@@ -19,9 +19,9 @@ Open `index.html` in a browser with WebGL2 (any current Chrome, Firefox, Safari 
 | **Heavies** | Specialist hulls: bulk freighter, agri ship, mining tug towing its refinery, colony ship, fleet carrier, survey vessel. |
 | **Stations** | Ring habitats, container ports, forges, refineries, shipyards and relay arrays, each built in an owning brand's style. |
 | **Asteroids** | Ten compositions (carbonaceous to ore-veined crystal), ray-marched and tumbling, sized to scale. |
-| **Fly** | Inertial flight with NPC traffic, combat, shields and planets. |
+| **Fly** | One Newtonian physics for every ship with flight assist as an autopilot layer; nebula gas (hydrogen, dust, ionized), stellar radiation with planet shadows and flares; signature-based sensors, scanning, running cold and active pings; NPC traffic and combat. |
 
-Flight controls: W/↑ thrust, A/D turn, S brake (assisted) or turn retrograde (Newtonian), Shift burn, Space fire, Tab target, F flight model, wheel or +/− zoom.
+Flight controls: W/S set speed (assist on) or main/reverse thrust (assist off), A/D turn, Q/E strafe and X point retrograde (assist off), Shift burner, Space fire, Tab next sensor contact, C run cold, P active ping, F flight assist, R trigger a stellar flare, wheel or +/− zoom.
 
 ## How it works
 
@@ -37,7 +37,7 @@ Flight controls: W/↑ thrust, A/D turn, S brake (assisted) or turn retrograde (
 
 **Planets and suns** are drawn analytically in fragment shaders: seamless 3D noise on a rotating sphere, equatorial rings that cast and receive shadows, moons on inclined orbits, blackbody star colors, granulation and corona, pulsar beams, and a ray-marched black hole with a Doppler-beamed disk that lenses the real sky behind it.
 
-**Flight** keeps all entity state in typed arrays (structure of arrays): ships, bolts, particles and lights. Rendering is instanced: one draw per ship type, one each for plumes, shields, bolts and particles. Hits test against the baked shield/hull field, so bolts strike the actual silhouette.
+**Flight** keeps all entity state in typed arrays (structure of arrays): ships, bolts, particles and lights. Every ship has main, reverse and lateral thrusters under one Newtonian model; a drive taper caps self-propelled speed and dampers bleed off anything gravity or slingshots add. Flight assist is a controller that turns a desired velocity into thruster commands, and NPCs fly through the same controller. The sector carries coarse gas and radiation fields: gas adds drag, attenuates sensors and (ionized) drains shields; radiation follows the star with shadows behind planets and spikes during flares. Detection is signature over range squared, times gas transmission, over local noise. Rendering is instanced: one draw per ship type, one each for plumes, shields, bolts and particles. Hits test against the baked shield/hull field, so bolts strike the actual silhouette.
 
 **Everything is parameterized** for LLM authoring: categorical choices are enums (brand part roles, planet palettes, ring styles, star types), everything else is a bounded number. The JSON panels in the lab show exactly what a model would emit.
 

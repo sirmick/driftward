@@ -19,7 +19,7 @@ const state = {
   map: 0, spin: true, trueScale: false, shadow: true, pl: true,
   sunAz: 135, sunEl: 35, star: 'sol', seed: 'kestrel-7',
   planetSeed: 'set-1', planetFocus: -1, sunSeed: 's1', sunFocus: -1, stSeed: 'stations-1', stFocus: -1, hvSeed: 'heavies-1', hvFocus: -1, astSeed: 'rocks-1', astFocus: -1, hoverItem: -1, sunOff: [-0.17, 0.12], flares: true,
-  flyBrand: 'halcyon', flySize: 'fighter', traffic: 60, zoom: 1, flightModel: 'assist', pirates: false,
+  flyBrand: 'halcyon', flySize: 'fighter', traffic: 60, zoom: 1, flightModel: 'assist', pirates: false, env: 'mixed', solarFlares: true,
   throttle: 0.6, bloom: 0.9, lightsN: 4, shields: true, shieldIdle: 0.3, barrage: false, click: 'inspect',
   mouse: null, hoverKey: null, editBrand: catalog.brands[0].id
 };
@@ -519,7 +519,7 @@ function updateHint() {
   if (GENERIC[state.view]) { const G = GENERIC[state.view]; $('hint').textContent = state[G.focus] >= 0 ? G.one : G.grid; return; }
   if (state.view === 'suns') { $('hint').textContent = state.sunFocus >= 0 ? 'Drag the star to move it · the lens flare follows' : 'Click a star to open it in the builder'; return; }
   if (state.view === 'planets') { $('hint').textContent = state.planetFocus >= 0 ? 'Drag to move the sun · edit this planet in the side panel' : 'Click a planet to edit it · drag to move the sun'; return; }
-  if (state.view === 'fly') { $('hint').textContent = 'W thrust · A D turn · S brake · Shift burn · Space fire · Tab target · F flight model · wheel zoom'; return; }
+  if (state.view === 'fly') { $('hint').textContent = 'W S speed · A D turn · Shift burn · Space fire · Tab contact · C cold · P ping · F assist · wheel zoom'; return; }
   const fire = state.view === 'detail' || state.click === 'fire';
   $('hint').textContent = 'Drag to move the sun · hover for a work light · ' + (fire ? 'click a shield to hit it' : 'click a ship to inspect');
 }
@@ -788,6 +788,7 @@ function postProcess() {
 }
 
 /*FLY*/
+if (FLY) window.__fly = FLY; // test hook
 /*PLANETS*/
 /*SUNS*/
 /*STATIONS*/
@@ -1001,7 +1002,12 @@ fillSelect('fly-size', catalog.sizes.map(z => [z.id, z.name]), state.flySize);
 $('fly-brand').addEventListener('change', e => { state.flyBrand = e.target.value; if (FLY) FLY.swapPlayer(); canvas.focus(); });
 $('fly-size').addEventListener('change', e => { state.flySize = e.target.value; if (FLY) FLY.swapPlayer(); canvas.focus(); });
 function syncFlightModel() { $('seg-fm').querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-pressed', String(['assist', 'newton'][i] === state.flightModel))); }
-seg('seg-fm', [['assist', 'Assisted'], ['newton', 'Newtonian']], () => state.flightModel, v => { state.flightModel = v; canvas.focus(); });
+seg('seg-fm', [['assist', 'Assist on'], ['newton', 'Assist off']], () => state.flightModel, v => { state.flightModel = v; canvas.focus(); });
+fillSelect('fly-env', [['mixed', 'Mixed nebula'], ['hydrogen', 'Hydrogen cloud'], ['dust', 'Dust cloud'], ['ion', 'Ion storm'], ['clear', 'Clear space']], state.env);
+$('fly-env').addEventListener('change', e => { state.env = e.target.value; if (FLY) FLY.env(); canvas.focus(); });
+$('opt-sflares').checked = state.solarFlares;
+$('opt-sflares').addEventListener('change', e => { state.solarFlares = e.target.checked; });
+$('fly-flare').addEventListener('click', () => { if (FLY) FLY.flare(); canvas.focus(); });
 bindRange('traffic', 'traffic', v => String(v), 1);
 $('traffic').addEventListener('change', () => { if (FLY) FLY.reset(); });
 bindRange('zoom', 'zoom', v => Math.round(v * 100) + '%', 100);

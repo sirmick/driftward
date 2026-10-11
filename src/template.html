@@ -58,6 +58,7 @@ header.bar {
 .detail-cap small { font: 400 11.5px/1.3 var(--f-mono); color: var(--muted); }
 #progress { position: absolute; right: 14px; top: 12px; padding: 5px 10px; border-radius: 999px; background: rgba(12, 16, 21, .85); border: 1px solid var(--line); font: 500 11.5px/1 var(--f-mono); color: var(--amber); }
 .hint { position: absolute; left: 16px; bottom: 12px; font-size: 12px; color: var(--muted); pointer-events: none; }
+[hidden] { display: none !important; }
 #glerr { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--bad); }
 
 aside.rail { border-left: 1px solid var(--line); background: var(--rail); overflow-y: auto; min-width: 0; }
@@ -181,6 +182,9 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
           <button type="button" data-code="ShiftLeft" aria-label="Burn">Burn</button>
           <button type="button" data-code="Space" aria-label="Fire">Fire</button>
           <button type="button" data-code="Tab" aria-label="Next target">Tgt</button>
+          <button type="button" data-code="KeyF" aria-label="Flight assist">Asst</button>
+          <button type="button" data-code="KeyC" aria-label="Run cold">Cold</button>
+          <button type="button" data-code="KeyP" aria-label="Active ping">Ping</button>
         </div>
       </div>
       <div id="progress">Baking</div>
@@ -281,21 +285,27 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
           <select id="fly-brand"></select>
           <select id="fly-size" aria-label="Hull class"></select>
         </div>
-        <div class="seg" id="seg-fm" role="group" aria-label="Flight model"></div>
+        <div class="seg" id="seg-fm" role="group" aria-label="Flight assist"></div>
+        <div class="flypick"><label for="fly-env">Space</label><select id="fly-env" style="grid-column: span 2"></select></div>
         <label class="slider" for="traffic">Traffic <input id="traffic" type="range" min="0" max="200" step="1"><output id="traffic-v"></output></label>
         <label class="slider" for="zoom">Zoom <input id="zoom" type="range" min="25" max="400" step="1"><output id="zoom-v"></output></label>
         <div class="checks">
           <label><input type="checkbox" id="opt-pirates"><span>Rustline pirates</span></label>
+          <label><input type="checkbox" id="opt-sflares"><span>Stellar flares</span></label>
         </div>
         <div class="json-actions">
+          <button class="btn" type="button" id="fly-flare">Flare now</button>
           <button class="btn" type="button" id="fly-calm">Calm everyone</button>
           <button class="btn" type="button" id="fly-reset">New sector</button>
         </div>
         <dl class="keys">
-          <dt>W / ↑</dt><dd>Thrust</dd><dt>A D / ← →</dt><dd>Turn</dd><dt>S / ↓</dt><dd>Brake (assisted) or turn retrograde (Newtonian)</dd>
-          <dt>Shift</dt><dd>Burn: more thrust, higher speed cap</dd><dt>Space</dt><dd>Fire</dd><dt>Tab</dt><dd>Next target</dd><dt>F</dt><dd>Toggle flight model</dd><dt>Wheel, + −</dt><dd>Zoom</dd>
+          <dt>W S / ↑ ↓</dt><dd>Assist on: raise or lower set speed. Assist off: main or reverse thrust</dd>
+          <dt>A D / ← →</dt><dd>Turn</dd><dt>Q E</dt><dd>Strafe (assist off)</dd><dt>X</dt><dd>Point retrograde (assist off)</dd>
+          <dt>Shift</dt><dd>Burner: burns fuel, runs hot, very loud</dd><dt>Space</dt><dd>Fire</dd>
+          <dt>Tab</dt><dd>Next sensor contact; hold within 5 km to scan</dd><dt>C</dt><dd>Run cold: shields off, quiet</dd>
+          <dt>P</dt><dd>Active ping: long range, but everyone hears it</dd><dt>F</dt><dd>Flight assist on/off</dd><dt>R</dt><dd>Trigger a stellar flare</dd><dt>Wheel, + −</dt><dd>Zoom</dd>
         </dl>
-        <p class="note">Shooting a ship turns its whole brand hostile. Traders run, patrols and capital ships fight back. Assisted damps sideways drift; Newtonian keeps every bit of momentum.</p>
+        <p class="note">One Newtonian physics for every ship; assist is an autopilot on the same thrusters. Hydrogen drags and refuels you, dust blinds sensors, ionized gas eats shields. Radiation drains shields and raises sensor noise; planets cast shadows from it. Hostiles only engage what their sensors hold, so running cold in dust breaks contact.</p>
       </div>
 
       <div class="sec" id="detail-panel" hidden>
