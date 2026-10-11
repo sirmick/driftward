@@ -406,7 +406,7 @@ function bake(ship, brand, size) {
   const k = smooth ? (st.blend || 0.03) * L : 0;
   const hullCols = pal.hull.map(hexRGB), trim = hexRGB(pal.trim), glass = hexRGB(pal.glass), accent = hexRGB(pal.accent);
   const engine = hexRGB(pal.engine), windowC = hexRGB(pal.window), emissive = hexRGB(pal.emissive), rustC = hexRGB(pal.rust || '#000000');
-  for (const p of parts) p.col = p.paint === -1 ? trim : p.paint === -2 ? glass : hullCols[p.paint % hullCols.length];
+  for (const p of parts) p.col = p.colOverride ? hexRGB(p.colOverride) : p.paint === -1 ? trim : p.paint === -2 ? glass : hullCols[p.paint % hullCols.length];
 
   // pass 0: exact silhouette bounds on a coarse grid to frame the texture
   let ex0 = 1e9, ey0 = 1e9, ex1 = -1e9, ey1 = -1e9;
@@ -424,14 +424,14 @@ function bake(ship, brand, size) {
     }
   }
   const ccx = (ex0 + ex1) / 2, ccy = (ey0 + ey1) / 2;
-  const shieldS = ((st.shield && st.shield.standoff) || 0.035) * L, Dmax = shieldS * 2.2;
+  const shieldS = (ship.noShield ? 0.002 : ((st.shield && st.shield.standoff) || 0.035)) * L, Dmax = shieldS * 2.2;
   const extent = Math.max(ex1 - ex0, ey1 - ey0) * 1.08 + k * 2 + shieldS * 2.8;
   const px = extent / res;
   // recenter parts so the ship sits at texture center
   for (const p of parts) { p.x -= ccx; p.y -= ccy; }
 
   // spatial bins
-  const B = 16, binW = extent / B, half = extent / 2;
+  const B = parts.length > 80 ? 32 : 16, binW = extent / B, half = extent / 2;
   const bins = Array.from({ length: B * B }, () => []);
   const margin = Math.max(smooth ? k * 2.5 : px * 2, Dmax);
   parts.forEach((p, idx) => {
@@ -447,7 +447,8 @@ function bake(ship, brand, size) {
 
   const n = res * res;
   const Hm = new Float32Array(n), A = new Float32Array(n), C = new Float32Array(n * 3), E = new Float32Array(n * 3), SP = new Float32Array(n), AX = new Float32Array(n), EG = new Float32Array(n);
-  const fade = S => clamp((S / px - 1.6) / 3, 0, 1);
+  const DS = ship.detailScale || 1, pxd = px / DS;
+  const fade = S => clamp((S * DS / px - 1.6) / 3, 0, 1);
   const brandSeed = hashStr(brand.id) & 0xffff;
 
   for (let iy = 0; iy < res; iy++) {
@@ -463,7 +464,8 @@ function bake(ship, brand, size) {
         const dx = wx - p.x, dy = wy - p.y;
         if (Math.abs(dx) > p.rad + margin || Math.abs(dy) > p.rad + margin) continue;
         let lx = dx * p.ca + dy * p.sa; const ly = -dx * p.sa + dy * p.ca; if (p.flip) lx = -lx;
-        const d = partSDF(p, lx, ly);
+        let d = partSDF(p, lx, ly);
+        if (p.lat && d < 0 && latticeHole(p, lx, ly, px)) d = px * 1.5;
         if (d < dOut) dOut = d;
         if (smooth) {
           if (d > k * 2.5) continue;
@@ -488,22 +490,22 @@ function bake(ship, brand, size) {
       let h = smooth ? hs : best;
 
       // ---------- surface detail on the winning part ----------
-      const p = bp, t = Math.max(bt, 0), lx = blx, ly = bly;
+      const p = bp, t = Math.max(bt, 0) / DS, lx = blx / DS, ly = bly / DS, wxd = wx / DS, wyd = wy / DS, inRd = p.inR / DS, hld = p.hl / DS;
       let cr = p.col[0], cg = p.col[1], cb = p.col[2];
       let spec = p.paint === -2 ? 1.0 : st.material.spec;
       let er = 0, eg = 0, eb = 0, dh = 0;
-      const vn = ly / Math.max(p.hl, 1e-3);
+      const vn = ly / Math.max(hld, 1e-3);
       const mixc = (c, m) => { cr += (c[0] - cr) * m; cg += (c[1] - cg) * m; cb += (c[2] - cb) * m; };
       const mulc = m => { cr *= m; cg *= m; cb *= m; };
       const emit = (c, m) => { er += c[0] * m; eg += c[1] * m; eb += c[2] * m; };
 
       if (smooth) { // organic mottling + edge darkening
-        const m = fbm(wx * 0.06 + 3, wy * 0.06, brandSeed);
+        const m = fbm(wxd * 0.06 + 3, wyd * 0.06, brandSeed);
         const c2 = hullCols[(p.paint + 1) % hullCols.length]; mixc(c2, sstep(0.35, 0.75, m) * 0.6);
-        mulc(0.72 + 0.28 * Math.min(t / p.inR, 1));
+        mulc(0.72 + 0.28 * Math.min(t / inRd, 1));
       }
       if (p.paint === -2) { // glass canopy streak
-        const s = sstep(0.15, 0.0, Math.abs(lx / p.inR + 0.35 - vn * 0.2)); cr += 0.12 * s; cg += 0.14 * s; cb += 0.16 * s;
+        const s = sstep(0.15, 0.0, Math.abs(lx / inRd + 0.35 - vn * 0.2)); cr += 0.12 * s; cg += 0.14 * s; cb += 0.16 * s;
       }
       // panel lines
       if (p.det.panel && (D.panelSpacing || 0) > 0) {
@@ -513,9 +515,9 @@ function bake(ship, brand, size) {
           const yy = ly / S + (p.seedI % 97) * 0.13, row = Math.floor(yy), fy = yy - row;
           const xx = (lx + h2(row, 3, p.seedI) * S2) / S2, col = Math.floor(xx), fx = xx - col;
           const e = Math.min(Math.min(fy, 1 - fy), Math.min(fx, 1 - fx) * asp);
-          const lw = Math.max(px * 0.7, S * 0.03) / S;
-          if (t > Math.min(S * 0.2, p.inR * 0.4)) {
-            if (e < lw) { const g = f * (1 - e / lw); dh -= (D.panelDepth || 0.5) * px * 0.9 * g; mulc(1 - 0.3 * g * (D.panelDark || 0.5)); spec *= 1 - 0.3 * g; }
+          const lw = Math.max(pxd * 0.7, S * 0.03) / S;
+          if (t > Math.min(S * 0.2, inRd * 0.4)) {
+            if (e < lw) { const g = f * (1 - e / lw); dh -= (D.panelDepth || 0.5) * pxd * 0.9 * g; mulc(1 - 0.3 * g * (D.panelDark || 0.5)); spec *= 1 - 0.3 * g; }
             const tone = (h2(row, col, p.seedI) - 0.5) * (D.panelTone || 0) * f; mulc(1 + tone);
           }
         }
@@ -530,7 +532,7 @@ function bake(ship, brand, size) {
             const fx = ux - cx, fy = uy - cy, inset = 0.12;
             if (fx > inset && fx < 1 - inset && fy > inset && fy < 1 - inset && t > 0.3) {
               const pc = hullCols[Math.floor(h2(cx, cy, 77) * hullCols.length)];
-              mixc(pc, 0.85 * f); mulc(0.8 + 0.4 * h2(cx, cy, 9)); dh += px * 0.6 * f;
+              mixc(pc, 0.85 * f); mulc(0.8 + 0.4 * h2(cx, cy, 9)); dh += pxd * 0.6 * f;
             }
           }
         }
@@ -541,64 +543,64 @@ function bake(ship, brand, size) {
         if (f > 0 && Math.abs(t - 0.45) < 0.22) {
           const fx = frac(lx / S) - 0.5, fy = frac(ly / S) - 0.5;
           const rd = Math.hypot(fx, fy) * S;
-          if (rd < 0.17) { const g = f * (1 - rd / 0.17); dh += px * 0.9 * g; mulc(1 + 0.15 * g); }
+          if (rd < 0.17) { const g = f * (1 - rd / 0.17); dh += pxd * 0.9 * g; mulc(1 + 0.15 * g); }
         }
       }
       // ribs (organic)
       if (smooth && (D.ribs || 0) > 0 && ['core', 'hull', 'pod', 'nacelle', 'wing', 'fin'].includes(p.role)) {
         const S = D.ribSpacing || 1.4, f = fade(S);
-        if (f > 0) dh += D.ribs * Math.min(p.H * 0.05, px * 1.2) * Math.sin(ly * 2 * Math.PI / S) * sstep(0, p.inR * 0.4, t) * f;
+        if (f > 0) dh += D.ribs * Math.min(p.H * 0.05, pxd * 1.2) * Math.sin(ly * 2 * Math.PI / S) * sstep(0, inRd * 0.4, t) * f;
       }
       // grime
-      if ((D.grime || 0) > 0) { const g = fbm(wx * 0.3, wy * 0.3, brandSeed + 99); mulc(1 - D.grime * 0.4 * (g - 0.25)); }
+      if ((D.grime || 0) > 0) { const g = fbm(wxd * 0.3, wyd * 0.3, brandSeed + 99); mulc(1 - D.grime * 0.4 * (g - 0.25)); }
       // rust (scrap)
       if ((D.rust || 0) > 0 && p.paint !== -2) {
-        let m = sstep(0.56, 0.8, fbm(wx * 0.14, wy * 0.14, brandSeed + 5)) * D.rust;
-        m += (1 - sstep(0, 0.6, t)) * D.rust * 0.45 * fbm(wx * 1.1, wy * 1.1, 3);
+        let m = sstep(0.56, 0.8, fbm(wxd * 0.14, wyd * 0.14, brandSeed + 5)) * D.rust;
+        m += (1 - sstep(0, 0.6, t)) * D.rust * 0.45 * fbm(wxd * 1.1, wyd * 1.1, 3);
         m = clamp(m, 0, 1);
-        const rv = 0.75 + 0.5 * fbm(wx * 1.7, wy * 1.7, 11);
+        const rv = 0.75 + 0.5 * fbm(wxd * 1.7, wyd * 1.7, 11);
         mixc([rustC[0] * rv, rustC[1] * rv, rustC[2] * rv], m * 0.85); spec *= 1 - 0.85 * m;
       }
       // military stripes on core
       if (p.det.stripes) {
         const s = D.stripes;
         if ((vn > 0.5 && vn < 0.56) || (vn > 0.6 && vn < 0.625)) mixc(accent, 0.85 * s);
-        if (vn > -0.62 && vn < -0.45 && Math.abs(lx) < p.inR * 0.18) mixc(accent, 0.55 * s);
+        if (vn > -0.62 && vn < -0.45 && Math.abs(lx) < inRd * 0.18) mixc(accent, 0.55 * s);
       }
       // hazard stripes (scrap)
       if (p.det.hazard && vn > 0.62) { const hz = frac((lx + ly) / 1.1) < 0.5; mixc(hz ? accent : trim, 0.8 * fade(1.1)); }
       // corporate accent trim line
       if (p.det.accent) {
-        const ai = Math.min(p.inR * 0.3, 1.0), aw = Math.max(px * 0.8, 0.12);
+        const ai = Math.min(inRd * 0.3, 1.0), aw = Math.max(pxd * 0.8, 0.12);
         if (Math.abs(t - ai) < aw / 2) { emit(accent, 1.1); mixc(accent, 0.3); }
       }
       // windows
       if (p.det.windows && (D.windows || 0) > 0 && Math.abs(vn) < 0.82) {
-        const wi = Math.min(1.2, p.inR * 0.4), ww = 0.45, S = 1.5, f = fade(ww * 2);
-        if (f > 0 && Math.abs(t - wi) < Math.max(ww, px) / 2) {
+        const wi = Math.min(1.2, inRd * 0.4), ww = 0.45, S = 1.5, f = fade(ww * 2);
+        if (f > 0 && Math.abs(t - wi) < Math.max(ww, pxd) / 2) {
           const cell = Math.floor(ly / S), fy = frac(ly / S);
           if (fy > 0.25 && fy < 0.75 && h2(cell, Math.sign(lx) + 2, p.seedI) < D.windows) emit(windowC, 0.95 * f);
         }
       }
       // lamps
       if ((D.lamps || 0) > 0 && p.paint !== -2) {
-        const S = 6, cx = Math.floor(wx / S), cy = Math.floor(wy / S);
+        const S = 6, cx = Math.floor(wxd / S), cy = Math.floor(wyd / S);
         if (h2(cx, cy, brandSeed + 31) < D.lamps) {
           const ox = (h2(cx, cy, 1) * 0.6 + 0.2) * S, oy = (h2(cx, cy, 2) * 0.6 + 0.2) * S;
-          const dd = Math.hypot(wx - cx * S - ox, wy - cy * S - oy), rr = Math.max(0.28, px * 0.8);
+          const dd = Math.hypot(wxd - cx * S - ox, wyd - cy * S - oy), rr = Math.max(0.28, pxd * 0.8);
           if (dd < rr && t > 0.3) emit(emissive, 1.4 * (1 - dd / rr));
         }
       }
       // veins + spots (organic)
       if (p.det.veins) {
-        const nv = fbm(wx * 0.11 + 13, wy * 0.11 - 4, brandSeed + 3);
-        const v = 1 - sstep(0.0, Math.max(0.012, px * 0.02), Math.abs(nv - 0.5));
-        const m = sstep(p.inR * 0.12, p.inR * 0.5, t) * fade(1.2);
+        const nv = fbm(wxd * 0.11 + 13, wyd * 0.11 - 4, brandSeed + 3);
+        const v = 1 - sstep(0.0, Math.max(0.012, pxd * 0.02), Math.abs(nv - 0.5));
+        const m = sstep(inRd * 0.12, inRd * 0.5, t) * fade(1.2);
         if (v > 0) { emit(emissive, v * D.veins * 0.6 * m); mulc(1 - 0.25 * v * m); }
         if ((D.spots || 0) > 0) {
           const S = 2.2, cx = Math.floor(lx / S), cy = Math.floor(ly / S);
           if (h2(cx, cy, p.seedI + 41) < D.spots) {
-            const dd = Math.hypot(lx - (cx + 0.5) * S, ly - (cy + 0.5) * S), rr = Math.max(0.3, px * 0.7);
+            const dd = Math.hypot(lx - (cx + 0.5) * S, ly - (cy + 0.5) * S), rr = Math.max(0.3, pxd * 0.7);
             if (dd < rr) emit(emissive, 1.2 * (1 - dd / rr) * fade(S));
           }
         }
@@ -606,19 +608,61 @@ function bake(ship, brand, size) {
       // engine exhaust, weapon tips, glowing cores
       if (p.em) {
         if (p.em.type === 'exhaust') {
-          const gl = p.em.glow * 2 * p.hl, g = sstep(-p.hl + gl, -p.hl, ly);
-          const rim = p.inR * 0.22;
+          const gl = p.em.glow * 2 * hld, g = sstep(-hld + gl, -hld, ly);
+          const rim = inRd * 0.22;
           if (g > 0 && t > rim) { EG[o] = g; emit(engine, (0.35 + 1.9 * g * g) * g); dh -= p.H * 0.55 * g; mulc(0.35); spec *= 0.3; }
           else mulc(0.85);
         } else if (p.em.type === 'tip') {
-          const g = sstep(p.hl - p.inR * 4, p.hl, ly); emit(engine, 1.4 * g);
+          const g = sstep(hld - inRd * 4, hld, ly); emit(engine, 1.4 * g);
         } else if (p.em.type === 'core') {
-          const d0 = Math.hypot(lx, ly) / p.inR, g = 1 - sstep(0, 0.8, d0);
+          const d0 = Math.hypot(lx, ly) / inRd, g = 1 - sstep(0, 0.8, d0);
           emit(emissive, 1.5 * g); mixc(glass, 0.6);
         }
       }
 
-      Hm[o] = h + dh;
+      // ---------- station details ----------
+      if (p.det.solar) {
+        const S = 2.4, f = fade(S), gx = Math.abs(frac(lx / S) - 0.5), gy = Math.abs(frac(ly / (S * 1.5)) - 0.5);
+        cr = 0.05; cg = 0.09; cb = 0.2; spec = 0.45;
+        const sheen = h2(Math.floor(lx / S), Math.floor(ly / (S * 1.5)), p.seedI) * 0.06; cr += sheen * 0.5; cg += sheen; cb += sheen * 1.5;
+        if (f > 0 && (gx > 0.43 || gy > 0.44)) { mixc([0.62, 0.64, 0.66], f); spec = 0.5; }
+        if (t < 0.5) mixc([0.55, 0.56, 0.58], 0.9);
+      }
+      if (p.det.container) {
+        const f = fade(0.6);
+        if (frac(lx / 0.6) < 0.45) mulc(1 - 0.18 * f);
+        if (Math.abs(vn) > 0.9) mulc(0.7);
+        spec *= 0.6;
+      }
+      if (p.det.radiator) {
+        const f = fade(1.8);
+        if (frac(ly / 1.8) < 0.3) mulc(1 - 0.35 * f);
+        const heat = p.det.radiator * (1 - Math.min(1, Math.abs(vn))) * (0.7 + 0.3 * fbm(wxd * 0.05, wyd * 0.05, 4));
+        emit([1.0, 0.28, 0.08], heat * 0.9); mixc([0.25, 0.1, 0.06], heat * 0.5);
+      }
+      if (p.det.dish) {
+        const d0 = Math.hypot(lx, ly) / inRd, an = Math.atan2(ly, lx);
+        if (Math.abs(frac(an * 12 / (2 * Math.PI)) - 0.5) < 0.04 && d0 > 0.2) mulc(0.78);
+        if (Math.abs(frac(d0 * 4) - 0.5) < 0.05) mulc(0.85);
+        mixc([0.85, 0.87, 0.9], 0.35); spec = Math.max(spec, 0.6);
+        if (d0 < 0.12) emit(emissive, 1.2);
+      }
+      if (p.em && p.em.type === 'furnace') {
+        const d0 = Math.hypot(lx, ly) / inRd, n = fbm(wxd * 0.25 + 3, wyd * 0.25, 9);
+        const g = 1 - sstep(0.15, 1.0, d0);
+        emit([1.0, 0.45, 0.12], (1.4 + 1.6 * n) * g); emit([1.0, 0.92, 0.7], 1.6 * (1 - sstep(0, 0.42, d0)));
+        mulc(0.25); spec *= 0.2; dh -= p.H * 0.3 * g;
+      }
+      if (p.em && p.em.type === 'beacon') {
+        const c = p.em.col ? hexRGB(p.em.col) : emissive, d0 = Math.hypot(lx, ly) / inRd;
+        emit(c, 2.4 * (1 - sstep(0, 1, d0))); mixc(c, 0.4);
+      }
+      if (p.em && p.em.type === 'flare') {
+        const d0 = Math.hypot(lx, ly) / inRd, n = fbm(wxd * 0.6, wyd * 0.6, 21);
+        emit([1.0, 0.55, 0.2], (2.2 + 1.4 * n) * (1 - sstep(0, 1, d0))); emit([1, 0.95, 0.8], 2 * (1 - sstep(0, 0.35, d0)));
+      }
+
+      Hm[o] = h + dh * DS;
       C[o * 3] = cr; C[o * 3 + 1] = cg; C[o * 3 + 2] = cb;
       E[o * 3] = er; E[o * 3 + 1] = eg; E[o * 3 + 2] = eb;
       SP[o] = clamp(spec, 0, 1);
@@ -652,6 +696,192 @@ function bake(ship, brand, size) {
   return { res, extent, px, hRange: hRange * ex, albedo, nrm, emis, aux, engines, shieldS, Dmax, partCount: parts.length };
 }
 
+// open truss: rails along both edges, cross braces and rungs; everything else is a hole
+function latticeHole(p, lx, ly, px) {
+  let hw, along;
+  if (p.prim === 'rbox') { hw = p.a.hw; along = ly; }
+  else if (p.prim === 'trap') { hw = Math.max(p.a.r1, p.a.r2); along = ly; }
+  else return false;
+  if (hw < px * 3) return false;
+  const u = lx / hw, rail = 0.2;
+  if (Math.abs(u) > 1 - rail) return false;
+  const cell = hw * 2, f = frac(along / cell) * 2 - 1, bw = 0.16;
+  if (Math.abs(f - u) < bw || Math.abs(f + u) < bw) return false;
+  if (Math.abs(f) > 1 - bw * 0.6) return false;
+  return true;
+}
+
+const CONTAINER_COLS = ['#9c3b2a', '#2f5d8a', '#c99a2e', '#3f7a4a', '#d8d4cc', '#c4602a', '#5a5e66', '#7a3f6a', '#b8b0a0'];
+function finalizeParts(parts, brand, seedStr, L, opts) {
+  const st = brand.style, D = st.detail || {}, r = rng32(hashStr(seedStr + '|fin'));
+  const sym = st.symmetry == null ? 1 : st.symmetry;
+  for (const p of parts) {
+    if (opts.jitter && sym < 1 && !p.fixed) { p.x += (r() * 2 - 1) * 0.004 * L; p.y += (r() * 2 - 1) * 0.004 * L; p.ang += (r() * 2 - 1) * 4; }
+    if (st.union === 'smooth') { p.lat = false; if (p.prof === 'chamfer') p.prof = 'round'; }
+    if (p.det.panel && (D.rivets || 0) > 0) p.det.rivets = true;
+    if (p.det.panel && (D.veins || 0) > 0 && r() < 0.6) p.det.veins = true;
+    if (p.det.panel && sym < 1 && (D.stripes || 0) > 0 && r() < 0.15) p.det.hazard = true;
+    if (p.det.windows && !(D.windows > 0)) p.det.windows = false;
+    p.seedI = hashStr(seedStr + ':' + p.id) & 0xffff;
+    const m = partMetrics(p); p.inR = Math.max(m.inR, 1e-3); p.hl = m.hl; p.rad = m.rad;
+    p.bw = Math.max((st.bevelW || 0.3) * p.inR, 0.02);
+    p.ca = Math.cos(p.ang * D2R); p.sa = Math.sin(p.ang * D2R);
+  }
+}
+
+// Stations: the archetype picks a layout, the owning brand supplies palette, bevel, symmetry and surface detail.
+function assembleStation(arch, brand, seed) {
+  const r = rng32(hashStr('st|' + arch.id + '|' + brand.id + '|' + seed));
+  const st = brand.style, L = lerp(arch.diameter[0], arch.diameter[1], r()), H0 = 0.03 * L;
+  const sym = st.symmetry == null ? 1 : st.symmetry, hullN = st.palette.hull.length, emis = st.palette.emissive;
+  const parts = []; let uid = 0;
+  const add = p => { parts.push(p); return p; };
+  const mk = (prim, a, x, y, ang, z, H, ex) => add(Object.assign({ id: uid++, tmpl: arch.id, prim, a, x, y, ang, z, H, prof: st.bevel, role: 'hull', flip: false, paint: 0, det: { panel: true }, em: null }, ex || {}));
+  const paint = () => (st.union === 'smooth' || sym < 1) ? Math.floor(r() * hullN) : (r() < 0.6 ? 0 : 1 % hullN);
+  const angOf = (dx, dy) => Math.atan2(-dx, dy) / D2R;
+  const truss = (x0, y0, x1, y1, w, z, H, ex) => { const len = Math.hypot(x1 - x0, y1 - y0); return mk('rbox', { hw: w, hl: len / 2, rad: w * 0.1 }, (x0 + x1) / 2, (y0 + y1) / 2, angOf(x1 - x0, y1 - y0), z, H, Object.assign({ lat: true, paint: -1, role: 'strut', det: {} }, ex || {})); };
+  const beam = (x0, y0, x1, y1, w, z, H, ex) => truss(x0, y0, x1, y1, w, z, H, Object.assign({ lat: false, det: { panel: true } }, ex || {}));
+  const circle = (x, y, rad, z, H, ex) => mk('circle', { r: rad }, x, y, 0, z, H, ex);
+  const box = (x, y, hw, hl, ang, z, H, ex) => mk('rbox', { hw, hl, rad: Math.min(hw, hl) * 0.15 }, x, y, ang, z, H, ex);
+  const beacon = (x, y, rad, z, col) => circle(x, y, rad, z, H0 * 0.2, { paint: -1, det: {}, em: { type: 'beacon', col }, prof: 'round' });
+  const solar = (x, y, hw, hl, ang, z) => box(x, y, hw, hl, ang, z, H0 * 0.12, { paint: -1, det: { solar: true }, prof: 'chamfer' });
+  const keep = () => sym >= 1 || r() < 0.78;
+  const jit = v => v * (1 + (sym < 1 ? (r() * 2 - 1) * 0.25 : 0));
+  const pick = a => a[Math.floor(r() * a.length)];
+  const TAU = Math.PI * 2;
+
+  switch (arch.layout) {
+    case 'ring': {
+      const hubR = 0.085 * L, R1 = 0.4 * L, tR = 0.032 * L;
+      circle(0, 0, hubR, 0.6 * H0, 1.4 * H0, { det: { panel: true, windows: true }, prof: st.bevel });
+      circle(0, 0, hubR * 0.42, 1.8 * H0, 0.6 * H0, { paint: -1, det: { dish: true }, prof: 'round' });
+      const rings = r() < 0.4 ? [R1, 0.26 * L] : [R1];
+      rings.forEach((R, k) => mk('ring', { R, t: tR * (k ? 0.75 : 1), gap: 0 }, 0, 0, 0, 0, 1.2 * H0, { paint: k ? 1 % hullN : 0, det: { panel: true, windows: true }, prof: 'round' }));
+      const ns = pick([3, 4, 6]), a0 = r() * TAU;
+      for (let i = 0; i < ns; i++) { const a = a0 + i / ns * TAU; truss(Math.cos(a) * hubR * 0.9, Math.sin(a) * hubR * 0.9, Math.cos(a) * R1, Math.sin(a) * R1, 0.011 * L, 0.2 * H0, 0.9 * H0); }
+      const nm = 6 + Math.floor(r() * 7);
+      for (let i = 0; i < nm; i++) { if (!keep()) continue; const a = (i + 0.5) / nm * TAU + a0; box(Math.cos(a) * R1, Math.sin(a) * R1, jit(0.03 * L), jit(0.022 * L), a / D2R - 90, 0.7 * H0, 1.0 * H0, { paint: paint(), det: { panel: true, windows: true } }); }
+      truss(0, hubR, 0, 0.6 * L, 0.014 * L, 0.5 * H0, 0.6 * H0);
+      box(0, 0.6 * L, 0.05 * L, 0.009 * L, 0, 0.8 * H0, 0.5 * H0, { paint: -1 });
+      beacon(-0.05 * L, 0.6 * L, 0.007 * L, 1.4 * H0, emis); beacon(0.05 * L, 0.6 * L, 0.007 * L, 1.4 * H0, emis);
+      for (const sd of [-1, 1]) { truss(sd * (R1 + tR), 0, sd * 0.56 * L, 0, 0.008 * L, 0.2 * H0, 0.5 * H0); solar(sd * 0.6 * L, 0, 0.045 * L, 0.14 * L, 0, 0.3 * H0); }
+      for (let i = 0; i < 4; i++) { const a = a0 + (i + 0.5) / 4 * TAU; beacon(Math.cos(a) * R1, Math.sin(a) * R1, 0.006 * L, 1.6 * H0, emis); }
+      break;
+    }
+    case 'port': {
+      const spine = 0.9 * L;
+      box(0, 0, 0.03 * L, spine / 2, 0, 0.4 * H0, 1.2 * H0, { det: { panel: true, windows: true } });
+      circle(0, spine / 2 * 0.93, 0.055 * L, 1.0 * H0, 1.6 * H0, { paint: 1 % hullN, det: { panel: true, windows: true } });
+      circle(0.07 * L, spine / 2 * 0.78, 0.03 * L, 1.5 * H0, 0.4 * H0, { paint: -1, det: { dish: true }, prof: 'round' });
+      const np = 3 + Math.floor(r() * 3), cw = 0.011 * L, cl = 0.02 * L;
+      for (let i = 0; i < np; i++) {
+        const y = lerp(-0.38, 0.28, np > 1 ? i / (np - 1) : 0.5) * L;
+        for (const sd of [-1, 1]) {
+          const ph = jit((0.28 + r() * 0.12) * L);
+          truss(sd * 0.03 * L, y, sd * ph, y, 0.008 * L, 0.2 * H0, 0.6 * H0);
+          beacon(sd * ph, y, 0.006 * L, 1.0 * H0, emis);
+          for (const row of [-1, 1]) {
+            const n = Math.floor((ph - 0.06 * L) / (cw * 2.3));
+            for (let j = 0; j < n; j++) {
+              if (r() > 0.82) continue;
+              const stack = r() < 0.35 ? 2 : 1;
+              for (let k = 0; k < stack; k++) box(sd * (0.06 * L + j * cw * 2.3), y + row * (0.012 * L + cl), cw, cl, 0, 0.5 * H0 + k * 0.4 * H0, 0.38 * H0, { paint: -1, colOverride: pick(CONTAINER_COLS), det: { container: true }, prof: 'chamfer', role: 'pod' });
+            }
+          }
+          const gx = sd * (0.08 + r() * 0.15) * L;
+          beam(gx, y - 0.045 * L, gx, y + 0.045 * L, 0.004 * L, 1.5 * H0, 0.3 * H0, { paint: -1, det: {} });
+        }
+      }
+      break;
+    }
+    case 'forge': {
+      const coreR = 0.17 * L;
+      circle(0, 0, coreR, 0, 2.0 * H0, { det: { panel: true } });
+      mk('ring', { R: coreR * 1.12, t: 0.024 * L, gap: 0 }, 0, 0, 0, 0.6 * H0, 1.5 * H0, { paint: -1, det: { panel: true }, prof: 'chamfer' });
+      circle(0, 0, coreR * 0.52, 1.3 * H0, 1.0 * H0, { paint: -1, det: {}, em: { type: 'furnace' }, prof: 'round' });
+      const nf = 6 + 2 * Math.floor(r() * 3), a0 = r() * TAU;
+      for (let i = 0; i < nf; i++) {
+        if (!keep()) continue;
+        const a = a0 + (i + 0.5) / nf * TAU, inner = coreR * 1.28, outer = jit((0.42 + r() * 0.05) * L);
+        box(Math.cos(a) * (inner + outer) / 2, Math.sin(a) * (inner + outer) / 2, 0.02 * L, (outer - inner) / 2, a / D2R - 90, 0.1 * H0, 0.5 * H0, { paint: -1, det: { radiator: 0.8 }, prof: 'chamfer' });
+      }
+      const nh = 3;
+      for (let i = 0; i < nh; i++) {
+        const a = a0 + i / nh * TAU, rr = 0.33 * L;
+        mk('ucap', { r1: 0.05 * L, r2: 0.05 * L, len: 0.17 * L }, Math.cos(a) * rr, Math.sin(a) * rr, a / D2R, 0.3 * H0, 1.6 * H0, { paint: paint(), det: { panel: true }, prof: 'round' });
+        truss(Math.cos(a) * coreR * 1.15, Math.sin(a) * coreR * 1.15, Math.cos(a) * (rr - 0.05 * L), Math.sin(a) * (rr - 0.05 * L), 0.012 * L, 0.9 * H0, 0.5 * H0);
+      }
+      for (let i = 0; i < 10; i++) { const a = a0 + i / 10 * TAU; beacon(Math.cos(a) * coreR * 1.12, Math.sin(a) * coreR * 1.12, 0.009 * L, 2.2 * H0, '#ff7a2a'); }
+      break;
+    }
+    case 'refinery': {
+      truss(-0.46 * L, 0, 0.46 * L, 0, 0.016 * L, 0.2 * H0, 0.7 * H0);
+      truss(0, -0.46 * L, 0, 0.46 * L, 0.016 * L, 0.2 * H0, 0.7 * H0);
+      box(0, 0, 0.05 * L, 0.05 * L, 45, 0.8 * H0, 1.3 * H0, { det: { panel: true, windows: true } });
+      for (const [qx, qy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+        const n = 1 + Math.floor(r() * 3);
+        for (let k = 0; k < n; k++) {
+          if (!keep()) continue;
+          const rad = (0.045 + r() * 0.04) * L, tx = qx * (0.13 + r() * 0.17) * L, ty = qy * (0.13 + r() * 0.17) * L;
+          circle(tx, ty, rad, 0.3 * H0, rad * 0.9, { paint: paint(), det: {}, prof: 'round' });
+          if (r() < 0.5) beam(tx, ty, tx, 0, 0.005 * L, 0.25 * H0, 0.3 * H0, { paint: -1, det: {} });
+          else beam(tx, ty, 0, ty, 0.005 * L, 0.25 * H0, 0.3 * H0, { paint: -1, det: {} });
+        }
+      }
+      const towers = [[0.36, 0], [-0.36, 0], [0, 0.36], [0, -0.36]].filter(() => r() < 0.75);
+      for (const [tx, ty] of towers) {
+        circle(tx * L, ty * L, 0.032 * L, 0.6 * H0, 2.2 * H0, { paint: 1 % hullN, det: { panel: true }, prof: 'round' });
+        mk('ring', { R: 0.044 * L, t: 0.005 * L, gap: 0 }, tx * L, ty * L, 0, 1.5 * H0, 0.3 * H0, { paint: -1, det: {} });
+      }
+      for (const [fx, fy] of [[0.46, 0], [-0.46, 0], [0, 0.46], [0, -0.46]]) if (r() < 0.6) circle(fx * L, fy * L, 0.014 * L, 1.0 * H0, 0.3 * H0, { paint: -1, det: {}, em: { type: 'flare' }, prof: 'round' });
+      break;
+    }
+    case 'shipyard': {
+      const ax = 0.2 * L;
+      for (const sd of [-1, 1]) {
+        truss(sd * ax, -0.45 * L, sd * ax, 0.45 * L, 0.022 * L, 0.3 * H0, 1.0 * H0);
+        const no = 2 + Math.floor(r() * 2);
+        for (let k = 0; k < no; k++) if (keep()) box(sd * (ax + 0.065 * L), lerp(-0.3, 0.3, no > 1 ? k / (no - 1) : 0.5) * L, 0.035 * L, jit(0.06 * L), 0, 0.5 * H0, 1.2 * H0, { paint: paint(), det: { panel: true, windows: true } });
+        truss(sd * (ax + 0.1 * L), 0, sd * (ax + 0.16 * L), 0, 0.007 * L, 0.2 * H0, 0.4 * H0);
+        solar(sd * (ax + 0.24 * L), 0, 0.07 * L, 0.3 * L, 0, 0.2 * H0);
+        for (let y = -0.42; y <= 0.42; y += 0.14) beacon(sd * ax, y * L, 0.006 * L, 1.4 * H0, emis);
+      }
+      truss(-ax - 0.02 * L, -0.45 * L, ax + 0.02 * L, -0.45 * L, 0.026 * L, 0.3 * H0, 1.0 * H0);
+      const ng = 3;
+      for (let k = 0; k < ng; k++) {
+        const y = lerp(-0.28, 0.32, k / (ng - 1)) * L;
+        beam(-ax, y, ax, y, 0.01 * L, 1.5 * H0, 0.4 * H0, { paint: -1, det: {} });
+        box((r() * 2 - 1) * ax * 0.7, y, 0.022 * L, 0.02 * L, 0, 1.9 * H0, 0.4 * H0, { paint: 1 % hullN, det: { panel: true } });
+      }
+      mk('trap', { r1: 0.1 * L, r2: 0.02 * L, he: 0.32 * L }, 0, 0.02 * L, 0, 0, 0.8 * H0, { lat: true, paint: 0, det: {}, prof: st.bevel });
+      break;
+    }
+    case 'relay': {
+      circle(0, 0, 0.07 * L, 0.4 * H0, 1.4 * H0, { det: { panel: true, windows: true } });
+      const na = r() < 0.5 ? 3 : 4, a0 = Math.PI / 2;
+      for (let i = 0; i < na; i++) {
+        const a = a0 + i / na * TAU, dx = Math.cos(a), dy = Math.sin(a), ex = 0.38 * L;
+        truss(dx * 0.065 * L, dy * 0.065 * L, dx * ex, dy * ex, 0.011 * L, 0.3 * H0, 0.6 * H0);
+        circle(dx * (ex + 0.06 * L), dy * (ex + 0.06 * L), jit(0.1 * L), 0.6 * H0, 0.9 * H0, { paint: 0, det: { dish: true }, prof: 'round' });
+        const px = -dy, py = dx;
+        for (const sd of [-1, 1]) solar(dx * 0.22 * L + px * sd * 0.055 * L, dy * 0.22 * L + py * sd * 0.055 * L, 0.03 * L, 0.06 * L, a / D2R - 90, 0.2 * H0);
+        beacon(dx * (ex + 0.17 * L), dy * (ex + 0.17 * L), 0.007 * L, 1.6 * H0, emis);
+      }
+      break;
+    }
+  }
+  const seedStr = 'st|' + arch.id + '|' + brand.id + '|' + seed;
+  finalizeParts(parts, brand, seedStr, L, { jitter: true });
+  return { brand: brand.id, size: 'station', seed, L, coreH: H0, coreTemplate: arch.id, parts, detailScale: arch.detailScale || 5, noShield: true };
+}
+
+function generateStation(catalog, archId, brandId, seed) {
+  const arch = catalog.stations.find(a => a.id === archId), brand = catalog.brands.find(b => b.id === brandId);
+  const ship = assembleStation(arch, brand, seed);
+  const maps = bake(ship, brand, { res: arch.res || 768, length: ship.L });
+  return { ship, maps };
+}
+
 function generate(catalog, brandId, sizeId, seed) {
   const brand = catalog.brands.find(b => b.id === brandId);
   const sizeIdx = catalog.sizes.findIndex(s => s.id === sizeId);
@@ -674,6 +904,6 @@ function describe(ship) {
   };
 }
 
-const api = { generate, assemble, bake, describe, hexRGB };
+const api = { generate, generateStation, assemble, assembleStation, bake, describe, hexRGB };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ShipGen = api;
 })(typeof self !== 'undefined' ? self : this);

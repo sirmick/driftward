@@ -201,5 +201,13 @@
         "capital":  { "hull": 6, "wing": 0, "fin": 1, "nacelle": 1, "engine": 5, "weapon": 9, "pod": 2, "ring": 0, "bridge": 1 }
       }
     }
+  ],
+  "stations": [
+    { "id": "ring", "name": "Ring habitat", "blurb": "A spinning torus on spokes around a docking hub, with solar wings.", "layout": "ring", "diameter": [700, 1100], "res": 768, "spin": 0.05 },
+    { "id": "port", "name": "Container port", "blurb": "A cargo spine whose piers are stacked with shipping containers.", "layout": "port", "diameter": [800, 1200], "res": 896, "spin": 0.006 },
+    { "id": "forge", "name": "Forge", "blurb": "An ore smelter: a white-hot furnace ringed by glowing radiator fins.", "layout": "forge", "diameter": [450, 750], "res": 768, "spin": 0.012 },
+    { "id": "refinery", "name": "Refinery", "blurb": "Tank farms, cracking towers and flare stacks on a cross truss.", "layout": "refinery", "diameter": [500, 900], "res": 768, "spin": 0.008 },
+    { "id": "shipyard", "name": "Shipyard", "blurb": "An open dry dock with gantries, offices and a hull on the slip.", "layout": "shipyard", "diameter": [650, 1000], "res": 768, "spin": 0.004 },
+    { "id": "relay", "name": "Relay array", "blurb": "A comms hub with dish-tipped arms and solar wings.", "layout": "relay", "diameter": [350, 600], "res": 640, "spin": 0.02 }
   ]
 }

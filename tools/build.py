@@ -6,7 +6,7 @@ t = (src / 'template.html').read_text()
 catalog = json.dumps(json.loads((src / 'catalog.json').read_text()), indent=1)
 assert '</script' not in catalog
 app = (src / 'app.js').read_text()
-for marker, name in (('/*FLY*/', 'fly.js'), ('/*PLANETS*/', 'planets.js'), ('/*SUNS*/', 'suns.js')):
+for marker, name in (('/*FLY*/', 'fly.js'), ('/*PLANETS*/', 'planets.js'), ('/*SUNS*/', 'suns.js'), ('/*STATIONS*/', 'stations.js'), ('/*ASTEROIDS*/', 'asteroids.js')):
     app = app.replace(marker, (src / name).read_text())
 t = t.replace('/*CATALOG*/', catalog).replace('/*GEN*/', (src / 'gen.js').read_text()).replace('/*APP*/', app)
 out = root / 'index.html'

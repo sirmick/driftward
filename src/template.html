@@ -101,6 +101,9 @@ dl.keys dd { margin: 0; color: var(--muted); }
 .pl-name { margin: 0; font: 700 22px/1.1 var(--f-display); letter-spacing: .02em; }
 .pl-stack { display: grid; gap: 10px; }
 pre.specpre { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font: 400 11px/1.45 var(--f-mono); color: #c9d2dc; }
+dl.statlist { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 12.5px; }
+dl.statlist dt { color: var(--muted); }
+dl.statlist dd { margin: 0; font-family: var(--f-mono); font-size: 12px; text-align: right; }
 .note { margin: 0; font-size: 12.5px; color: var(--muted); max-width: 60ch; }
 
 #brands { display: grid; gap: 8px; }
@@ -147,7 +150,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
   <header class="bar">
     <div class="brandmark">
       <h1>Driftward</h1>
-      <p>Procedural ships, planets and suns from JSON catalogs, with inertial flight</p>
+      <p>Procedural ships, stations, planets, suns and asteroids from JSON, with inertial flight</p>
     </div>
     <div class="spacer"></div>
     <div class="tabs" role="group" aria-label="View">
@@ -155,6 +158,8 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
       <button type="button" data-view="detail" aria-pressed="false">Ship</button>
       <button type="button" data-view="planets" aria-pressed="false">Planets</button>
       <button type="button" data-view="suns" aria-pressed="false">Suns</button>
+      <button type="button" data-view="stations" aria-pressed="false">Stations</button>
+      <button type="button" data-view="asteroids" aria-pressed="false">Asteroids</button>
       <button type="button" data-view="fly" aria-pressed="false">Fly</button>
     </div>
   </header>
@@ -183,6 +188,37 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
     </section>
 
     <aside class="rail">
+      <div class="sec" id="station-panel" hidden>
+        <h2>Station</h2>
+        <div id="st-gridnote">
+          <p class="note">Six archetypes, each built in an owning brand's style: the same palette, bevels, symmetry and wear as that brand's ships. Click one to open it in the builder.</p>
+          <div class="json-actions" style="margin-top:10px"><button class="btn primary" type="button" id="st-newset">New set</button></div>
+        </div>
+        <div id="st-editor" hidden>
+          <div class="pl-head"><div><p id="st-name" class="pl-name"></p><p id="st-kind" class="note"></p></div><button class="btn" type="button" id="st-back">← All stations</button></div>
+          <div class="flypick"><label for="st-arch">Archetype</label><select id="st-arch" style="grid-column: span 2"></select></div>
+          <div class="flypick"><label for="st-brand">Built by</label><select id="st-brand" style="grid-column: span 2"></select></div>
+          <div class="json-actions"><button class="btn" type="button" id="st-random">New layout</button></div>
+          <dl id="st-stats" class="statlist"></dl>
+          <details><summary>Station JSON</summary><pre id="st-json" class="specpre"></pre></details>
+        </div>
+      </div>
+
+      <div class="sec" id="asteroid-panel" hidden>
+        <h2>Asteroid</h2>
+        <div id="as-gridnote">
+          <p class="note">Ten compositions from carbonaceous rubble to ore-veined crystal. Sizes are to scale within the set. Click one to open it in the builder.</p>
+          <div class="json-actions" style="margin-top:10px"><button class="btn primary" type="button" id="as-newset">New set</button></div>
+        </div>
+        <div id="as-editor" hidden>
+          <div class="pl-head"><div><p id="as-name" class="pl-name"></p><p id="as-kind" class="note"></p></div><button class="btn" type="button" id="as-back">← All asteroids</button></div>
+          <div class="flypick"><label for="as-type">Type</label><select id="as-type" style="grid-column: span 2"></select></div>
+          <div id="as-sliders" class="pl-stack"></div>
+          <div class="json-actions"><button class="btn" type="button" id="as-random">New shape</button></div>
+          <details><summary>Asteroid JSON</summary><pre id="as-json" class="specpre"></pre></details>
+        </div>
+      </div>
+
       <div class="sec" id="sun-panel" hidden>
         <h2>Star</h2>
         <div id="sn-gridnote">
@@ -288,7 +324,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
         <p class="note">Throttle above 85% is a burn: longer, whiter plumes. Drifting lights, engines and shield hits all light nearby hulls, up to 16 lights per ship. <span id="hdr-note"></span></p>
       </div>
 
-      <div class="sec" data-hide="planets suns">
+      <div class="sec" data-hide="planets suns asteroids">
         <h2>Maps</h2>
         <div class="seg" id="seg-map" role="group" aria-label="Map shown"></div>
         <div class="checks">
@@ -296,7 +332,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
         </div>
       </div>
 
-      <div class="sec" data-hide="planets suns">
+      <div class="sec" data-hide="planets suns stations asteroids">
         <h2>Seed</h2>
         <div class="seedrow">
           <input id="seed" type="text" spellcheck="false" aria-label="Seed">
@@ -305,7 +341,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
         <p class="note">Brand, size and seed fully determine a ship, so the same seed always rebuilds the same fleet.</p>
       </div>
 
-      <div class="sec" data-hide="planets suns">
+      <div class="sec" data-hide="planets suns stations asteroids">
         <h2>Catalogs</h2>
         <div id="brands"></div>
         <div class="json-head"><h2>Brand JSON</h2><span id="json-title"></span></div>
