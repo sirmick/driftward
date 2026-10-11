@@ -1,0 +1,16 @@
+{
+  "name": "driftward",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Driftward: an Escape Velocity-style browser space game with LLM-generated content",
+  "license": "MIT",
+  "scripts": {
+    "build": "python3 tools/build.py",
+    "check": "npm run build && node tools/check.js",
+    "preview": "node tools/preview.js"
+  },
+  "devDependencies": {
+    "glslang-validator-prebuilt-predownloaded": "0.0.2",
+    "pngjs": "7.0.0"
+  }
+}
