@@ -150,7 +150,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
   <header class="bar">
     <div class="brandmark">
       <h1>Driftward</h1>
-      <p>Procedural ships, stations, planets, suns and asteroids from JSON, with inertial flight</p>
+      <p>Procedural ships, heavies, stations, planets, suns and asteroids from JSON, with inertial flight</p>
     </div>
     <div class="spacer"></div>
     <div class="tabs" role="group" aria-label="View">
@@ -158,6 +158,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
       <button type="button" data-view="detail" aria-pressed="false">Ship</button>
       <button type="button" data-view="planets" aria-pressed="false">Planets</button>
       <button type="button" data-view="suns" aria-pressed="false">Suns</button>
+      <button type="button" data-view="heavies" aria-pressed="false">Heavies</button>
       <button type="button" data-view="stations" aria-pressed="false">Stations</button>
       <button type="button" data-view="asteroids" aria-pressed="false">Asteroids</button>
       <button type="button" data-view="fly" aria-pressed="false">Fly</button>
@@ -201,6 +202,22 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
           <div class="json-actions"><button class="btn" type="button" id="st-random">New layout</button></div>
           <dl id="st-stats" class="statlist"></dl>
           <details><summary>Station JSON</summary><pre id="st-json" class="specpre"></pre></details>
+        </div>
+      </div>
+
+      <div class="sec" id="heavy-panel" hidden>
+        <h2>Heavy ship</h2>
+        <div id="hv-gridnote">
+          <p class="note">Six specialist hulls (freighter, agri ship, mining tug with a towed refinery, colony ship, fleet carrier, survey vessel), each built in an owning brand's style. Click one to open it in the builder.</p>
+          <div class="json-actions" style="margin-top:10px"><button class="btn primary" type="button" id="hv-newset">New set</button></div>
+        </div>
+        <div id="hv-editor" hidden>
+          <div class="pl-head"><div><p id="hv-name" class="pl-name"></p><p id="hv-kind" class="note"></p></div><button class="btn" type="button" id="hv-back">← All heavies</button></div>
+          <div class="flypick"><label for="hv-arch">Hull</label><select id="hv-arch" style="grid-column: span 2"></select></div>
+          <div class="flypick"><label for="hv-brand">Built by</label><select id="hv-brand" style="grid-column: span 2"></select></div>
+          <div class="json-actions"><button class="btn" type="button" id="hv-random">New layout</button></div>
+          <dl id="hv-stats" class="statlist"></dl>
+          <details><summary>Ship JSON</summary><pre id="hv-json" class="specpre"></pre></details>
         </div>
       </div>
 
@@ -332,7 +349,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
         </div>
       </div>
 
-      <div class="sec" data-hide="planets suns stations asteroids">
+      <div class="sec" data-hide="planets suns stations heavies asteroids">
         <h2>Seed</h2>
         <div class="seedrow">
           <input id="seed" type="text" spellcheck="false" aria-label="Seed">
@@ -341,7 +358,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
         <p class="note">Brand, size and seed fully determine a ship, so the same seed always rebuilds the same fleet.</p>
       </div>
 
-      <div class="sec" data-hide="planets suns stations asteroids">
+      <div class="sec" data-hide="planets suns stations heavies asteroids">
         <h2>Catalogs</h2>
         <div id="brands"></div>
         <div class="json-head"><h2>Brand JSON</h2><span id="json-title"></span></div>

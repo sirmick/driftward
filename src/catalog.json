@@ -209,5 +209,13 @@
     { "id": "refinery", "name": "Refinery", "blurb": "Tank farms, cracking towers and flare stacks on a cross truss.", "layout": "refinery", "diameter": [500, 900], "res": 768, "spin": 0.008 },
     { "id": "shipyard", "name": "Shipyard", "blurb": "An open dry dock with gantries, offices and a hull on the slip.", "layout": "shipyard", "diameter": [650, 1000], "res": 768, "spin": 0.004 },
     { "id": "relay", "name": "Relay array", "blurb": "A comms hub with dish-tipped arms and solar wings.", "layout": "relay", "diameter": [350, 600], "res": 640, "spin": 0.02 }
+  ],
+  "heavies": [
+    { "id": "freighter", "name": "Bulk freighter", "blurb": "A cargo spine racked with container bays, driven by a heavy engine block.", "layout": "freighter", "diameter": [700, 1000], "res": 896, "detailScale": 3 },
+    { "id": "agri", "name": "Agri ship", "blurb": "A long spine of glass farm domes feeding the outer colonies.", "layout": "agri", "diameter": [900, 1300], "res": 896, "detailScale": 3 },
+    { "id": "miner", "name": "Mining tug", "blurb": "A drill-nosed tug dragging its own refinery on tow cables.", "layout": "miner", "diameter": [700, 1000], "res": 896, "detailScale": 3 },
+    { "id": "colony", "name": "Colony ship", "blurb": "A spin ring, farm domes, cargo bays and solar wings: a town under way.", "layout": "colony", "diameter": [1500, 2200], "res": 1024, "detailScale": 4 },
+    { "id": "carrier", "name": "Fleet carrier", "blurb": "A flight deck with fighter launch tubes and side cradles for docked frigates.", "layout": "carrier", "diameter": [900, 1300], "res": 960, "detailScale": 3 },
+    { "id": "explorer", "name": "Survey vessel", "blurb": "Sensor dish, science probe racks, shuttle bays and long antenna booms.", "layout": "explorer", "diameter": [600, 900], "res": 896, "detailScale": 3 }
   ]
 }

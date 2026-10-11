@@ -18,7 +18,7 @@ const state = {
   view: 'grid', brand: catalog.brands[0].id, size: catalog.sizes[2].id,
   map: 0, spin: true, trueScale: false, shadow: true, pl: true,
   sunAz: 135, sunEl: 35, star: 'sol', seed: 'kestrel-7',
-  planetSeed: 'set-1', planetFocus: -1, sunSeed: 's1', sunFocus: -1, stSeed: 'stations-1', stFocus: -1, astSeed: 'rocks-1', astFocus: -1, hoverItem: -1, sunOff: [-0.17, 0.12], flares: true,
+  planetSeed: 'set-1', planetFocus: -1, sunSeed: 's1', sunFocus: -1, stSeed: 'stations-1', stFocus: -1, hvSeed: 'heavies-1', hvFocus: -1, astSeed: 'rocks-1', astFocus: -1, hoverItem: -1, sunOff: [-0.17, 0.12], flares: true,
   flyBrand: 'halcyon', flySize: 'fighter', traffic: 60, zoom: 1, flightModel: 'assist', pirates: false,
   throttle: 0.6, bloom: 0.9, lightsN: 4, shields: true, shieldIdle: 0.3, barrage: false, click: 'inspect',
   mouse: null, hoverKey: null, editBrand: catalog.brands[0].id
@@ -364,6 +364,7 @@ function onResult(m) {
   updateProgress();
   if (state.view === 'detail' && m.key === keyOf(state.brand, state.size)) renderInfo();
   if (STN) STN.onBaked(m.key);
+  if (HVY) HVY.onBaked(m.key);
 }
 function pump() {
   if (!workers.length) {
@@ -404,11 +405,11 @@ function rebakeBrand(id) {
 }
 function updateProgress() {
   const total = catalog.brands.length * catalog.sizes.length;
-  let done = 0; ships.forEach((s, k) => { if (s.ready && !s.pending && !k.startsWith('st|')) done++; });
+  let done = 0; ships.forEach((s, k) => { if (s.ready && !s.pending && !/^(st|hv)\|/.test(k)) done++; });
   const el = $('progress');
-  let stPending = 0; ships.forEach((s, k) => { if (k.startsWith('st|') && s.pending) stPending++; });
+  let stPending = 0; ships.forEach((s, k) => { if (/^(st|hv)\|/.test(k) && s.pending) stPending++; });
   el.hidden = done >= total && stPending === 0;
-  el.textContent = done < total ? `Baking ${done} of ${total}` : `Baking ${stPending} station${stPending === 1 ? '' : 's'}`;
+  el.textContent = done < total ? `Baking ${done} of ${total}` : `Baking ${stPending} large asset${stPending === 1 ? '' : 's'}`;
 }
 function showError(key, msg) { $('json-err').textContent = `Bake failed for ${key.replace('|', ' / ')}: ${msg}`; }
 
@@ -602,7 +603,7 @@ function frame(now) {
   const sv = sunVec(); const sl = Math.hypot(sv[0], sv[1]) || 1;
   const RW = canvas.width, RH = canvas.height;
 
-  let maxExt = 1; ships.forEach((s, k) => { if (s.ready && !k.startsWith('st|')) maxExt = Math.max(maxExt, s.maps.extent); });
+  let maxExt = 1; ships.forEach((s, k) => { if (s.ready && !/^(st|hv)\|/.test(k)) maxExt = Math.max(maxExt, s.maps.extent); });
   // resolve each visible ship's transform for this frame
   const vis = [];
   cells.forEach((c, i) => {
@@ -795,6 +796,7 @@ function postProcess() {
 // Grid-and-builder tabs that share layout, hover and click handling
 const GENERIC = {
   stations: { mod: () => STN, err: () => STN_ERR, focus: 'stFocus', grid: 'Click a station to open it in the builder · drag to move the sun', one: 'Drag to move the sun · hover for a work light' },
+  heavies: { mod: () => HVY, err: () => HVY_ERR, focus: 'hvFocus', grid: 'Click a ship to open it in the builder · throttle lives under Drives and effects', one: 'Drag to move the sun · hover for a work light' },
   asteroids: { mod: () => AST, err: () => AST_ERR, focus: 'astFocus', grid: 'Sizes are to scale within the set · click one to open it in the builder', one: 'Drag to move the sun' }
 };
 
@@ -876,6 +878,7 @@ function setView(v) {
   $('planet-panel').hidden = v !== 'planets';
   $('sun-panel').hidden = v !== 'suns';
   $('station-panel').hidden = v !== 'stations';
+  $('heavy-panel').hidden = v !== 'heavies';
   $('asteroid-panel').hidden = v !== 'asteroids';
   if (GENERIC[v] && GENERIC[v].mod()) GENERIC[v].mod().sync();
   if (v === 'suns' && SUNS) SUNS.sync();

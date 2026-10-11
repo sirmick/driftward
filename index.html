@@ -150,7 +150,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
   <header class="bar">
     <div class="brandmark">
       <h1>Driftward</h1>
-      <p>Procedural ships, stations, planets, suns and asteroids from JSON, with inertial flight</p>
+      <p>Procedural ships, heavies, stations, planets, suns and asteroids from JSON, with inertial flight</p>
     </div>
     <div class="spacer"></div>
     <div class="tabs" role="group" aria-label="View">
@@ -158,6 +158,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
       <button type="button" data-view="detail" aria-pressed="false">Ship</button>
       <button type="button" data-view="planets" aria-pressed="false">Planets</button>
       <button type="button" data-view="suns" aria-pressed="false">Suns</button>
+      <button type="button" data-view="heavies" aria-pressed="false">Heavies</button>
       <button type="button" data-view="stations" aria-pressed="false">Stations</button>
       <button type="button" data-view="asteroids" aria-pressed="false">Asteroids</button>
       <button type="button" data-view="fly" aria-pressed="false">Fly</button>
@@ -201,6 +202,22 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
           <div class="json-actions"><button class="btn" type="button" id="st-random">New layout</button></div>
           <dl id="st-stats" class="statlist"></dl>
           <details><summary>Station JSON</summary><pre id="st-json" class="specpre"></pre></details>
+        </div>
+      </div>
+
+      <div class="sec" id="heavy-panel" hidden>
+        <h2>Heavy ship</h2>
+        <div id="hv-gridnote">
+          <p class="note">Six specialist hulls (freighter, agri ship, mining tug with a towed refinery, colony ship, fleet carrier, survey vessel), each built in an owning brand's style. Click one to open it in the builder.</p>
+          <div class="json-actions" style="margin-top:10px"><button class="btn primary" type="button" id="hv-newset">New set</button></div>
+        </div>
+        <div id="hv-editor" hidden>
+          <div class="pl-head"><div><p id="hv-name" class="pl-name"></p><p id="hv-kind" class="note"></p></div><button class="btn" type="button" id="hv-back">← All heavies</button></div>
+          <div class="flypick"><label for="hv-arch">Hull</label><select id="hv-arch" style="grid-column: span 2"></select></div>
+          <div class="flypick"><label for="hv-brand">Built by</label><select id="hv-brand" style="grid-column: span 2"></select></div>
+          <div class="json-actions"><button class="btn" type="button" id="hv-random">New layout</button></div>
+          <dl id="hv-stats" class="statlist"></dl>
+          <details><summary>Ship JSON</summary><pre id="hv-json" class="specpre"></pre></details>
         </div>
       </div>
 
@@ -332,7 +349,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
         </div>
       </div>
 
-      <div class="sec" data-hide="planets suns stations asteroids">
+      <div class="sec" data-hide="planets suns stations heavies asteroids">
         <h2>Seed</h2>
         <div class="seedrow">
           <input id="seed" type="text" spellcheck="false" aria-label="Seed">
@@ -341,7 +358,7 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
         <p class="note">Brand, size and seed fully determine a ship, so the same seed always rebuilds the same fleet.</p>
       </div>
 
-      <div class="sec" data-hide="planets suns stations asteroids">
+      <div class="sec" data-hide="planets suns stations heavies asteroids">
         <h2>Catalogs</h2>
         <div id="brands"></div>
         <div class="json-head"><h2>Brand JSON</h2><span id="json-title"></span></div>
@@ -2289,6 +2306,80 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
    "res": 640,
    "spin": 0.02
   }
+ ],
+ "heavies": [
+  {
+   "id": "freighter",
+   "name": "Bulk freighter",
+   "blurb": "A cargo spine racked with container bays, driven by a heavy engine block.",
+   "layout": "freighter",
+   "diameter": [
+    700,
+    1000
+   ],
+   "res": 896,
+   "detailScale": 3
+  },
+  {
+   "id": "agri",
+   "name": "Agri ship",
+   "blurb": "A long spine of glass farm domes feeding the outer colonies.",
+   "layout": "agri",
+   "diameter": [
+    900,
+    1300
+   ],
+   "res": 896,
+   "detailScale": 3
+  },
+  {
+   "id": "miner",
+   "name": "Mining tug",
+   "blurb": "A drill-nosed tug dragging its own refinery on tow cables.",
+   "layout": "miner",
+   "diameter": [
+    700,
+    1000
+   ],
+   "res": 896,
+   "detailScale": 3
+  },
+  {
+   "id": "colony",
+   "name": "Colony ship",
+   "blurb": "A spin ring, farm domes, cargo bays and solar wings: a town under way.",
+   "layout": "colony",
+   "diameter": [
+    1500,
+    2200
+   ],
+   "res": 1024,
+   "detailScale": 4
+  },
+  {
+   "id": "carrier",
+   "name": "Fleet carrier",
+   "blurb": "A flight deck with fighter launch tubes and side cradles for docked frigates.",
+   "layout": "carrier",
+   "diameter": [
+    900,
+    1300
+   ],
+   "res": 960,
+   "detailScale": 3
+  },
+  {
+   "id": "explorer",
+   "name": "Survey vessel",
+   "blurb": "Sensor dish, science probe racks, shuttle bays and long antenna booms.",
+   "layout": "explorer",
+   "diameter": [
+    600,
+    900
+   ],
+   "res": 896,
+   "detailScale": 3
+  }
  ]
 }</script>
 <script id="gen">/* Shipwright generator: brand catalog + size + seed -> part list -> baked maps.
@@ -2794,7 +2885,7 @@ function bake(ship, brand, size) {
 
       if (smooth) { // organic mottling + edge darkening
         const m = fbm(wxd * 0.06 + 3, wyd * 0.06, brandSeed);
-        const c2 = hullCols[(p.paint + 1) % hullCols.length]; mixc(c2, sstep(0.35, 0.75, m) * 0.6);
+        const c2 = hullCols[(((p.paint + 1) % hullCols.length) + hullCols.length) % hullCols.length]; mixc(c2, sstep(0.35, 0.75, m) * 0.6);
         mulc(0.72 + 0.28 * Math.min(t / inRd, 1));
       }
       if (p.paint === -2) { // glass canopy streak
@@ -2950,6 +3041,32 @@ function bake(ship, brand, size) {
         const c = p.em.col ? hexRGB(p.em.col) : emissive, d0 = Math.hypot(lx, ly) / inRd;
         emit(c, 2.4 * (1 - sstep(0, 1, d0))); mixc(c, 0.4);
       }
+      if (p.det.agri) { // farm dome: crop fields under glass
+        const d0 = Math.hypot(lx, ly) / inRd;
+        const S = 7, cx = Math.floor(lx / S + 50), cy = Math.floor(ly / S + 50), hh = h2(cx, cy, p.seedI);
+        const greens = [[0.16, 0.36, 0.12], [0.3, 0.46, 0.14], [0.52, 0.5, 0.18], [0.1, 0.28, 0.12], [0.42, 0.34, 0.16]];
+        const g = greens[Math.floor(hh * greens.length)];
+        cr = g[0]; cg = g[1]; cb = g[2];
+        const rowAng = hh * Math.PI, rv = lx * Math.cos(rowAng) + ly * Math.sin(rowAng);
+        if (frac(rv / 0.9) < 0.35) mulc(0.78);
+        if (frac(lx / S) < 0.06 || frac(ly / S) < 0.06) mulc(0.6);
+        if (Math.abs(frac(Math.atan2(ly, lx) * 8 / (2 * Math.PI)) - 0.5) < 0.03 || d0 > 0.94) mixc([0.6, 0.64, 0.66], 0.8);
+        const sh = sstep(0.12, 0.0, Math.abs(lx / inRd + 0.3 - ly / inRd * 0.4)) * 0.12; cr += sh; cg += sh; cb += sh * 1.2;
+        emit([1.0, 0.82, 0.55], 0.06); spec = 0.35;
+      }
+      if (p.det.deck) { // flight deck: dark deck, centerline dashes, edge stripes, landing lights
+        cr = 0.1; cg = 0.11; cb = 0.13; spec = 0.25;
+        const ax = Math.abs(lx), w = p.a.hw / DS;
+        if (ax < 0.5 && frac(ly / 8) < 0.55) mixc(accent, 0.9);
+        if (Math.abs(ax - w * 0.82) < 0.35) mixc([0.85, 0.75, 0.2], 0.8);
+        if (Math.abs(ax - w * 0.5) < 0.2 && frac(ly / 3) < 0.4) mixc([0.6, 0.62, 0.66], 0.6);
+        if (vn > 0.8 && Math.abs(ax - w * 0.82) < 0.6 && frac(ly / 2) < 0.4) emit([1, 0.9, 0.6], 1.5);
+      }
+      if (p.det.tube) { // launch tube: dark slot with lit mouth
+        cr = 0.03; cg = 0.035; cb = 0.045; spec = 0.2; dh -= p.H * 0.4;
+        if (vn > 0.82) emit(accent, 1.6);
+        else if (frac(ly / 2.5) < 0.2) emit(accent, 0.35);
+      }
       if (p.em && p.em.type === 'flare') {
         const d0 = Math.hypot(lx, ly) / inRd, n = fbm(wxd * 0.6, wyd * 0.6, 21);
         emit([1.0, 0.55, 0.2], (2.2 + 1.4 * n) * (1 - sstep(0, 1, d0))); emit([1, 0.95, 0.8], 2 * (1 - sstep(0, 0.35, d0)));
@@ -3009,7 +3126,7 @@ function finalizeParts(parts, brand, seedStr, L, opts) {
   const st = brand.style, D = st.detail || {}, r = rng32(hashStr(seedStr + '|fin'));
   const sym = st.symmetry == null ? 1 : st.symmetry;
   for (const p of parts) {
-    if (opts.jitter && sym < 1 && !p.fixed) { p.x += (r() * 2 - 1) * 0.004 * L; p.y += (r() * 2 - 1) * 0.004 * L; p.ang += (r() * 2 - 1) * 4; }
+    if (opts.jitter && sym < 1 && !p.fixed && partMetrics(p).rad < 0.2 * L) { p.x += (r() * 2 - 1) * 0.004 * L; p.y += (r() * 2 - 1) * 0.004 * L; p.ang += (r() * 2 - 1) * 4; }
     if (st.union === 'smooth') { p.lat = false; if (p.prof === 'chamfer') p.prof = 'round'; }
     if (p.det.panel && (D.rivets || 0) > 0) p.det.rivets = true;
     if (p.det.panel && (D.veins || 0) > 0 && r() < 0.6) p.det.veins = true;
@@ -3042,6 +3159,22 @@ function assembleStation(arch, brand, seed) {
   const jit = v => v * (1 + (sym < 1 ? (r() * 2 - 1) * 0.25 : 0));
   const pick = a => a[Math.floor(r() * a.length)];
   const TAU = Math.PI * 2;
+
+  // heavy-ship helpers: +y is forward, engines face aft
+  const PORT = '#ff4a3a', STBD = '#3bff7a';
+  const engine = (x, y, rad, z) => mk('trap', { r1: rad, r2: rad * 0.72, he: rad * 0.85 }, x, y, 0, z == null ? 0.2 * H0 : z, 0.9 * H0, { paint: -1, det: {}, em: { type: 'exhaust', glow: 0.55 }, prof: st.bevel, fixed: true });
+  const engines = (n, y, rad, spread, z) => { for (let i = 0; i < n; i++) engine((i - (n - 1) / 2) * spread, y, rad, z); };
+  const navLights = (x, y) => { beacon(-x, y, 0.006 * L, 1.6 * H0, PORT); beacon(x, y, 0.006 * L, 1.6 * H0, STBD); };
+  const containers = (x0, y0, cols, rows, cw, cl, z) => {
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+      if (r() > 0.9) continue;
+      const stack = r() < 0.3 ? 2 : 1;
+      for (let k = 0; k < stack; k++) box(x0 + i * cw * 2.25, y0 + j * cl * 2.2, cw, cl, 0, z + k * 0.35 * H0, 0.34 * H0, { paint: -1, colOverride: pick(CONTAINER_COLS), det: { container: true }, prof: 'chamfer', role: 'pod' });
+    }
+  };
+  const dome = (x, y, rad, z) => circle(x, y, rad, z == null ? 0.4 * H0 : z, rad * 0.55, { paint: -1, det: { agri: true }, prof: 'round' });
+  const smallShip = (x, y, len, ang, z) => mk('trap', { r1: len * 0.32, r2: len * 0.08, he: len / 2 }, x, y, ang || 0, z == null ? 0.9 * H0 : z, 0.35 * H0, { paint: 1 % hullN, det: { panel: true }, prof: st.bevel });
+  const tank = (x, y, rad, len, ang, z) => mk('ucap', { r1: rad, r2: rad, len }, x, y, ang || 0, z == null ? 0.3 * H0 : z, rad * 0.9, { paint: paint(), det: { panel: true }, prof: 'round' });
 
   switch (arch.layout) {
     case 'ring': {
@@ -3162,6 +3295,142 @@ function assembleStation(arch, brand, seed) {
       }
       break;
     }
+    case 'freighter': {
+      const W = 0.115 * L, nb = 5 + Math.floor(r() * 3), top = 0.36 * L, bot = -0.38 * L, bl = (top - bot) / nb;
+      box(0, -0.01 * L, 0.022 * L, 0.42 * L, 0, 0.3 * H0, 0.9 * H0, { det: { panel: true, windows: true } });
+      box(0, 0.43 * L, 0.05 * L, 0.035 * L, 0, 0.8 * H0, 1.4 * H0, { det: { panel: true, windows: true } });
+      mk('ucap', { r1: 0.02 * L, r2: 0.012 * L, len: 0.05 * L }, 0, 0.47 * L, 0, 1.6 * H0, 0.5 * H0, { paint: -2, det: {}, prof: 'round' });
+      const cw = 0.0095 * L, cl = 0.017 * L;
+      for (let i = 0; i < nb; i++) {
+        const y0 = top - i * bl;
+        for (const sd of [-1, 1]) {
+          truss(sd * W, y0, sd * W, y0 - bl * 0.94, 0.006 * L, 0.2 * H0, 0.7 * H0);
+          truss(sd * 0.022 * L, y0 - bl * 0.03, sd * W, y0 - bl * 0.03, 0.005 * L, 0.2 * H0, 0.7 * H0);
+          const cols = Math.max(1, Math.floor((W - 0.03 * L) / (cw * 2.25))), rows = Math.max(1, Math.floor((bl * 0.85) / (cl * 2.2)));
+          containers(sd * 0.032 * L + (sd < 0 ? -(cols - 1) * cw * 2.25 : 0), y0 - bl * 0.12 - (rows - 1) * cl * 2.2, cols, rows, cw, cl, 0.5 * H0);
+        }
+      }
+      box(0, -0.43 * L, 0.075 * L, 0.04 * L, 0, 0.2 * H0, 1.5 * H0, { det: { panel: true } });
+      engines(3 + Math.floor(r() * 3), -0.48 * L, 0.02 * L, 0.045 * L);
+      for (const sd of [-1, 1]) box(sd * 0.1 * L, -0.42 * L, 0.025 * L, 0.012 * L, 0, 0.3 * H0, 0.4 * H0, { paint: -1, det: { radiator: 0.4 }, prof: 'chamfer' });
+      navLights(W, top); navLights(W, bot + 0.02 * L);
+      break;
+    }
+    case 'agri': {
+      box(0, 0, 0.016 * L, 0.45 * L, 0, 0.3 * H0, 0.9 * H0, { det: { panel: true } });
+      box(0, 0.44 * L, 0.04 * L, 0.04 * L, 0, 0.7 * H0, 1.3 * H0, { det: { panel: true, windows: true } });
+      const np = 5 + Math.floor(r() * 3), R = 0.05 * L;
+      for (let i = 0; i < np; i++) {
+        const y = lerp(0.33, -0.28, i / (np - 1)) * L;
+        for (const sd of [-1, 1]) {
+          if (!keep()) continue;
+          beam(sd * 0.016 * L, y, sd * (0.04 * L + R * 0.2), y, 0.006 * L, 0.3 * H0, 0.5 * H0, { paint: -1, det: {} });
+          dome(sd * (0.045 * L + R), y, jit(R));
+        }
+        if (i % 2 === 0) tank(0, y + 0.03 * L, 0.012 * L, 0.05 * L, 0, 0.9 * H0);
+      }
+      for (const sd of [-1, 1]) { truss(sd * 0.016 * L, -0.36 * L, sd * 0.13 * L, -0.36 * L, 0.006 * L, 0.2 * H0, 0.5 * H0); solar(sd * 0.2 * L, -0.36 * L, 0.06 * L, 0.035 * L, 0, 0.3 * H0); }
+      box(0, -0.43 * L, 0.05 * L, 0.035 * L, 0, 0.2 * H0, 1.3 * H0, { det: { panel: true } });
+      engines(2 + Math.floor(r() * 2), -0.48 * L, 0.018 * L, 0.04 * L);
+      navLights(0.04 * L, 0.46 * L);
+      break;
+    }
+    case 'miner': {
+      mk('trap', { r1: 0.085 * L, r2: 0.05 * L, he: 0.15 * L }, 0, 0.27 * L, 0, 0, 1.6 * H0, { det: { panel: true, windows: true } });
+      circle(0, 0.45 * L, 0.045 * L, 0.6 * H0, 1.4 * H0, { paint: -1, det: { dish: true }, prof: 'round' });
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; box(Math.cos(a) * 0.05 * L, 0.45 * L + Math.sin(a) * 0.05 * L, 0.006 * L, 0.012 * L, a / D2R - 90, 0.8 * H0, 0.6 * H0, { paint: -1, det: {} }); }
+      circle(0, 0.45 * L, 0.012 * L, 2.2 * H0, 0.3 * H0, { paint: -1, det: {}, em: { type: 'furnace' }, prof: 'round' });
+      tank(-0.04 * L, 0.24 * L, 0.025 * L, 0.11 * L, 0, 1.3 * H0); tank(0.04 * L, 0.24 * L, 0.025 * L, 0.11 * L, 0, 1.3 * H0);
+      for (const sd of [-1, 1]) {
+        beam(sd * 0.07 * L, 0.2 * L, sd * 0.15 * L, 0.2 * L, 0.01 * L, 0.3 * H0, 0.7 * H0);
+        mk('ucap', { r1: 0.024 * L, r2: 0.018 * L, len: 0.13 * L }, sd * 0.155 * L, 0.18 * L, 0, 0.2 * H0, 1.1 * H0, { paint: paint(), det: { panel: true }, prof: 'round' });
+        engine(sd * 0.155 * L, 0.1 * L, 0.02 * L);
+        beam(sd * 0.05 * L, 0.12 * L, sd * 0.06 * L, -0.15 * L, 0.0025 * L, 0.5 * H0, 0.2 * H0, { paint: -1, det: {} });
+        box(sd * 0.11 * L, 0.4 * L, 0.012 * L, 0.05 * L, sd * -12, 0.4 * H0, 0.6 * H0, { paint: -1, det: { panel: true } });
+      }
+      // the towed refinery
+      truss(-0.11 * L, -0.16 * L, 0.11 * L, -0.16 * L, 0.008 * L, 0.2 * H0, 0.6 * H0);
+      truss(-0.11 * L, -0.46 * L, 0.11 * L, -0.46 * L, 0.008 * L, 0.2 * H0, 0.6 * H0);
+      truss(-0.11 * L, -0.16 * L, -0.11 * L, -0.46 * L, 0.008 * L, 0.2 * H0, 0.6 * H0);
+      truss(0.11 * L, -0.16 * L, 0.11 * L, -0.46 * L, 0.008 * L, 0.2 * H0, 0.6 * H0);
+      circle(0, -0.31 * L, 0.06 * L, 0.3 * H0, 1.6 * H0, { det: { panel: true } });
+      circle(0, -0.31 * L, 0.032 * L, 1.3 * H0, 0.8 * H0, { paint: -1, det: {}, em: { type: 'furnace' }, prof: 'round' });
+      for (const [tx, ty] of [[-0.065, -0.21], [0.065, -0.21], [-0.065, -0.41], [0.065, -0.41]]) if (keep()) circle(tx * L, ty * L, (0.03 + r() * 0.012) * L, 0.3 * H0, 0.035 * L, { paint: paint(), det: {}, prof: 'round' });
+      for (const sd of [-1, 1]) box(sd * 0.135 * L, -0.31 * L, 0.012 * L, 0.06 * L, 0, 0.2 * H0, 0.4 * H0, { paint: -1, det: { radiator: 0.8 }, prof: 'chamfer' });
+      circle(-0.1 * L, -0.47 * L, 0.01 * L, 1 * H0, 0.3 * H0, { paint: -1, det: {}, em: { type: 'flare' }, prof: 'round' });
+      navLights(0.085 * L, 0.13 * L);
+      break;
+    }
+    case 'colony': {
+      box(0, -0.02 * L, 0.018 * L, 0.45 * L, 0, 0.3 * H0, 0.9 * H0, { det: { panel: true, windows: true } });
+      circle(0, 0.45 * L, 0.075 * L, 0.5 * H0, 1.2 * H0, { det: { panel: true }, prof: 'round' });
+      circle(0, 0.45 * L, 0.03 * L, 1.2 * H0, 0.6 * H0, { paint: -1, det: { dish: true }, prof: 'round' });
+      const ry = 0.3 * L, RR = 0.13 * L;
+      mk('ring', { R: RR, t: 0.014 * L, gap: 0 }, 0, ry, 0, 0.2 * H0, 1.1 * H0, { det: { panel: true, windows: true }, prof: 'round' });
+      for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; truss(Math.cos(a) * 0.02 * L, ry + Math.sin(a) * 0.02 * L, Math.cos(a) * RR, ry + Math.sin(a) * RR, 0.005 * L, 0.2 * H0, 0.6 * H0); }
+      for (let i = 0; i < 8; i++) { const a = (i + 0.5) / 8 * Math.PI * 2; if (keep()) box(Math.cos(a) * RR, ry + Math.sin(a) * RR, 0.014 * L, 0.011 * L, a / D2R - 90, 0.6 * H0, 0.9 * H0, { paint: paint(), det: { panel: true, windows: true } }); }
+      for (let i = 0; i < 3; i++) { const y = (0.12 - i * 0.09) * L; for (const sd of [-1, 1]) { beam(sd * 0.018 * L, y, sd * 0.05 * L, y, 0.005 * L, 0.3 * H0, 0.4 * H0, { paint: -1, det: {} }); dome(sd * 0.085 * L, y, 0.038 * L); } }
+      const cw = 0.009 * L, cl = 0.017 * L;
+      for (const sd of [-1, 1]) {
+        truss(sd * 0.075 * L, -0.15 * L, sd * 0.075 * L, -0.32 * L, 0.004 * L, 0.2 * H0, 0.6 * H0);
+        containers(sd < 0 ? -0.07 * L : 0.026 * L, -0.31 * L, 3, 4, cw, cl, 0.5 * H0);
+        truss(sd * 0.018 * L, 0.02 * L, sd * 0.22 * L, 0.02 * L, 0.005 * L, 0.2 * H0, 0.4 * H0);
+        solar(sd * 0.27 * L, 0.02 * L, 0.05 * L, 0.06 * L, 0, 0.2 * H0);
+        box(sd * 0.09 * L, -0.4 * L, 0.03 * L, 0.012 * L, 0, 0.3 * H0, 0.4 * H0, { paint: -1, det: { radiator: 0.5 }, prof: 'chamfer' });
+      }
+      box(0, -0.42 * L, 0.06 * L, 0.035 * L, 0, 0.2 * H0, 1.5 * H0, { det: { panel: true } });
+      engines(5, -0.475 * L, 0.016 * L, 0.03 * L);
+      navLights(0.075 * L, 0.45 * L);
+      break;
+    }
+    case 'carrier': {
+      mk('trap', { r1: 0.16 * L, r2: 0.1 * L, he: 0.44 * L }, 0, 0, 0, 0, 1.2 * H0, { det: { panel: true, windows: true }, prof: 'chamfer' });
+      box(0, 0.02 * L, 0.07 * L, 0.4 * L, 0, 1.0 * H0, 0.3 * H0, { paint: -1, det: { deck: true }, prof: 'chamfer' });
+      for (const sd of [-1, 1]) {
+        for (let j = 0; j < 3; j++) box(sd * (0.083 * L + j * 0.012 * L), 0.27 * L, 0.0045 * L, 0.11 * L, 0, 1.05 * H0, 0.2 * H0, { paint: -1, det: { tube: true }, prof: 'chamfer' });
+        for (let k = 0; k < 2; k++) {
+          const y = (0.02 - k * 0.2) * L, x0 = sd * 0.13 * L, x1 = sd * 0.3 * L;
+          truss(x0, y - 0.07 * L, x1, y - 0.07 * L, 0.006 * L, 0.3 * H0, 0.6 * H0);
+          truss(x0, y + 0.07 * L, x1, y + 0.07 * L, 0.006 * L, 0.3 * H0, 0.6 * H0);
+          truss(x1, y - 0.07 * L, x1, y + 0.07 * L, 0.006 * L, 0.3 * H0, 0.6 * H0);
+          if (r() < 0.75) smallShip((x0 + x1) / 2 + sd * 0.01 * L, y, 0.12 * L, 0, 0.5 * H0);
+          beacon(x1, y - 0.07 * L, 0.005 * L, 0.9 * H0, emis); beacon(x1, y + 0.07 * L, 0.005 * L, 0.9 * H0, emis);
+        }
+        for (let k = 0; k < 3; k++) {
+          const y = (0.3 - k * 0.25) * L;
+          circle(sd * 0.115 * L, y, 0.014 * L, 1.3 * H0, 0.5 * H0, { paint: -1, det: {}, prof: 'round' });
+          box(sd * 0.115 * L, y + 0.02 * L, 0.0025 * L, 0.018 * L, 0, 1.6 * H0, 0.25 * H0, { paint: -1, det: {} });
+        }
+      }
+      box(-0.1 * L, -0.2 * L, 0.022 * L, 0.06 * L, 0, 1.4 * H0, 1.5 * H0, { paint: 1 % hullN, det: { panel: true, windows: true } });
+      for (let y = -0.36; y <= 0.4; y += 0.08) { beacon(-0.068 * L, y * L, 0.003 * L, 1.35 * H0, emis); beacon(0.068 * L, y * L, 0.003 * L, 1.35 * H0, emis); }
+      engines(6, -0.47 * L, 0.02 * L, 0.045 * L);
+      navLights(0.1 * L, 0.42 * L);
+      break;
+    }
+    case 'explorer': {
+      mk('ucap', { r1: 0.05 * L, r2: 0.035 * L, len: 0.62 * L }, 0, 0.02 * L, 0, 0, 1.3 * H0, { det: { panel: true, windows: true }, prof: 'round' });
+      circle(0, 0.38 * L, 0.075 * L, 1.3 * H0, 0.6 * H0, { paint: 0, det: { dish: true }, prof: 'round' });
+      mk('ring', { R: 0.11 * L, t: 0.008 * L, gap: 0 }, 0, 0.1 * L, 0, 0.2 * H0, 0.8 * H0, { paint: 1 % hullN, det: { panel: true, windows: true }, prof: 'round' });
+      for (const sd of [-1, 1]) {
+        beam(sd * 0.03 * L, 0.33 * L, sd * 0.23 * L, 0.47 * L, 0.0025 * L, 1.0 * H0, 0.2 * H0, { paint: -1, det: {} });
+        beacon(sd * 0.23 * L, 0.47 * L, 0.005 * L, 1.2 * H0, emis);
+        for (let i = 0; i < 6; i++) for (let j = 0; j < 2; j++) {
+          const y = (0.24 - i * 0.045) * L, x = sd * (0.058 * L + j * 0.018 * L);
+          mk('ucap', { r1: 0.006 * L, r2: 0.004 * L, len: 0.03 * L }, x, y, 0, 1.0 * H0, 0.3 * H0, { paint: -1, det: {} });
+          beacon(x, y + 0.016 * L, 0.0035 * L, 1.3 * H0, emis);
+        }
+        truss(sd * 0.04 * L, -0.08 * L, sd * 0.19 * L, -0.08 * L, 0.006 * L, 0.2 * H0, 0.6 * H0);
+        for (const dy of [-0.035, 0.035]) { box(sd * 0.17 * L, (-0.08 + dy) * L, 0.02 * L, 0.004 * L, 0, 0.3 * H0, 0.3 * H0, { paint: -1, det: {} }); if (r() < 0.8) smallShip(sd * 0.17 * L, (-0.08 + dy) * L, 0.05 * L, 0, 0.6 * H0); }
+        tank(sd * 0.065 * L, -0.24 * L, 0.022 * L, 0.12 * L, 0, 0.4 * H0);
+        truss(sd * 0.05 * L, -0.33 * L, sd * 0.15 * L, -0.33 * L, 0.005 * L, 0.2 * H0, 0.4 * H0);
+        solar(sd * 0.2 * L, -0.33 * L, 0.05 * L, 0.03 * L, 0, 0.3 * H0);
+      }
+      box(0, -0.37 * L, 0.04 * L, 0.03 * L, 0, 0.2 * H0, 1.2 * H0, { det: { panel: true } });
+      engines(2, -0.415 * L, 0.018 * L, 0.04 * L);
+      navLights(0.05 * L, 0.3 * L);
+      break;
+    }
   }
   const seedStr = 'st|' + arch.id + '|' + brand.id + '|' + seed;
   finalizeParts(parts, brand, seedStr, L, { jitter: true });
@@ -3169,7 +3438,7 @@ function assembleStation(arch, brand, seed) {
 }
 
 function generateStation(catalog, archId, brandId, seed) {
-  const arch = catalog.stations.find(a => a.id === archId), brand = catalog.brands.find(b => b.id === brandId);
+  const arch = [...catalog.stations, ...(catalog.heavies || [])].find(a => a.id === archId), brand = catalog.brands.find(b => b.id === brandId);
   const ship = assembleStation(arch, brand, seed);
   const maps = bake(ship, brand, { res: arch.res || 768, length: ship.L });
   return { ship, maps };
@@ -3221,7 +3490,7 @@ const state = {
   view: 'grid', brand: catalog.brands[0].id, size: catalog.sizes[2].id,
   map: 0, spin: true, trueScale: false, shadow: true, pl: true,
   sunAz: 135, sunEl: 35, star: 'sol', seed: 'kestrel-7',
-  planetSeed: 'set-1', planetFocus: -1, sunSeed: 's1', sunFocus: -1, stSeed: 'stations-1', stFocus: -1, astSeed: 'rocks-1', astFocus: -1, hoverItem: -1, sunOff: [-0.17, 0.12], flares: true,
+  planetSeed: 'set-1', planetFocus: -1, sunSeed: 's1', sunFocus: -1, stSeed: 'stations-1', stFocus: -1, hvSeed: 'heavies-1', hvFocus: -1, astSeed: 'rocks-1', astFocus: -1, hoverItem: -1, sunOff: [-0.17, 0.12], flares: true,
   flyBrand: 'halcyon', flySize: 'fighter', traffic: 60, zoom: 1, flightModel: 'assist', pirates: false,
   throttle: 0.6, bloom: 0.9, lightsN: 4, shields: true, shieldIdle: 0.3, barrage: false, click: 'inspect',
   mouse: null, hoverKey: null, editBrand: catalog.brands[0].id
@@ -3567,6 +3836,7 @@ function onResult(m) {
   updateProgress();
   if (state.view === 'detail' && m.key === keyOf(state.brand, state.size)) renderInfo();
   if (STN) STN.onBaked(m.key);
+  if (HVY) HVY.onBaked(m.key);
 }
 function pump() {
   if (!workers.length) {
@@ -3607,11 +3877,11 @@ function rebakeBrand(id) {
 }
 function updateProgress() {
   const total = catalog.brands.length * catalog.sizes.length;
-  let done = 0; ships.forEach((s, k) => { if (s.ready && !s.pending && !k.startsWith('st|')) done++; });
+  let done = 0; ships.forEach((s, k) => { if (s.ready && !s.pending && !/^(st|hv)\|/.test(k)) done++; });
   const el = $('progress');
-  let stPending = 0; ships.forEach((s, k) => { if (k.startsWith('st|') && s.pending) stPending++; });
+  let stPending = 0; ships.forEach((s, k) => { if (/^(st|hv)\|/.test(k) && s.pending) stPending++; });
   el.hidden = done >= total && stPending === 0;
-  el.textContent = done < total ? `Baking ${done} of ${total}` : `Baking ${stPending} station${stPending === 1 ? '' : 's'}`;
+  el.textContent = done < total ? `Baking ${done} of ${total}` : `Baking ${stPending} large asset${stPending === 1 ? '' : 's'}`;
 }
 function showError(key, msg) { $('json-err').textContent = `Bake failed for ${key.replace('|', ' / ')}: ${msg}`; }
 
@@ -3805,7 +4075,7 @@ function frame(now) {
   const sv = sunVec(); const sl = Math.hypot(sv[0], sv[1]) || 1;
   const RW = canvas.width, RH = canvas.height;
 
-  let maxExt = 1; ships.forEach((s, k) => { if (s.ready && !k.startsWith('st|')) maxExt = Math.max(maxExt, s.maps.extent); });
+  let maxExt = 1; ships.forEach((s, k) => { if (s.ready && !/^(st|hv)\|/.test(k)) maxExt = Math.max(maxExt, s.maps.extent); });
   // resolve each visible ship's transform for this frame
   const vis = [];
   cells.forEach((c, i) => {
@@ -5472,27 +5742,27 @@ try { SUNS = (function () {
   };
 })(); } catch (e) { SUNS_ERR = String(e.message || e); console.error(e); }
 
-// ======================= STATIONS =======================
-// Stations are assembled by gen.js (assembleStation) from an archetype layout plus an owning brand's style,
-// baked by the same workers as ships, and lit with the yard ship shader.
-let STN = null, STN_ERR = '';
-try { STN = (function () {
+// ======================= STATIONS & HEAVIES =======================
+// Both are assembled by gen.js (assembleStation) from an archetype layout plus an owning brand's style,
+// baked by the same workers as ships, and lit with the yard ship shader. Heavies also get engine plumes.
+function makeBakedTab(cfg) {
   function rngOf(s) { let a = 0; for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 2654435761) >>> 0; return function () { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  const NAMES = ['Anchorage', 'Meridian', 'Halfway', 'Cinder Yard', 'Tollgate', 'Weir', 'Lantern', 'Keel', 'Foundry', 'Harbor', 'Crossing', 'Bastion', 'Spindle', 'Hearth', 'Waypoint', 'Slipway'];
+  const list = () => catalog[cfg.list];
+  const id = k => $(cfg.idp + '-' + k);
   let items = [];
-  const stKey = it => 'st|' + it.arch + '|' + it.brand + '|' + it.seed;
+  const itemKey = it => cfg.prefix + it.arch + '|' + it.brand + '|' + it.seed;
   function newSet() {
-    purge();
-    const r = rngOf(state.stSeed), A = catalog.stations, B = catalog.brands;
-    items = [];
-    for (let k = 0; k < 12; k++) items.push({ arch: A[k % A.length].id, brand: B[Math.floor(r() * B.length)].id, seed: 's' + Math.floor(r() * 1e6), name: NAMES[Math.floor(r() * NAMES.length)] });
+    const r = rngOf(state[cfg.seedKey]), A = list(), B = catalog.brands;
+    const next = [];
+    for (let k = 0; k < 12; k++) next.push({ arch: A[k % A.length].id, brand: B[Math.floor(r() * B.length)].id, seed: 's' + Math.floor(r() * 1e6), name: cfg.names[Math.floor(r() * cfg.names.length)] });
+    items = next; purge();
   }
   function purge() {
-    const live = new Set(items.map(stKey));
-    for (const [k, s] of ships) if (k.startsWith('st|') && !live.has(k)) { if (s.tex) s.tex.forEach(t => gl.deleteTexture(t)); ships.delete(k); const i = queue.indexOf(k); if (i >= 0) queue.splice(i, 1); }
+    const live = new Set(items.map(itemKey));
+    for (const [k, s] of ships) if (k.startsWith(cfg.prefix) && !live.has(k)) { if (s.tex) s.tex.forEach(t => gl.deleteTexture(t)); ships.delete(k); const i = queue.indexOf(k); if (i >= 0) queue.splice(i, 1); }
   }
   function ensure(it, front) {
-    const k = stKey(it);
+    const k = itemKey(it);
     if (!ships.has(k)) { enqueue(k, front, { station: it.arch, brand: it.brand, seed: it.seed }); updateProgress(); pump(); }
     return ships.get(k);
   }
@@ -5509,7 +5779,41 @@ try { STN = (function () {
     gl.uniform3fv(P.bg.u.uStar, star.col); gl.uniform3fv(P.bg.u.uNeb, star.neb);
     gl.uniform2f(P.bg.u.uSunDir, sv[0] / sl, sv[1] / sl); gl.uniform2f(P.bg.u.uOff, 0, 0);
     draw();
-    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
+    const focus = state[cfg.focusKey] >= 0;
+    // resolve visible, baked items for this frame
+    const vis = [];
+    for (const c of cells) {
+      const it = items[c.item]; if (!it) continue;
+      const s = ensure(it, focus); if (!s || !s.ready) continue;
+      const arch = list().find(a => a.id === it.arch), brand = catalog.brands.find(b => b.id === it.brand);
+      if (!arch || !brand) continue;
+      const hd = c.cell * 0.5 * dpr;
+      const ang = state.spin ? (cfg.plumes ? Math.sin(t * 0.15 + c.item) * 0.35 : t * (arch.spin || 0.01) * (focus ? 1 : 2) + c.item) : 0;
+      vis.push({ c, s, arch, brand, hd, ang, cx: c.cx * dpr, cy: (H - c.cy) * dpr });
+    }
+    // engine plumes go under the hulls
+    if (cfg.plumes && state.map === 0) {
+      gl.blendFunc(gl.ONE, gl.ONE);
+      const u = P.plume.u; gl.useProgram(P.plume.p);
+      gl.uniform2f(u.uRes, RW, RH); gl.uniform1f(u.uTime, t);
+      const th = state.throttle;
+      for (const v of vis) {
+        const br = brandRender(v.brand), pw = plumePower(th), boost = th > 0.85 ? 1 + (th - 0.85) * 3 : 1;
+        gl.uniform3fv(u.uCol, br.plCol); gl.uniform3fv(u.uCore, br.plCore.map(c => c + (1 - c) * (boost - 1) * 0.8));
+        gl.uniform1f(u.uTurb, br.plTurb); gl.uniform1f(u.uDiamonds, br.plDia); gl.uniform1f(u.uSputter, br.plSput); gl.uniform1f(u.uPulse, br.plPulse); gl.uniform1f(u.uSpread, br.plSpread);
+        gl.uniform1f(u.uPower, pw);
+        v.s.maps.engines.forEach((e, k) => {
+          const q = rot(v.ang, (e.u - 0.5) * 2 * v.hd, (0.5 - e.v) * 2 * v.hd), d = rot(v.ang, e.dx, e.dy);
+          const wid = Math.max(e.w * 2 * v.hd, 1.5 * dpr);
+          gl.uniform2f(u.uNoz, v.cx + q[0], v.cy + q[1]); gl.uniform2f(u.uDir, d[0], d[1]);
+          gl.uniform1f(u.uWid, wid * br.plWid * 1.1); gl.uniform1f(u.uLen, wid * br.plLen * (0.3 + 1.7 * th) * boost);
+          gl.uniform1f(u.uSeed, v.c.item * 7.3 + k * 1.37);
+          draw();
+        });
+      }
+    }
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     const u = P.ship.u; gl.useProgram(P.ship.p);
     gl.uniform2f(u.uRes, RW, RH);
     gl.uniform3fv(u.uSun, sv); gl.uniform3fv(u.uSunCol, lin(star.col)); gl.uniform3fv(u.uAmb, star.amb);
@@ -5518,21 +5822,15 @@ try { STN = (function () {
     const LP = new Float32Array(64), LC = new Float32Array(64); let nl = 0;
     if (state.pl && state.mouse) { LP.set([state.mouse.x * dpr, (H - state.mouse.y) * dpr, 120 * dpr, 240 * dpr], 0); LC.set([1.6, 1.25, 0.85, 0], 0); nl = 1; }
     gl.uniform4fv(u.uLP, LP); gl.uniform4fv(u.uLC, LC); gl.uniform1i(u.uLN, nl);
-    gl.uniform1f(u.uThrottle, 0);
-    const focus = state.stFocus >= 0;
-    for (const c of cells) {
-      const it = items[c.item]; if (!it) continue;
-      const s = ensure(it, focus);
-      if (!s || !s.ready) continue;
-      const arch = catalog.stations.find(a => a.id === it.arch), brand = catalog.brands.find(b => b.id === it.brand), m = brand.style.material;
-      const hd = c.cell * (focus ? 0.5 : 0.5) * dpr;
-      const ang = state.spin ? t * (arch.spin || 0.01) * (focus ? 1 : 2) + c.item : 0;
-      gl.uniform2f(u.uCenter, c.cx * dpr, (H - c.cy) * dpr); gl.uniform1f(u.uHalf, hd); gl.uniform1f(u.uAngle, ang);
-      gl.uniform1f(u.uExtent, s.maps.extent); gl.uniform1f(u.uHRange, s.maps.hRange); gl.uniform1f(u.uPxPerM, 2 * hd / s.maps.extent);
-      gl.uniform1f(u.uDmax, s.maps.Dmax); gl.uniform1f(u.uS, s.maps.shieldS);
+    gl.uniform1f(u.uThrottle, cfg.plumes ? state.throttle : 0);
+    for (const v of vis) {
+      const m = v.brand.style.material;
+      gl.uniform2f(u.uCenter, v.cx, v.cy); gl.uniform1f(u.uHalf, v.hd); gl.uniform1f(u.uAngle, v.ang);
+      gl.uniform1f(u.uExtent, v.s.maps.extent); gl.uniform1f(u.uHRange, v.s.maps.hRange); gl.uniform1f(u.uPxPerM, 2 * v.hd / v.s.maps.extent);
+      gl.uniform1f(u.uDmax, v.s.maps.Dmax); gl.uniform1f(u.uS, v.s.maps.shieldS);
       gl.uniform1f(u.uGloss, m.gloss); gl.uniform1f(u.uSpecK, 0.6 + m.spec * 1.4); gl.uniform1f(u.uWrap, m.wrap); gl.uniform1f(u.uIrid, m.irid); gl.uniform1f(u.uRim, m.rim);
-      gl.uniform1f(u.uHover, !focus && state.hoverItem === c.item ? 1 : 0);
-      for (let k = 0; k < 4; k++) { gl.activeTexture(gl.TEXTURE0 + k); gl.bindTexture(gl.TEXTURE_2D, s.tex[k]); }
+      gl.uniform1f(u.uHover, !focus && state.hoverItem === v.c.item ? 1 : 0);
+      for (let k = 0; k < 4; k++) { gl.activeTexture(gl.TEXTURE0 + k); gl.bindTexture(gl.TEXTURE_2D, v.s.tex[k]); }
       draw();
     }
     gl.disable(gl.BLEND);
@@ -5540,38 +5838,50 @@ try { STN = (function () {
   }
 
   // ---------- builder ----------
-  $('st-arch').innerHTML = catalog.stations.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
-  $('st-brand').innerHTML = catalog.brands.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
-  const cur = () => items[state.stFocus];
+  id('arch').innerHTML = list().map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
+  id('brand').innerHTML = catalog.brands.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+  const cur = () => items[state[cfg.focusKey]];
   function syncPanel() {
     const it = cur();
-    $('st-editor').hidden = !it; $('st-gridnote').hidden = !!it;
+    id('editor').hidden = !it; id('gridnote').hidden = !!it;
     if (!it) return;
-    const arch = catalog.stations.find(a => a.id === it.arch), brand = catalog.brands.find(b => b.id === it.brand);
-    $('st-name').textContent = it.name + ' ' + arch.name.split(' ').pop();
-    $('st-kind').textContent = arch.blurb;
-    $('st-arch').value = it.arch; $('st-brand').value = it.brand;
-    const s = ships.get(stKey(it));
-    if (!s || !s.ready || s.pending) { $('st-stats').innerHTML = '<dt>Status</dt><dd>Baking…</dd>'; $('st-json').textContent = ''; return; }
-    const roles = {}; s.spec.parts.forEach(p => { roles[p.prim] = (roles[p.prim] || 0) + 1; });
-    const rows = [['Owner style', brand.name], ['Diameter', Math.round(s.spec.length_m) + ' m'], ['Parts', s.maps.partCount], ['Bake', `${s.maps.res}² px`], ['Resolution', (s.maps.res / s.maps.extent).toFixed(2) + ' px/m']];
-    $('st-stats').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${escapeHtml(String(v))}</dd>`).join('');
-    $('st-json').textContent = JSON.stringify({ archetype: arch, owner: it.brand, seed: it.seed, parts: s.spec.parts.length, primitives: roles }, null, 1);
+    const arch = list().find(a => a.id === it.arch), brand = catalog.brands.find(b => b.id === it.brand);
+    id('name').textContent = (it.name + ' ' + cfg.suffix(arch)).trim();
+    id('kind').textContent = arch.blurb;
+    id('arch').value = it.arch; id('brand').value = it.brand;
+    const s = ships.get(itemKey(it));
+    if (!s || !s.ready || s.pending) { id('stats').innerHTML = '<dt>Status</dt><dd>Baking…</dd>'; id('json').textContent = ''; return; }
+    const prims = {}; s.spec.parts.forEach(p => { prims[p.prim] = (prims[p.prim] || 0) + 1; });
+    const rows = [['Built by', brand.name], [cfg.sizeLabel, Math.round(s.spec.length_m) + ' m'], ['Parts', s.maps.partCount], ['Engines', s.maps.engines.length], ['Bake', `${s.maps.res}² px`], ['Resolution', (s.maps.res / s.maps.extent).toFixed(2) + ' px/m']];
+    id('stats').innerHTML = rows.filter(r => cfg.plumes || r[0] !== 'Engines').map(([k, v]) => `<dt>${k}</dt><dd>${escapeHtml(String(v))}</dd>`).join('');
+    id('json').textContent = JSON.stringify({ archetype: arch, owner: it.brand, seed: it.seed, parts: s.spec.parts.length, primitives: prims }, null, 1);
   }
   const rebuild = () => { purge(); ensure(cur(), true); syncPanel(); layout(); };
-  $('st-arch').addEventListener('change', e => { const it = cur(); if (!it) return; it.arch = e.target.value; rebuild(); });
-  $('st-brand').addEventListener('change', e => { const it = cur(); if (!it) return; it.brand = e.target.value; rebuild(); });
-  $('st-random').addEventListener('click', () => { const it = cur(); if (!it) return; it.seed = 's' + Math.floor(Math.random() * 1e6); rebuild(); });
-  $('st-newset').addEventListener('click', () => { state.stSeed = 'stations-' + Math.floor(Math.random() * 1e6); newSet(); layout(); });
-  $('st-back').addEventListener('click', () => { state.stFocus = -1; syncPanel(); layout(); });
+  id('arch').addEventListener('change', e => { const it = cur(); if (!it) return; it.arch = e.target.value; rebuild(); });
+  id('brand').addEventListener('change', e => { const it = cur(); if (!it) return; it.brand = e.target.value; rebuild(); });
+  id('random').addEventListener('click', () => { const it = cur(); if (!it) return; it.seed = 's' + Math.floor(Math.random() * 1e6); rebuild(); });
+  id('newset').addEventListener('click', () => { state[cfg.seedKey] = cfg.list + '-' + Math.floor(Math.random() * 1e6); newSet(); layout(); });
+  id('back').addEventListener('click', () => { state[cfg.focusKey] = -1; syncPanel(); layout(); });
 
   return {
     frame, count: () => items.length, sync: syncPanel,
-    focus: k => { state.stFocus = k; syncPanel(); layout(); },
-    onBaked: key => { if (state.view === 'stations' && state.stFocus >= 0 && key === stKey(cur())) syncPanel(); },
-    label: k => { const it = items[k]; if (!it) return null; const a = catalog.stations.find(x => x.id === it.arch), b = catalog.brands.find(x => x.id === it.brand); return { name: a.name, kind: b.name }; }
+    focus: k => { state[cfg.focusKey] = k; syncPanel(); layout(); },
+    onBaked: key => { if (state[cfg.focusKey] >= 0 && cur() && key === itemKey(cur())) syncPanel(); },
+    label: k => { const it = items[k]; if (!it) return null; const a = list().find(x => x.id === it.arch), b = catalog.brands.find(x => x.id === it.brand); return a && b ? { name: a.name, kind: b.name } : null; }
   };
-})(); } catch (e) { STN_ERR = String(e.message || e); console.error(e); }
+}
+
+let STN = null, STN_ERR = '', HVY = null, HVY_ERR = '';
+try {
+  STN = makeBakedTab({ list: 'stations', prefix: 'st|', idp: 'st', focusKey: 'stFocus', seedKey: 'stSeed', plumes: false, sizeLabel: 'Diameter',
+    names: ['Anchorage', 'Meridian', 'Halfway', 'Cinder', 'Tollgate', 'Weir', 'Lantern', 'Keel', 'Hearth', 'Harbor', 'Crossing', 'Bastion', 'Spindle', 'Waypoint', 'Slipway'],
+    suffix: a => a.name.split(' ').pop() });
+} catch (e) { STN_ERR = String(e.message || e); console.error(e); }
+try {
+  HVY = makeBakedTab({ list: 'heavies', prefix: 'hv|', idp: 'hv', focusKey: 'hvFocus', seedKey: 'hvSeed', plumes: true, sizeLabel: 'Length',
+    names: ['Long Patience', 'Ardent', 'Seedbearer', 'Iron Mule', 'Far Promise', 'Bulwark', 'Wanderlight', 'Grain Road', 'Slow Thunder', 'Cartographer', 'Undertow', 'Hesper'],
+    suffix: () => '' });
+} catch (e) { HVY_ERR = String(e.message || e); console.error(e); }
 
 // ======================= ASTEROIDS =======================
 // Sphere-traced in the fragment shader: an ellipsoid displaced by low-frequency noise for the silhouette,
@@ -5757,6 +6067,7 @@ try { AST = (function () {
 // Grid-and-builder tabs that share layout, hover and click handling
 const GENERIC = {
   stations: { mod: () => STN, err: () => STN_ERR, focus: 'stFocus', grid: 'Click a station to open it in the builder · drag to move the sun', one: 'Drag to move the sun · hover for a work light' },
+  heavies: { mod: () => HVY, err: () => HVY_ERR, focus: 'hvFocus', grid: 'Click a ship to open it in the builder · throttle lives under Drives and effects', one: 'Drag to move the sun · hover for a work light' },
   asteroids: { mod: () => AST, err: () => AST_ERR, focus: 'astFocus', grid: 'Sizes are to scale within the set · click one to open it in the builder', one: 'Drag to move the sun' }
 };
 
@@ -5838,6 +6149,7 @@ function setView(v) {
   $('planet-panel').hidden = v !== 'planets';
   $('sun-panel').hidden = v !== 'suns';
   $('station-panel').hidden = v !== 'stations';
+  $('heavy-panel').hidden = v !== 'heavies';
   $('asteroid-panel').hidden = v !== 'asteroids';
   if (GENERIC[v] && GENERIC[v].mod()) GENERIC[v].mod().sync();
   if (v === 'suns' && SUNS) SUNS.sync();

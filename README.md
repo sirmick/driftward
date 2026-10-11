@@ -16,6 +16,7 @@ Open `index.html` in a browser with WebGL2 (any current Chrome, Firefox, Safari 
 | **Ship** | One ship up close: map views (albedo, normal, height, emissive, shield field), part list, catalog editor. |
 | **Planets** | 12 generated systems plus a builder: 13 palettes, rings on any axis, moons on inclined orbits. |
 | **Suns** | One of each class from red dwarf to quasar, with a draggable lens flare. |
+| **Heavies** | Specialist hulls: bulk freighter, agri ship, mining tug towing its refinery, colony ship, fleet carrier, survey vessel. |
 | **Stations** | Ring habitats, container ports, forges, refineries, shipyards and relay arrays, each built in an owning brand's style. |
 | **Asteroids** | Ten compositions (carbonaceous to ore-veined crystal), ray-marched and tumbling, sized to scale. |
 | **Fly** | Inertial flight with NPC traffic, combat, shields and planets. |
@@ -27,6 +28,8 @@ Flight controls: W/↑ thrust, A/D turn, S brake (assisted) or turn retrograde (
 **Ships are data.** `src/catalog.json` defines size classes (length, bake resolution, flight stats) and brands. A brand is a style grammar: palette, union mode, symmetry, bevel profile, detail switches, plume and shield style, flight multipliers, a catalog of part templates with parameter ranges, and a loadout per size. Shape values are fractions of hull length; detail spacing is in meters, so a fighter and a capital ship of one brand share panel size and window pitch.
 
 **Pipeline:** `brand + size + seed` → part list (`assemble` in `src/gen.js`) → per-texel 2D SDF evaluation into albedo, normal, height, emissive, spec and a shield distance field (`bake`, run in Web Workers) → lit in a fragment shader with self-shadowing, up to 16 point lights, plumes, shields and HDR bloom.
+
+**Heavies** share that pipeline with forward-facing layouts (`heavies` in the catalog): container bays, glass farm domes, tow cables, flight decks with launch tubes, docking cradles with parked frigates, probe racks and shuttle bays. Their nozzles feed the same throttle-driven plumes as fighters.
 
 **Stations** use the same bake: an archetype layout (`stations` in the catalog) places hubs, rings, open lattice trusses, container stacks, tanks, radiators, furnaces, dishes and solar arrays, and the owning brand supplies the look, so a Rustline refinery is patched and asymmetric while a Vaelith one grows into a single organic skin. A detail-scale factor keeps paneling legible at kilometer size.
 
@@ -43,13 +46,13 @@ Flight controls: W/↑ thrust, A/D turn, S brake (assisted) or turn retrograde (
 ```
 index.html          built, self-contained page (open this)
 src/
-  catalog.json      size classes, the four brand catalogs and station archetypes
+  catalog.json      size classes, the four brand catalogs, station archetypes and heavy hulls
   gen.js            ship and station assembly and baking (pure JS, runs in workers and Node)
   app.js            renderer, yard and ship views, UI
   fly.js            flight simulation and instanced rendering
   planets.js        planet shader and builder
   suns.js           star, pulsar and black hole shaders, lens flare, builder
-  stations.js       station tab: bakes via gen.js, builder
+  stations.js       stations and heavies tabs: bakes via gen.js, builders
   asteroids.js      asteroid shader and builder
   template.html     page shell and styles
 tools/

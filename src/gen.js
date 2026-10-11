@@ -501,7 +501,7 @@ function bake(ship, brand, size) {
 
       if (smooth) { // organic mottling + edge darkening
         const m = fbm(wxd * 0.06 + 3, wyd * 0.06, brandSeed);
-        const c2 = hullCols[(p.paint + 1) % hullCols.length]; mixc(c2, sstep(0.35, 0.75, m) * 0.6);
+        const c2 = hullCols[(((p.paint + 1) % hullCols.length) + hullCols.length) % hullCols.length]; mixc(c2, sstep(0.35, 0.75, m) * 0.6);
         mulc(0.72 + 0.28 * Math.min(t / inRd, 1));
       }
       if (p.paint === -2) { // glass canopy streak
@@ -657,6 +657,32 @@ function bake(ship, brand, size) {
         const c = p.em.col ? hexRGB(p.em.col) : emissive, d0 = Math.hypot(lx, ly) / inRd;
         emit(c, 2.4 * (1 - sstep(0, 1, d0))); mixc(c, 0.4);
       }
+      if (p.det.agri) { // farm dome: crop fields under glass
+        const d0 = Math.hypot(lx, ly) / inRd;
+        const S = 7, cx = Math.floor(lx / S + 50), cy = Math.floor(ly / S + 50), hh = h2(cx, cy, p.seedI);
+        const greens = [[0.16, 0.36, 0.12], [0.3, 0.46, 0.14], [0.52, 0.5, 0.18], [0.1, 0.28, 0.12], [0.42, 0.34, 0.16]];
+        const g = greens[Math.floor(hh * greens.length)];
+        cr = g[0]; cg = g[1]; cb = g[2];
+        const rowAng = hh * Math.PI, rv = lx * Math.cos(rowAng) + ly * Math.sin(rowAng);
+        if (frac(rv / 0.9) < 0.35) mulc(0.78);
+        if (frac(lx / S) < 0.06 || frac(ly / S) < 0.06) mulc(0.6);
+        if (Math.abs(frac(Math.atan2(ly, lx) * 8 / (2 * Math.PI)) - 0.5) < 0.03 || d0 > 0.94) mixc([0.6, 0.64, 0.66], 0.8);
+        const sh = sstep(0.12, 0.0, Math.abs(lx / inRd + 0.3 - ly / inRd * 0.4)) * 0.12; cr += sh; cg += sh; cb += sh * 1.2;
+        emit([1.0, 0.82, 0.55], 0.06); spec = 0.35;
+      }
+      if (p.det.deck) { // flight deck: dark deck, centerline dashes, edge stripes, landing lights
+        cr = 0.1; cg = 0.11; cb = 0.13; spec = 0.25;
+        const ax = Math.abs(lx), w = p.a.hw / DS;
+        if (ax < 0.5 && frac(ly / 8) < 0.55) mixc(accent, 0.9);
+        if (Math.abs(ax - w * 0.82) < 0.35) mixc([0.85, 0.75, 0.2], 0.8);
+        if (Math.abs(ax - w * 0.5) < 0.2 && frac(ly / 3) < 0.4) mixc([0.6, 0.62, 0.66], 0.6);
+        if (vn > 0.8 && Math.abs(ax - w * 0.82) < 0.6 && frac(ly / 2) < 0.4) emit([1, 0.9, 0.6], 1.5);
+      }
+      if (p.det.tube) { // launch tube: dark slot with lit mouth
+        cr = 0.03; cg = 0.035; cb = 0.045; spec = 0.2; dh -= p.H * 0.4;
+        if (vn > 0.82) emit(accent, 1.6);
+        else if (frac(ly / 2.5) < 0.2) emit(accent, 0.35);
+      }
       if (p.em && p.em.type === 'flare') {
         const d0 = Math.hypot(lx, ly) / inRd, n = fbm(wxd * 0.6, wyd * 0.6, 21);
         emit([1.0, 0.55, 0.2], (2.2 + 1.4 * n) * (1 - sstep(0, 1, d0))); emit([1, 0.95, 0.8], 2 * (1 - sstep(0, 0.35, d0)));
@@ -716,7 +742,7 @@ function finalizeParts(parts, brand, seedStr, L, opts) {
   const st = brand.style, D = st.detail || {}, r = rng32(hashStr(seedStr + '|fin'));
   const sym = st.symmetry == null ? 1 : st.symmetry;
   for (const p of parts) {
-    if (opts.jitter && sym < 1 && !p.fixed) { p.x += (r() * 2 - 1) * 0.004 * L; p.y += (r() * 2 - 1) * 0.004 * L; p.ang += (r() * 2 - 1) * 4; }
+    if (opts.jitter && sym < 1 && !p.fixed && partMetrics(p).rad < 0.2 * L) { p.x += (r() * 2 - 1) * 0.004 * L; p.y += (r() * 2 - 1) * 0.004 * L; p.ang += (r() * 2 - 1) * 4; }
     if (st.union === 'smooth') { p.lat = false; if (p.prof === 'chamfer') p.prof = 'round'; }
     if (p.det.panel && (D.rivets || 0) > 0) p.det.rivets = true;
     if (p.det.panel && (D.veins || 0) > 0 && r() < 0.6) p.det.veins = true;
@@ -749,6 +775,22 @@ function assembleStation(arch, brand, seed) {
   const jit = v => v * (1 + (sym < 1 ? (r() * 2 - 1) * 0.25 : 0));
   const pick = a => a[Math.floor(r() * a.length)];
   const TAU = Math.PI * 2;
+
+  // heavy-ship helpers: +y is forward, engines face aft
+  const PORT = '#ff4a3a', STBD = '#3bff7a';
+  const engine = (x, y, rad, z) => mk('trap', { r1: rad, r2: rad * 0.72, he: rad * 0.85 }, x, y, 0, z == null ? 0.2 * H0 : z, 0.9 * H0, { paint: -1, det: {}, em: { type: 'exhaust', glow: 0.55 }, prof: st.bevel, fixed: true });
+  const engines = (n, y, rad, spread, z) => { for (let i = 0; i < n; i++) engine((i - (n - 1) / 2) * spread, y, rad, z); };
+  const navLights = (x, y) => { beacon(-x, y, 0.006 * L, 1.6 * H0, PORT); beacon(x, y, 0.006 * L, 1.6 * H0, STBD); };
+  const containers = (x0, y0, cols, rows, cw, cl, z) => {
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+      if (r() > 0.9) continue;
+      const stack = r() < 0.3 ? 2 : 1;
+      for (let k = 0; k < stack; k++) box(x0 + i * cw * 2.25, y0 + j * cl * 2.2, cw, cl, 0, z + k * 0.35 * H0, 0.34 * H0, { paint: -1, colOverride: pick(CONTAINER_COLS), det: { container: true }, prof: 'chamfer', role: 'pod' });
+    }
+  };
+  const dome = (x, y, rad, z) => circle(x, y, rad, z == null ? 0.4 * H0 : z, rad * 0.55, { paint: -1, det: { agri: true }, prof: 'round' });
+  const smallShip = (x, y, len, ang, z) => mk('trap', { r1: len * 0.32, r2: len * 0.08, he: len / 2 }, x, y, ang || 0, z == null ? 0.9 * H0 : z, 0.35 * H0, { paint: 1 % hullN, det: { panel: true }, prof: st.bevel });
+  const tank = (x, y, rad, len, ang, z) => mk('ucap', { r1: rad, r2: rad, len }, x, y, ang || 0, z == null ? 0.3 * H0 : z, rad * 0.9, { paint: paint(), det: { panel: true }, prof: 'round' });
 
   switch (arch.layout) {
     case 'ring': {
@@ -869,6 +911,142 @@ function assembleStation(arch, brand, seed) {
       }
       break;
     }
+    case 'freighter': {
+      const W = 0.115 * L, nb = 5 + Math.floor(r() * 3), top = 0.36 * L, bot = -0.38 * L, bl = (top - bot) / nb;
+      box(0, -0.01 * L, 0.022 * L, 0.42 * L, 0, 0.3 * H0, 0.9 * H0, { det: { panel: true, windows: true } });
+      box(0, 0.43 * L, 0.05 * L, 0.035 * L, 0, 0.8 * H0, 1.4 * H0, { det: { panel: true, windows: true } });
+      mk('ucap', { r1: 0.02 * L, r2: 0.012 * L, len: 0.05 * L }, 0, 0.47 * L, 0, 1.6 * H0, 0.5 * H0, { paint: -2, det: {}, prof: 'round' });
+      const cw = 0.0095 * L, cl = 0.017 * L;
+      for (let i = 0; i < nb; i++) {
+        const y0 = top - i * bl;
+        for (const sd of [-1, 1]) {
+          truss(sd * W, y0, sd * W, y0 - bl * 0.94, 0.006 * L, 0.2 * H0, 0.7 * H0);
+          truss(sd * 0.022 * L, y0 - bl * 0.03, sd * W, y0 - bl * 0.03, 0.005 * L, 0.2 * H0, 0.7 * H0);
+          const cols = Math.max(1, Math.floor((W - 0.03 * L) / (cw * 2.25))), rows = Math.max(1, Math.floor((bl * 0.85) / (cl * 2.2)));
+          containers(sd * 0.032 * L + (sd < 0 ? -(cols - 1) * cw * 2.25 : 0), y0 - bl * 0.12 - (rows - 1) * cl * 2.2, cols, rows, cw, cl, 0.5 * H0);
+        }
+      }
+      box(0, -0.43 * L, 0.075 * L, 0.04 * L, 0, 0.2 * H0, 1.5 * H0, { det: { panel: true } });
+      engines(3 + Math.floor(r() * 3), -0.48 * L, 0.02 * L, 0.045 * L);
+      for (const sd of [-1, 1]) box(sd * 0.1 * L, -0.42 * L, 0.025 * L, 0.012 * L, 0, 0.3 * H0, 0.4 * H0, { paint: -1, det: { radiator: 0.4 }, prof: 'chamfer' });
+      navLights(W, top); navLights(W, bot + 0.02 * L);
+      break;
+    }
+    case 'agri': {
+      box(0, 0, 0.016 * L, 0.45 * L, 0, 0.3 * H0, 0.9 * H0, { det: { panel: true } });
+      box(0, 0.44 * L, 0.04 * L, 0.04 * L, 0, 0.7 * H0, 1.3 * H0, { det: { panel: true, windows: true } });
+      const np = 5 + Math.floor(r() * 3), R = 0.05 * L;
+      for (let i = 0; i < np; i++) {
+        const y = lerp(0.33, -0.28, i / (np - 1)) * L;
+        for (const sd of [-1, 1]) {
+          if (!keep()) continue;
+          beam(sd * 0.016 * L, y, sd * (0.04 * L + R * 0.2), y, 0.006 * L, 0.3 * H0, 0.5 * H0, { paint: -1, det: {} });
+          dome(sd * (0.045 * L + R), y, jit(R));
+        }
+        if (i % 2 === 0) tank(0, y + 0.03 * L, 0.012 * L, 0.05 * L, 0, 0.9 * H0);
+      }
+      for (const sd of [-1, 1]) { truss(sd * 0.016 * L, -0.36 * L, sd * 0.13 * L, -0.36 * L, 0.006 * L, 0.2 * H0, 0.5 * H0); solar(sd * 0.2 * L, -0.36 * L, 0.06 * L, 0.035 * L, 0, 0.3 * H0); }
+      box(0, -0.43 * L, 0.05 * L, 0.035 * L, 0, 0.2 * H0, 1.3 * H0, { det: { panel: true } });
+      engines(2 + Math.floor(r() * 2), -0.48 * L, 0.018 * L, 0.04 * L);
+      navLights(0.04 * L, 0.46 * L);
+      break;
+    }
+    case 'miner': {
+      mk('trap', { r1: 0.085 * L, r2: 0.05 * L, he: 0.15 * L }, 0, 0.27 * L, 0, 0, 1.6 * H0, { det: { panel: true, windows: true } });
+      circle(0, 0.45 * L, 0.045 * L, 0.6 * H0, 1.4 * H0, { paint: -1, det: { dish: true }, prof: 'round' });
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; box(Math.cos(a) * 0.05 * L, 0.45 * L + Math.sin(a) * 0.05 * L, 0.006 * L, 0.012 * L, a / D2R - 90, 0.8 * H0, 0.6 * H0, { paint: -1, det: {} }); }
+      circle(0, 0.45 * L, 0.012 * L, 2.2 * H0, 0.3 * H0, { paint: -1, det: {}, em: { type: 'furnace' }, prof: 'round' });
+      tank(-0.04 * L, 0.24 * L, 0.025 * L, 0.11 * L, 0, 1.3 * H0); tank(0.04 * L, 0.24 * L, 0.025 * L, 0.11 * L, 0, 1.3 * H0);
+      for (const sd of [-1, 1]) {
+        beam(sd * 0.07 * L, 0.2 * L, sd * 0.15 * L, 0.2 * L, 0.01 * L, 0.3 * H0, 0.7 * H0);
+        mk('ucap', { r1: 0.024 * L, r2: 0.018 * L, len: 0.13 * L }, sd * 0.155 * L, 0.18 * L, 0, 0.2 * H0, 1.1 * H0, { paint: paint(), det: { panel: true }, prof: 'round' });
+        engine(sd * 0.155 * L, 0.1 * L, 0.02 * L);
+        beam(sd * 0.05 * L, 0.12 * L, sd * 0.06 * L, -0.15 * L, 0.0025 * L, 0.5 * H0, 0.2 * H0, { paint: -1, det: {} });
+        box(sd * 0.11 * L, 0.4 * L, 0.012 * L, 0.05 * L, sd * -12, 0.4 * H0, 0.6 * H0, { paint: -1, det: { panel: true } });
+      }
+      // the towed refinery
+      truss(-0.11 * L, -0.16 * L, 0.11 * L, -0.16 * L, 0.008 * L, 0.2 * H0, 0.6 * H0);
+      truss(-0.11 * L, -0.46 * L, 0.11 * L, -0.46 * L, 0.008 * L, 0.2 * H0, 0.6 * H0);
+      truss(-0.11 * L, -0.16 * L, -0.11 * L, -0.46 * L, 0.008 * L, 0.2 * H0, 0.6 * H0);
+      truss(0.11 * L, -0.16 * L, 0.11 * L, -0.46 * L, 0.008 * L, 0.2 * H0, 0.6 * H0);
+      circle(0, -0.31 * L, 0.06 * L, 0.3 * H0, 1.6 * H0, { det: { panel: true } });
+      circle(0, -0.31 * L, 0.032 * L, 1.3 * H0, 0.8 * H0, { paint: -1, det: {}, em: { type: 'furnace' }, prof: 'round' });
+      for (const [tx, ty] of [[-0.065, -0.21], [0.065, -0.21], [-0.065, -0.41], [0.065, -0.41]]) if (keep()) circle(tx * L, ty * L, (0.03 + r() * 0.012) * L, 0.3 * H0, 0.035 * L, { paint: paint(), det: {}, prof: 'round' });
+      for (const sd of [-1, 1]) box(sd * 0.135 * L, -0.31 * L, 0.012 * L, 0.06 * L, 0, 0.2 * H0, 0.4 * H0, { paint: -1, det: { radiator: 0.8 }, prof: 'chamfer' });
+      circle(-0.1 * L, -0.47 * L, 0.01 * L, 1 * H0, 0.3 * H0, { paint: -1, det: {}, em: { type: 'flare' }, prof: 'round' });
+      navLights(0.085 * L, 0.13 * L);
+      break;
+    }
+    case 'colony': {
+      box(0, -0.02 * L, 0.018 * L, 0.45 * L, 0, 0.3 * H0, 0.9 * H0, { det: { panel: true, windows: true } });
+      circle(0, 0.45 * L, 0.075 * L, 0.5 * H0, 1.2 * H0, { det: { panel: true }, prof: 'round' });
+      circle(0, 0.45 * L, 0.03 * L, 1.2 * H0, 0.6 * H0, { paint: -1, det: { dish: true }, prof: 'round' });
+      const ry = 0.3 * L, RR = 0.13 * L;
+      mk('ring', { R: RR, t: 0.014 * L, gap: 0 }, 0, ry, 0, 0.2 * H0, 1.1 * H0, { det: { panel: true, windows: true }, prof: 'round' });
+      for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; truss(Math.cos(a) * 0.02 * L, ry + Math.sin(a) * 0.02 * L, Math.cos(a) * RR, ry + Math.sin(a) * RR, 0.005 * L, 0.2 * H0, 0.6 * H0); }
+      for (let i = 0; i < 8; i++) { const a = (i + 0.5) / 8 * Math.PI * 2; if (keep()) box(Math.cos(a) * RR, ry + Math.sin(a) * RR, 0.014 * L, 0.011 * L, a / D2R - 90, 0.6 * H0, 0.9 * H0, { paint: paint(), det: { panel: true, windows: true } }); }
+      for (let i = 0; i < 3; i++) { const y = (0.12 - i * 0.09) * L; for (const sd of [-1, 1]) { beam(sd * 0.018 * L, y, sd * 0.05 * L, y, 0.005 * L, 0.3 * H0, 0.4 * H0, { paint: -1, det: {} }); dome(sd * 0.085 * L, y, 0.038 * L); } }
+      const cw = 0.009 * L, cl = 0.017 * L;
+      for (const sd of [-1, 1]) {
+        truss(sd * 0.075 * L, -0.15 * L, sd * 0.075 * L, -0.32 * L, 0.004 * L, 0.2 * H0, 0.6 * H0);
+        containers(sd < 0 ? -0.07 * L : 0.026 * L, -0.31 * L, 3, 4, cw, cl, 0.5 * H0);
+        truss(sd * 0.018 * L, 0.02 * L, sd * 0.22 * L, 0.02 * L, 0.005 * L, 0.2 * H0, 0.4 * H0);
+        solar(sd * 0.27 * L, 0.02 * L, 0.05 * L, 0.06 * L, 0, 0.2 * H0);
+        box(sd * 0.09 * L, -0.4 * L, 0.03 * L, 0.012 * L, 0, 0.3 * H0, 0.4 * H0, { paint: -1, det: { radiator: 0.5 }, prof: 'chamfer' });
+      }
+      box(0, -0.42 * L, 0.06 * L, 0.035 * L, 0, 0.2 * H0, 1.5 * H0, { det: { panel: true } });
+      engines(5, -0.475 * L, 0.016 * L, 0.03 * L);
+      navLights(0.075 * L, 0.45 * L);
+      break;
+    }
+    case 'carrier': {
+      mk('trap', { r1: 0.16 * L, r2: 0.1 * L, he: 0.44 * L }, 0, 0, 0, 0, 1.2 * H0, { det: { panel: true, windows: true }, prof: 'chamfer' });
+      box(0, 0.02 * L, 0.07 * L, 0.4 * L, 0, 1.0 * H0, 0.3 * H0, { paint: -1, det: { deck: true }, prof: 'chamfer' });
+      for (const sd of [-1, 1]) {
+        for (let j = 0; j < 3; j++) box(sd * (0.083 * L + j * 0.012 * L), 0.27 * L, 0.0045 * L, 0.11 * L, 0, 1.05 * H0, 0.2 * H0, { paint: -1, det: { tube: true }, prof: 'chamfer' });
+        for (let k = 0; k < 2; k++) {
+          const y = (0.02 - k * 0.2) * L, x0 = sd * 0.13 * L, x1 = sd * 0.3 * L;
+          truss(x0, y - 0.07 * L, x1, y - 0.07 * L, 0.006 * L, 0.3 * H0, 0.6 * H0);
+          truss(x0, y + 0.07 * L, x1, y + 0.07 * L, 0.006 * L, 0.3 * H0, 0.6 * H0);
+          truss(x1, y - 0.07 * L, x1, y + 0.07 * L, 0.006 * L, 0.3 * H0, 0.6 * H0);
+          if (r() < 0.75) smallShip((x0 + x1) / 2 + sd * 0.01 * L, y, 0.12 * L, 0, 0.5 * H0);
+          beacon(x1, y - 0.07 * L, 0.005 * L, 0.9 * H0, emis); beacon(x1, y + 0.07 * L, 0.005 * L, 0.9 * H0, emis);
+        }
+        for (let k = 0; k < 3; k++) {
+          const y = (0.3 - k * 0.25) * L;
+          circle(sd * 0.115 * L, y, 0.014 * L, 1.3 * H0, 0.5 * H0, { paint: -1, det: {}, prof: 'round' });
+          box(sd * 0.115 * L, y + 0.02 * L, 0.0025 * L, 0.018 * L, 0, 1.6 * H0, 0.25 * H0, { paint: -1, det: {} });
+        }
+      }
+      box(-0.1 * L, -0.2 * L, 0.022 * L, 0.06 * L, 0, 1.4 * H0, 1.5 * H0, { paint: 1 % hullN, det: { panel: true, windows: true } });
+      for (let y = -0.36; y <= 0.4; y += 0.08) { beacon(-0.068 * L, y * L, 0.003 * L, 1.35 * H0, emis); beacon(0.068 * L, y * L, 0.003 * L, 1.35 * H0, emis); }
+      engines(6, -0.47 * L, 0.02 * L, 0.045 * L);
+      navLights(0.1 * L, 0.42 * L);
+      break;
+    }
+    case 'explorer': {
+      mk('ucap', { r1: 0.05 * L, r2: 0.035 * L, len: 0.62 * L }, 0, 0.02 * L, 0, 0, 1.3 * H0, { det: { panel: true, windows: true }, prof: 'round' });
+      circle(0, 0.38 * L, 0.075 * L, 1.3 * H0, 0.6 * H0, { paint: 0, det: { dish: true }, prof: 'round' });
+      mk('ring', { R: 0.11 * L, t: 0.008 * L, gap: 0 }, 0, 0.1 * L, 0, 0.2 * H0, 0.8 * H0, { paint: 1 % hullN, det: { panel: true, windows: true }, prof: 'round' });
+      for (const sd of [-1, 1]) {
+        beam(sd * 0.03 * L, 0.33 * L, sd * 0.23 * L, 0.47 * L, 0.0025 * L, 1.0 * H0, 0.2 * H0, { paint: -1, det: {} });
+        beacon(sd * 0.23 * L, 0.47 * L, 0.005 * L, 1.2 * H0, emis);
+        for (let i = 0; i < 6; i++) for (let j = 0; j < 2; j++) {
+          const y = (0.24 - i * 0.045) * L, x = sd * (0.058 * L + j * 0.018 * L);
+          mk('ucap', { r1: 0.006 * L, r2: 0.004 * L, len: 0.03 * L }, x, y, 0, 1.0 * H0, 0.3 * H0, { paint: -1, det: {} });
+          beacon(x, y + 0.016 * L, 0.0035 * L, 1.3 * H0, emis);
+        }
+        truss(sd * 0.04 * L, -0.08 * L, sd * 0.19 * L, -0.08 * L, 0.006 * L, 0.2 * H0, 0.6 * H0);
+        for (const dy of [-0.035, 0.035]) { box(sd * 0.17 * L, (-0.08 + dy) * L, 0.02 * L, 0.004 * L, 0, 0.3 * H0, 0.3 * H0, { paint: -1, det: {} }); if (r() < 0.8) smallShip(sd * 0.17 * L, (-0.08 + dy) * L, 0.05 * L, 0, 0.6 * H0); }
+        tank(sd * 0.065 * L, -0.24 * L, 0.022 * L, 0.12 * L, 0, 0.4 * H0);
+        truss(sd * 0.05 * L, -0.33 * L, sd * 0.15 * L, -0.33 * L, 0.005 * L, 0.2 * H0, 0.4 * H0);
+        solar(sd * 0.2 * L, -0.33 * L, 0.05 * L, 0.03 * L, 0, 0.3 * H0);
+      }
+      box(0, -0.37 * L, 0.04 * L, 0.03 * L, 0, 0.2 * H0, 1.2 * H0, { det: { panel: true } });
+      engines(2, -0.415 * L, 0.018 * L, 0.04 * L);
+      navLights(0.05 * L, 0.3 * L);
+      break;
+    }
   }
   const seedStr = 'st|' + arch.id + '|' + brand.id + '|' + seed;
   finalizeParts(parts, brand, seedStr, L, { jitter: true });
@@ -876,7 +1054,7 @@ function assembleStation(arch, brand, seed) {
 }
 
 function generateStation(catalog, archId, brandId, seed) {
-  const arch = catalog.stations.find(a => a.id === archId), brand = catalog.brands.find(b => b.id === brandId);
+  const arch = [...catalog.stations, ...(catalog.heavies || [])].find(a => a.id === archId), brand = catalog.brands.find(b => b.id === brandId);
   const ship = assembleStation(arch, brand, seed);
   const maps = bake(ship, brand, { res: arch.res || 768, length: ship.L });
   return { ship, maps };
