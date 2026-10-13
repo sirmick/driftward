@@ -70,6 +70,10 @@ npm run check        # build, then validate all shaders
 npm run preview      # bake every ship on the CPU -> preview.png
 ```
 
+## Design
+
+[The Book](docs/book.md) describes every game mechanism, tagged by the milestone that builds it, along with the build staging (M0 to M9), the M1 scope and the faction names. It is an export of the design doc; update it by re-exporting rather than editing it here.
+
 ## Roadmap
 
 - One JSON Schema for brands, planets and suns, used both as the LLM contract and as the validator that clamps its output
