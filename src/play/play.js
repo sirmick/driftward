@@ -152,10 +152,21 @@ const ASSIST = [
 let assistMode = 0, zoom = 1, bloomOn = true, nanView = 0, navOn = false;
 const assist = () => assistMode === 0;
 function setNav(on) { navOn = on; $('b-nav').setAttribute('aria-pressed', String(on)); }
+// settings, kept in this browser; a new game starts from the assist level and overlay chosen here
+const SETTINGS = Object.assign({ bloom: 1, nav: 0, assist: 0, debug: 1 }, (() => { try { return JSON.parse(localStorage.getItem('driftward.settings') || '{}'); } catch (e) { return {}; } })());
+function applySettings() { bloomOn = !!SETTINGS.bloom; }
+applySettings();
+// the shell's screens over the game: the title, the pause menu, settings (on top of either)
+const shellOpen = () => ['settings', 'pause', 'title'].find(id => !$(id).hidden) || null;
 $('b-nav').onclick = () => { setNav(!navOn); canvas.focus(); };
 window.addEventListener('keydown', e => {
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) { if (e.code === 'Escape') e.target.blur(); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
+  // with a shell screen up, the game takes no keys: Esc and P step back out
+  if (shellOpen()) { if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyP')) shellBack(); return; }
   if (!keys.has(e.code)) {
+    if (e.code === 'KeyP') pauseGame(true);
+    if (e.code === 'Escape') onEscape();
     if (e.code === 'Tab' || e.code === 'KeyF') { assistMode = (assistMode + 1) % 3; toast(ASSIST[assistMode].toast); }
     if ((e.code === 'KeyQ' || e.code === 'KeyE') && assist()) toast('Strafe works with assist off: press Tab');
     // flight: T cycles ship targets, 1-9 pick from the location list, G flies to the target, M opens the map
@@ -164,15 +175,13 @@ window.addEventListener('keydown', e => {
       if (e.code === 'KeyG') flyTo();
       if (e.code === 'KeyM') toggleMap();
       if (/^Digit[1-9]$/.test(e.code)) pickLocation(+e.code.slice(5));
-      if (e.code === 'Escape') escapeFlight();
     }
     if (e.code === 'KeyI') setNav(!navOn);
     // debugging the flashing black squares: B toggles bloom, N paints bad scene pixels (see postProcess)
     if (e.code === 'KeyB') { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
     if (e.code === 'KeyN') { nanView = 1 - nanView; toast(nanView ? 'NaN view: magenta = bad scene pixel, cyan = bad bloom, yellow = negative' : 'NaN view off'); }
     if (e.code === 'KeyL') landOrLaunch();
-    if (e.code === 'Escape' && panelOpen()) showPanel(null);
-    if (e.code === 'Enter' || e.code === 'Escape') skipSequence();
+    if (e.code === 'Enter') skipSequence();
     if (e.code === 'KeyW' && inPort()) waitDay();
     if (e.code === 'KeyT' && inPort()) showPanel(panelOpen() === 'trade' ? null : 'trade');
     if (e.code === 'KeyM' && inPort()) showPanel(panelOpen() === 'board' ? null : 'board');
@@ -208,7 +217,16 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
-let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => {};
+let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false;
+let pauseGame = () => {}, shellBack = () => {};
+// Esc steps back: a sequence skips; in port, an open panel closes; in flight, the map closes, then the target
+// clears; otherwise the game pauses
+function onEscape() {
+  if (skipSequence() === 0) return;
+  if (inPort()) { if (panelOpen()) showPanel(null); else pauseGame(true); return; }
+  if (inFlight() && escapeFlight()) return;
+  pauseGame(true);
+}
 // the port screen's panels beside the port card: the market or the mission board, one at a time
 const PANELS = ['trade', 'board'];
 const panelOpen = () => PANELS.find(p => !$(p).hidden) || null;
@@ -248,8 +266,11 @@ CORE_READY.then(CORE => {
 
   // A new game starts landed at the system's start port, as in EV. opts.space = [x, y] starts flying there instead
   // (tests and the debug hook use it).
+  // opts.backdrop: the title's live view (no player ship, the shell stays up).
+  let seedNow = 0;
   function newGame(seed, opts) {
-    sim.clear(); sim.reseed(seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed);
+    seedNow = seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed >>> 0;
+    sim.clear(); sim.reseed(seedNow);
     writePrices();
     sim.setCount(1);
     SH.kind[0] = playerTypeIndex(); SH.alive[0] = 1; SH.ang[0] = 0;
@@ -262,6 +283,9 @@ CORE_READY.then(CORE => {
     sim.startTraffic(); // ambient traffic, already mid-flow
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
     navTarget = null;
+    if (sim.game.auto) sim.game.auto[0] = 0;
+    if (opts && opts.backdrop) SH.alive[0] = 0; // nobody flies the title
+    else { closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav); zoom = 1; }
     missionSeen.set(sim.mission.state);
     startRecording();
   }
@@ -291,16 +315,28 @@ CORE_READY.then(CORE => {
   $('svc-trade').onclick = () => { showPanel(panelOpen() === 'trade' ? null : 'trade'); canvas.focus(); };
   $('svc-board').onclick = () => { showPanel(panelOpen() === 'board' ? null : 'board'); canvas.focus(); };
   $('svc-launch').onclick = () => { landOrLaunch(); canvas.focus(); };
-  saveGame = () => { localStorage.setItem('driftward.save', b64(sim.save())); toast(`Saved at tick ${sim.tick()}`); };
-  loadGame = () => {
-    const s = localStorage.getItem('driftward.save') || localStorage.getItem('driftward.autosave');
-    if (!s) { toast('No saved game'); return; }
+  // saves: the world's bytes, and a note of where and when for the title's Continue
+  function store(key) {
+    localStorage.setItem(key, b64(sim.save()));
+    const at = sim.mode() === MODE.flying ? null : BODIES[sim.game.at[0]];
+    localStorage.setItem(key + '.meta', JSON.stringify({ day: sim.day(), credits: sim.credits(), port: at && at.port ? at.port.name : null, seed: seedNow }));
+  }
+  saveGame = () => { if (titleUp()) return; store('driftward.save'); toast(`Saved at tick ${sim.tick()}`); };
+  function loadFrom(key) {
+    const s = localStorage.getItem(key);
+    if (!s) return false;
     const err = sim.load(unb64(s));
-    if (err) { toast(`Save is unreadable (error ${err})`); return; }
-    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; missionSeen.set(sim.mission.state); startRecording(); toast(`Loaded day ${sim.day()}`);
-  };
+    if (err) { toast(`Save is unreadable (error ${err}): saved by an older build?`); return false; }
+    const meta = JSON.parse(localStorage.getItem(key + '.meta') || '{}');
+    seedNow = meta.seed >>> 0;
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; missionSeen.set(sim.mission.state); startRecording();
+    closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav);
+    toast(`Loaded day ${sim.day()}`);
+    return true;
+  }
+  loadGame = () => { if (!loadFrom('driftward.save') && !loadFrom('driftward.autosave')) toast('No saved game'); };
   // autosave on landing, as in EV (the Book: death reloads the last landing save)
-  function autosave() { localStorage.setItem('driftward.autosave', b64(sim.save())); }
+  function autosave() { store('driftward.autosave'); }
   function exportReplay() {
     const ticks = sim.tick() - rec.startTick, hash = sim.hash();
     const log = `# driftward input log: replay with\n#   cargo run --release --bin replay -- driftward-save.bin driftward-inputs.txt ${ticks}\n# expect: tick ${sim.tick()} hash ${hash}\n` + rec.log.map(e => e[1] === 'cmd' ? `${e[0]} cmd ${e[2]} ${e[3]} ${e[4]}` : `${e[0]} ${e[1]}`).join('\n') + '\n';
@@ -309,7 +345,59 @@ CORE_READY.then(CORE => {
   function download(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
   $('b-save').onclick = () => { saveGame(); canvas.focus(); };
   $('b-load').onclick = () => { loadGame(); canvas.focus(); };
-  $('b-new').onclick = () => { newGame(); toast('New game'); canvas.focus(); };
+  $('b-menu').onclick = () => { pauseGame(!$('pause').hidden ? false : true); };
+
+  // ---------- the shell: title, pause, settings ----------
+  let paused = false;
+  const titleUp = () => !$('title').hidden;
+  function closeShell() { for (const id of ['title', 'pause', 'settings']) $(id).hidden = true; paused = false; canvas.focus(); }
+  // the title: over a live view of the system (traffic flying past Halde), with Continue from the last landing
+  function showTitle() {
+    const H0 = BODIES[startBody];
+    newGame(1, { backdrop: true, space: [H0.x - H0.r * 1.05, H0.y + H0.r * 0.25] });
+    zoom = 0.5; setNav(false);
+    for (const id of ['pause', 'settings']) $(id).hidden = true;
+    paused = false;
+    const meta = JSON.parse(localStorage.getItem('driftward.autosave.meta') || 'null');
+    $('t-continue').disabled = !localStorage.getItem('driftward.autosave');
+    $('t-continue-sub').textContent = meta ? `day ${meta.day}${meta.port ? ' at ' + meta.port : ''} · ${fmtCr(meta.credits)} cr` : 'no landing yet';
+    $('title-sub').textContent = `The ${SYS.name} system · ${BODIES.filter(b => b.port).length} ports`;
+    $('title').hidden = false;
+    ($('t-continue').disabled ? $('t-new') : $('t-continue')).focus();
+  }
+  // a seed from the field: blank is random; a number is used as is; any other text is hashed
+  function seedFrom(text) {
+    text = text.trim();
+    if (!text) return undefined;
+    if (/^\d+$/.test(text)) return Number(text) >>> 0;
+    let h = 0x811c9dc5; for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193) >>> 0;
+    return h;
+  }
+  $('t-new').onclick = () => { newGame(seedFrom($('t-seed').value)); toast(`New game · seed ${seedNow}`); };
+  $('t-continue').onclick = () => { if (!loadFrom('driftward.autosave')) showTitle(); };
+  pauseGame = on => {
+    if (titleUp()) return;
+    paused = on;
+    $('pause').hidden = !on;
+    if (on) $('pause-sub').textContent = `Day ${sim.day()} · ${fmtCr(sim.credits())} cr · seed ${seedNow}`;
+    else canvas.focus();
+  };
+  shellBack = () => { if (!$('settings').hidden) closeSettings(); else if (!$('pause').hidden) pauseGame(false); };
+  $('p-resume').onclick = () => pauseGame(false);
+  $('p-save').onclick = () => { saveGame(); pauseGame(false); };
+  $('p-load').onclick = () => loadGame();
+  $('p-replay').onclick = () => $('b-replay').onclick();
+  $('p-title').onclick = () => showTitle();
+  function openSettings() {
+    $('s-bloom').value = String(SETTINGS.bloom); $('s-nav').value = String(SETTINGS.nav);
+    $('s-assist').value = String(SETTINGS.assist); $('s-debug').value = String(SETTINGS.debug);
+    $('settings').hidden = false; $('s-done').focus();
+  }
+  function closeSettings() { $('settings').hidden = true; if (!shellOpen()) canvas.focus(); }
+  for (const k of ['bloom', 'nav', 'assist', 'debug']) $('s-' + k).onchange = e => {
+    SETTINGS[k] = +e.target.value; localStorage.setItem('driftward.settings', JSON.stringify(SETTINGS)); applySettings();
+  };
+  $('t-settings').onclick = openSettings; $('p-settings').onclick = openSettings; $('s-done').onclick = closeSettings;
   $('b-replay').onclick = () => {
     const r = exportReplay();
     download('driftward-save.bin', r.save, 'application/octet-stream');
@@ -327,9 +415,11 @@ CORE_READY.then(CORE => {
     sim.checkViews();
     // bake the traffic hulls up front (behind the start port's screen), not when the first one flies into view
     for (let k = 0; k < 3; k++) typeReady(types[sim.role.kind[k]]);
-    const bits = inputBits(IN);
-    if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
-    for (let n = sim.due(dt); n > 0; n--) sim.step();
+    if (!paused) { // paused: the clock stops (the replay log is by tick, so a pause leaves no trace)
+      const bits = inputBits(IN);
+      if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
+      for (let n = sim.due(dt); n > 0; n--) sim.step();
+    }
     sim.interpolate();
     const mode = sim.mode();
     if (mode !== lastMode) { onMode(mode, lastMode); lastMode = mode; }
@@ -355,7 +445,9 @@ CORE_READY.then(CORE => {
       $('svc-board').disabled = !(P0.services || []).includes('missions');
       port.hidden = false;
       showPanel(null);
-      if (prev === MODE.descending) { autosave(); toast(`Landed at ${P0.name}: day ${sim.day()}, saved`); }
+      // newly landed (not a new game or a load): autosave. Any earlier mode counts, as a stalled frame or a test
+      // stepping the sim directly can pass the whole descent between two frames
+      if (prev !== -1 && prev !== MODE.landed) { autosave(); toast(`Landed at ${P0.name}: day ${sim.day()}, saved`); }
     } else port.hidden = true;
   }
 
@@ -700,9 +792,9 @@ CORE_READY.then(CORE => {
     hx.setTransform(dpr, 0, 0, dpr, 0, 0);
     hx.clearRect(0, 0, W, H);
     const mode = sim.mode();
-    $('loc').hidden = mode !== MODE.flying || mapOn;
-    if (mode !== MODE.flying && mapOn) toggleMap(false);
-    if (mode === MODE.landed) return; // the port screen is the HUD
+    $('loc').hidden = mode !== MODE.flying || mapOn || titleUp();
+    if ((mode !== MODE.flying || titleUp()) && mapOn) toggleMap(false);
+    if (mode === MODE.landed || titleUp()) return; // the port screen is the HUD; the title has none
     if (mode !== MODE.flying) { // in a landing or launch sequence: the day and how to skip it
       hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle'; hx.textAlign = 'center';
       const B = BODIES[sim.game.at[0]];
@@ -720,7 +812,7 @@ CORE_READY.then(CORE => {
       [`DAY ${sim.day()}  ·  ${fmtCr(sim.credits())} CR  ·  HOLD ${sim.holdUsed()}/${holdCap()} T`, '#dbe0e7'],
       [`SPD ${sp.toFixed(0).padStart(4)} / ${topNow.toFixed(0)} m/s${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, wk < -0.03 ? '#e08a4a' : wk > 0.03 ? '#7fd08a' : '#dbe0e7'],
       [`HDG ${hd.toFixed(0).padStart(3, '0')}°  ${ASSIST[assistMode].hud}${burn ? '  BURN' : ''}`, burn ? '#e2b866' : assistMode ? '#c8a27a' : '#8a95a4'],
-      [`${T0.name.toUpperCase()}  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps`, '#8a95a4']
+      [`${T0.name.toUpperCase()}${SETTINGS.debug ? `  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps` : ''}`, '#8a95a4']
     ];
     hx.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle';
     // under the nearest-body line: the autopilot, then the active missions with days left
@@ -878,7 +970,11 @@ CORE_READY.then(CORE => {
     if (!assist()) { toast('The autopilot flies under full assist: press Tab'); return; }
     if (command(CMD.autopilot, j) === 0) toast(`Autopilot: flying to ${targetName(navTarget)}`);
   };
-  escapeFlight = () => { if (mapOn) toggleMap(false); else if (navTarget) { setTarget(null); toast('Target cleared'); } };
+  escapeFlight = () => {
+    if (mapOn) { toggleMap(false); return true; }
+    if (navTarget) { setTarget(null); toast('Target cleared'); return true; }
+    return false;
+  };
   inFlight = () => sim.mode() === MODE.flying;
 
   // the target, marked where it is: corner brackets round it on screen, or an arrow on the screen edge
@@ -1104,7 +1200,7 @@ CORE_READY.then(CORE => {
 
   // test hook: drive and inspect the session from a console or a headless browser
   window.__play = {
-    sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES, ECON,
+    sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES, ECON, showTitle, pauseGame,
     setNav, trade, repay, showPanel, accept, abandon, setTarget, flyTo, cycleTarget, toggleMap, pickLocation,
     target: () => navTarget && (navTarget.body !== undefined ? { body: navTarget.body } : { ship: sim.resolve(navTarget.ship) }),
     locations: () => locRows.map(([j, child]) => ({ j, name: BODIES[j].name, child })),
@@ -1118,7 +1214,7 @@ CORE_READY.then(CORE => {
     // commodity index by id, and its price where the player is landed
     good: id => GOODS.findIndex(c => c.id === id),
     price: id => sim.price(sim.game.at[0], GOODS.findIndex(c => c.id === id)),
-    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn,
+    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
       credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap() }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {
@@ -1131,7 +1227,6 @@ CORE_READY.then(CORE => {
     save: () => saveGame(), load: () => loadGame(), b64, unb64,
     inspect: () => G.inspectScene(), setZoom
   };
-  newGame(1);
-  canvas.focus();
+  showTitle();
   requestAnimationFrame(frame);
 }).catch(e => { console.error(e); $('glerr').textContent = 'The sim core failed to start: ' + (e.message || e); $('glerr').hidden = false; });

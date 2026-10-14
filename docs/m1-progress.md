@@ -4,7 +4,7 @@ M1 in the Book is "Trade and delivery": one system, a game shell, the sim core a
 
 This file tracks that milestone against the Book's `[M1]` items. Update it as work lands. Status: **done**, **partial** (with what is missing), or **to do**.
 
-Last updated: 2026-10-14, with step 7 (HUD, targeting and the system map).
+Last updated: 2026-10-14, with step 8 (the shell).
 
 ## Summary
 
@@ -19,8 +19,8 @@ Last updated: 2026-10-14, with step 7 (HUD, targeting and the system map).
 | Mission board and delivery missions | Done |
 | Ambient traffic | Done |
 | HUD, targeting, system map, location list | Done, but for ship status and sensor error radii |
-| Shell | Partial (next) |
-| Lore, painted vistas and portraits (OpenRouter) | To do |
+| Shell | Done, but for death (no combat yet) |
+| Lore, painted vistas and portraits (OpenRouter) | To do (next) |
 | Exit test, headless | Every piece works and is tested; the single scripted test is to do |
 
 ## Done
@@ -49,6 +49,7 @@ Last updated: 2026-10-14, with step 7 (HUD, targeting and the system map).
 - **Targeting.** T cycles the ships on the radar, nearest first; bodies from the location list or the map. A body or ship target is bracketed on screen, or marked by an arrow on the screen edge; a ship target lapses when it lands.
 - **System map (M).** Orbits, bodies, ports, ships, mission destinations, the target and the autopilot's course; click to target.
 - **Fly-to autopilot (G).** A core command, so it replays: under full assist it flies to the target body, round the star or a planet in the way (the same detour traffic uses), and brakes to stop over it, clear to land. Thrust, reverse or turn, or leaving full assist, takes over. The smoke test flies a delivery with it and replays the session natively.
+- **Shell.** The page opens on the title, over a live view of Halde with traffic flying past: Continue (the last landing's autosave, with its day, port and credits), New game (from a seed: blank is random, a number is used as is, text is hashed), Settings. P, or Esc with nothing else to close, pauses: the clock stops (the replay log is by tick, so a pause leaves no trace); the pause menu has resume, save, load, settings, export replay and quit to title. Settings (bloom, the nav overlay and assist level a game starts with, the debug readout) are kept in the browser. Every landing autosaves, even one a stalled frame skips past.
 - **Teleport (dev).** `__play.teleport(body)` puts the flying player at rest over a body, as a logged command, so tests can fly a delivery and still replay it.
 - **Dev server.** Node, live reload of both pages, the crate rebuilds on change.
 
@@ -56,7 +57,7 @@ Last updated: 2026-10-14, with step 7 (HUD, targeting and the system map).
 
 - **Port screen.** Name, body, role, population, description and a vista of the body; trade, the mission board, wait a day and launch work. Missing: bar, refuel and repair (shown disabled), painted vista and lore.
 - **HUD.** Missing: ship status (shields, hull, energy, heat, fuel), which waits for damage and fuel in the core, and radar contacts drawn at their sensor error radius, which waits for sensors in the core.
-- **Shell.** New game, save and load buttons, replay export. Missing: title screen, new game from a seed, continue from the last landing save, settings, pause.
+- **Shell.** Missing: death reloading the last landing save, which waits for something that can kill you (M2).
 - **Debug control plane.** The page exposes `window.__play` (new game, advance, commands, teleport, probe, save, load, export replay), which headless tests drive. Missing: a local API (time scale, teleport, spawn, state inspector, replay and diff) that Claude Code can drive without a browser script.
 - **Controls.** As the Book's: arrows or WASD, Shift burner, Tab assist level (F too), T targets, L land, M map, wheel zoom; plus 1 to 9 for locations, G fly to, I the nav overlay; in port, T trade and M the mission board. Missing: J to jump (M4), gamepad.
 
@@ -64,9 +65,8 @@ Last updated: 2026-10-14, with step 7 (HUD, targeting and the system map).
 
 In build order.
 
-1. **Shell.** Title, new game with a seed, continue from the last landing save, settings, pause. Death reloads the last landing save.
-2. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
-3. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
+1. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
+2. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
 
 ## Deviations from the Book
 

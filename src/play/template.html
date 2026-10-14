@@ -98,6 +98,30 @@ button { font: inherit; color: inherit; }
 #loc .tag { margin-left: 4px; padding: 0 4px; border-radius: 3px; font-size: 9.5px; letter-spacing: .06em; color: #7fd08a; border: 1px solid rgba(127,208,138,.45); }
 #loc .tag.m { color: #8fd3ff; border-color: rgba(143,211,255,.5); }
 #map { position: fixed; left: 0; top: 0; width: 100%; cursor: crosshair; }
+/* the shell: the title over a live view of the system, the pause menu, settings */
+.shell { position: fixed; inset: 0; display: grid; align-items: center; padding: 24px 6vw; }
+#title { background: linear-gradient(90deg, rgba(7,9,12,.9) 0%, rgba(7,9,12,.6) 40%, rgba(7,9,12,0) 72%); }
+#pause, #settings { background: rgba(7,9,12,.7); justify-items: center; }
+.shell-card { width: min(380px, 100%); display: grid; gap: 8px; }
+#pause .shell-card, #settings .shell-card { background: rgba(12,16,21,.94); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; }
+.shell h2 { margin: 0; font: 700 64px/0.95 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+.shell h3 { margin: 0 0 6px; font: 700 22px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+.shell .sub { margin: 4px 0 22px; color: var(--muted); font: 500 13px var(--f-mono); }
+.shell button.item { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; text-align: left; width: 100%;
+  background: rgba(18,24,33,.88); border: 1px solid var(--line); border-radius: 6px; padding: 11px 14px; cursor: pointer;
+  font: 600 15px var(--f-display); letter-spacing: .05em; text-transform: uppercase; color: var(--fg); }
+.shell button.item span { color: var(--muted); font: 400 11.5px var(--f-mono); text-transform: none; letter-spacing: 0; }
+.shell button.item:hover:not(:disabled) { border-color: var(--amber); }
+.shell button.item:disabled { cursor: default; color: var(--muted); }
+.shell button.item.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+.shell button.item.primary span { color: rgba(27,21,8,.75); }
+.shell button.item.primary:disabled { background: rgba(18,24,33,.88); border-color: var(--line); color: var(--muted); }
+.shell label.seed { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 500 12px var(--f-mono); }
+.shell input[type=text] { flex: 1; background: #0c1015; border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; color: var(--fg); font: 500 12.5px var(--f-mono); }
+.shell .setting { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 2px; font: 500 13px var(--f-body); }
+.shell .setting select { background: #0c1015; color: var(--fg); border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; font: 500 12px var(--f-mono); }
+.shell .foot { margin: 14px 0 0; color: var(--muted); font: 400 11.5px var(--f-mono); }
+.shell .note { margin: 0 0 6px; color: var(--muted); font: 400 11.5px var(--f-mono); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -146,14 +170,48 @@ button { font: inherit; color: inherit; }
     <p class="trade-note">Mission cargo takes hold space; land at the destination by the deadline to be paid. Late, the cargo is reclaimed and nothing is paid.</p>
   </div>
 </section>
+<section id="title" class="shell" hidden aria-label="Title">
+  <div class="shell-card">
+    <h2>Driftward</h2>
+    <p class="sub" id="title-sub"></p>
+    <button type="button" class="item primary" id="t-continue">Continue<span id="t-continue-sub"></span></button>
+    <button type="button" class="item" id="t-new">New game<span>a used fighter and a debt</span></button>
+    <label class="seed">Seed <input type="text" id="t-seed" placeholder="blank: random" maxlength="24" spellcheck="false"></label>
+    <button type="button" class="item" id="t-settings">Settings</button>
+    <p class="foot">An Escape Velocity-style game in progress: milestone M1, one system. Trade, haul, and pay off the lender.</p>
+  </div>
+</section>
+<section id="pause" class="shell" hidden aria-label="Paused">
+  <div class="shell-card">
+    <h3>Paused</h3>
+    <p class="note" id="pause-sub"></p>
+    <button type="button" class="item primary" id="p-resume">Resume<span>P or Esc</span></button>
+    <button type="button" class="item" id="p-save">Save<span>F6</span></button>
+    <button type="button" class="item" id="p-load">Load<span>F9: your save, else the last landing</span></button>
+    <button type="button" class="item" id="p-settings">Settings</button>
+    <button type="button" class="item" id="p-replay">Export replay<span>snapshot and input log</span></button>
+    <button type="button" class="item" id="p-title">Quit to title<span>unsaved progress is lost</span></button>
+  </div>
+</section>
+<section id="settings" class="shell" hidden aria-label="Settings">
+  <div class="shell-card">
+    <h3>Settings</h3>
+    <div class="setting">Bloom <select id="s-bloom"><option value="1">On</option><option value="0">Off</option></select></div>
+    <div class="setting">Navigation overlay at start <select id="s-nav"><option value="0">Off</option><option value="1">On</option></select></div>
+    <div class="setting">Assist level at start <select id="s-assist"><option value="0">Full assist</option><option value="1">Drift off</option><option value="2">Full off</option></select></div>
+    <div class="setting">Debug readout (tick, fps) <select id="s-debug"><option value="1">On</option><option value="0">Off</option></select></div>
+    <button type="button" class="item primary" id="s-done">Done<span>Esc</span></button>
+    <p class="note">Settings are kept in this browser.</p>
+  </div>
+</section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · Tab assist · L land · T target · 1–9 locations · G fly to · M map · I nav · wheel zoom</span>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · P pause · Tab assist · L land · T target · 1–9 locations · G fly to · M map · I nav · wheel zoom</span>
   <span class="spacer"></span>
+  <button type="button" id="b-menu" title="P">Menu</button>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
   <button type="button" id="b-save" title="F6">Save</button>
   <button type="button" id="b-load" title="F9">Load</button>
-  <button type="button" id="b-new">New game</button>
   <button type="button" id="b-replay" title="Download the snapshot and input log since the last new game or load">Export replay</button>
   <a href="index.html">Lab</a>
 </div>

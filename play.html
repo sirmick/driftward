@@ -98,6 +98,30 @@ button { font: inherit; color: inherit; }
 #loc .tag { margin-left: 4px; padding: 0 4px; border-radius: 3px; font-size: 9.5px; letter-spacing: .06em; color: #7fd08a; border: 1px solid rgba(127,208,138,.45); }
 #loc .tag.m { color: #8fd3ff; border-color: rgba(143,211,255,.5); }
 #map { position: fixed; left: 0; top: 0; width: 100%; cursor: crosshair; }
+/* the shell: the title over a live view of the system, the pause menu, settings */
+.shell { position: fixed; inset: 0; display: grid; align-items: center; padding: 24px 6vw; }
+#title { background: linear-gradient(90deg, rgba(7,9,12,.9) 0%, rgba(7,9,12,.6) 40%, rgba(7,9,12,0) 72%); }
+#pause, #settings { background: rgba(7,9,12,.7); justify-items: center; }
+.shell-card { width: min(380px, 100%); display: grid; gap: 8px; }
+#pause .shell-card, #settings .shell-card { background: rgba(12,16,21,.94); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; }
+.shell h2 { margin: 0; font: 700 64px/0.95 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+.shell h3 { margin: 0 0 6px; font: 700 22px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+.shell .sub { margin: 4px 0 22px; color: var(--muted); font: 500 13px var(--f-mono); }
+.shell button.item { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; text-align: left; width: 100%;
+  background: rgba(18,24,33,.88); border: 1px solid var(--line); border-radius: 6px; padding: 11px 14px; cursor: pointer;
+  font: 600 15px var(--f-display); letter-spacing: .05em; text-transform: uppercase; color: var(--fg); }
+.shell button.item span { color: var(--muted); font: 400 11.5px var(--f-mono); text-transform: none; letter-spacing: 0; }
+.shell button.item:hover:not(:disabled) { border-color: var(--amber); }
+.shell button.item:disabled { cursor: default; color: var(--muted); }
+.shell button.item.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+.shell button.item.primary span { color: rgba(27,21,8,.75); }
+.shell button.item.primary:disabled { background: rgba(18,24,33,.88); border-color: var(--line); color: var(--muted); }
+.shell label.seed { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 500 12px var(--f-mono); }
+.shell input[type=text] { flex: 1; background: #0c1015; border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; color: var(--fg); font: 500 12.5px var(--f-mono); }
+.shell .setting { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 2px; font: 500 13px var(--f-body); }
+.shell .setting select { background: #0c1015; color: var(--fg); border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; font: 500 12px var(--f-mono); }
+.shell .foot { margin: 14px 0 0; color: var(--muted); font: 400 11.5px var(--f-mono); }
+.shell .note { margin: 0 0 6px; color: var(--muted); font: 400 11.5px var(--f-mono); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -146,14 +170,48 @@ button { font: inherit; color: inherit; }
     <p class="trade-note">Mission cargo takes hold space; land at the destination by the deadline to be paid. Late, the cargo is reclaimed and nothing is paid.</p>
   </div>
 </section>
+<section id="title" class="shell" hidden aria-label="Title">
+  <div class="shell-card">
+    <h2>Driftward</h2>
+    <p class="sub" id="title-sub"></p>
+    <button type="button" class="item primary" id="t-continue">Continue<span id="t-continue-sub"></span></button>
+    <button type="button" class="item" id="t-new">New game<span>a used fighter and a debt</span></button>
+    <label class="seed">Seed <input type="text" id="t-seed" placeholder="blank: random" maxlength="24" spellcheck="false"></label>
+    <button type="button" class="item" id="t-settings">Settings</button>
+    <p class="foot">An Escape Velocity-style game in progress: milestone M1, one system. Trade, haul, and pay off the lender.</p>
+  </div>
+</section>
+<section id="pause" class="shell" hidden aria-label="Paused">
+  <div class="shell-card">
+    <h3>Paused</h3>
+    <p class="note" id="pause-sub"></p>
+    <button type="button" class="item primary" id="p-resume">Resume<span>P or Esc</span></button>
+    <button type="button" class="item" id="p-save">Save<span>F6</span></button>
+    <button type="button" class="item" id="p-load">Load<span>F9: your save, else the last landing</span></button>
+    <button type="button" class="item" id="p-settings">Settings</button>
+    <button type="button" class="item" id="p-replay">Export replay<span>snapshot and input log</span></button>
+    <button type="button" class="item" id="p-title">Quit to title<span>unsaved progress is lost</span></button>
+  </div>
+</section>
+<section id="settings" class="shell" hidden aria-label="Settings">
+  <div class="shell-card">
+    <h3>Settings</h3>
+    <div class="setting">Bloom <select id="s-bloom"><option value="1">On</option><option value="0">Off</option></select></div>
+    <div class="setting">Navigation overlay at start <select id="s-nav"><option value="0">Off</option><option value="1">On</option></select></div>
+    <div class="setting">Assist level at start <select id="s-assist"><option value="0">Full assist</option><option value="1">Drift off</option><option value="2">Full off</option></select></div>
+    <div class="setting">Debug readout (tick, fps) <select id="s-debug"><option value="1">On</option><option value="0">Off</option></select></div>
+    <button type="button" class="item primary" id="s-done">Done<span>Esc</span></button>
+    <p class="note">Settings are kept in this browser.</p>
+  </div>
+</section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · Tab assist · L land · T target · 1–9 locations · G fly to · M map · I nav · wheel zoom</span>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · P pause · Tab assist · L land · T target · 1–9 locations · G fly to · M map · I nav · wheel zoom</span>
   <span class="spacer"></span>
+  <button type="button" id="b-menu" title="P">Menu</button>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
   <button type="button" id="b-save" title="F6">Save</button>
   <button type="button" id="b-load" title="F9">Load</button>
-  <button type="button" id="b-new">New game</button>
   <button type="button" id="b-replay" title="Download the snapshot and input log since the last new game or load">Export replay</button>
   <a href="index.html">Lab</a>
 </div>
@@ -4414,10 +4472,21 @@ const ASSIST = [
 let assistMode = 0, zoom = 1, bloomOn = true, nanView = 0, navOn = false;
 const assist = () => assistMode === 0;
 function setNav(on) { navOn = on; $('b-nav').setAttribute('aria-pressed', String(on)); }
+// settings, kept in this browser; a new game starts from the assist level and overlay chosen here
+const SETTINGS = Object.assign({ bloom: 1, nav: 0, assist: 0, debug: 1 }, (() => { try { return JSON.parse(localStorage.getItem('driftward.settings') || '{}'); } catch (e) { return {}; } })());
+function applySettings() { bloomOn = !!SETTINGS.bloom; }
+applySettings();
+// the shell's screens over the game: the title, the pause menu, settings (on top of either)
+const shellOpen = () => ['settings', 'pause', 'title'].find(id => !$(id).hidden) || null;
 $('b-nav').onclick = () => { setNav(!navOn); canvas.focus(); };
 window.addEventListener('keydown', e => {
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) { if (e.code === 'Escape') e.target.blur(); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
+  // with a shell screen up, the game takes no keys: Esc and P step back out
+  if (shellOpen()) { if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyP')) shellBack(); return; }
   if (!keys.has(e.code)) {
+    if (e.code === 'KeyP') pauseGame(true);
+    if (e.code === 'Escape') onEscape();
     if (e.code === 'Tab' || e.code === 'KeyF') { assistMode = (assistMode + 1) % 3; toast(ASSIST[assistMode].toast); }
     if ((e.code === 'KeyQ' || e.code === 'KeyE') && assist()) toast('Strafe works with assist off: press Tab');
     // flight: T cycles ship targets, 1-9 pick from the location list, G flies to the target, M opens the map
@@ -4426,15 +4495,13 @@ window.addEventListener('keydown', e => {
       if (e.code === 'KeyG') flyTo();
       if (e.code === 'KeyM') toggleMap();
       if (/^Digit[1-9]$/.test(e.code)) pickLocation(+e.code.slice(5));
-      if (e.code === 'Escape') escapeFlight();
     }
     if (e.code === 'KeyI') setNav(!navOn);
     // debugging the flashing black squares: B toggles bloom, N paints bad scene pixels (see postProcess)
     if (e.code === 'KeyB') { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
     if (e.code === 'KeyN') { nanView = 1 - nanView; toast(nanView ? 'NaN view: magenta = bad scene pixel, cyan = bad bloom, yellow = negative' : 'NaN view off'); }
     if (e.code === 'KeyL') landOrLaunch();
-    if (e.code === 'Escape' && panelOpen()) showPanel(null);
-    if (e.code === 'Enter' || e.code === 'Escape') skipSequence();
+    if (e.code === 'Enter') skipSequence();
     if (e.code === 'KeyW' && inPort()) waitDay();
     if (e.code === 'KeyT' && inPort()) showPanel(panelOpen() === 'trade' ? null : 'trade');
     if (e.code === 'KeyM' && inPort()) showPanel(panelOpen() === 'board' ? null : 'board');
@@ -4470,7 +4537,16 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
-let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => {};
+let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false;
+let pauseGame = () => {}, shellBack = () => {};
+// Esc steps back: a sequence skips; in port, an open panel closes; in flight, the map closes, then the target
+// clears; otherwise the game pauses
+function onEscape() {
+  if (skipSequence() === 0) return;
+  if (inPort()) { if (panelOpen()) showPanel(null); else pauseGame(true); return; }
+  if (inFlight() && escapeFlight()) return;
+  pauseGame(true);
+}
 // the port screen's panels beside the port card: the market or the mission board, one at a time
 const PANELS = ['trade', 'board'];
 const panelOpen = () => PANELS.find(p => !$(p).hidden) || null;
@@ -4510,8 +4586,11 @@ CORE_READY.then(CORE => {
 
   // A new game starts landed at the system's start port, as in EV. opts.space = [x, y] starts flying there instead
   // (tests and the debug hook use it).
+  // opts.backdrop: the title's live view (no player ship, the shell stays up).
+  let seedNow = 0;
   function newGame(seed, opts) {
-    sim.clear(); sim.reseed(seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed);
+    seedNow = seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed >>> 0;
+    sim.clear(); sim.reseed(seedNow);
     writePrices();
     sim.setCount(1);
     SH.kind[0] = playerTypeIndex(); SH.alive[0] = 1; SH.ang[0] = 0;
@@ -4524,6 +4603,9 @@ CORE_READY.then(CORE => {
     sim.startTraffic(); // ambient traffic, already mid-flow
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
     navTarget = null;
+    if (sim.game.auto) sim.game.auto[0] = 0;
+    if (opts && opts.backdrop) SH.alive[0] = 0; // nobody flies the title
+    else { closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav); zoom = 1; }
     missionSeen.set(sim.mission.state);
     startRecording();
   }
@@ -4553,16 +4635,28 @@ CORE_READY.then(CORE => {
   $('svc-trade').onclick = () => { showPanel(panelOpen() === 'trade' ? null : 'trade'); canvas.focus(); };
   $('svc-board').onclick = () => { showPanel(panelOpen() === 'board' ? null : 'board'); canvas.focus(); };
   $('svc-launch').onclick = () => { landOrLaunch(); canvas.focus(); };
-  saveGame = () => { localStorage.setItem('driftward.save', b64(sim.save())); toast(`Saved at tick ${sim.tick()}`); };
-  loadGame = () => {
-    const s = localStorage.getItem('driftward.save') || localStorage.getItem('driftward.autosave');
-    if (!s) { toast('No saved game'); return; }
+  // saves: the world's bytes, and a note of where and when for the title's Continue
+  function store(key) {
+    localStorage.setItem(key, b64(sim.save()));
+    const at = sim.mode() === MODE.flying ? null : BODIES[sim.game.at[0]];
+    localStorage.setItem(key + '.meta', JSON.stringify({ day: sim.day(), credits: sim.credits(), port: at && at.port ? at.port.name : null, seed: seedNow }));
+  }
+  saveGame = () => { if (titleUp()) return; store('driftward.save'); toast(`Saved at tick ${sim.tick()}`); };
+  function loadFrom(key) {
+    const s = localStorage.getItem(key);
+    if (!s) return false;
     const err = sim.load(unb64(s));
-    if (err) { toast(`Save is unreadable (error ${err})`); return; }
-    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; missionSeen.set(sim.mission.state); startRecording(); toast(`Loaded day ${sim.day()}`);
-  };
+    if (err) { toast(`Save is unreadable (error ${err}): saved by an older build?`); return false; }
+    const meta = JSON.parse(localStorage.getItem(key + '.meta') || '{}');
+    seedNow = meta.seed >>> 0;
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; missionSeen.set(sim.mission.state); startRecording();
+    closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav);
+    toast(`Loaded day ${sim.day()}`);
+    return true;
+  }
+  loadGame = () => { if (!loadFrom('driftward.save') && !loadFrom('driftward.autosave')) toast('No saved game'); };
   // autosave on landing, as in EV (the Book: death reloads the last landing save)
-  function autosave() { localStorage.setItem('driftward.autosave', b64(sim.save())); }
+  function autosave() { store('driftward.autosave'); }
   function exportReplay() {
     const ticks = sim.tick() - rec.startTick, hash = sim.hash();
     const log = `# driftward input log: replay with\n#   cargo run --release --bin replay -- driftward-save.bin driftward-inputs.txt ${ticks}\n# expect: tick ${sim.tick()} hash ${hash}\n` + rec.log.map(e => e[1] === 'cmd' ? `${e[0]} cmd ${e[2]} ${e[3]} ${e[4]}` : `${e[0]} ${e[1]}`).join('\n') + '\n';
@@ -4571,7 +4665,59 @@ CORE_READY.then(CORE => {
   function download(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
   $('b-save').onclick = () => { saveGame(); canvas.focus(); };
   $('b-load').onclick = () => { loadGame(); canvas.focus(); };
-  $('b-new').onclick = () => { newGame(); toast('New game'); canvas.focus(); };
+  $('b-menu').onclick = () => { pauseGame(!$('pause').hidden ? false : true); };
+
+  // ---------- the shell: title, pause, settings ----------
+  let paused = false;
+  const titleUp = () => !$('title').hidden;
+  function closeShell() { for (const id of ['title', 'pause', 'settings']) $(id).hidden = true; paused = false; canvas.focus(); }
+  // the title: over a live view of the system (traffic flying past Halde), with Continue from the last landing
+  function showTitle() {
+    const H0 = BODIES[startBody];
+    newGame(1, { backdrop: true, space: [H0.x - H0.r * 1.05, H0.y + H0.r * 0.25] });
+    zoom = 0.5; setNav(false);
+    for (const id of ['pause', 'settings']) $(id).hidden = true;
+    paused = false;
+    const meta = JSON.parse(localStorage.getItem('driftward.autosave.meta') || 'null');
+    $('t-continue').disabled = !localStorage.getItem('driftward.autosave');
+    $('t-continue-sub').textContent = meta ? `day ${meta.day}${meta.port ? ' at ' + meta.port : ''} · ${fmtCr(meta.credits)} cr` : 'no landing yet';
+    $('title-sub').textContent = `The ${SYS.name} system · ${BODIES.filter(b => b.port).length} ports`;
+    $('title').hidden = false;
+    ($('t-continue').disabled ? $('t-new') : $('t-continue')).focus();
+  }
+  // a seed from the field: blank is random; a number is used as is; any other text is hashed
+  function seedFrom(text) {
+    text = text.trim();
+    if (!text) return undefined;
+    if (/^\d+$/.test(text)) return Number(text) >>> 0;
+    let h = 0x811c9dc5; for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193) >>> 0;
+    return h;
+  }
+  $('t-new').onclick = () => { newGame(seedFrom($('t-seed').value)); toast(`New game · seed ${seedNow}`); };
+  $('t-continue').onclick = () => { if (!loadFrom('driftward.autosave')) showTitle(); };
+  pauseGame = on => {
+    if (titleUp()) return;
+    paused = on;
+    $('pause').hidden = !on;
+    if (on) $('pause-sub').textContent = `Day ${sim.day()} · ${fmtCr(sim.credits())} cr · seed ${seedNow}`;
+    else canvas.focus();
+  };
+  shellBack = () => { if (!$('settings').hidden) closeSettings(); else if (!$('pause').hidden) pauseGame(false); };
+  $('p-resume').onclick = () => pauseGame(false);
+  $('p-save').onclick = () => { saveGame(); pauseGame(false); };
+  $('p-load').onclick = () => loadGame();
+  $('p-replay').onclick = () => $('b-replay').onclick();
+  $('p-title').onclick = () => showTitle();
+  function openSettings() {
+    $('s-bloom').value = String(SETTINGS.bloom); $('s-nav').value = String(SETTINGS.nav);
+    $('s-assist').value = String(SETTINGS.assist); $('s-debug').value = String(SETTINGS.debug);
+    $('settings').hidden = false; $('s-done').focus();
+  }
+  function closeSettings() { $('settings').hidden = true; if (!shellOpen()) canvas.focus(); }
+  for (const k of ['bloom', 'nav', 'assist', 'debug']) $('s-' + k).onchange = e => {
+    SETTINGS[k] = +e.target.value; localStorage.setItem('driftward.settings', JSON.stringify(SETTINGS)); applySettings();
+  };
+  $('t-settings').onclick = openSettings; $('p-settings').onclick = openSettings; $('s-done').onclick = closeSettings;
   $('b-replay').onclick = () => {
     const r = exportReplay();
     download('driftward-save.bin', r.save, 'application/octet-stream');
@@ -4589,9 +4735,11 @@ CORE_READY.then(CORE => {
     sim.checkViews();
     // bake the traffic hulls up front (behind the start port's screen), not when the first one flies into view
     for (let k = 0; k < 3; k++) typeReady(types[sim.role.kind[k]]);
-    const bits = inputBits(IN);
-    if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
-    for (let n = sim.due(dt); n > 0; n--) sim.step();
+    if (!paused) { // paused: the clock stops (the replay log is by tick, so a pause leaves no trace)
+      const bits = inputBits(IN);
+      if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
+      for (let n = sim.due(dt); n > 0; n--) sim.step();
+    }
     sim.interpolate();
     const mode = sim.mode();
     if (mode !== lastMode) { onMode(mode, lastMode); lastMode = mode; }
@@ -4617,7 +4765,9 @@ CORE_READY.then(CORE => {
       $('svc-board').disabled = !(P0.services || []).includes('missions');
       port.hidden = false;
       showPanel(null);
-      if (prev === MODE.descending) { autosave(); toast(`Landed at ${P0.name}: day ${sim.day()}, saved`); }
+      // newly landed (not a new game or a load): autosave. Any earlier mode counts, as a stalled frame or a test
+      // stepping the sim directly can pass the whole descent between two frames
+      if (prev !== -1 && prev !== MODE.landed) { autosave(); toast(`Landed at ${P0.name}: day ${sim.day()}, saved`); }
     } else port.hidden = true;
   }
 
@@ -4962,9 +5112,9 @@ CORE_READY.then(CORE => {
     hx.setTransform(dpr, 0, 0, dpr, 0, 0);
     hx.clearRect(0, 0, W, H);
     const mode = sim.mode();
-    $('loc').hidden = mode !== MODE.flying || mapOn;
-    if (mode !== MODE.flying && mapOn) toggleMap(false);
-    if (mode === MODE.landed) return; // the port screen is the HUD
+    $('loc').hidden = mode !== MODE.flying || mapOn || titleUp();
+    if ((mode !== MODE.flying || titleUp()) && mapOn) toggleMap(false);
+    if (mode === MODE.landed || titleUp()) return; // the port screen is the HUD; the title has none
     if (mode !== MODE.flying) { // in a landing or launch sequence: the day and how to skip it
       hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle'; hx.textAlign = 'center';
       const B = BODIES[sim.game.at[0]];
@@ -4982,7 +5132,7 @@ CORE_READY.then(CORE => {
       [`DAY ${sim.day()}  ·  ${fmtCr(sim.credits())} CR  ·  HOLD ${sim.holdUsed()}/${holdCap()} T`, '#dbe0e7'],
       [`SPD ${sp.toFixed(0).padStart(4)} / ${topNow.toFixed(0)} m/s${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, wk < -0.03 ? '#e08a4a' : wk > 0.03 ? '#7fd08a' : '#dbe0e7'],
       [`HDG ${hd.toFixed(0).padStart(3, '0')}°  ${ASSIST[assistMode].hud}${burn ? '  BURN' : ''}`, burn ? '#e2b866' : assistMode ? '#c8a27a' : '#8a95a4'],
-      [`${T0.name.toUpperCase()}  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps`, '#8a95a4']
+      [`${T0.name.toUpperCase()}${SETTINGS.debug ? `  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps` : ''}`, '#8a95a4']
     ];
     hx.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle';
     // under the nearest-body line: the autopilot, then the active missions with days left
@@ -5140,7 +5290,11 @@ CORE_READY.then(CORE => {
     if (!assist()) { toast('The autopilot flies under full assist: press Tab'); return; }
     if (command(CMD.autopilot, j) === 0) toast(`Autopilot: flying to ${targetName(navTarget)}`);
   };
-  escapeFlight = () => { if (mapOn) toggleMap(false); else if (navTarget) { setTarget(null); toast('Target cleared'); } };
+  escapeFlight = () => {
+    if (mapOn) { toggleMap(false); return true; }
+    if (navTarget) { setTarget(null); toast('Target cleared'); return true; }
+    return false;
+  };
   inFlight = () => sim.mode() === MODE.flying;
 
   // the target, marked where it is: corner brackets round it on screen, or an arrow on the screen edge
@@ -5366,7 +5520,7 @@ CORE_READY.then(CORE => {
 
   // test hook: drive and inspect the session from a console or a headless browser
   window.__play = {
-    sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES, ECON,
+    sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES, ECON, showTitle, pauseGame,
     setNav, trade, repay, showPanel, accept, abandon, setTarget, flyTo, cycleTarget, toggleMap, pickLocation,
     target: () => navTarget && (navTarget.body !== undefined ? { body: navTarget.body } : { ship: sim.resolve(navTarget.ship) }),
     locations: () => locRows.map(([j, child]) => ({ j, name: BODIES[j].name, child })),
@@ -5380,7 +5534,7 @@ CORE_READY.then(CORE => {
     // commodity index by id, and its price where the player is landed
     good: id => GOODS.findIndex(c => c.id === id),
     price: id => sim.price(sim.game.at[0], GOODS.findIndex(c => c.id === id)),
-    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn,
+    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
       credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap() }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {
@@ -5393,8 +5547,7 @@ CORE_READY.then(CORE => {
     save: () => saveGame(), load: () => loadGame(), b64, unb64,
     inspect: () => G.inspectScene(), setZoom
   };
-  newGame(1);
-  canvas.focus();
+  showTitle();
   requestAnimationFrame(frame);
 }).catch(e => { console.error(e); $('glerr').textContent = 'The sim core failed to start: ' + (e.message || e); $('glerr').hidden = false; });
 

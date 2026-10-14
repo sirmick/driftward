@@ -1,6 +1,7 @@
 """Drive the built game page (play.html) in headless Chromium and check the session machinery end to end.
 
-Checks: the page starts on the sim core, landed at the system's start port, with no console errors; the market
+Checks: the page starts on the sim core at the title, and a new game from a seed starts landed at the system's start
+port, with no console errors; pause stops the clock; Continue on the title restores the last landing; the market
 buys and sells through the core (panel and commands), within credits and hold space; the mission board offers
 deliveries, and one accepted, flown there by the autopilot and landed pays; the flight HUD's keys (locations,
 targets, the map) work; ambient traffic starts mid-flow and turns
@@ -47,7 +48,11 @@ with sync_playwright() as p:
     pg.goto(page_path.as_uri())
     pg.wait_for_function('window.__play && window.__play.probe().ready', timeout=120000)
     ev = pg.evaluate
+    t = ev('__play.probe()')
+    check(t['shell'] == 'title' and pg.is_visible('#title') and pg.is_disabled('#t-continue'), 'starts on the title (nothing to continue yet)')
+    pg.fill('#t-seed', '1'); pg.click('#t-new'); pg.wait_for_timeout(300)
     start = ev('__play.probe()')
+    check(start['shell'] is None and start['seed'] == 1, 'New game with seed 1')
     check(start['mode'] == 2 and start['day'] == 1 and pg.is_visible('#port'), f"starts landed on day 1 at {pg.inner_text('#port-name')}")
     SPACE = '{ space: [0, -8000] }'  # open space: outside every well
 
@@ -70,6 +75,11 @@ with sync_playwright() as p:
     check(t['sell'] == 0 and t['after']['credits'] == start['credits'] and not t['after']['hold'], 'selling it all back restores the credits (fixed prices)')
     pg.keyboard.press('Escape')
     check(not pg.is_visible('#trade'), 'Escape closes the market')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    t0 = ev('__play.probe().tick'); pg.wait_for_timeout(1000)
+    check(pg.is_visible('#pause') and ev('__play.probe().tick') == t0, 'Escape again pauses, and the clock stops')
+    pg.keyboard.press('KeyP'); pg.wait_for_timeout(500)
+    check(not pg.is_visible('#pause') and ev('__play.probe().tick') > t0, 'P resumes')
 
     # ambient traffic: mid-flow from the start, Rustline hulls, and turning over (two minutes of sim time)
     t0 = ev('__play.traffic()')
@@ -178,6 +188,19 @@ with sync_playwright() as p:
     check(50 < rate < 64, f'live clock {rate:.1f} ticks/s')
     if shot:
         ev("__play.newGame(5, { space: [0, -8000] })"); pg.keyboard.down('KeyW'); pg.wait_for_timeout(2500); pg.screenshot(path=shot); pg.keyboard.up('KeyW')
+    # the title's Continue: the last landing's autosave, as its note says. A landing the page's frames see (the
+    # scripted steps above start and end landed, so no frame saw them fly): launch, a frame or two, land
+    ev("(() => { const P = __play, C = P.CMD; P.newGame(9); P.command(C.buy, P.good('goods'), 2); P.command(C.launch); P.command(C.skip); P.advance(0.2, []); })()")
+    pg.wait_for_timeout(500)
+    ev("(() => { const P = __play, C = P.CMD; P.command(C.land); P.command(C.skip); P.advance(0.1, []); })()")
+    pg.wait_for_timeout(500)
+    meta = json.loads(ev("localStorage.getItem('driftward.autosave.meta')") or 'null')
+    check(meta is not None and meta['day'] == 2 and meta['port'] == 'Halde Landing', f'landing autosaves: {meta}')
+    ev('__play.showTitle()'); pg.wait_for_timeout(200)
+    check(pg.is_enabled('#t-continue') and f"day {meta['day']}" in pg.inner_text('#t-continue'), f"the title offers to continue: {pg.inner_text('#t-continue-sub')}")
+    pg.click('#t-continue'); pg.wait_for_timeout(300)
+    c = ev('__play.probe()')
+    check(c['shell'] is None and c['mode'] == 2 and c['day'] == meta['day'] and c['credits'] == meta['credits'], f"Continue lands you back on day {c['day']} with {c['credits']} cr")
     check(not errs, 'no console errors' + (': ' + '; '.join(errs) if errs else ''))
     b.close()
 
