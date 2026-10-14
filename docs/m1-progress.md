@@ -4,7 +4,7 @@ M1 in the Book is "Trade and delivery": one system, a game shell, the sim core a
 
 This file tracks that milestone against the Book's `[M1]` items. Update it as work lands. Status: **done**, **partial** (with what is missing), or **to do**.
 
-Last updated: 2026-10-14, with step 4 (cargo, credits and markets).
+Last updated: 2026-10-14, with step 5 (the mission board and delivery missions).
 
 ## Summary
 
@@ -14,13 +14,13 @@ Last updated: 2026-10-14, with step 4 (cargo, credits and markets).
 | Flight (M0 physics in the core, three-level assist) | Done |
 | The M1 system, from its schema | Done |
 | Landing, docking, launch, the day clock, autosave | Done |
-| Port screen | Partial: trade works; missions, bar, refuel and repair are placeholders |
+| Port screen | Partial: trade and missions work; bar, refuel and repair are placeholders |
 | Cargo, credits, markets, trading | Done |
-| Mission board and delivery missions | To do (next) |
-| Ambient traffic | To do |
+| Mission board and delivery missions | Done |
+| Ambient traffic | To do (next) |
 | HUD, targeting, system map, location list, shell | Partial |
 | Lore, painted vistas and portraits (OpenRouter) | To do |
-| Exit test, headless | Machinery and trading done; needs missions |
+| Exit test, headless | Every piece works and is tested; the single scripted test is to do |
 
 ## Done
 
@@ -41,26 +41,28 @@ Last updated: 2026-10-14, with step 4 (cargo, credits and markets).
 - **Start.** A used fighter, 1,500 credits and a 12,000-credit debt to a lender, gathering 0.2% a day; repay at any port.
 - **Docking fees.** Waiting a day in port costs 20 credits (the `dock_fee` param); you cannot wait if you cannot pay.
 - **Market screen.** Trade (T) on the port screen: what the port trades, price (green under base, amber over), tons aboard, buy and sell a ton or, shift-clicked, all you can; repay the lender. Credits and hold on the flight HUD.
+- **Mission board.** Each port's board holds 3 to 8 haulage offers (core columns, posted from the seeded generator, so boards replay). Each day expired offers drop (an offer lasts 2 to 5 days) and free slots fill by chance. An offer binds live state: a destination port, cargo the origin's market trades, 1 to 12 tons, a deadline of the route's length in days (20 km a day) times a slack of 1.5 to 3, plus one, and pay of a base plus tons times kilometres, times an urgency that rises as the slack falls. Risk and faction wealth are 1 in M1.
+- **Delivery missions.** Accept (a command) moves an offer to the player's missions (up to 4); its cargo takes hold space and cannot be sold. Landing at the destination delivers and pays; a day past the deadline fails it softly (the cargo is reclaimed, nothing is paid). Missions can be abandoned. The board panel (M) lists offers and your missions with days left; delivery and failure are reported as they happen; active missions show on the HUD, and their destinations on the nav overlay and minimap.
+- **Teleport (dev).** `__play.teleport(body)` puts the flying player at rest over a body, as a logged command, so tests can fly a delivery and still replay it.
 - **Dev server.** Node, live reload of both pages, the crate rebuilds on change.
 
 ## Partial
 
-- **Port screen.** Name, body, role, population, description and a vista of the body; trade, wait a day and launch work. Missing: mission board, bar, refuel and repair (shown disabled), painted vista and lore.
-- **HUD.** Day, credits, hold, speed, top speed, assist level, nearest body, well strength, minimap, navigation overlay (I), velocity and heading marks. Missing: ship status (shields, hull, energy, heat, fuel), nav target bottom-right (range, relative speed, clear to land), active mission with days left, message log, radar contacts at their error radius.
+- **Port screen.** Name, body, role, population, description and a vista of the body; trade, the mission board, wait a day and launch work. Missing: bar, refuel and repair (shown disabled), painted vista and lore.
+- **HUD.** Day, credits, hold, speed, top speed, assist level, nearest body, well strength, minimap, navigation overlay (I), velocity and heading marks. Missing: ship status (shields, hull, energy, heat, fuel), nav target bottom-right (range, relative speed, clear to land), message log, radar contacts at their error radius.
 - **Shell.** New game, save and load buttons, replay export. Missing: title screen, new game from a seed, continue from the last landing save, settings, pause.
-- **Debug control plane.** The page exposes `window.__play` (new game, advance, commands, probe, save, load, export replay), which headless tests drive. Missing: a local API (time scale, teleport, spawn, state inspector, replay and diff) that Claude Code can drive without a browser script.
-- **Controls.** Arrows or WASD, Shift burner, L land, wheel zoom work. Missing: T to cycle targets, M for the map; assist level is on F, not Tab.
+- **Debug control plane.** The page exposes `window.__play` (new game, advance, commands, teleport, probe, save, load, export replay), which headless tests drive. Missing: a local API (time scale, teleport, spawn, state inspector, replay and diff) that Claude Code can drive without a browser script.
+- **Controls.** Arrows or WASD, Shift burner, L land, wheel zoom work; in port, T trade and M the mission board. Missing: T to cycle targets, M for the map; assist level is on F, not Tab.
 
 ## To do
 
 In build order.
 
-1. **Mission board and delivery missions (step 5).** A mission is a template run as a state machine: deliver cargo to a named port in the system. 3 to 8 offers per board, each expiring; deadline in days from route length times slack; pay from base, distance, risk and urgency. Accept, carry, deliver on landing; failure is soft. Active mission on the HUD.
-2. **Ambient traffic (step 6).** The Ironhull hull family in three sizes (shuttle, hauler, liner), 10 to 20 ships. Flows between ports from a gravity model (population times population over distance, weighted by role complementarity). Poisson arrivals from undocking; steady state on entry; ships on rails far from the player and full physics and AI near; they land, dock and launch with the same animation. AI moves into the core.
-3. **HUD, targeting and maps.** T cycles targets with a nav target panel; M opens the system map (orbits, bodies, contacts, mission destinations; click to target; fly-to autopilot under full assist); the location list on the right, expanding the body whose zone the player is in; ship status; message log.
-4. **Shell.** Title, new game with a seed, continue from the last landing save, settings, pause. Death reloads the last landing save.
-5. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
-6. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
+1. **Ambient traffic (step 6).** The Ironhull hull family in three sizes (shuttle, hauler, liner), 10 to 20 ships. Flows between ports from a gravity model (population times population over distance, weighted by role complementarity). Poisson arrivals from undocking; steady state on entry; ships on rails far from the player and full physics and AI near; they land, dock and launch with the same animation. AI moves into the core.
+2. **HUD, targeting and maps.** T cycles targets with a nav target panel; M opens the system map (orbits, bodies, contacts, mission destinations; click to target; fly-to autopilot under full assist); the location list on the right, expanding the body whose zone the player is in; ship status; message log.
+3. **Shell.** Title, new game with a seed, continue from the last landing save, settings, pause. Death reloads the last landing save.
+4. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
+5. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
 
 ## Deviations from the Book
 
@@ -68,6 +70,7 @@ In build order.
 - **Bodies hold still.** No orbiting or spinning stations yet (stations spin only visually), so "slow relative to the port" is just "slow".
 - **Gravity is game physics,** by design: see `core/src/flight.rs`.
 - **Prices are content, not core code.** The Book's markets are columns in the core; M1's fixed prices are computed in the page from `src/economy.json` and written into them, so M5's moving prices can replace the writer without changing the columns or the trading commands.
+- **Missions are fixed code, not templates yet.** The Book's mission template (objective nodes, triggers, branches) is tagged M1, but M1 has one mission type, so delivery is written directly in `core/src/mission.rs`; the template machinery waits for a second type.
 - **One price per commodity per port.** No buy and sell spread, as in EV: profit comes only from price gaps between ports.
 
 See also [Known issues](known-issues.md) and the Book's [Build staging](book.md#build-staging).

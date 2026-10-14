@@ -5,9 +5,11 @@
 //! From the Book (Docking and landing, Time): fly over a port's disc, slow to near-stationary, request landing;
 //! a short descent; landed, the player is safe and flight is paused for them; each landing advances the clock by
 //! a day, and so does waiting in port, which costs a docking fee. Stations need a slower approach than planets
-//! (clamps, not a descent). Trading commands are in market.rs.
+//! (clamps, not a descent). Landing delivers the missions bound for the port. Trading commands are in market.rs,
+//! mission commands in mission.rs.
 
 use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL, NO_CREDITS};
+use crate::mission::{CMD_ABANDON, CMD_ACCEPT};
 use crate::world::{World, DT, P};
 
 pub const MODE_FLYING: u8 = 0;
@@ -28,12 +30,15 @@ pub const CMD_LAUNCH: u32 = 2;
 pub const CMD_WAIT: u32 = 3;
 /// Finish a descent or launch now (the sequence is skippable).
 pub const CMD_SKIP: u32 = 4;
+/// Debug control plane: put the flying player at rest over body `a` (a dev action, logged so replays still match).
+pub const CMD_TELEPORT: u32 = 100;
 
 pub const OK: i32 = 0;
 pub const NOT_OVER_PORT: i32 = 1;
 pub const TOO_FAST: i32 = 2;
 pub const WRONG_MODE: i32 = 3;
 pub const UNKNOWN_COMMAND: i32 = 4;
+pub const NO_SUCH_BODY: i32 = 12;
 
 /// Seconds the descent and the launch sequences take.
 pub const DESCENT_S: f64 = 2.5;
@@ -99,6 +104,18 @@ impl World {
                 OK
             }
             CMD_BUY | CMD_SELL | CMD_REPAY => self.trade(code, a, b),
+            CMD_ACCEPT | CMD_ABANDON => self.mission_command(code, a),
+            CMD_TELEPORT => {
+                if mode != MODE_FLYING { return WRONG_MODE; }
+                let (Some(j), Ok(i)) = (usize::try_from(a).ok().filter(|&j| j < self.n_bodies), usize::try_from(self.player.slot)) else { return NO_SUCH_BODY };
+                let s = &mut self.ships;
+                s.x[i] = self.bodies.x[j];
+                s.y[i] = self.bodies.y[j] - self.bodies.r[j] * 0.3;
+                s.vx[i] = 0.0; s.vy[i] = 0.0; s.av[i] = 0.0;
+                self.player.set = 0.0;
+                self.slot_reset(i, false);
+                OK
+            }
             _ => UNKNOWN_COMMAND,
         }
     }
@@ -127,6 +144,7 @@ impl World {
                     self.game.timer[0] = 0.0;
                     self.game.mode[0] = MODE_LANDED;
                     self.next_day();
+                    self.deliver(self.game.at[0] as usize);
                 }
             }
             MODE_LAUNCHING => {
@@ -218,6 +236,17 @@ mod tests {
         assert_eq!(w.command(CMD_LAND, 0, 0), WRONG_MODE);
         assert_eq!(w.command(CMD_WAIT, 0, 0), WRONG_MODE);
         assert_eq!(w.command(99, 0, 0), UNKNOWN_COMMAND);
+    }
+
+    #[test]
+    fn teleport_puts_the_player_over_a_body() {
+        let mut w = world(2500.0, 0.0);
+        w.ships.vx[0] = 150.0;
+        assert_eq!(w.command(CMD_TELEPORT, 1, 0), OK);
+        assert_eq!(w.port_below(), Some((1, true)));
+        assert_eq!(w.command(CMD_TELEPORT, 2, 0), NO_SUCH_BODY);
+        assert_eq!(w.command(CMD_LAND, 0, 0), OK);
+        assert_eq!(w.command(CMD_TELEPORT, 0, 0), WRONG_MODE);
     }
 
     #[test]

@@ -25,9 +25,12 @@ None of these hurt at today's scale (about 60 ships). They are the costs that gr
 - **The well model is untuned game physics.** Wells pull with a share of each hull's thrust and bend its top speed by direction (`core/src/flight.rs`); a slingshot works as momentum carried through a well, not as a speed gain. The numbers (`pull`, `well_in`, `well_out`, `well_reach`, and each hull class's `well` in the catalog) are first guesses, tunable live from the console.
 
 - **Bodies hold still.** Planets, moons and stations sit at fixed points (EV style), so "slow relative to the port" is just "slow"; the Book's orbiting and spinning stations, where assist matches their velocity, come later. Stations spin only visually.
-- **Some port services are not built yet.** The mission board, the bar and refuel and repair are shown but disabled until M1's next steps; trade, wait-a-day and launch work.
+- **Some port services are not built yet.** The bar and refuel and repair are shown but disabled; trade, the mission board, wait-a-day and launch work.
+- **Mission pay is untuned.** Pay is a 200-credit base plus 2 credits per ton per kilometre, so small loads pay far more per ton than big ones, and the board does not yet weigh offers by what the player's ship can carry (the Book's M6 weighting).
 - **The lender has no teeth.** The debt gathers interest, and you can repay it at any port, but nothing happens if you never do.
 
 ## Bugs
+
+- **Nav overlay labels overlap** when two off-screen bodies lie in nearly the same direction: their edge arrows and labels draw on top of each other.
 
 - **Black squares flashed over the canvas (symptom fixed, source unconfirmed).** Seen on both pages on the user's GPU, never under the headless software renderer. Turning bloom off stopped them, which fits one bad (NaN or infinite) scene pixel being spread by the bloom chain's six half-size levels into squares of 2 to 64 pixels. The bloom bright pass now drops non-finite samples and caps hot ones, and the composite ignores bad bloom texels. What still makes the bad pixel on that GPU is unknown: on the game page, N paints raw non-finite scene pixels magenta (bloom cyan, negative values yellow), which would locate it; B toggles bloom.

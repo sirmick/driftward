@@ -161,10 +161,11 @@ window.addEventListener('keydown', e => {
     if (e.code === 'KeyB') { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
     if (e.code === 'KeyN') { nanView = 1 - nanView; toast(nanView ? 'NaN view: magenta = bad scene pixel, cyan = bad bloom, yellow = negative' : 'NaN view off'); }
     if (e.code === 'KeyL') landOrLaunch();
-    if (e.code === 'Escape' && tradeOpen()) showTrade(false);
+    if (e.code === 'Escape' && panelOpen()) showPanel(null);
     if (e.code === 'Enter' || e.code === 'Escape') skipSequence();
     if (e.code === 'KeyW' && inPort()) waitDay();
-    if (e.code === 'KeyT' && inPort()) showTrade(!tradeOpen());
+    if (e.code === 'KeyT' && inPort()) showPanel(panelOpen() === 'trade' ? null : 'trade');
+    if (e.code === 'KeyM' && inPort()) showPanel(panelOpen() === 'board' ? null : 'board');
     if (e.code === 'F6') saveGame();
     if (e.code === 'F9') loadGame();
     if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(zoom * 1.25);
@@ -192,8 +193,10 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
-const tradeOpen = () => !$('trade').hidden;
-let showTrade = () => {};
+// the port screen's panels beside the port card: the market or the mission board, one at a time
+const PANELS = ['trade', 'board'];
+const panelOpen = () => PANELS.find(p => !$(p).hidden) || null;
+let showPanel = () => {};
 const fmtCr = n => n.toLocaleString('en-US');
 
 CORE_READY.then(CORE => {
@@ -234,7 +237,9 @@ CORE_READY.then(CORE => {
     else { sim.slotReset(0, true); sim.placeLanded(startBody); }
     sim.game.day[0] = 1; // day one
     sim.game.credits[0] = ECON.start.credits; sim.game.debt[0] = ECON.start.debt; // a used fighter and a debt to a lender
+    sim.postBoards();
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
+    missionSeen.set(sim.mission.state);
     startRecording();
   }
   // commands go through here: applied now (between ticks) and logged for replays when they take effect
@@ -260,7 +265,8 @@ CORE_READY.then(CORE => {
   };
   inPort = () => sim.mode() === MODE.landed;
   $('svc-wait').onclick = () => { waitDay(); canvas.focus(); };
-  $('svc-trade').onclick = () => { showTrade(!tradeOpen()); canvas.focus(); };
+  $('svc-trade').onclick = () => { showPanel(panelOpen() === 'trade' ? null : 'trade'); canvas.focus(); };
+  $('svc-board').onclick = () => { showPanel(panelOpen() === 'board' ? null : 'board'); canvas.focus(); };
   $('svc-launch').onclick = () => { landOrLaunch(); canvas.focus(); };
   saveGame = () => { localStorage.setItem('driftward.save', b64(sim.save())); toast(`Saved at tick ${sim.tick()}`); };
   loadGame = () => {
@@ -268,7 +274,7 @@ CORE_READY.then(CORE => {
     if (!s) { toast('No saved game'); return; }
     const err = sim.load(unb64(s));
     if (err) { toast(`Save is unreadable (error ${err})`); return; }
-    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; startRecording(); toast(`Loaded day ${sim.day()}`);
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; missionSeen.set(sim.mission.state); startRecording(); toast(`Loaded day ${sim.day()}`);
   };
   // autosave on landing, as in EV (the Book: death reloads the last landing save)
   function autosave() { localStorage.setItem('driftward.autosave', b64(sim.save())); }
@@ -302,6 +308,7 @@ CORE_READY.then(CORE => {
     sim.interpolate();
     const mode = sim.mode();
     if (mode !== lastMode) { onMode(mode, lastMode); lastMode = mode; }
+    watchMissions();
     const k = Math.min(1, dt * 3.5);
     if (mode === MODE.landed) { const B = BODIES[sim.game.at[0]]; camX += (B.x - camX) * k; camY += (B.y - camY) * k; }
     else if (mode === MODE.flying) { const lead = 0.35; camX += (SH.rx[0] + SH.vx[0] * lead - camX) * k; camY += (SH.ry[0] + SH.vy[0] * lead - camY) * k; }
@@ -319,20 +326,28 @@ CORE_READY.then(CORE => {
       $('port-name').textContent = P0.name;
       $('port-desc').textContent = P0.description || '';
       $('svc-trade').disabled = !(P0.services || []).includes('market');
+      $('svc-board').disabled = !(P0.services || []).includes('missions');
       port.hidden = false;
-      showTrade(false);
+      showPanel(null);
       if (prev === MODE.descending) { autosave(); toast(`Landed at ${P0.name}: day ${sim.day()}, saved`); }
     } else port.hidden = true;
   }
 
-  // ---------- the port's market ----------
-  // Every change is a core command (logged for replays); the panel only shows the columns and sends commands.
+  // ---------- the port's market and mission board ----------
+  // Every change is a core command (logged for replays); the panels only show the columns and send commands.
   const holdCap = () => sim.type.cargo[SH.kind[0]];
+  const MS = sim.mission, OF = sim.offer, NM = sim.maxMissions, NO = sim.maxOffers, MSTATE = CORE.MISSION;
+  const activeMissions = () => { const a = []; for (let k = 0; k < NM; k++) if (MS.state[k] === MSTATE.active) a.push(k); return a; };
+  const portName = j => BODIES[j].port ? BODIES[j].port.name : BODIES[j].name;
+  const cargoText = (tons, g) => `${tons} t ${(GOODS[g] || { name: '?' }).name.toLowerCase()}`;
+  const daysText = n => n <= 0 ? 'due today' : n === 1 ? '1 day' : `${n} days`;
   function refreshPort() {
     if (sim.mode() !== MODE.landed) return;
     $('port-day').textContent = `Day ${sim.day()} · ${SYS.name} system`;
-    $('port-money').textContent = `${fmtCr(sim.credits())} cr · hold ${sim.holdUsed()}/${holdCap()} t · owe ${fmtCr(sim.debt())} cr`;
-    if (!tradeOpen()) return;
+    const nm = activeMissions().length;
+    $('port-money').textContent = `${fmtCr(sim.credits())} cr · hold ${sim.holdUsed()}/${holdCap()} t · owe ${fmtCr(sim.debt())} cr` + (nm ? ` · ${nm} mission${nm > 1 ? 's' : ''}` : '');
+    if (panelOpen() === 'board') refreshBoard();
+    if (panelOpen() !== 'trade') return;
     const at = sim.game.at[0], room = holdCap() - sim.holdUsed(), cr = sim.credits();
     $('trade-sum').textContent = `${fmtCr(cr)} cr · hold ${sim.holdUsed()}/${holdCap()} t`;
     $('trade-rows').innerHTML = GOODS.map((c, g) => {
@@ -348,9 +363,30 @@ CORE_READY.then(CORE => {
     $('repay-1k').disabled = !owe || cr < Math.min(1000, owe);
     $('repay-max').disabled = !owe || !cr;
   }
-  showTrade = on => {
-    $('trade').hidden = !on || $('svc-trade').disabled;
-    $('svc-trade').setAttribute('aria-pressed', String(tradeOpen()));
+  // the board: offers at this port, then the player's missions
+  function refreshBoard() {
+    const at = sim.game.at[0], room = holdCap() - sim.holdUsed(), full = activeMissions().length >= NM;
+    $('board-sum').textContent = `hold ${sim.holdUsed()}/${holdCap()} t · ${activeMissions().length}/${NM} missions`;
+    let rows = '';
+    for (let k = 0; k < NO; k++) {
+      const o = at * NO + k;
+      if (!OF.live[o]) continue;
+      const fits = OF.tons[o] <= room;
+      rows += `<tr><td>${portName(OF.dest[o])}<br><small>${BODIES[OF.dest[o]].name}</small></td><td>${cargoText(OF.tons[o], OF.good[o])}</td>`
+        + `<td class="num">${fmtCr(OF.pay[o])}</td><td class="num">${daysText(OF.days[o])}</td>`
+        + `<td class="act"><button type="button" data-k="${k}" data-act="accept"${fits && !full ? '' : ' disabled'} title="${full ? 'Carrying the most missions you can' : fits ? '' : 'Not enough room in the hold'}">Accept</button></td></tr>`;
+    }
+    $('board-rows').innerHTML = rows || '<tr><td class="empty" colspan="5">No offers today</td></tr>';
+    $('mission-rows').innerHTML = activeMissions().map(k => `<tr><td>${portName(MS.dest[k])}</td><td>${cargoText(MS.tons[k], MS.good[k])}</td>`
+      + `<td class="num">${fmtCr(MS.pay[k])}</td><td class="num ${MS.due[k] - sim.day() <= 1 ? 'high' : ''}">${daysText(MS.due[k] - sim.day())}</td>`
+      + `<td class="act"><button type="button" data-k="${k}" data-act="abandon">Abandon</button></td></tr>`).join('')
+      || '<tr><td class="empty">None</td></tr>';
+  }
+  showPanel = name => {
+    for (const p of PANELS) {
+      $(p).hidden = name !== p || $('svc-' + p).disabled;
+      $('svc-' + p).setAttribute('aria-pressed', String(!$(p).hidden));
+    }
     refreshPort();
   };
   // buy or sell n tons (n omitted: all that fits or is aboard); returns the core's result
@@ -375,6 +411,35 @@ CORE_READY.then(CORE => {
   });
   $('repay-1k').onclick = () => repay(1000);
   $('repay-max').onclick = () => repay(sim.credits());
+  // accept offer k on this port's board; abandon mission slot k
+  function accept(k) {
+    const o = sim.game.at[0] * NO + k, what = OF.live[o] ? `${cargoText(OF.tons[o], OF.good[o])} to ${portName(OF.dest[o])}, by day ${sim.day() + OF.days[o]}` : '';
+    const r = command(CMD.accept, k);
+    toast(r === 0 ? `Accepted: ${what}` : `Can't accept: ${CORE.RESULT[r] || r}`);
+    refreshPort();
+    return r;
+  }
+  function abandon(k) {
+    const what = `${cargoText(MS.tons[k], MS.good[k])} to ${portName(MS.dest[k])}`;
+    const r = command(CMD.abandon, k);
+    toast(r === 0 ? `Abandoned: ${what}` : `Can't abandon: ${CORE.RESULT[r] || r}`);
+    refreshPort();
+    return r;
+  }
+  $('board').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]');
+    if (b) (b.dataset.act === 'accept' ? accept : abandon)(+b.dataset.k);
+  });
+  // report missions the core delivered (on landing) or failed (a day passed the deadline)
+  const missionSeen = new Uint8Array(NM);
+  function watchMissions() {
+    for (let k = 0; k < NM; k++) {
+      const st = MS.state[k];
+      if (missionSeen[k] === MSTATE.active && st === MSTATE.delivered) toast(`Delivered ${cargoText(MS.tons[k], MS.good[k])} to ${portName(MS.dest[k])}: +${fmtCr(MS.pay[k])} cr`);
+      if (missionSeen[k] === MSTATE.active && st === MSTATE.failed) toast(`Mission failed: ${cargoText(MS.tons[k], MS.good[k])} to ${portName(MS.dest[k])} is past its deadline`);
+      if (missionSeen[k] !== st) { missionSeen[k] = st; refreshPort(); }
+    }
+  }
 
   // ---------- render ----------
   const MAXS = 64;
@@ -605,8 +670,11 @@ CORE_READY.then(CORE => {
       [`${T0.name.toUpperCase()}  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps`, '#8a95a4']
     ];
     hx.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle';
-    hx.fillStyle = 'rgba(7,9,12,.55)'; hx.fillRect(6, 6, 300, lines.length * 17 + 31); // + the nearest-body line
+    // the active missions under the nearest-body line, with days left
+    const ms = activeMissions().map(k => { const left = MS.due[k] - sim.day(); return [`→ ${portName(MS.dest[k]).toUpperCase()}  ${MS.tons[k]} T  ${fmtCr(MS.pay[k])} CR  ${daysText(left).toUpperCase()}`, left <= 1 ? NAV_HOT : MIS_COL]; });
+    hx.fillStyle = 'rgba(7,9,12,.55)'; hx.fillRect(6, 6, 340, (lines.length + ms.length) * 17 + 31); // + the nearest-body line
     lines.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + k * 17); });
+    ms.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + (lines.length + 1 + k) * 17); });
     if (!typeReady(T0)) { hx.fillStyle = '#e2b866'; hx.fillText('Baking your ship…', 14, 20 + lines.length * 17 + 28); }
     drawShipMarks(T0);
     drawLandingPrompt();
@@ -656,7 +724,10 @@ CORE_READY.then(CORE => {
   // ---------- navigation: what is where ----------
   // Everything the player might steer for, from the player's drawn (interpolated) position. Planets for now;
   // stations, ports and targets join this list as they arrive.
-  const navObjects = () => BODIES.map(b => ({ name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x: b.x, y: b.y, r: b.r, kind: b.kind, port: !!b.port }));
+  const navObjects = () => {
+    const dest = new Set(activeMissions().map(k => MS.dest[k]));
+    return BODIES.map((b, j) => ({ name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x: b.x, y: b.y, r: b.r, kind: b.kind, port: !!b.port, mission: dest.has(j) }));
+  };
   function navInfo(o) {
     const dx = o.x - SH.rx[0], dy = o.y - SH.ry[0], d = Math.hypot(dx, dy) || 1;
     return { d, surf: d - o.r, closing: (SH.vx[0] * dx + SH.vy[0] * dy) / d }; // surface distance; closing speed > 0
@@ -664,7 +735,7 @@ CORE_READY.then(CORE => {
   const fmtDist = m => m < 1000 ? `${Math.max(0, m).toFixed(0)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
   const fmtClose = v => Math.abs(v) < 1 ? '' : `${v > 0 ? 'closing' : 'opening'} ${Math.abs(v).toFixed(0)} m/s`;
   const toScreen = (x, y) => [(x - camX) * scale / dpr + W / 2, H / 2 - (y - camY) * scale / dpr];
-  const NAV_COL = '#9fb4c8', NAV_HOT = '#e2b866';
+  const NAV_COL = '#9fb4c8', NAV_HOT = '#e2b866', MIS_COL = '#8fd3ff'; // mission destinations in light blue
   // text with a dark outline, readable over bright cloud tops
   function label(text, x, y) { hx.lineWidth = 3.5; hx.lineJoin = 'round'; hx.strokeStyle = 'rgba(7,9,12,.85)'; hx.strokeText(text, x, y); hx.fillText(text, x, y); }
 
@@ -681,8 +752,8 @@ CORE_READY.then(CORE => {
     const m = 34, x0 = m, y0 = m, x1 = W - m, y1 = H - stripH - m, cx = W / 2, cy = (H - stripH) / 2;
     hx.textBaseline = 'middle';
     for (const o of navs) {
-      const [sx, sy] = toScreen(o.x, o.y), hot = o.surf <= 0, col = hot ? NAV_HOT : NAV_COL;
-      const name = o.name.toUpperCase(), sub = hot ? 'OVER' : `${fmtDist(o.surf)}  ${fmtClose(o.closing)}`.trim();
+      const [sx, sy] = toScreen(o.x, o.y), hot = o.surf <= 0, col = hot ? NAV_HOT : o.mission ? MIS_COL : NAV_COL;
+      const name = (o.mission ? 'DELIVER: ' : '') + o.name.toUpperCase(), sub = hot ? 'OVER' : `${fmtDist(o.surf)}  ${fmtClose(o.closing)}`.trim();
       hx.fillStyle = col; hx.strokeStyle = col; hx.lineWidth = 1.5;
       if (sx > x0 && sx < x1 && sy > y0 && sy < y1) { // centre on screen: label it there
         hx.textAlign = 'center';
@@ -723,12 +794,12 @@ CORE_READY.then(CORE => {
       const md = Math.hypot(mx, my), rr = Math.max(2.5, o.r * k), hot = o.surf <= 0;
       if (md - rr > R) { // beyond range: a pip on the rim
         mx *= (R - 4) / md; my *= (R - 4) / md;
-        hx.fillStyle = NAV_COL; hx.beginPath(); hx.arc(cx + mx, cy + my, 2.5, 0, 6.283); hx.fill();
+        hx.fillStyle = o.mission ? MIS_COL : NAV_COL; hx.beginPath(); hx.arc(cx + mx, cy + my, o.mission ? 3.5 : 2.5, 0, 6.283); hx.fill();
         continue;
       }
-      hx.strokeStyle = hot ? NAV_HOT : 'rgba(159,180,200,.75)'; hx.lineWidth = hot ? 1.5 : 1;
+      hx.strokeStyle = hot ? NAV_HOT : o.mission ? MIS_COL : 'rgba(159,180,200,.75)'; hx.lineWidth = hot || o.mission ? 1.5 : 1;
       hx.beginPath(); hx.arc(cx + mx, cy + my, rr, 0, 6.283); hx.stroke();
-      hx.fillStyle = hot ? NAV_HOT : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
+      hx.fillStyle = hot ? NAV_HOT : o.mission ? MIS_COL : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
     }
     // the player: velocity line and heading arrow (world y up, screen y down)
     const vx = SH.vx[0] * k * 6, vy = -SH.vy[0] * k * 6;
@@ -745,7 +816,12 @@ CORE_READY.then(CORE => {
   // test hook: drive and inspect the session from a console or a headless browser
   window.__play = {
     sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES, ECON,
-    setNav, trade, repay, showTrade,
+    setNav, trade, repay, showPanel, accept, abandon,
+    // dev: put the (flying) player at rest over body j; a logged command, so replays still match
+    teleport: j => command(CMD.teleport, j),
+    // this port's offers and the player's active missions, as plain objects
+    offers: () => { const at = sim.game.at[0], out = []; for (let k = 0; k < NO; k++) { const o = at * NO + k; if (OF.live[o]) out.push({ k, dest: OF.dest[o], good: OF.good[o], tons: OF.tons[o], pay: OF.pay[o], days: OF.days[o] }); } return out; },
+    missions: () => Array.from(MS.state, (state, k) => ({ k, state, dest: MS.dest[k], tons: MS.tons[k], pay: MS.pay[k], due: MS.due[k] })),
     // commodity index by id, and its price where the player is landed
     good: id => GOODS.findIndex(c => c.id === id),
     price: id => sim.price(sim.game.at[0], GOODS.findIndex(c => c.id === id)),

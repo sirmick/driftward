@@ -1,7 +1,8 @@
 """Drive the built game page (play.html) in headless Chromium and check the session machinery end to end.
 
 Checks: the page starts on the sim core, landed at the system's start port, with no console errors; the market
-buys and sells through the core (panel and commands), within credits and hold space; assist flight in open space
+buys and sells through the core (panel and commands), within credits and hold space; the mission board offers
+deliveries, and one accepted, flown and landed at its destination pays; assist flight in open space
 matches the lab's numbers; launch, landing and a day passing (with its docking fee) work; save then load restores
 the exact state; a replay exported from the browser (snapshot + input log, trades included) reruns natively to the
 same state hash; the live clock ticks at 60 Hz.
@@ -68,6 +69,20 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape')
     check(not pg.is_visible('#trade'), 'Escape closes the market')
 
+    # the mission board at the start port
+    pg.click('#svc-board')
+    offers = ev('__play.offers()')
+    check(pg.is_visible('#board') and 3 <= len(offers) <= 8 and pg.locator('#board-rows button[data-act="accept"]').count() == len(offers),
+          f'the board shows {len(offers)} offers')
+    small = min(offers, key=lambda o: o['tons'])
+    pg.locator(f'#board-rows button[data-k="{small["k"]}"]').click()
+    m = ev('__play.missions()')[0]
+    check(m['state'] == 1 and m['dest'] == small['dest'] and m['due'] == 1 + small['days'] and ev('__play.probe()')['holdCap'] > 0
+          and pg.locator('#mission-rows button[data-act="abandon"]').count() == 1, f"accepting from the board: {small['tons']} t to body {small['dest']} for {small['pay']} cr")
+    pg.locator('#mission-rows button[data-act="abandon"]').click()
+    check(ev('__play.missions()')[0]['state'] == 0, 'abandoning it')
+    pg.keyboard.press('Escape')
+
     # flight: the same numbers as the lab's Fly tab (Halcyon fighter, from rest, clear space)
     a = ev("(() => { const P = __play; P.newGame(4242, " + SPACE + "); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe()]; })()")
     print('after 4 s W   ', json.dumps({k: a[0][k] for k in ('tick', 'v', 'set')}))
@@ -91,6 +106,19 @@ with sync_playwright() as p:
       const b = P.probe(); out.wait = P.command(C.wait); const c = P.probe(); out.day2 = c.day; out.fee = b.credits - c.credits; out.hold = c.hold;
       out.launch2 = P.command(C.launch); P.advance(0.3, []); out.skip = P.command(C.skip); P.advance(0.1, []); out.flying2 = P.probe().mode;
       return out; })()""")
+    # a delivery: back at the start port take the smallest offer, teleport (a logged dev command) over its
+    # destination, land: delivered on landing, paid
+    d = ev("""(() => { const P = __play, C = P.CMD, out = {};
+      out.teleHome = P.teleport(P.probe().at); P.advance(0.5, []); out.landHome = P.command(C.land); P.advance(3, []);
+      const o = P.offers().sort((a, b) => a.tons - b.tons)[0]; out.offer = o;
+      out.accept = P.accept(o.k); out.before = P.probe(); out.launch = P.command(C.launch); P.advance(2.2, []);
+      out.tele = P.teleport(o.dest); P.advance(0.5, []); out.land = P.command(C.land); P.advance(3, []);
+      out.after = P.probe(); out.mission = P.missions()[0]; return out; })()""")
+    print('delivery', json.dumps({k: d[k] for k in ('offer', 'accept', 'tele', 'land')}))
+    check(d['accept'] == 0 and d['tele'] == 0 and d['land'] == 0 and d['after']['at'] == d['offer']['dest'] and d['mission']['state'] == 2,
+          f"a delivery to body {d['offer']['dest']} completes on landing")
+    check(d['after']['credits'] == d['before']['credits'] + d['offer']['pay'] and d['after']['hold'] == d['before']['hold'],
+          f"and pays {d['offer']['pay']} cr, freeing the hold")
     print('port visit', json.dumps(v))
     check(v['launch'] == 0 and v['flying'] == 0, 'launch hands back control')
     check(v['land'] == 0 and v['landed'] == 2 and v['day'] == 2, 'landing takes a day')

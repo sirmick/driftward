@@ -32,8 +32,8 @@ impl World {
     /// Price per ton of commodity `g` at `body`'s market; 0 if it does not trade it.
     pub fn price(&self, body: usize, g: usize) -> u32 { self.market.price[body * MAX_GOODS + g] }
 
-    /// Tons in the player's hold, and what it holds at most.
-    pub fn hold_used(&self) -> u32 { self.hold.tons.iter().sum() }
+    /// Tons in the player's hold (trade cargo and mission cargo), and what it holds at most.
+    pub fn hold_used(&self) -> u32 { self.hold.tons.iter().sum::<u32>() + self.mission_tons() }
     pub fn hold_cap(&self) -> u32 {
         usize::try_from(self.player.slot).ok().filter(|&i| i < self.count).map_or(0, |i| self.types.cargo[self.ships.kind[i] as usize])
     }
@@ -71,11 +71,12 @@ impl World {
     /// The docking fee for a day in port, in credits.
     pub fn dock_fee(&self) -> u32 { self.p(P::dock_fee).max(0.0) as u32 }
 
-    /// A day passes (landing, waiting): the debt gathers interest.
+    /// A day passes (landing, waiting): the debt gathers interest, and the mission boards and deadlines move on.
     pub(crate) fn next_day(&mut self) {
         self.game.day[0] += 1;
         let debt = self.debt() as f64;
         self.game.debt[0] = (debt + (debt * self.p(P::interest)).round()).min(u32::MAX as f64) as u32;
+        self.missions_day();
     }
 }
 

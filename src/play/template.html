@@ -26,15 +26,16 @@ button { font: inherit; color: inherit; }
 #view { outline: none; }
 #hud { pointer-events: none; }
 .strip {
-  position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
   padding: 8px 14px; background: rgba(12, 16, 21, .9); border-top: 1px solid var(--line);
 }
-.strip h1 { margin: 0 8px 0 0; font: 700 17px/1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
-.strip .keys { color: var(--muted); font: 12px var(--f-mono); }
+.strip h1 { flex: none; margin: 0 8px 0 0; font: 700 17px/1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+.strip .keys { color: var(--muted); font: 12px var(--f-mono); flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .strip .spacer { flex: 1; }
 .strip button, .strip a {
   background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer;
   font: 600 12.5px var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: var(--fg); text-decoration: none;
+  white-space: nowrap; flex: none;
 }
 .strip button:hover, .strip a:hover { border-color: var(--amber); }
 .strip button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
@@ -65,20 +66,22 @@ button { font: inherit; color: inherit; }
 .port-day { margin: 18px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
 .port-money { margin: 6px 0 0; color: var(--fg); font: 500 12px var(--f-mono); }
 .port-services button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
-#trade { background: rgba(12,16,21,.92); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+#trade, #board { background: rgba(12,16,21,.92); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
 .trade-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
 .trade-head h3 { margin: 0; font: 700 20px/1 var(--f-display); letter-spacing: .05em; text-transform: uppercase; }
 .trade-head span { color: var(--muted); font: 500 12px var(--f-mono); }
-#trade table { width: 100%; border-collapse: collapse; font: 500 13px var(--f-mono); }
-#trade th { color: var(--muted); font: 500 11px var(--f-mono); text-align: left; padding: 0 6px 6px; border-bottom: 1px solid var(--line); }
-#trade td { padding: 5px 6px; border-bottom: 1px solid rgba(30,38,48,.6); }
-#trade td.num, #trade th.num { text-align: right; }
-#trade td.low { color: #7fd08a; } #trade td.high { color: var(--amber); } #trade td.none { color: var(--muted); }
-#trade td.act { text-align: right; white-space: nowrap; }
-#trade button { background: #121821; border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; margin-left: 4px; cursor: pointer;
+#port table { width: 100%; border-collapse: collapse; font: 500 13px var(--f-mono); }
+#port th { color: var(--muted); font: 500 11px var(--f-mono); text-align: left; padding: 0 6px 6px; border-bottom: 1px solid var(--line); }
+#port td { padding: 5px 6px; border-bottom: 1px solid rgba(30,38,48,.6); }
+#port td.num, #port th.num { text-align: right; }
+#port td.low { color: #7fd08a; } #port td.high { color: var(--amber); } #port td.none, #port td.empty { color: var(--muted); }
+#port td.act { text-align: right; white-space: nowrap; }
+#port td small { color: var(--muted); font-size: 11px; }
+.board-sub { margin: 16px 0 6px; color: var(--muted); font: 600 12px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; }
+#trade button, #board button { background: #121821; border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; margin-left: 4px; cursor: pointer;
   font: 600 11.5px var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: var(--fg); }
-#trade button:hover:not(:disabled) { border-color: var(--amber); }
-#trade button:disabled { cursor: default; color: #4d5663; }
+#trade button:hover:not(:disabled), #board button:hover:not(:disabled) { border-color: var(--amber); }
+#trade button:disabled, #board button:disabled { cursor: default; color: #4d5663; }
 .trade-foot { display: flex; align-items: center; gap: 4px; margin: 12px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
 .trade-foot span { flex: 1; }
 .trade-note { margin: 8px 0 0; color: var(--muted); font: 400 11.5px var(--f-mono); }
@@ -97,7 +100,7 @@ button { font: inherit; color: inherit; }
     <p class="port-desc" id="port-desc"></p>
     <div class="port-services">
       <button type="button" id="svc-trade" aria-pressed="false">Trade<span>T</span></button>
-      <button type="button" disabled>Mission board<span>next</span></button>
+      <button type="button" id="svc-board" aria-pressed="false">Mission board<span>M</span></button>
       <button type="button" disabled>Bar<span>later</span></button>
       <button type="button" disabled>Refuel &amp; repair<span>later</span></button>
       <button type="button" id="svc-wait">Wait a day<span>W</span></button>
@@ -115,10 +118,22 @@ button { font: inherit; color: inherit; }
     <div class="trade-foot"><span id="trade-debt"></span><button type="button" id="repay-1k">Repay 1,000</button><button type="button" id="repay-max">Repay max</button></div>
     <p class="trade-note">Prices are per ton. Click for one ton; Shift-click buys all you can, or sells all aboard.</p>
   </div>
+  <div id="board" hidden aria-label="Mission board">
+    <div class="trade-head"><h3>Mission board</h3><span id="board-sum"></span></div>
+    <table>
+      <thead><tr><th>Deliver to</th><th>Cargo</th><th class="num">Pay</th><th class="num">Deadline</th><th></th></tr></thead>
+      <tbody id="board-rows"></tbody>
+    </table>
+    <p class="board-sub">Your missions</p>
+    <table>
+      <tbody id="mission-rows"></tbody>
+    </table>
+    <p class="trade-note">Mission cargo takes hold space; land at the destination by the deadline to be paid. Late, the cargo is reclaimed and nothing is paid.</p>
+  </div>
 </section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · F assist level · L land · T trade · I nav · wheel zoom</span>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · F assist · L land · T trade · M missions · I nav · wheel zoom</span>
   <span class="spacer"></span>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
   <button type="button" id="b-save" title="F6">Save</button>

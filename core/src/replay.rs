@@ -1,6 +1,6 @@
 //! Replays: a snapshot to start from plus a log of what the player did, keyed by world tick: input changes (the
-//! buttons held from that tick on) and commands (land, launch, buy, ...; see port.rs and market.rs), applied before
-//! that tick's step.
+//! buttons held from that tick on) and commands (land, launch, buy, accept, ...; see port.rs, market.rs and
+//! mission.rs), applied before that tick's step.
 //! The page records the log as you play; `cargo run --bin replay` reruns it headless.
 
 use crate::world::World;
@@ -58,6 +58,7 @@ mod tests {
     use super::*;
     use crate::player::{IN_ASSIST, IN_BURN, IN_LEFT, IN_REVERSE, IN_THRUST};
     use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL};
+    use crate::mission::{CMD_ACCEPT, MAX_OFFERS, M_ACTIVE};
     use crate::port::{CMD_LAND, CMD_LAUNCH, CMD_WAIT, MODE_FLYING, OK};
     use crate::scenario;
 
@@ -69,6 +70,8 @@ mod tests {
         live.types.cargo[live.ships.kind[0] as usize] = 10;
         live.market.price[1] = 37; // the port (body 0) trades commodity 1
         (live.game.credits[0], live.game.debt[0]) = (1000, 5000);
+        live.post_boards();
+        let offer = (0..MAX_OFFERS).find(|&k| live.offers.live[k] != 0 && live.offers.tons[k] <= 4).expect("a small offer") as i32;
         let (px, py) = (live.bodies.x[0], live.bodies.y[0]); // the scenario's first body is a port
         live.ships.x[0] = px + 100.0;
         live.ships.y[0] = py;
@@ -78,10 +81,10 @@ mod tests {
         live.save();
         let start = live.snapshot().to_vec();
         type Step = (u64, Option<u32>, Option<(u32, i32, i32)>); // tick, buttons, command
-        let script: [Step; 11] = [
+        let script: [Step; 12] = [
             (0, Some(IN_ASSIST | IN_THRUST), None), (40, Some(IN_ASSIST | IN_REVERSE), None), (200, Some(IN_ASSIST), None),
             (260, None, Some((CMD_LAND, 0, 0))), (450, None, Some((CMD_BUY, 1, 6))), (500, None, Some((CMD_WAIT, 0, 0))),
-            (505, None, Some((CMD_SELL, 1, 2))), (510, None, Some((CMD_REPAY, 300, 0))), (520, None, Some((CMD_LAUNCH, 0, 0))),
+            (505, None, Some((CMD_SELL, 1, 2))), (507, None, Some((CMD_ACCEPT, offer, 0))), (510, None, Some((CMD_REPAY, 300, 0))), (520, None, Some((CMD_LAUNCH, 0, 0))),
             (700, Some(IN_ASSIST | IN_THRUST | IN_BURN), None), (800, Some(IN_ASSIST | IN_LEFT), None),
         ];
         let mut log = Vec::new();
@@ -93,7 +96,7 @@ mod tests {
             }
             live.step();
         }
-        assert_eq!((live.mode(), live.day(), live.hold.tons[1]), (MODE_FLYING, 2, 4));
+        assert_eq!((live.mode(), live.day(), live.hold.tons[1], live.missions.state[0]), (MODE_FLYING, 2, 4, M_ACTIVE));
         assert_eq!(live.credits(), 1000 - 6 * 37 - live.dock_fee() + 2 * 37 - 300);
         let mut again = World::from_snapshot(&start).unwrap();
         run(&mut again, &log, 1000);

@@ -3,6 +3,7 @@
 use crate::cols::{params, soa, ColumnDesc};
 use crate::flight;
 use crate::market::MAX_GOODS;
+use crate::mission::{MAX_MISSIONS, MAX_OFFERS};
 use crate::player::{self, Player};
 use crate::snapshot;
 use crate::math::wrap;
@@ -80,6 +81,19 @@ soa! {
 }
 
 soa! {
+    /// Mission boards: one row per body and offer slot (body * MAX_OFFERS + slot). A haulage offer: deliver `tons`
+    /// of commodity `good` to body `dest` within `days` of accepting, for `pay`; it leaves the board after day
+    /// `expires`. See mission.rs.
+    pub struct Offers { live: u8, dest: i16, good: u8, tons: u32, pay: u32, days: u32, expires: u32 }
+}
+
+soa! {
+    /// The player's missions, MAX_MISSIONS rows: state (mission.rs M_*), where from and to, the cargo, the pay, and
+    /// the last day it may be delivered.
+    pub struct Missions { state: u8, from: i16, dest: i16, good: u8, tons: u32, pay: u32, due: u32 }
+}
+
+soa! {
     /// Nebula gas on a square grid centred on the origin, row-major, three species.
     pub struct Env { h: f32, d: f32, i: f32 }
 }
@@ -110,6 +124,12 @@ params! {
     launch_speed = 20.0;  "orbital speed a ship has when launch hands back control, m/s"
     dock_fee = 20.0;      "credits a day in port costs the player"
     interest = 0.002;     "the lender's interest on the player's debt, per day"
+    offer_chance = 0.35;  "chance a free board slot gets a new offer each day, once the board has its minimum"
+    mission_base = 200.0; "a delivery's pay before distance, credits"
+    mission_rate = 2.0;   "a delivery's pay per ton per kilometre of route, credits"
+    route_day = 20000.0;  "metres of route counted as a day when setting deadlines"
+    slack_min = 1.5;      "tightest deadline, as a multiple of route days (pays the most)"
+    slack_max = 3.0;      "loosest deadline, as a multiple of route days"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -132,6 +152,8 @@ pub struct World {
     pub game: Game,
     pub hold: Hold,
     pub market: Market,
+    pub offers: Offers,
+    pub missions: Missions,
     pub params: Vec<f64>,
     /// live ship slots are 0..count
     pub count: usize,
@@ -158,6 +180,8 @@ impl World {
             game: Game::with_capacity(1),
             hold: Hold::with_capacity(MAX_GOODS),
             market: Market::with_capacity(cfg.max_bodies * MAX_GOODS),
+            offers: Offers::with_capacity(cfg.max_bodies * MAX_OFFERS),
+            missions: Missions::with_capacity(MAX_MISSIONS),
             params: param_defaults(),
             count: 0,
             n_bodies: 0,
@@ -187,6 +211,8 @@ impl World {
         self.game.describe("game", &mut c);
         self.hold.describe("hold", &mut c);
         self.market.describe("market", &mut c);
+        self.offers.describe("offer", &mut c);
+        self.missions.describe("mission", &mut c);
         c.push(ColumnDesc::of("world", "params", &self.params));
         c
     }
@@ -201,19 +227,21 @@ impl World {
         )).collect();
         let names: Vec<String> = PARAM_NAMES.iter().map(|n| format!("\"{n}\"")).collect();
         format!(
-            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"envN":{},"envW":{},"params":[{}],"columns":[{}]}}"#,
-            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, self.cfg.env_n, self.cfg.env_w,
+            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"envN":{},"envW":{},"params":[{}],"columns":[{}]}}"#,
+            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, MAX_OFFERS, MAX_MISSIONS, self.cfg.env_n, self.cfg.env_w,
             names.join(","), cols.join(",")
         )
     }
 
-    /// Start over: every ship column zeroed, the game row and hold emptied, no live slots, clock at tick 0. Types,
-    /// bodies, markets, gas, params and the generator are kept (reseed separately). Handles from before a clear are
-    /// invalid.
+    /// Start over: every ship column zeroed, the game row, hold, missions and boards emptied, no live slots, clock at
+    /// tick 0. Types, bodies, markets, gas, params and the generator are kept (reseed separately; post boards with
+    /// `post_boards`). Handles from before a clear are invalid.
     pub fn clear(&mut self) {
         self.ships.clear();
         self.game.clear();
         self.hold.clear();
+        self.offers.clear();
+        self.missions.clear();
         self.count = 0;
         self.tick = 0;
         self.player.set = 0.0;
@@ -315,6 +343,19 @@ impl World {
         eat(self.game.credits[0] as u64 | (self.game.debt[0] as u64) << 32);
         for &t in &self.hold.tons { eat(t as u64); }
         for &p in &self.market.price[..self.n_bodies * MAX_GOODS] { eat(p as u64); }
+        let f = &self.offers;
+        for o in 0..self.n_bodies * MAX_OFFERS {
+            if f.live[o] == 0 { continue; }
+            eat(o as u64 | (f.dest[o] as u16 as u64) << 16 | (f.good[o] as u64) << 32 | (f.days[o] as u64) << 40);
+            eat(f.tons[o] as u64 | (f.pay[o] as u64) << 32);
+            eat(f.expires[o] as u64);
+        }
+        let m = &self.missions;
+        for k in 0..MAX_MISSIONS {
+            eat(m.state[k] as u64 | (m.from[k] as u16 as u64) << 8 | (m.dest[k] as u16 as u64) << 24 | (m.good[k] as u64) << 40);
+            eat(m.tons[k] as u64 | (m.pay[k] as u64) << 32);
+            eat(m.due[k] as u64);
+        }
         let s = &self.ships;
         for i in 0..self.count {
             eat(s.alive[i] as u64 | (s.ctl[i] as u64) << 8 | (s.burn[i] as u64) << 16 | (s.kind[i] as u64) << 24 | (s.generation[i] as u64) << 32);

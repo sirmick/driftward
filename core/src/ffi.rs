@@ -142,6 +142,18 @@ pub unsafe extern "C" fn dw_command(w: *mut World, code: u32, a: i32, b: i32) ->
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dw_place_landed(w: *mut World, body: u32) { unsafe { world(w) }.place_landed(body as usize) }
 
+/// Post a fresh offer board at every port (a new game; later days top boards up themselves).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_post_boards(w: *mut World) { unsafe { world(w) }.post_boards() }
+
+/// Tons in the player's hold, trade and mission cargo together.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_hold_used(w: *mut World) -> u32 { unsafe { world(w) }.hold_used() }
+
 /// The port body under the player: index, plus 1000 if slow enough to land now; -1 if not over a port.
 /// # Safety
 /// See `world`.
