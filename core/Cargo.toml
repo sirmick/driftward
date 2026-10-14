@@ -1,0 +1,17 @@
+[package]
+name = "driftward-core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Driftward simulation core: typed columns, fixed-step deterministic tick, compiled to WASM for the page and native for headless tests"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driftward</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* The game: one full-window view. Flight HUD is drawn on a 2D canvas over the GL canvas; the strip at the
+   bottom holds the session controls. */
+:root {
+  color-scheme: dark;
+  --bg: #07090c; --rail: #0c1015; --line: #1e2630; --fg: #dbe0e7; --muted: #8a95a4; --amber: #e2b866; --amber-ink: #1b1508; --bad: #f08a72;
+  --f-display: "Saira Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--f-body); overflow: hidden; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+#view, #hud { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#view { outline: none; }
+#hud { pointer-events: none; }
+.strip {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 14px; background: rgba(12, 16, 21, .9); border-top: 1px solid var(--line);
+}
+.strip h1 { margin: 0 8px 0 0; font: 700 17px/1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+.strip .keys { color: var(--muted); font: 12px var(--f-mono); }
+.strip .spacer { flex: 1; }
+.strip button, .strip a {
+  background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer;
+  font: 600 12.5px var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: var(--fg); text-decoration: none;
+}
+.strip button:hover, .strip a:hover { border-color: var(--amber); }
+.strip button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+#toast {
+  position: fixed; left: 50%; top: 18px; transform: translateX(-50%); padding: 6px 14px; border-radius: 6px;
+  background: rgba(12, 16, 21, .9); border: 1px solid var(--line); font: 500 13px var(--f-mono); color: var(--amber);
+  opacity: 0; transition: opacity .25s; pointer-events: none;
+}
+#toast.on { opacity: 1; }
+#glerr { position: fixed; inset: 0; display: grid; place-items: center; color: var(--bad); font: 15px var(--f-mono); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="view" tabindex="0" aria-label="Flight view"></canvas>
+<canvas id="hud" aria-hidden="true"></canvas>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="glerr" hidden>This needs WebGL2.</div>
+<div class="strip">
+  <h1>Driftward</h1>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · F assist · I nav · wheel zoom</span>
+  <span class="spacer"></span>
+  <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
+  <button type="button" id="b-save" title="F6">Save</button>
+  <button type="button" id="b-load" title="F9">Load</button>
+  <button type="button" id="b-new">New game</button>
+  <button type="button" id="b-replay" title="Download the snapshot and input log since the last new game or load">Export replay</button>
+  <a href="index.html">Lab</a>
+</div>
+
+<script id="core-wasm" type="application/octet-stream">/*COREWASM*/</script>
+<script id="catalog" type="application/json">/*CATALOG*/</script>
+<script id="gen">/*GEN*/</script>
+<script>
+(function () {
+'use strict';
+/*LOOK*/
+/*SHADERS*/
+/*GFX*/
+/*BAKE*/
+/*CORE*/
+/*PLAY*/
+})();
+</script>
+</body>
+</html>

@@ -6,7 +6,9 @@
   "license": "MIT",
   "scripts": {
     "build": "python3 tools/build.py",
-    "check": "npm run build && node tools/check.js",
+    "check": "npm run build && node tools/check.js && node tools/core-test.js",
+    "test": "node tools/core-test.js",
+    "dev": "node tools/dev.js",
     "preview": "node tools/preview.js"
   },
   "devDependencies": {

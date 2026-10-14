@@ -1,0 +1,4 @@
+# The core builds on stable Rust and needs the WASM target; rustup installs it on first use if missing.
+[toolchain]
+channel = "stable"
+targets = ["wasm32-unknown-unknown"]

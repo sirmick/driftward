@@ -1,155 +1,12 @@
 // ======================= FLIGHT MODE =======================
 // Simulation state is structure-of-arrays (typed arrays indexed by entity id).
 // Rendering is instanced: one draw per ship type, one each for plumes, shields, bolts and particles.
-const DERIVE = {
-  ship: [
-    ["in vec2 vQ; in vec2 vWorld; out vec4 o;", "in vec2 vQ; in vec2 vWorld; flat in float vAng; flat in float vThr; flat in float vDmg; out vec4 o;"],
-    ["uniform float uAngle, uExtent, uHRange, uPxPerM, uTime, uThrottle, uDmax, uS;", "uniform float uExtent, uHRange, uTime, uDmax, uS;\n#define uAngle vAng\n#define uThrottle vThr\n#define uPxPerM 1.0"],
-    ["uniform float uGloss, uSpecK, uWrap, uIrid, uRim, uShadow, uHover;", "uniform float uGloss, uSpecK, uWrap, uIrid, uRim, uShadow;\n#define uHover 0.0"],
-    ["  o = vec4(col*A.a, A.a);\n}", "  col += vec3(1.,.42,.18)*vDmg*1.6;\n  o = vec4(col*A.a, A.a);\n}"]
-  ],
-  shield: [
-    ["in vec2 vQ; in vec2 vWorld; out vec4 o;", "in vec2 vQ; flat in vec4 vH1; flat in vec4 vH2; flat in float vIdle; flat in float vSeed; out vec4 o;"],
-    ["uniform float uExtent, uS, uDmax, uTime, uIdle, uStrength, uSeed;", "uniform float uExtent, uS, uDmax, uTime, uStrength;\n#define uIdle vIdle\n#define uSeed vSeed"],
-    ["uniform vec4 uHits[8];", ""],
-    ["for (int i=0; i<8; i++) {", "vec4 HH[2]; HH[0]=vH1; HH[1]=vH2;\n  for (int i=0; i<2; i++) {"],
-    ["uHits[i]", "HH[i]", 1]
-  ],
-  plume: [
-    ["uniform vec3 uCol, uCore; uniform float uTime, uSeed, uTurb, uDiamonds, uSputter, uPulse, uPower;", "flat in vec3 vCol; flat in vec3 vCore; flat in vec4 vP; flat in float vSeed; flat in float vPow; uniform float uTime;\n#define uCol vCol\n#define uCore vCore\n#define uSeed vSeed\n#define uTurb vP.x\n#define uDiamonds vP.y\n#define uSputter vP.z\n#define uPulse vP.w\n#define uPower vPow"]
-  ]
-};
-function derive(src, list) {
-  for (const [a, b, all] of list) { if (!src.includes(a)) throw new Error('shader derive failed: ' + a.slice(0, 50)); src = all ? src.split(a).join(b) : src.replace(a, b); }
-  return src;
-}
-const WORLD_POS = `uniform vec2 uRes, uCam; uniform float uScale;
-vec4 clipOf(vec2 w){ return vec4((w-uCam)*uScale/(uRes*.5), 0., 1.); }`;
+// Its shaders are in shaders.js.
 
-const FLY_SHIP_VS = `#version 300 es
-in vec2 aPos; in vec4 iA; in vec2 iB;
-${WORLD_POS}
-uniform float uHalfM;
-out vec2 vQ; out vec2 vWorld; flat out float vAng; flat out float vThr; flat out float vDmg;
-void main(){ vQ=aPos; float c=cos(iA.z), s=sin(iA.z);
-  vec2 w = iA.xy + mat2(c,s,-s,c)*(aPos*uHalfM); vWorld=w;
-  vAng=iA.z; vThr=iA.w; vDmg=iB.x; gl_Position=clipOf(w); }`;
-const FLY_SHIELD_VS = `#version 300 es
-in vec2 aPos; in vec4 iA; in vec4 iH1; in vec4 iH2;
-${WORLD_POS}
-uniform float uHalfM;
-out vec2 vQ; flat out vec4 vH1; flat out vec4 vH2; flat out float vIdle; flat out float vSeed;
-void main(){ vQ=aPos; float c=cos(iA.z), s=sin(iA.z);
-  vec2 w = iA.xy + mat2(c,s,-s,c)*(aPos*uHalfM);
-  vH1=iH1; vH2=iH2; vIdle=iA.w; vSeed=fract(iA.x*.0013+iA.y*.0007)*40.; gl_Position=clipOf(w); }`;
-const FLY_PLUME_VS = `#version 300 es
-in vec2 aPos; in vec4 iN; in vec4 iP; in vec2 iB;
-${WORLD_POS}
-uniform vec3 uPlCol[4]; uniform vec3 uPlCore[4]; uniform vec4 uPlP[4]; uniform float uPlSpread[4];
-out vec2 vST; flat out vec3 vCol; flat out vec3 vCore; flat out vec4 vP; flat out float vSeed; flat out float vPow;
-void main(){
-  int b = int(iB.x+.5);
-  float s = (aPos.y*.5+.5)*1.1-.1; float t = aPos.x;
-  vec2 dir = iN.zw, perp = vec2(-dir.y, dir.x);
-  float wid = max(iP.y, 2.5/uScale);
-  vec2 w = iN.xy + dir*s*iP.x + perp*t*wid*.5*(1.+max(s,0.)*(.6+uPlSpread[b]*2.));
-  vST=vec2(s,t); vCol=uPlCol[b]; vCore=mix(uPlCore[b], vec3(1.), clamp(iB.y,0.,1.)*.8); vP=uPlP[b]; vSeed=iP.z; vPow=iP.w;
-  gl_Position=clipOf(w);
-}`;
-const FLY_BOLT_VS = `#version 300 es
-in vec2 aPos; in vec4 iA; in vec4 iC;
-${WORLD_POS}
-out vec2 vQ; flat out vec3 vCol;
-void main(){ vec2 v=iA.zw; float sp=max(length(v),1.); vec2 d=v/sp, p=vec2(-d.y,d.x);
-  float wid = max(1.4, 2.5/uScale);
-  vec2 w = iA.xy + d*aPos.y*iC.w*.5 + p*aPos.x*wid; vQ=aPos; vCol=iC.rgb; gl_Position=clipOf(w); }`;
-const FLY_BOLT_FS = `#version 300 es
-precision highp float; in vec2 vQ; flat in vec3 vCol; out vec4 o;
-void main(){ float core = exp(-vQ.x*vQ.x*6.)*(1.-smoothstep(.55,1.,abs(vQ.y)));
-  float head = .5+1.5*smoothstep(-1.,1.,vQ.y);
-  o = vec4(mix(vCol, vec3(1.), core*core*.6)*core*head*2.5, 0.); }`;
-const FLY_PART_VS = `#version 300 es
-in vec2 aPos; in vec4 iA; in vec4 iC;
-${WORLD_POS}
-out vec2 vQ; flat out vec3 vCol; flat out float vLife;
-void main(){ vQ=aPos; vCol=iC.rgb; vLife=iA.w; vec2 w = iA.xy + aPos*max(iA.z, 1.6/uScale); gl_Position=clipOf(w); }`;
-const FLY_PART_FS = `#version 300 es
-precision highp float; in vec2 vQ; flat in vec3 vCol; flat in float vLife; out vec4 o;
-void main(){ float r=length(vQ); float g=(exp(-r*r*7.)*1.4 + exp(-r*3.)*.25)*(1.-smoothstep(.85,1.,r)); o=vec4(vCol*g*vLife, 0.); }`;
-const PLANET_VS = `#version 300 es
-in vec2 aPos;
-${WORLD_POS}
-uniform vec2 uC; uniform float uR;
-out vec2 vQ;
-void main(){ vQ=aPos*1.3; gl_Position=clipOf(uC + aPos*uR*1.3); }`;
-const PLANET_FS = `#version 300 es
-precision highp float; in vec2 vQ; out vec4 o;
-uniform vec3 uSun, uSunCol, uAmb, uC1, uC2, uC3, uAtm; uniform float uSeed, uTime, uPx; uniform int uKind;
-${NOISE}
-void main(){
-  float r = length(vQ);
-  vec3 L = normalize(uSun);
-  vec2 ld = normalize(L.xy+1e-5);
-  if (r > 1.) {
-    float a = exp(-(r-1.)*9.)*(1.-smoothstep(1.25,1.3,r));
-    float lit = clamp(dot(normalize(vQ), ld)*.6+.45, 0., 1.);
-    o = vec4(uAtm*uSunCol*a*lit*.8, 0.); return;
-  }
-  float z = sqrt(1.-r*r); vec3 N = vec3(vQ, z);
-  float ca = cos(uTime*.004+uSeed), sa = sin(uTime*.004+uSeed);
-  vec3 R = vec3(N.x*ca+N.z*sa, N.y, -N.x*sa+N.z*ca);
-  vec3 alb;
-  if (uKind == 1) {
-    float w = fbm(vec2(R.x*2.+R.z, R.y*6.)+uSeed)*2.;
-    float b = sin(R.y*14. + w*2.2);
-    alb = mix(uC1, uC2, smoothstep(-.6,.6,b)); alb = mix(alb, uC3, smoothstep(.55,.95,fbm(vec2(R.x*4.+R.z*2., R.y*20.)+uSeed*2.)));
-  } else {
-    float h = fbm(vec2(R.x*2.6+R.z*1.7, R.y*2.6-R.z*.6)+uSeed);
-    float land = smoothstep(.5,.54,h);
-    alb = mix(uC1, mix(uC2, uC3, smoothstep(.6,.75,h)), land);
-    if (uKind == 0) { float cl = smoothstep(.55,.75,fbm(vec2(R.x*3.+R.z*2.+uTime*.002, R.y*4.)+uSeed*3.)); alb = mix(alb, vec3(.9), cl*.8); }
-    else alb *= .7+.6*fbm(vec2(R.x*9., R.y*9.)+R.z);
-  }
-  alb = pow(alb, vec3(2.2));
-  float dif = max(dot(N, L), 0.);
-  vec3 col = alb*uSunCol*dif*2.2 + alb*uAmb*1.5;
-  float rim = pow(1.-z, 3.);
-  col += uAtm*uSunCol*rim*(.25+dif)*1.2;
-  float aa = 1.-smoothstep(1.-uPx*1.5, 1., r);
-  o = vec4(col*aa, aa);
-}`;
-// Nebula gas and flare radiation, drawn twice: a full back layer under the ships and a thin haze over them.
-const NEB_VS = `#version 300 es
-in vec2 aPos; out vec2 vP; void main(){ vP=aPos; gl_Position=vec4(aPos,0.,1.); }`;
-const NEB_FS = `#version 300 es
-precision highp float; in vec2 vP; out vec4 o;
-uniform vec2 uRes, uCam, uLdir; uniform float uScale, uTime, uFront, uFlare, uWorld;
-uniform vec3 uPl[3]; uniform sampler2D uGas;
-${NOISE}
-void main(){
-  vec2 w = uCam + vP*uRes*.5/uScale;
-  vec2 uv = w/uWorld + .5;
-  vec3 g = (uv.x<0.||uv.y<0.||uv.x>1.||uv.y>1.) ? vec3(0.) : texture(uGas, uv).rgb;
-  float n1 = fbm(w*.0011 + 3.1), n2 = fbm(w*.0047 - 1.7);
-  float det = .15 + 1.9*pow(clamp(n1*n2*2.2, 0., 1.5), 1.6);
-  vec3 d = g*g*clamp(det, 0., 1.8);
-  float flick = .6 + .8*vn(vec2(uTime*2.7, w.x*.0009 + w.y*.0006));
-  float k = uFront > .5 ? .35 : 1.;
-  vec3 emis = (vec3(.11,.012,.03)*d.r + vec3(.018,.011,.007)*d.g + vec3(.008,.05,.11)*d.b*flick)*k;
-  float absorb = clamp(d.g*.9 + d.r*.06 + d.b*.04, 0., .9)*k;
-  if (uFlare > 0. && uFront < .5) {
-    float lit = 1.;
-    for (int i = 0; i < 3; i++) {
-      vec2 q = w - uPl[i].xy; float al = dot(q, uLdir);
-      if (al < 0.) lit = min(lit, smoothstep(uPl[i].z*.92, uPl[i].z*1.04, length(q - al*uLdir)));
-    }
-    emis += vec3(1.,.8,.55)*uFlare*.06*lit*(.6 + .4*n1);
-  }
-  o = vec4(emis, absorb);
-}`;
-
+// Flight mode starts once the sim core is ready (WASM instantiation is async). Physics runs in the core;
+// AI, weapons, shields, sensors and effects still run here, around each core tick.
 let FLY = null, FLY_ERR = '';
-try { FLY = (function () {
+const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
   const FP = {
     ship: compile(FLY_SHIP_VS, derive(SHIP_FS, DERIVE.ship), { iA: 1, iB: 2 }),
     shield: compile(FLY_SHIELD_VS, derive(SHIELD_FS, DERIVE.shield), { iA: 1, iH1: 2, iH2: 3 }),
@@ -179,18 +36,26 @@ try { FLY = (function () {
 
   // ---------- entity storage (structure of arrays) ----------
   const MAXS = 320, MAXB = 4096, MAXP = 8192, MAXL = 64, BOLT_V = 1100, HIT_LIFE = 2.6;
-  const REV = 0.5, RCS = 0.3, SENS = 100; // reverse and lateral thrust as fractions of main; sensor constant
-  const sType = new Int16Array(MAXS), sBrand = new Uint8Array(MAXS), sSize = new Uint8Array(MAXS);
-  const sAlive = new Uint8Array(MAXS), sRole = new Uint8Array(MAXS), sMode = new Uint8Array(MAXS), sMount = new Uint8Array(MAXS), sBurn = new Uint8Array(MAXS);
-  const sx = new Float32Array(MAXS), sy = new Float32Array(MAXS), svx = new Float32Array(MAXS), svy = new Float32Array(MAXS);
-  const sAng = new Float32Array(MAXS), sAv = new Float32Array(MAXS), sThr = new Float32Array(MAXS);
+  const SENS = 100; // sensor constant
+  const ENV_N = 128, ENV_W = 26000, CELL = ENV_W / ENV_N, START = [1800, 1800]; // gas grid; start sunlit, off Tessaly's shadow
+  // The sim core owns pose, motion, actuators and the gas grid; these names are views into its columns.
+  const sim = CORE.world({ maxShips: MAXS, maxTypes: 64, maxBodies: 8, envN: ENV_N, envW: ENV_W, seed: 1 });
+  const rnd = sim.rand; // seeded: every sim decision draws from the core's generator; visual-only noise keeps Math.random
+  let seed = 1, forcedSeed;
+  const SH = sim.ship;
+  const sType = SH.kind, sAlive = SH.alive, sBurn = SH.burn;
+  const sx = SH.x, sy = SH.y, svx = SH.vx, svy = SH.vy, sAng = SH.ang, sAv = SH.av, sThr = SH.thr;
+  // actuators: main (-1 reverse .. 1 forward), lateral RCS (-1 left .. 1 right), turn; the core's assist writes them when cMode > 0
+  const sTurnIn = SH.turn_in, sMain = SH.main, sLat = SH.lat;
+  const cMode = SH.ctl, cVx = SH.want_vx, cVy = SH.want_vy, cFace = SH.want_face;
+  const rX = SH.rx, rY = SH.ry, rA = SH.ra; // interpolated render pose, written each frame
+  const sBrand = new Uint8Array(MAXS), sSize = new Uint8Array(MAXS);
+  const sRole = new Uint8Array(MAXS), sMode = new Uint8Array(MAXS), sMount = new Uint8Array(MAXS);
   const sHp = new Float32Array(MAXS), sSh = new Float32Array(MAXS), sSince = new Float32Array(MAXS), sDmg = new Float32Array(MAXS);
   const sCd = new Float32Array(MAXS), sAi = new Float32Array(MAXS), sTx = new Float32Array(MAXS), sTy = new Float32Array(MAXS), sResp = new Float32Array(MAXS);
-  const sTurnIn = new Float32Array(MAXS), sThrIn = new Uint8Array(MAXS), sBrkIn = new Uint8Array(MAXS), sFireIn = new Uint8Array(MAXS);
+  const sFireIn = new Uint8Array(MAXS);
   const hAx = new Float32Array(MAXS), hAy = new Float32Array(MAXS), hAt = new Float32Array(MAXS), hAs = new Float32Array(MAXS);
   const hBx = new Float32Array(MAXS), hBy = new Float32Array(MAXS), hBt = new Float32Array(MAXS), hBs = new Float32Array(MAXS);
-  // actuators: main (-1 reverse .. 1 forward) and lateral RCS (-1 left .. 1 right); turn is sTurnIn
-  const sMain = new Float32Array(MAXS), sLat = new Float32Array(MAXS);
   // sensors: emitted signature, recent-fire glow, NPC's track of the player, player's track of each NPC, scan progress
   const sSig = new Float32Array(MAXS), sFireT = new Float32Array(MAXS), sDetP = new Float32Array(MAXS), pDet = new Float32Array(MAXS), pScan = new Float32Array(MAXS);
   let nS = 0;
@@ -209,8 +74,7 @@ try { FLY = (function () {
   const pl = { set: 0, heat: 0, fuel: 1, cold: false, lock: false, ping: 0, pingCd: 0, pingR: -1, gas: [0, 0, 0], rad: 0, lit: 1, noise: 1 };
 
   // ---------- environment: nebula gas (three species on a coarse grid) and radiation ----------
-  const ENV_N = 128, ENV_W = 26000, CELL = ENV_W / ENV_N, START = [1800, 1800]; // start sunlit, off Tessaly's shadow
-  const gH = new Float32Array(ENV_N * ENV_N), gD = new Float32Array(ENV_N * ENV_N), gI = new Float32Array(ENV_N * ENV_N);
+  const gH = sim.env.h, gD = sim.env.d, gI = sim.env.i; // the core samples these for drag; JS for sensors and the radar
   const gasTex = gl.createTexture();
   const gasImg = document.createElement('canvas'); gasImg.width = gasImg.height = ENV_N;
   const ENV_KINDS = { mixed: [1, 0.9, 0.8], hydrogen: [1.5, 0, 0], dust: [0.35, 1.6, 0], ion: [0.3, 0, 1.6], clear: [0, 0, 0] };
@@ -223,7 +87,7 @@ try { FLY = (function () {
   }
   function fbm2(x, y, s) { let v = 0, a = 0.5; for (let o = 0; o < 5; o++) { v += a * vnoise(x, y, s + o * 17); x = x * 2.03 + 1.3; y = y * 2.03 - 0.7; a *= 0.5; } return v; }
   function genEnv() {
-    const m = ENV_KINDS[state.env] || ENV_KINDS.mixed, seed = (Math.random() * 1e6) | 0;
+    const m = ENV_KINDS[state.env] || ENV_KINDS.mixed, seed = (rnd() * 1e6) | 0;
     const img = gasImg.getContext('2d').createImageData(ENV_N, ENV_N), tex = new Uint8Array(ENV_N * ENV_N * 4);
     for (let j = 0; j < ENV_N; j++) for (let i = 0; i < ENV_N; i++) {
       const wx = (i + 0.5) * CELL - ENV_W / 2, wy = (j + 0.5) * CELL - ENV_W / 2, k = j * ENV_N + i;
@@ -278,7 +142,7 @@ try { FLY = (function () {
   }
   function radAt(x, y, ion, out) { const lit = litAt(x, y); if (out) out.lit = lit; return (STAR_RAD[state.star] || 1) * (1 + 9 * flare.level) * lit + 0.8 * ion; }
   function stepFlare(dt) {
-    if (flare.t >= 0) { flare.t += dt; flare.level = smooth(0, 1.2, flare.t) * (1 - smooth(7, 9, flare.t)); if (flare.t > 9) { flare.t = -1; flare.level = 0; flare.next = 70 + Math.random() * 50; } return; }
+    if (flare.t >= 0) { flare.t += dt; flare.level = smooth(0, 1.2, flare.t) * (1 - smooth(7, 9, flare.t)); if (flare.t > 9) { flare.t = -1; flare.level = 0; flare.next = 70 + rnd() * 50; } return; }
     if (flare.warn > 0) { flare.warn -= dt; if (flare.warn <= 0) flare.t = 0; return; }
     if (state.solarFlares !== false) { flare.next -= dt; if (flare.next <= 0) flare.warn = 8; }
   }
@@ -294,6 +158,8 @@ try { FLY = (function () {
     { x: 6800, y: -4400, r: 2700, kind: 1, c1: '#c9925c', c2: '#7d4e33', c3: '#ecd9b0', atm: '#ffc98a', seed: 4.1, name: 'Orrin' },
     { x: -8200, y: -6400, r: 820, kind: 2, c1: '#5e5953', c2: '#8a8178', c3: '#c9c0b4', atm: '#b0a8a0', seed: 7.7, name: 'Kell' }
   ].map(p => Object.assign(p, { g: 0.004 * p.r, L1: hexRGB(p.c1), L2: hexRGB(p.c2), L3: hexRGB(p.c3), LA: lin(hexRGB(p.atm)) }));
+  PLANETS.forEach((p, j) => { sim.body.x[j] = p.x; sim.body.y[j] = p.y; sim.body.r[j] = p.r; sim.body.g[j] = p.g; });
+  sim.setBodies(PLANETS.length);
 
   // ---------- ship types (one per baked brand x size) ----------
   let types = [];
@@ -318,6 +184,8 @@ try { FLY = (function () {
         if (!T.mounts.length) T.mounts = [[0, T.half * 0.3]];
         T.hullEps = T.Dmax / 255 * 1.5;
       }
+      const ti = types.length;
+      sim.type.accel[ti] = T.accel; sim.type.turn[ti] = T.turn; sim.type.vmax[ti] = T.vmax;
       types.push(T);
     }));
   }
@@ -327,22 +195,24 @@ try { FLY = (function () {
   // ---------- spawning ----------
   const SIZE_W = [0.36, 0.3, 0.2, 0.1, 0.04];
   function randomType() {
-    let x = Math.random(), zi = 0; for (; zi < SIZE_W.length - 1; zi++) { x -= SIZE_W[zi]; if (x <= 0) break; }
-    const bi = Math.floor(Math.random() * catalog.brands.length);
+    let x = rnd(), zi = 0; for (; zi < SIZE_W.length - 1; zi++) { x -= SIZE_W[zi]; if (x <= 0) break; }
+    const bi = Math.floor(rnd() * catalog.brands.length);
     return bi * nSizes() + Math.min(zi, nSizes() - 1);
   }
   function pickWaypoint(i) {
-    if (sRole[i] === 0) { const p = PLANETS[Math.floor(Math.random() * PLANETS.length)]; const a = Math.random() * 6.283; sTx[i] = p.x + Math.cos(a) * p.r * 1.35; sTy[i] = p.y + Math.sin(a) * p.r * 1.35; }
-    else { const a = Math.random() * 6.283, r = 1500 + Math.random() * 6000; sTx[i] = Math.cos(a) * r; sTy[i] = Math.sin(a) * r; }
+    if (sRole[i] === 0) { const p = PLANETS[Math.floor(rnd() * PLANETS.length)]; const a = rnd() * 6.283; sTx[i] = p.x + Math.cos(a) * p.r * 1.35; sTy[i] = p.y + Math.sin(a) * p.r * 1.35; }
+    else { const a = rnd() * 6.283, r = 1500 + rnd() * 6000; sTx[i] = Math.cos(a) * r; sTy[i] = Math.sin(a) * r; }
   }
-  function spawn(i, ti, x, y, role) {
+  // ang: facing (random if omitted)
+  function spawn(i, ti, x, y, role, ang) {
     const T = types[ti];
     sType[i] = ti; sBrand[i] = T.bi; sSize[i] = T.zi; sAlive[i] = 1; sRole[i] = role; sMode[i] = 0; sMount[i] = 0; sBurn[i] = 0;
-    sx[i] = x; sy[i] = y; sAng[i] = Math.random() * 6.283; sAv[i] = 0; sThr[i] = 0;
-    const v0 = i === 0 ? 0 : T.vmax * (0.2 + Math.random() * 0.3);
+    sx[i] = x; sy[i] = y; sAng[i] = ang === undefined ? rnd() * 6.283 : ang; sAv[i] = 0; sThr[i] = 0;
+    const v0 = i === 0 ? 0 : T.vmax * (0.2 + rnd() * 0.3);
     svx[i] = -Math.sin(sAng[i]) * v0; svy[i] = Math.cos(sAng[i]) * v0;
-    sHp[i] = T.hull; sSh[i] = T.shield; sSince[i] = 99; sDmg[i] = 0; sCd[i] = Math.random(); sAi[i] = Math.random() * 0.5; sResp[i] = 0;
-    sTurnIn[i] = 0; sThrIn[i] = 0; sBrkIn[i] = 0; sFireIn[i] = 0; sMain[i] = 0; sLat[i] = 0;
+    sHp[i] = T.hull; sSh[i] = T.shield; sSince[i] = 99; sDmg[i] = 0; sCd[i] = rnd(); sAi[i] = rnd() * 0.5; sResp[i] = 0;
+    sTurnIn[i] = 0; sFireIn[i] = 0; sMain[i] = 0; sLat[i] = 0; cMode[i] = 0;
+    sim.slotReset(i, true); // new generation, and no interpolation streak from the old pose
     sSig[i] = 1; sFireT[i] = 0; sDetP[i] = 0; pDet[i] = 0; pScan[i] = 0;
     hAt[i] = -1e9; hBt[i] = -1e9;
     if (i === 0) { pl.set = v0; pl.heat = 0; pl.fuel = 1; pl.cold = false; pl.lock = false; }
@@ -354,22 +224,25 @@ try { FLY = (function () {
   }
   function resetWorld() {
     nB = 0; nP = 0; nL = 0; hostile.fill(0);
-    nS = Math.min(MAXS, 1 + state.traffic);
-    spawn(0, playerType(), START[0], START[1], 1); sAng[0] = 0;
+    // the one host-random draw (unless a seed is forced): everything after replays from it, given the same inputs
+    seed = forcedSeed !== undefined ? forcedSeed >>> 0 : (Math.random() * 4294967296) >>> 0; forcedSeed = undefined;
+    sim.clear(); sim.reseed(seed);
+    nS = Math.min(MAXS, 1 + state.traffic); sim.setCount(nS);
+    spawn(0, playerType(), START[0], START[1], 1, 0);
     for (let i = 1; i < nS; i++) {
-      const a = Math.random() * 6.283, r = 1200 + Math.random() * 9000;
-      spawn(i, randomType(), Math.cos(a) * r, Math.sin(a) * r, Math.random() < 0.55 ? 0 : 1);
+      const a = rnd() * 6.283, r = 1200 + rnd() * 9000;
+      spawn(i, randomType(), Math.cos(a) * r, Math.sin(a) * r, rnd() < 0.55 ? 0 : 1);
     }
     applyPirates();
-    camX = START[0]; camY = START[1]; target = -1; simT = 0;
-    genEnv(); flare.next = 60 + Math.random() * 40; flare.warn = 0; flare.t = -1; flare.level = 0;
+    camX = START[0]; camY = START[1]; target = -1; simT = 0; pl.ping = 0; pl.pingCd = 0; pl.pingR = -1;
+    genEnv(); flare.next = 60 + rnd() * 40; flare.warn = 0; flare.t = -1; flare.level = 0;
   }
   function ping() { if (pl.pingCd > 0 || !sAlive[0]) return; pl.ping = 1; pl.pingCd = 6; pl.pingR = 0; }
   function flareNow() { if (flare.t < 0 && flare.warn <= 0) flare.warn = 5; }
   function applyPirates() { const ri = catalog.brands.findIndex(b => b.id === 'rustline'); if (ri >= 0 && state.pirates) hostile[ri] = 1; }
   function respawnNPC(i) {
-    const a = Math.random() * 6.283, r = 4000 + Math.random() * 5000;
-    spawn(i, randomType(), sx[0] + Math.cos(a) * r, sy[0] + Math.sin(a) * r, Math.random() < 0.55 ? 0 : 1);
+    const a = rnd() * 6.283, r = 4000 + rnd() * 5000;
+    spawn(i, randomType(), sx[0] + Math.cos(a) * r, sy[0] + Math.sin(a) * r, rnd() < 0.55 ? 0 : 1);
   }
 
   // ---------- effects ----------
@@ -390,7 +263,7 @@ try { FLY = (function () {
   let shake = 0;
   function explode(i) {
     const T = types[sType[i]], L = T.L;
-    sAlive[i] = 0; sResp[i] = i === 0 ? 3 : 5 + Math.random() * 6;
+    sAlive[i] = 0; sResp[i] = i === 0 ? 3 : 5 + rnd() * 6;
     const hot = [1.0, 0.75, 0.45], col = T.br.plCol;
     addParticle(sx[i], sy[i], svx[i] * 0.5, svy[i] * 0.5, 0.6, L * 0.9, 1.6, 6, 4.5, 3);
     addParticle(sx[i], sy[i], svx[i] * 0.5, svy[i] * 0.5, 1.4, L * 0.6, 0.9, col[0] * 2, col[1] * 2, col[2] * 2);
@@ -442,33 +315,28 @@ try { FLY = (function () {
   // ---------- AI ----------
   const wrap = a => { a = (a + Math.PI) % 6.283185307; if (a < 0) a += 6.283185307; return a - Math.PI; };
   const clamp1 = v => v < -1 ? -1 : v > 1 ? 1 : v;
-  // The assist controller: given a desired velocity (and optionally a facing), drive turn, main/reverse and lateral thrusters.
+  // Flight assist: ask for a velocity (and optionally a facing); the core's control stage turns it into turn,
+  // main/reverse and lateral commands each tick. face undefined: auto; null: leave the turn command alone.
   // NPCs always fly through it; the player does when assist is on.
   function control(i, tvx, tvy, face) {
-    const T = types[sType[i]], hx = -Math.sin(sAng[i]), hy = Math.cos(sAng[i]);
-    const dvx = tvx - svx[i], dvy = tvy - svy[i];
-    if (face === undefined) {
-      const tl = Math.hypot(tvx, tvy), dl = Math.hypot(dvx, dvy);
-      face = dl > T.accel * 0.6 ? Math.atan2(-dvx, dvy) : tl > T.vmax * 0.08 ? Math.atan2(-tvx, tvy) : sAng[i];
-    }
-    if (face !== null) sTurnIn[i] = clamp1(wrap(face - sAng[i]) * 3 / T.turn);
-    const g = T.accel * 0.35;
-    sMain[i] = clamp1((dvx * hx + dvy * hy) / g);
-    sLat[i] = clamp1((dvx * hy - dvy * hx) / (g * RCS));
+    cVx[i] = tvx; cVy[i] = tvy;
+    if (face === undefined) cMode[i] = 1;
+    else if (face === null) cMode[i] = 3;
+    else { cMode[i] = 2; cFace[i] = face; }
   }
   function seek(i, tx, ty, arrive) {
     const T = types[sType[i]], dx = tx - sx[i], dy = ty - sy[i], d = Math.hypot(dx, dy) || 1;
-    const vd = arrive ? Math.min(T.vmax, Math.sqrt(2 * T.accel * REV * 0.6 * d)) : T.vmax * (sBurn[i] ? 1.3 : 1);
+    const vd = arrive ? Math.min(T.vmax, Math.sqrt(2 * T.accel * sim.param('rev') * 0.6 * d)) : T.vmax * (sBurn[i] ? sim.param('burn_cap') : 1);
     control(i, dx / d * vd, dy / d * vd);
     return d;
   }
   function ai(i, dt) {
     const T = types[sType[i]];
-    sFireIn[i] = 0; sBrkIn[i] = 0; sBurn[i] = 0;
+    sFireIn[i] = 0; sBurn[i] = 0;
     const pdx = sx[0] - sx[i], pdy = sy[0] - sy[i], pd = Math.hypot(pdx, pdy) || 1;
     sAi[i] -= dt;
     if (sAi[i] <= 0) {
-      sAi[i] = 0.35 + Math.random() * 0.35;
+      sAi[i] = 0.35 + rnd() * 0.35;
       // hostiles only act on what their sensors hold: a cold player in dust can slip away
       if (hostile[sBrand[i]] && sAlive[0] && sDetP[i] > 1 && pd < 6000 + T.L * 6) sMode[i] = sRole[i] === 0 && sSize[i] < 3 ? 2 : 1;
       else sMode[i] = 0;
@@ -511,21 +379,27 @@ try { FLY = (function () {
       control(0, hx * pl.set, hy * pl.set, null);
     } else {
       // assist off: raw actuators
+      cMode[0] = 0;
       sMain[0] = up ? 1 : down ? -1 : 0;
       sLat[0] = (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0);
       if (keys.has('KeyX') && !left && !right && Math.hypot(svx[0], svy[0]) > 2) sTurnIn[0] = clamp1(wrap(Math.atan2(svx[0], -svy[0]) - sAng[0]) * 3 / T.turn);
       pl.set = Math.max(0, svx[0] * hx + svy[0] * hy);
     }
   }
-  // drive taper: an engine cannot push its own ship past the cap along its thrust axis
-  const taper = (u, cap) => u <= 0 ? 1 : u >= cap ? 0 : 1 - Math.pow(u / cap, 4);
   function puff(i, lx, ly, dx, dy) {
     const T = types[sType[i]], c = Math.cos(sAng[i]), s = Math.sin(sAng[i]);
     const wx = sx[i] + c * lx - s * ly, wy = sy[i] + s * lx + c * ly, vx = c * dx - s * dy, vy = s * dx + c * dy, sp = 25 + T.L * 0.8;
     addParticle(wx, wy, svx[i] + vx * sp, svy[i] + vy * sp, 0.22 + Math.random() * 0.15, 0.6 + T.L * 0.035, 2.2, 1.4, 1.45, 1.6);
   }
   const sNoise = new Float32Array(MAXS);
+  // One fixed tick: decide (JS), then the core moves every ship (assist control, gas fields, turning, thrust,
+  // drag, gravity, integration, dampers, engine glow), then the systems that react to the new state (JS).
   function step(dt) {
+    preTick(dt);
+    sim.step();
+    postTick(dt);
+  }
+  function preTick(dt) {
     simT += dt;
     stepFlare(dt); sunDir2();
     if (sAlive[0]) playerInput(dt);
@@ -537,33 +411,14 @@ try { FLY = (function () {
         continue;
       }
       if (i !== 0) ai(i, dt);
+    }
+  }
+  function postTick(dt) {
+    for (let i = 0; i < nS; i++) {
+      if (!sAlive[i]) continue;
       const T = types[sType[i]];
-      const tav = sTurnIn[i] * T.turn, ta = T.turn * 8 * dt;
-      sAv[i] += Math.max(-ta, Math.min(ta, tav - sAv[i]));
-      sAng[i] += sAv[i] * dt;
-      const hx = -Math.sin(sAng[i]), hy = Math.cos(sAng[i]), rx = hy, ry = -hx;
       const burn = sBurn[i] && sMain[i] > 0;
-      const acc = T.accel * (burn ? 1.7 : 1), cap = T.vmax * (burn ? 1.3 : 1);
-      const along = svx[i] * hx + svy[i] * hy, side = svx[i] * rx + svy[i] * ry;
-      let ax = 0, ay = 0;
-      if (sMain[i] > 0) { const f = acc * sMain[i] * taper(along, cap); ax += hx * f; ay += hy * f; }
-      else if (sMain[i] < 0) { const f = T.accel * REV * sMain[i] * taper(-along, cap); ax += hx * f; ay += hy * f; }
-      if (sLat[i]) { const f = T.accel * RCS * sLat[i] * taper(sLat[i] > 0 ? side : -side, cap * 0.6); ax += rx * f; ay += ry * f; }
-      // environment: gas drag (density x v^2) and planet gravity (softened inside the body)
-      gasAt(sx[i], sy[i], G3);
-      const sp = Math.hypot(svx[i], svy[i]), cd = 6e-4 * G3[0] + 3e-3 * G3[1] + 1.5e-3 * G3[2];
-      ax -= cd * sp * svx[i]; ay -= cd * sp * svy[i];
-      for (const p of PLANETS) {
-        const dx = p.x - sx[i], dy = p.y - sy[i], d = Math.hypot(dx, dy) || 1, g = p.g * (d > p.r ? p.r * p.r / (d * d) : d / p.r);
-        ax += dx / d * g; ay += dy / d * g;
-      }
-      svx[i] += ax * dt; svy[i] += ay * dt;
-      // inertial dampers bleed speed above the hull's limit, so slingshots and recoil can exceed it for a while
-      const sp2 = Math.hypot(svx[i], svy[i]), lim = T.vmax * (burn ? 1.3 : 1);
-      if (sp2 > lim) { const k = 1 - Math.min(1, 0.4 * dt) * (sp2 - lim) / sp2; svx[i] *= k; svy[i] *= k; }
-      sx[i] += svx[i] * dt; sy[i] += svy[i] * dt;
-      const tt = sMain[i] > 0.05 ? (burn ? 1 : 0.3 + 0.42 * sMain[i]) : 0.06;
-      sThr[i] += (tt - sThr[i]) * Math.min(1, dt * 6);
+      G3[0] = SH.gas_h[i]; G3[1] = SH.gas_d[i]; G3[2] = SH.gas_i[i]; // sampled by the core this tick
       if (Math.abs(sx[i] - camX) < 2600 && Math.abs(sy[i] - camY) < 2600 && Math.random() < dt * 26) {
         if (Math.abs(sLat[i]) > 0.25) { const sg = sLat[i] > 0 ? 1 : -1; puff(i, -sg * T.half * 0.32, T.half * (Math.random() < 0.5 ? 0.25 : -0.2), -sg, 0); }
         if (sMain[i] < -0.25) puff(i, (Math.random() - 0.5) * T.half * 0.3, T.half * 0.42, 0, 1);
@@ -661,9 +516,9 @@ try { FLY = (function () {
     };
     for (let i = 0; i < nS; i++) {
       if (!sAlive[i] || sThr[i] < 0.05) continue;
-      const T = types[sType[i]], c = Math.cos(sAng[i]), s = Math.sin(sAng[i]);
+      const T = types[sType[i]], c = Math.cos(rA[i]), s = Math.sin(rA[i]);
       const ex = T.engX, ey = T.engY - T.L * 0.12, pw = plumePower(sThr[i]) * 1.5;
-      push(sx[i] + c * ex - s * ey, sy[i] + s * ex + c * ey, T.L * 0.05 + 1.5, T.L * 1.6 + 8, T.br.plCol[0] * pw, T.br.plCol[1] * pw, T.br.plCol[2] * pw);
+      push(rX[i] + c * ex - s * ey, rY[i] + s * ex + c * ey, T.L * 0.05 + 1.5, T.L * 1.6 + 8, T.br.plCol[0] * pw, T.br.plCol[1] * pw, T.br.plCol[2] * pw);
     }
     for (let j = 0; j < nL; j++) { const f = 1 - lT[j] / lLife[j], k = f * f; push(lX[j], lY[j], lZ[j], lR[j], lCr[j] * k, lCg[j] * k, lCb[j] * k); }
     for (let k = 0; k < Math.min(nB, 48); k++) { const c = types[bBrand[k] * nSizes()].br.plCol; push(bx[k], by[k], 6, 70, c[0] * 1.6, c[1] * 1.6, c[2] * 1.6); }
@@ -689,13 +544,15 @@ try { FLY = (function () {
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, gasTex); gl.uniform1i(u.uGas, 0);
     draw();
   }
+  // Draws from the interpolated pose (rX, rY, rA): between the last two ticks at the clock's alpha, so motion is
+  // smooth at any refresh rate. Bolts and particles are stepped back by the same fraction of a tick to match.
   function render(t) {
-    const RW = canvas.width, RH = canvas.height;
+    const RW = canvas.width, RH = canvas.height, back = (1 - sim.alpha()) * sim.DT;
     const T0 = types[sType[0]];
     const viewW = Math.max(700, T0.L * 16) / state.zoom;
     scale = RW / viewW;
     const halfW = RW / scale / 2, halfH = RH / scale / 2, viewR = Math.hypot(halfW, halfH);
-    const visible = i => Math.abs(sx[i] - camX) < halfW + types[sType[i]].half * 1.2 + types[sType[i]].L * 2 && Math.abs(sy[i] - camY) < halfH + types[sType[i]].half * 1.2 + types[sType[i]].L * 2;
+    const visible = i => Math.abs(rX[i] - camX) < halfW + types[sType[i]].half * 1.2 + types[sType[i]].L * 2 && Math.abs(rY[i] - camY) < halfH + types[sType[i]].half * 1.2 + types[sType[i]].L * 2;
     const star = STARS[state.star], sunCol = lin(star.col), sv = sunVec(), sl = Math.hypot(sv[0], sv[1]) || 1;
 
     gl.bindVertexArray(null);
@@ -729,11 +586,11 @@ try { FLY = (function () {
     if (state.map === 0) {
       for (let i = 0; i < nS && nPl < MAXS * 12; i++) {
         if (!sAlive[i] || sThr[i] < 0.03 || !visible(i)) continue;
-        const T = types[sType[i]], br = T.br, c = Math.cos(sAng[i]), s = Math.sin(sAng[i]);
+        const T = types[sType[i]], br = T.br, c = Math.cos(rA[i]), s = Math.sin(rA[i]);
         const th = sThr[i], burn = sBurn[i] && sMain[i] > 0 ? 1 : 0, pw = plumePower(th) * (burn ? 1.3 : 1);
         for (let e = 0; e < T.eng.length; e++) {
           const E = T.eng[e], o = nPl * 10;
-          plumeInst[o] = sx[i] + c * E.lx - s * E.ly; plumeInst[o + 1] = sy[i] + s * E.lx + c * E.ly;
+          plumeInst[o] = rX[i] + c * E.lx - s * E.ly; plumeInst[o + 1] = rY[i] + s * E.lx + c * E.ly;
           plumeInst[o + 2] = c * E.dx - s * E.dy; plumeInst[o + 3] = s * E.dx + c * E.dy;
           plumeInst[o + 4] = E.w * br.plLen * (0.3 + 1.7 * th) * (burn ? 1.6 : 1); plumeInst[o + 5] = E.w * br.plWid * 1.1;
           plumeInst[o + 6] = i * 7.3 + e * 1.37; plumeInst[o + 7] = pw;
@@ -768,10 +625,10 @@ try { FLY = (function () {
     for (let i = 0; i < nS; i++) {
       if (!sAlive[i] || !visible(i)) continue;
       const ti = sType[i], o = typeFill[ti]++ * 6;
-      shipInst[o] = sx[i]; shipInst[o + 1] = sy[i]; shipInst[o + 2] = sAng[i]; shipInst[o + 3] = sThr[i]; shipInst[o + 4] = sDmg[i]; shipInst[o + 5] = 0;
+      shipInst[o] = rX[i]; shipInst[o + 1] = rY[i]; shipInst[o + 2] = rA[i]; shipInst[o + 3] = sThr[i]; shipInst[o + 4] = sDmg[i]; shipInst[o + 5] = 0;
       if (state.map === 0 && (simT - hAt[i] < HIT_LIFE || (state.shields && state.shieldIdle > 0 && sSh[i] > 0))) {
         const q = shieldFill[ti]++ * 12, a1 = simT - hAt[i], a2 = simT - hBt[i];
-        shieldInst.set([sx[i], sy[i], sAng[i], state.shields && sSh[i] > 0 ? state.shieldIdle * 0.6 : 0,
+        shieldInst.set([rX[i], rY[i], rA[i], state.shields && sSh[i] > 0 ? state.shieldIdle * 0.6 : 0,
           hAx[i], hAy[i], a1 < HIT_LIFE ? a1 : -1, hAs[i], hBx[i], hBy[i], a2 < HIT_LIFE ? a2 : -1, hBs[i]], q);
       }
     }
@@ -820,7 +677,7 @@ try { FLY = (function () {
     for (let k = 0; k < nB; k++) {
       if (Math.abs(bx[k] - camX) > halfW + 80 || Math.abs(by[k] - camY) > halfH + 80) continue;
       const c = types[bBrand[k] * nSizes()].br.plCol, o = nb * 8;
-      boltInst[o] = bx[k]; boltInst[o + 1] = by[k]; boltInst[o + 2] = bvx[k] - 0; boltInst[o + 3] = bvy[k];
+      boltInst[o] = bx[k] - bvx[k] * back; boltInst[o + 1] = by[k] - bvy[k] * back; boltInst[o + 2] = bvx[k] - 0; boltInst[o + 3] = bvy[k];
       boltInst[o + 4] = c[0] * 3; boltInst[o + 5] = c[1] * 3; boltInst[o + 6] = c[2] * 3; boltInst[o + 7] = 22 + Math.min(40, bDmg[k] * 1.2);
       nb++;
     }
@@ -830,7 +687,7 @@ try { FLY = (function () {
     for (let k = 0; k < nP; k++) {
       if (Math.abs(px[k] - camX) > halfW + pSz[k] || Math.abs(py[k] - camY) > halfH + pSz[k]) continue;
       const o = np * 8, f = pLife[k] / pMax[k];
-      partInst[o] = px[k]; partInst[o + 1] = py[k]; partInst[o + 2] = pSz[k]; partInst[o + 3] = f * f;
+      partInst[o] = px[k] - pvx[k] * back; partInst[o + 1] = py[k] - pvy[k] * back; partInst[o + 2] = pSz[k]; partInst[o + 3] = f * f;
       partInst[o + 4] = pr[k]; partInst[o + 5] = pg[k]; partInst[o + 6] = pb[k]; partInst[o + 7] = 0;
       np++;
     }
@@ -854,7 +711,7 @@ try { FLY = (function () {
     hx.font = mono; hx.textBaseline = 'middle';
     const assist = state.flightModel === 'assist';
     if (sAlive[0]) {
-      const [cx, cy] = toScreen(sx[0], sy[0]);
+      const [cx, cy] = toScreen(rX[0], rY[0]);
       const sp = Math.hypot(svx[0], svy[0]), r0 = Math.max(18, T0.half * scale / dpr * 0.75);
       if (sp > 1) {
         const len = 30 + 60 * Math.min(1.3, sp / T0.vmax), ux = svx[0] / sp, uy = -svy[0] / sp;
@@ -863,7 +720,7 @@ try { FLY = (function () {
         hx.beginPath(); hx.arc(cx + ux * (r0 + len), cy + uy * (r0 + len), 4, 0, 6.283); hx.stroke();
       }
       if (assist) { // set-speed tick along the nose
-        const nx = -Math.sin(sAng[0]), ny = -Math.cos(sAng[0]), len = 30 + 60 * Math.min(1.3, pl.set / T0.vmax);
+        const nx = -Math.sin(rA[0]), ny = -Math.cos(rA[0]), len = 30 + 60 * Math.min(1.3, pl.set / T0.vmax);
         hx.strokeStyle = 'rgba(159,180,200,.7)'; hx.lineWidth = 1.5;
         const qx = cx + nx * (r0 + len), qy = cy + ny * (r0 + len);
         hx.beginPath(); hx.moveTo(qx - ny * 6, qy + nx * 6); hx.lineTo(qx + ny * 6, qy - nx * 6); hx.stroke();
@@ -875,12 +732,12 @@ try { FLY = (function () {
     }
     // target bracket: a scanned or identified target gets corners, a raw contact only an uncertainty circle
     if (target >= 0 && sAlive[target] && level(target) > 0) {
-      const T = types[sType[target]], [tx, ty] = toScreen(sx[target], sy[target]), lv = level(target);
+      const T = types[sType[target]], [tx, ty] = toScreen(rX[target], rY[target]), lv = level(target);
       const on = tx > 0 && ty > 0 && tx < W && ty < H;
       const col = lv >= 2 && hostile[sBrand[target]] ? red : '#9fb4c8';
       hx.strokeStyle = col; hx.fillStyle = col; hx.lineWidth = 1.5;
       if (on) {
-        if (lv === 1) { const err = Math.hypot(sx[target] - sx[0], sy[target] - sy[0]) * 0.12 / Math.max(1, pDet[target]); hx.setLineDash([4, 4]); hx.beginPath(); hx.arc(tx, ty, Math.max(14, err * scale / dpr), 0, 6.283); hx.stroke(); hx.setLineDash([]); }
+        if (lv === 1) { const err = Math.hypot(rX[target] - rX[0], rY[target] - rY[0]) * 0.12 / Math.max(1, pDet[target]); hx.setLineDash([4, 4]); hx.beginPath(); hx.arc(tx, ty, Math.max(14, err * scale / dpr), 0, 6.283); hx.stroke(); hx.setLineDash([]); }
         else {
           const r = Math.max(14, T.half * scale / dpr * 0.7), k = r * 0.35;
           for (const [sxn, syn] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { hx.beginPath(); hx.moveTo(tx + sxn * r, ty + syn * (r - k)); hx.lineTo(tx + sxn * r, ty + syn * r); hx.lineTo(tx + sxn * (r - k), ty + syn * r); hx.stroke(); }
@@ -896,7 +753,7 @@ try { FLY = (function () {
     const lines = [];
     const pct = v => Math.round(v * 100) + '%';
     if (sAlive[0]) {
-      const sp = Math.hypot(svx[0], svy[0]), hd = ((-sAng[0] * 180 / Math.PI) % 360 + 360) % 360, burn = sBurn[0] && sMain[0] > 0;
+      const sp = Math.hypot(svx[0], svy[0]), hd = ((-rA[0] * 180 / Math.PI) % 360 + 360) % 360, burn = sBurn[0] && sMain[0] > 0;
       lines.push([T0.name, fg]);
       lines.push([`SPD ${sp.toFixed(0).padStart(4)} / ${T0.vmax.toFixed(0)} m/s${assist ? `  SET ${pl.set.toFixed(0)}` : ''}`, fg]);
       const flags = [assist ? 'ASSIST' : 'MANUAL', burn ? 'BURN' : '', pl.cold ? 'COLD' : '', pl.lock ? 'OVERHEAT' : ''].filter(Boolean).join('  ');
@@ -906,8 +763,8 @@ try { FLY = (function () {
       lines.push([`RAD ${pl.rad.toFixed(1)}${pl.lit < 0.5 ? '  IN SHADOW' : ''}  NOISE ${pl.noise.toFixed(1)}`, pl.rad > 3 ? red : dim]);
     } else lines.push(['Hull breached. Respawning…', red]);
     if (target >= 0 && sAlive[target] && level(target) > 0) {
-      const T = types[sType[target]], d = Math.hypot(sx[target] - sx[0], sy[target] - sy[0]), lv = level(target);
-      const rv = ((svx[target] - svx[0]) * (sx[target] - sx[0]) + (svy[target] - svy[0]) * (sy[target] - sy[0])) / (d || 1);
+      const T = types[sType[target]], d = Math.hypot(rX[target] - rX[0], rY[target] - rY[0]), lv = level(target);
+      const rv = ((svx[target] - svx[0]) * (rX[target] - rX[0]) + (svy[target] - svy[0]) * (rY[target] - rY[0])) / (d || 1);
       lines.push(['', '']);
       if (lv === 1) lines.push([`TGT unknown contact  SNR ${pDet[target].toFixed(1)}`, '#9fb4c8']);
       else lines.push([`TGT ${T.name}${hostile[sBrand[target]] ? '  HOSTILE' : ''}`, hostile[sBrand[target]] ? red : '#9fb4c8']);
@@ -940,7 +797,7 @@ try { FLY = (function () {
     }
     // radar: gas underlay, then contacts drawn at the level the sensors hold them
     const R = Math.min(96, Math.min(W, H) * 0.18), rcx = W - R - 16, rcy = H - R - 16, range = Math.max(14000, T0.L * 80);
-    const cxw = sx[0], cyw = sy[0];
+    const cxw = rX[0], cyw = rY[0];
     hx.save(); hx.beginPath(); hx.arc(rcx, rcy, R, 0, 6.283); hx.clip();
     hx.fillStyle = 'rgba(7,9,12,.7)'; hx.fillRect(rcx - R, rcy - R, R * 2, R * 2);
     const pxPerM = R / range, imgS = ENV_W * pxPerM;
@@ -961,9 +818,9 @@ try { FLY = (function () {
     for (let i = 1; i < nS; i++) {
       if (!sAlive[i]) continue;
       const lv = level(i); if (!lv) continue;
-      const dx = (sx[i] - cxw) * pxPerM, dy = -(sy[i] - cyw) * pxPerM; if (dx * dx + dy * dy > R * R) continue;
+      const dx = (rX[i] - cxw) * pxPerM, dy = -(rY[i] - cyw) * pxPerM; if (dx * dx + dy * dy > R * R) continue;
       if (lv === 1) {
-        const err = Math.hypot(sx[i] - cxw, sy[i] - cyw) * 0.12 / Math.max(1, pDet[i]) * pxPerM;
+        const err = Math.hypot(rX[i] - cxw, rY[i] - cyw) * 0.12 / Math.max(1, pDet[i]) * pxPerM;
         hx.strokeStyle = 'rgba(200,210,220,.45)'; hx.beginPath(); hx.arc(rcx + dx, rcy + dy, Math.max(2.5, err), 0, 6.283); hx.stroke();
         hx.fillStyle = 'rgba(200,210,220,.8)'; hx.fillRect(rcx + dx - 1, rcy + dy - 1, 2, 2);
       } else {
@@ -976,7 +833,7 @@ try { FLY = (function () {
     if (pl.pingR >= 0) { hx.strokeStyle = 'rgba(120,220,255,.6)'; hx.beginPath(); hx.arc(rcx, rcy, pl.pingR * pxPerM, 0, 6.283); hx.stroke(); }
     hx.restore();
     hx.strokeStyle = 'rgba(138,149,164,.4)'; hx.lineWidth = 1; hx.beginPath(); hx.arc(rcx, rcy, R, 0, 6.283); hx.stroke();
-    hx.fillStyle = fg; hx.save(); hx.translate(rcx, rcy); hx.rotate(-sAng[0]); hx.beginPath(); hx.moveTo(0, -5); hx.lineTo(3.5, 4); hx.lineTo(-3.5, 4); hx.closePath(); hx.fill(); hx.restore();
+    hx.fillStyle = fg; hx.save(); hx.translate(rcx, rcy); hx.rotate(-rA[0]); hx.beginPath(); hx.moveTo(0, -5); hx.lineTo(3.5, 4); hx.lineTo(-3.5, 4); hx.closePath(); hx.fill(); hx.restore();
     let nc = 0, ni = 0; for (let i = 1; i < nS; i++) { const lv = sAlive[i] ? level(i) : 0; if (lv === 1) nc++; else if (lv > 1) ni++; }
     hx.fillStyle = dim; hx.textAlign = 'right';
     hx.fillText(`${(range / 1000).toFixed(0)} km · ${ni} identified · ${nc} contacts`, rcx + R, rcy - R - 8);
@@ -1000,11 +857,12 @@ try { FLY = (function () {
       return;
     }
     if (needsReset) { resetWorld(); needsReset = false; }
-    step(dt);
-    if (sAlive[0] || true) {
-      const lead = 0.35, tx = sx[0] + svx[0] * lead, ty = sy[0] + svy[0] * lead;
-      const k = Math.min(1, dt * 3.5); camX += (tx - camX) * k; camY += (ty - camY) * k;
-    }
+    sim.checkViews();
+    // fixed 60 Hz ticks: the core's clock says how many this frame owes, then the render pose is interpolated
+    for (let n = sim.due(dt); n > 0; n--) step(sim.DT);
+    sim.interpolate();
+    { const lead = 0.35, tx = rX[0] + svx[0] * lead, ty = rY[0] + svy[0] * lead;
+      const k = Math.min(1, dt * 3.5); camX += (tx - camX) * k; camY += (ty - camY) * k; }
     const shx = shake * shake * 14 / scale, a = Math.random() * 6.283;
     camX += Math.cos(a) * shx; camY += Math.sin(a) * shx;
     render(t);
@@ -1032,15 +890,19 @@ try { FLY = (function () {
   }
   return {
     frame, key, clearKeys: () => keys.clear(),
-    reset: () => { needsReset = true; },
+    // reset(seed) restarts now with that seed (for replays and tests); reset() picks a fresh one next frame
+    reset: s => { if (s !== undefined && allReady()) { forcedSeed = s; resetWorld(); needsReset = false; } else needsReset = true; },
     pirates: () => { applyPirates(); },
     calm: () => { hostile.fill(0); applyPirates(); },
     env: () => { if (allReady()) genEnv(); else needsReset = true; },
     flare: () => flareNow(),
     // test hooks: read player systems, teleport to the densest gas of a species (0 hydrogen, 1 dust, 2 ionized)
-    probe: () => ({ t: +simT.toFixed(2), fps: +stats.fps.toFixed(1), set: +pl.set.toFixed(0), x: sx[0], y: sy[0], v: Math.hypot(svx[0], svy[0]), sh: sSh[0], hp: sHp[0], sig: sSig[0], heat: pl.heat, fuel: pl.fuel, gas: pl.gas.slice(), rad: pl.rad, lit: pl.lit, flare: flare.level, contacts: Array.from(pDet.subarray(1, nS)).filter(v => v >= 1).length, tracking: Array.from(sDetP.subarray(1, nS)).filter(v => v > 1).length }),
-    advance: (sec, held) => { (held || []).forEach(k => keys.add(k)); for (let k = 0; k < sec * 60; k++) step(1 / 60); (held || []).forEach(k => keys.delete(k)); },
-    teleport: sp => { const g = [gH, gD, gI][sp]; let best = 0; for (let k = 1; k < g.length; k++) if (g[k] > g[best]) best = k; sx[0] = (best % ENV_N + 0.5) * CELL - ENV_W / 2; sy[0] = (Math.floor(best / ENV_N) + 0.5) * CELL - ENV_W / 2; camX = sx[0]; camY = sy[0]; },
-    swapPlayer: () => { if (!allReady()) { needsReset = true; return; } const ti = playerType(); const x = sx[0], y = sy[0], a = sAng[0]; spawn(0, ti, x, y, 1); sAng[0] = a; }
+    probe: () => ({ t: +simT.toFixed(2), tick: sim.tick(), hash: sim.hash(), fps: +stats.fps.toFixed(1), set: +pl.set.toFixed(0), x: sx[0], y: sy[0], v: Math.hypot(svx[0], svy[0]), sh: sSh[0], hp: sHp[0], sig: sSig[0], heat: pl.heat, fuel: pl.fuel, gas: pl.gas.slice(), rad: pl.rad, lit: pl.lit, flare: flare.level, contacts: Array.from(pDet.subarray(1, nS)).filter(v => v >= 1).length, tracking: Array.from(sDetP.subarray(1, nS)).filter(v => v > 1).length }),
+    advance: (sec, held) => { (held || []).forEach(k => keys.add(k)); for (let k = 0; k < Math.round(sec / sim.DT); k++) step(sim.DT); sim.interpolate(); (held || []).forEach(k => keys.delete(k)); },
+    teleport: sp => { const g = [gH, gD, gI][sp]; let best = 0; for (let k = 1; k < g.length; k++) if (g[k] > g[best]) best = k; sx[0] = (best % ENV_N + 0.5) * CELL - ENV_W / 2; sy[0] = (Math.floor(best / ENV_N) + 0.5) * CELL - ENV_W / 2; sim.slotReset(0, false); camX = sx[0]; camY = sy[0]; },
+    swapPlayer: () => { if (!allReady()) { needsReset = true; return; } spawn(0, playerType(), sx[0], sy[0], 1, sAng[0]); },
+    // the sim core: columns, params (sim.param('damper', 0.6)), tick count and state hash
+    sim, seed: () => seed
   };
-})(); } catch (e) { FLY_ERR = String(e.message || e); console.error(e); }
+})(); window.__fly = FLY; /* test hook */ }).catch(e => { FLY_ERR = String(e.message || e); console.error(e); });
+window.__flyReady = FLY_READY; // test hook: settles once flight mode has started (or failed)

@@ -4,16 +4,9 @@ const $ = id => document.getElementById(id);
 const CATALOG0 = JSON.parse($('catalog').textContent);
 let catalog = JSON.parse(JSON.stringify(CATALOG0));
 const GEN_TEXT = $('gen').textContent;
-const hexRGB = h => { h = String(h).replace('#', ''); return [parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255, parseInt(h.slice(4, 6), 16) / 255]; };
-const lin = c => c.map(v => Math.pow(v, 2.2));
+/*LOOK*/
 
-const STARS = {
-  sol:  { name: 'Yellow', col: [1.0, 0.95, 0.86], amb: [0.030, 0.034, 0.046], neb: [0.10, 0.12, 0.20] },
-  red:  { name: 'Red dwarf', col: [1.0, 0.58, 0.38], amb: [0.040, 0.026, 0.030], neb: [0.20, 0.08, 0.07] },
-  blue: { name: 'Blue giant', col: [0.72, 0.84, 1.0], amb: [0.024, 0.034, 0.055], neb: [0.06, 0.12, 0.24] }
-};
 const DRIFT_COLS = ['#ff5a4a', '#4ab8ff', '#ffd25a', '#b46bff', '#4dffa8', '#ff8ad8', '#ffffff', '#ff9a3d', '#6af0ff', '#c8ff5a'].map(h => lin(hexRGB(h)));
-const PATTERNS = { hex: 0, grid: 1, flow: 2, ragged: 3 };
 const state = {
   view: 'grid', brand: catalog.brands[0].id, size: catalog.sizes[2].id,
   map: 0, spin: true, trueScale: false, shadow: true, pl: true,
@@ -25,375 +18,30 @@ const state = {
 };
 
 // ---------------- WebGL setup ----------------
+/*SHADERS*/
+/*GFX*/
+/*BAKE*/
 const canvas = $('view');
-const gl = canvas.getContext('webgl2', { antialias: false, premultipliedAlpha: true, alpha: false });
-if (!gl) { $('glerr').hidden = false; return; }
-let HDR = !!gl.getExtension('EXT_color_buffer_float');
-
-function compile(vs, fs, attrs) {
-  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-  const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, vs)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
-  gl.bindAttribLocation(p, 0, 'aPos');
-  if (attrs) for (const k in attrs) gl.bindAttribLocation(p, attrs[k], k);
-  gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
-  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
-  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); u[info.name.replace(/\[0\]$/, '')] = gl.getUniformLocation(p, info.name); }
-  return { p, u };
-}
-
-const NOISE = `
-float h21(vec2 p){ p=fract(p*vec2(443.897,441.423)); p+=dot(p,p.yx+19.19); return fract((p.x+p.y)*p.x); }
-float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
-  return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
-float fbm(vec2 p){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*vn(p); p=p*2.03+1.3; a*=.5; } return s; }`;
-
-const FS_VS = `#version 300 es
-in vec2 aPos; out vec2 vUv; void main(){ vUv=aPos*0.5+0.5; gl_Position=vec4(aPos,0.,1.); }`;
-
-// Shared sky: the plain background and the black-hole lens both sample it, so lensed stars match the sky around them.
-const SKY = `uniform vec2 uRes; uniform float uTime; uniform vec3 uStar; uniform vec3 uNeb; uniform vec2 uSunDir; uniform vec2 uOff;
-${NOISE}
-vec3 sky(vec2 px){
-  vec2 uv = (px - uOff)/uRes;
-  vec2 q = (uv-.5)*vec2(uRes.x/uRes.y,1.) + uOff/uRes.y*.5;
-  vec3 c = vec3(0.0006,0.0008,0.0014);
-  float nb = fbm(q*1.6+vec2(3.1,1.7)), nb2 = fbm(q*3.3-vec2(1.,4.));
-  c += pow(uNeb,vec3(2.2))*0.35*smoothstep(.45,.95,nb)*(.6+.4*nb2);
-  float sd = max(dot(normalize(q+1e-4), uSunDir),0.);
-  c += pow(uStar,vec3(2.2))*0.012*pow(sd,4.)*smoothstep(0.,.9,length(q));
-  for(int l=0;l<3;l++){
-    float sc = 90.+float(l)*70.; vec2 g = px/sc*(1.+float(l)*.37) + float(l)*13.7; vec2 id=floor(g); vec2 f=fract(g)-.5;
-    float r = h21(id+float(l)); if(r>.18) continue;
-    vec2 o2 = vec2(h21(id+3.1),h21(id+7.3))-.5; float d=length(f-o2*.7);
-    float tw = .75+.25*sin(uTime*(1.+r*9.)+r*40.);
-    float b = (1.-smoothstep(0.,.06-.015*float(l),d))*(.35+.65*h21(id+11.))*tw;
-    vec3 sc3 = mix(vec3(1.,.8,.6), vec3(.6,.75,1.), h21(id+5.));
-    c += sc3*b*(.6-.15*float(l));
-  }
-  return c;
-}`;
-const BG_FS = `#version 300 es
-precision highp float; in vec2 vUv; out vec4 o;
-${SKY}
-void main(){ o = vec4(sky(vUv*uRes + uOff), 1.); }`;
-
-const SHIP_VS = `#version 300 es
-in vec2 aPos; uniform vec2 uRes, uCenter; uniform float uHalf, uAngle;
-out vec2 vQ; out vec2 vWorld;
-void main(){ vQ=aPos; float c=cos(uAngle), s=sin(uAngle);
-  vec2 w = uCenter + mat2(c,s,-s,c)*(aPos*uHalf); vWorld=w;
-  gl_Position=vec4(w/uRes*2.-1.,0.,1.); }`;
-
-const SHIP_FS = `#version 300 es
-precision highp float;
-in vec2 vQ; in vec2 vWorld; out vec4 o;
-uniform sampler2D uA, uN, uE, uX;
-uniform float uAngle, uExtent, uHRange, uPxPerM, uTime, uThrottle, uDmax, uS;
-uniform vec3 uSun, uSunCol, uAmb;
-uniform vec4 uLP[16]; uniform vec4 uLC[16]; uniform int uLN;
-uniform float uGloss, uSpecK, uWrap, uIrid, uRim, uShadow, uHover;
-uniform int uMode;
-void main(){
-  vec2 uv = vec2(vQ.x*.5+.5, .5-vQ.y*.5);
-  vec4 A = texture(uA, uv), Nt = texture(uN, uv), Et = texture(uE, uv), X = texture(uX, uv);
-  if (uMode != 0) {
-    if (uMode == 5) {
-      float f = X.r*uDmax/uS;
-      vec3 c = mix(vec3(.9,.95,1.), vec3(.02,.05,.12), clamp(f,0.,1.));
-      c += vec3(.3,.8,1.)*exp(-pow((f-1.)/.04,2.));
-      c += vec3(1.,.5,.2)*X.g;
-      float a = max(A.a, step(f,1.1)*.85);
-      o = vec4(pow(c,vec3(2.2))*a, a); return;
-    }
-    vec3 c = uMode==1 ? A.rgb : uMode==2 ? Nt.rgb : uMode==3 ? mix(vec3(.05,.07,.12), vec3(1.,.93,.78), Nt.a) : clamp(Et.rgb*2.,0.,1.);
-    o = vec4(pow(c,vec3(2.2))*A.a, A.a); return;
-  }
-  float c = cos(uAngle), s = sin(uAngle);
-  vec3 n = normalize(vec3(Nt.xy*2.-1., Nt.z));
-  vec3 N = normalize(vec3(c*n.x - s*n.y, s*n.x + c*n.y, n.z));
-  vec3 alb = pow(A.rgb, vec3(2.2));
-  float spec = Et.a;
-  vec3 V = vec3(0.,0.,1.);
-  vec3 L = normalize(uSun), H = normalize(L+V);
-  vec3 irid = .55+.55*cos(6.2832*(vec3(0.,.33,.67) + dot(N,H)*1.4 + N.x*.35 + N.y*.2));
-  alb *= mix(vec3(1.), irid, uIrid*.6);
-  float dif = max((dot(N,L)+uWrap)/(1.+uWrap), 0.);
-  float sh = 1.;
-  if (uShadow > .5 && L.z < .995) {
-    vec2 ll = vec2(c*L.x + s*L.y, -s*L.x + c*L.y);
-    float lxy = max(length(ll),1e-4); vec2 dir = vec2(ll.x, -ll.y)/lxy; float tanE = L.z/lxy;
-    float h0 = Nt.a*uHRange, occ = 0.;
-    for (int i=1; i<=28; i++) {
-      float du = float(i)*.004; vec2 u2 = uv + dir*du;
-      if (u2.x<0.||u2.y<0.||u2.x>1.||u2.y>1.) break;
-      float hs = textureLod(uN, u2, 0.).a*uHRange;
-      occ = max(occ, clamp((hs - h0 - du*uExtent*tanE)/(uHRange*.04+1e-4), 0., 1.) * (1.-float(i)/34.));
-    }
-    sh = 1. - occ*.82;
-  }
-  float specK = uSpecK*(1.+uGloss*.02);
-  float sp = pow(max(dot(N,H),0.), uGloss) * spec * specK;
-  vec3 specCol = mix(uSunCol, uSunCol*irid, uIrid);
-  vec3 col = (alb*dif + specCol*sp)*uSunCol*sh*2.2;
-  vec3 P = vec3(vWorld, Nt.a*uHRange*uPxPerM);
-  for (int i=0; i<16; i++) {
-    if (i >= uLN) break;
-    vec3 d = uLP[i].xyz - P; float dist = length(d); vec3 Lp = d/dist; float R = uLP[i].w;
-    float att = R*R/(R*R + dist*dist*1.6) * clamp(1.-dist/(R*4.),0.,1.);
-    float pd = max((dot(N,Lp)+uWrap)/(1.+uWrap),0.);
-    float ps = pow(max(dot(N,normalize(Lp+V)),0.),uGloss)*spec*specK;
-    col += (alb*pd + ps)*uLC[i].rgb*att;
-  }
-  col += alb*uAmb*(.8+.6*N.z);
-  float fr = pow(1.-max(N.z,0.), 2.5);
-  col += uRim*fr*(uAmb*3. + uSunCol*max(dot(normalize(N.xy+1e-5), normalize(L.xy+1e-5)),0.)*.5)*(.4+spec);
-  float eg = X.g;
-  float flick = .92 + .08*sin(uTime*41. + vQ.y*13.);
-  vec3 em = pow(Et.rgb*2., vec3(1.6))*2.2;
-  em *= mix(1., (.2 + 4.5*uThrottle*uThrottle)*flick, eg);
-  col += em;
-  col += vec3(.5,.38,.18)*uHover*.025;
-  o = vec4(col*A.a, A.a);
-}`;
-
-const SHIELD_FS = `#version 300 es
-precision highp float;
-in vec2 vQ; in vec2 vWorld; out vec4 o;
-uniform sampler2D uX;
-uniform float uExtent, uS, uDmax, uTime, uIdle, uStrength, uSeed;
-uniform vec3 uCol; uniform int uPat;
-uniform vec4 uHits[8];
-${NOISE}
-float hexd(vec2 p){ p.x *= 1.1547; p.y += mod(floor(p.x),2.)*.5; p = abs(fract(p)-.5); return abs(max(p.x*1.5+p.y, p.y*2.)-1.); }
-void main(){
-  vec2 uv = vec2(vQ.x*.5+.5, .5-vQ.y*.5);
-  float d = textureLod(uX, uv, 2.).r*uDmax;
-  float f = d/uS;
-  if (f > 1.2) discard;
-  float fe = clamp(f,0.,1.);
-  float bubble = sqrt(max(0.,1.-fe*fe));
-  float fres = pow(1.-bubble, 2.2);
-  float edge = 1.-smoothstep(.97,1.1,f);
-  vec2 m = vQ*uExtent*.5;
-  float PS = max(uS*.42, .8);
-  vec2 pp = m/PS;
-  float pat;
-  if (uPat == 0) pat = 1.-smoothstep(0.,.12,hexd(pp));
-  else if (uPat == 1) { vec2 g = abs(fract(pp*.8)-.5); pat = smoothstep(.42,.5,max(g.x,g.y)); }
-  else if (uPat == 2) { float n = fbm(pp*.55 + vec2(uSeed, uTime*.35)); pat = pow(1.-abs(n*2.-1.), 5.); }
-  else { float n = vn(pp*.8 + vec2(uSeed, uTime*1.3)); pat = step(.58,n)*(.6+.4*vn(pp*3.+uTime*6.)); }
-  float scan = .5+.5*sin(m.y/PS*.5 - uTime*2.4 + uSeed);
-  float idle = uIdle*(fres*.55 + fres*pat*(.35+.65*scan)*.9);
-  if (uPat == 3) idle *= .6+.4*step(.35, vn(vec2(uTime*7., uSeed)));
-  float hit = 0.;
-  for (int i=0; i<8; i++) {
-    float age = uHits[i].z; if (age < 0.) continue;
-    float hd = length(m - uHits[i].xy*uExtent*.5);
-    float w = uS*.55;
-    float rd = (hd - age*uS*10.)/w;
-    float ring = exp(-rd*rd)*exp(-age*2.4);
-    float flash = exp(-hd/(uS*.9))*exp(-age*6.);
-    float glowA = exp(-hd/(uS*3.))*exp(-age*3.);
-    hit += (ring*(.5+pat*1.5) + flash*4. + glowA*pat*.8)*uHits[i].w;
-  }
-  float I = edge*(idle + hit*(.3+.7*fres+.3*pat))*uStrength;
-  o = vec4(uCol*I*1.8, 0.);
-}`;
-
-const PLUME_VS = `#version 300 es
-in vec2 aPos; uniform vec2 uRes, uNoz, uDir; uniform float uLen, uWid, uSpread;
-out vec2 vST;
-void main(){
-  float s = (aPos.y*.5+.5)*1.1 - .1; float t = aPos.x;
-  vec2 perp = vec2(-uDir.y, uDir.x);
-  vec2 w = uNoz + uDir*s*uLen + perp*t*uWid*.5*(1. + max(s,0.)*(.6+uSpread*2.));
-  vST = vec2(s,t); gl_Position = vec4(w/uRes*2.-1.,0.,1.);
-}`;
-const PLUME_FS = `#version 300 es
-precision highp float; in vec2 vST; out vec4 o;
-uniform vec3 uCol, uCore; uniform float uTime, uSeed, uTurb, uDiamonds, uSputter, uPulse, uPower;
-${NOISE}
-void main(){
-  float s = vST.x, t = vST.y, sp = max(s,0.);
-  float n = vn(vec2(sp*7. - uTime*11., t*1.5 + uSeed)) - .5;
-  float tt = t + n*uTurb*.9*sp;
-  float core = exp(-tt*tt*(10. + 26.*sp));
-  float body = exp(-tt*tt*3.4);
-  float len = pow(clamp(1.-sp,0.,1.), 1.5);
-  float start = smoothstep(-.1, .03, s);
-  float diam = 1. + uDiamonds*1.4*pow(abs(cos(sp*34.)),8.)*(1.-sp)*core;
-  float flick = 1. - uSputter*.75*step(.64, vn(vec2(uTime*6., uSeed*1.7)));
-  flick *= 1. - uSputter*.3*vn(vec2(uTime*33., uSeed*3.1));
-  float pulse = 1. + uPulse*.55*sin(uTime*4.2 + uSeed*6. - sp*10.);
-  float wisp = 1. + uTurb*.9*(vn(vec2(sp*9. - uTime*15., t*3. + uSeed*2.)) - .5);
-  vec3 c = uCore*core*3.2*(1.-sp*.75) + uCol*body*1.4*(.35+.65*len);
-  c *= len*start*diam*flick*pulse*wisp*uPower;
-  o = vec4(c, 0.);
-}`;
-
-const MARK_VS = `#version 300 es
-in vec2 aPos; uniform vec2 uRes, uC; uniform float uSz; out vec2 vQ;
-void main(){ vQ=aPos; vec2 w = uC + aPos*uSz; gl_Position = vec4(w/uRes*2.-1.,0.,1.); }`;
-const MARK_FS = `#version 300 es
-precision highp float; in vec2 vQ; out vec4 o; uniform vec3 uCol;
-void main(){ float r = length(vQ); float g = exp(-r*r*40.)*6. + exp(-r*6.)*.35; o = vec4(uCol*g*(1.-smoothstep(.8,1.,r)), 0.); }`;
-
-const BRIGHT_FS = `#version 300 es
-precision highp float; in vec2 vUv; out vec4 o;
-uniform sampler2D uSrc; uniform vec2 uTexel; uniform float uThresh;
-void main(){
-  vec3 s = (texture(uSrc, vUv+uTexel*vec2(-1.,-1.)).rgb + texture(uSrc, vUv+uTexel*vec2(1.,-1.)).rgb
-          + texture(uSrc, vUv+uTexel*vec2(-1.,1.)).rgb + texture(uSrc, vUv+uTexel*vec2(1.,1.)).rgb)*.25;
-  float br = max(s.r, max(s.g, s.b)), k = .5;
-  float soft = clamp(br - uThresh + k, 0., 2.*k); soft = soft*soft/(4.*k + 1e-4);
-  o = vec4(s*max(soft, br - uThresh)/max(br, 1e-4), 1.);
-}`;
-const DOWN_FS = `#version 300 es
-precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uSrc; uniform vec2 uTexel;
-void main(){
-  vec3 s = texture(uSrc, vUv).rgb*4.;
-  s += texture(uSrc, vUv+uTexel*vec2(-1.,-1.)).rgb + texture(uSrc, vUv+uTexel*vec2(1.,-1.)).rgb;
-  s += texture(uSrc, vUv+uTexel*vec2(-1.,1.)).rgb + texture(uSrc, vUv+uTexel*vec2(1.,1.)).rgb;
-  o = vec4(s/8., 1.);
-}`;
-const UP_FS = `#version 300 es
-precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uSrc; uniform vec2 uTexel;
-void main(){
-  vec3 s = texture(uSrc, vUv).rgb*4.;
-  s += (texture(uSrc, vUv+uTexel*vec2(-1.,0.)).rgb + texture(uSrc, vUv+uTexel*vec2(1.,0.)).rgb
-      + texture(uSrc, vUv+uTexel*vec2(0.,-1.)).rgb + texture(uSrc, vUv+uTexel*vec2(0.,1.)).rgb)*2.;
-  s += texture(uSrc, vUv+uTexel*vec2(-1.,-1.)).rgb + texture(uSrc, vUv+uTexel*vec2(1.,-1.)).rgb
-     + texture(uSrc, vUv+uTexel*vec2(-1.,1.)).rgb + texture(uSrc, vUv+uTexel*vec2(1.,1.)).rgb;
-  o = vec4(s/16., 1.);
-}`;
-const COMP_FS = `#version 300 es
-precision highp float; in vec2 vUv; out vec4 o;
-uniform sampler2D uScene, uBloom; uniform float uBloomK, uExposure;
-vec3 aces(vec3 x){ return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.); }
-void main(){
-  vec3 c = texture(uScene, vUv).rgb + texture(uBloom, vUv).rgb*uBloomK;
-  c = aces(c*uExposure);
-  vec2 q = vUv-.5; c *= 1. - dot(q,q)*.35;
-  o = vec4(pow(c, vec3(1./2.2)), 1.);
-}`;
-
-const P = {
-  bg: compile(FS_VS, BG_FS), ship: compile(SHIP_VS, SHIP_FS), shield: compile(SHIP_VS, SHIELD_FS),
-  plume: compile(PLUME_VS, PLUME_FS), mark: compile(MARK_VS, MARK_FS),
-  bright: compile(FS_VS, BRIGHT_FS), down: compile(FS_VS, DOWN_FS), up: compile(FS_VS, UP_FS), comp: compile(FS_VS, COMP_FS)
-};
-const quad = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-const draw = () => gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-function tex(data, res) {
-  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, res, res, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
-  gl.generateMipmap(gl.TEXTURE_2D);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  return t;
-}
-function makeRT(w, h) {
-  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-  if (HDR) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
-  else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
-  const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  return { t, f, w, h, ok };
-}
-let scene = null, chain = [];
-function freeRT(r) { if (r) { gl.deleteTexture(r.t); gl.deleteFramebuffer(r.f); } }
+const G = makeGfx(canvas);
+if (!G) { $('glerr').hidden = false; return; }
+const { gl, compile, P, quad, draw, tex } = G;
+let HDR = G.HDR, scene = null, chain = [];
 function buildTargets() {
-  freeRT(scene); chain.forEach(freeRT); chain = [];
-  scene = makeRT(canvas.width, canvas.height);
-  if (!scene.ok && HDR) { HDR = false; freeRT(scene); scene = makeRT(canvas.width, canvas.height); }
-  let w = canvas.width, h = canvas.height;
-  for (let i = 0; i < 6; i++) { w = Math.max(1, w >> 1); h = Math.max(1, h >> 1); chain.push(makeRT(w, h)); }
+  ({ scene, chain } = G.buildTargets()); HDR = G.HDR;
   $('hdr-note').textContent = HDR ? 'HDR float target' : '8-bit target (float render targets unavailable)';
 }
 
 // ---------------- baking (workers) ----------------
-const ships = new Map();
-const keyOf = (b, s) => b + '|' + s;
-let jobCounter = 0;
-const queue = [];
-let workers = [];
-const busy = new Set();
-function makeWorker() {
-  const src = GEN_TEXT + `
-;self.onmessage = function (e) {
-  const m = e.data;
-  try {
-    const r = m.station ? self.ShipGen.generateStation(m.catalog, m.station, m.brand, m.seed) : self.ShipGen.generate(m.catalog, m.brand, m.size, m.seed);
-    const spec = self.ShipGen.describe(r.ship);
-    const mp = r.maps;
-    self.postMessage({ ok: true, key: m.key, job: m.job, spec, maps: mp }, [mp.albedo.buffer, mp.nrm.buffer, mp.emis.buffer, mp.aux.buffer]);
-  } catch (err) { self.postMessage({ ok: false, key: m.key, job: m.job, error: String((err && err.message) || err) }); }
-};`;
-  const w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
-  w.onmessage = e => { busy.delete(w); onResult(e.data); pump(); };
-  w.onerror = () => { busy.delete(w); pump(); };
-  return w;
-}
-try { const n = Math.min(3, Math.max(1, (navigator.hardwareConcurrency || 2) - 1)); for (let i = 0; i < n; i++) workers.push(makeWorker()); } catch (e) { workers = []; }
-
-function onResult(m) {
-  const s = ships.get(m.key);
-  if (!s || s.job !== m.job) return;
-  if (!m.ok) { s.error = m.error; s.pending = false; showError(m.key, m.error); updateProgress(); return; }
-  if (s.tex) s.tex.forEach(t => gl.deleteTexture(t));
-  const mp = m.maps;
-  s.maps = { res: mp.res, extent: mp.extent, px: mp.px, hRange: mp.hRange, partCount: mp.partCount, engines: mp.engines, shieldS: mp.shieldS, Dmax: mp.Dmax };
-  s.aux = mp.aux;
-  s.tex = [tex(mp.albedo, mp.res), tex(mp.nrm, mp.res), tex(mp.emis, mp.res), tex(mp.aux, mp.res)];
-  s.spec = m.spec; s.ready = true; s.pending = false; s.error = null;
-  s.hits = s.hits || [];
-  updateProgress();
-  if (state.view === 'detail' && m.key === keyOf(state.brand, state.size)) renderInfo();
-  if (STN) STN.onBaked(m.key);
-  if (HVY) HVY.onBaked(m.key);
-}
-function pump() {
-  if (!workers.length) {
-    if (!queue.length) return;
-    const key = queue.shift(), s = ships.get(key); if (!s) return;
-    const [b, z] = key.split('|'), q = s.req || { brand: b, size: z, seed: state.seed };
-    setTimeout(() => {
-      try { const r = q.station ? ShipGen.generateStation(catalog, q.station, q.brand, q.seed) : ShipGen.generate(catalog, q.brand, q.size, q.seed); onResult({ ok: true, key, job: s.job, spec: ShipGen.describe(r.ship), maps: r.maps }); }
-      catch (err) { onResult({ ok: false, key, job: s.job, error: String(err.message || err) }); }
-      pump();
-    }, 0);
-    return;
-  }
-  for (const w of workers) {
-    if (busy.has(w) || !queue.length) continue;
-    const key = queue.shift(), s = ships.get(key); if (!s) continue;
-    const [b, z] = key.split('|'), q = s.req || { brand: b, size: z, seed: state.seed };
-    busy.add(w);
-    w.postMessage({ key, job: s.job, catalog, brand: q.brand, size: q.size, seed: q.seed, station: q.station });
-  }
-}
-function enqueue(key, front, req) {
-  const s = ships.get(key) || {};
-  if (req) s.req = req;
-  s.job = ++jobCounter; s.pending = true; s.error = null;
-  ships.set(key, s);
-  const i = queue.indexOf(key); if (i >= 0) queue.splice(i, 1);
-  front ? queue.unshift(key) : queue.push(key);
-}
+const { ships, queue, keyOf, enqueue, pump } = makeBaker({
+  gl, tex, genText: GEN_TEXT, catalog: () => catalog, defaultSeed: () => state.seed,
+  onBaked: key => {
+    updateProgress();
+    if (state.view === 'detail' && key === keyOf(state.brand, state.size)) renderInfo();
+    if (STN) STN.onBaked(key);
+    if (HVY) HVY.onBaked(key);
+  },
+  onError: (key, msg) => { showError(key, msg); updateProgress(); }
+});
 function rebakeAll() {
   for (const b of catalog.brands) for (const z of catalog.sizes) enqueue(keyOf(b.id, z.id));
   if (state.view === 'detail') enqueue(keyOf(state.brand, state.size), true);
@@ -529,23 +177,8 @@ function sunVec() {
   const az = state.sunAz * Math.PI / 180, el = state.sunEl * Math.PI / 180;
   return [Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el)];
 }
-const brandCache = new Map();
-function brandRender(b) {
-  let c = brandCache.get(b);
-  if (!c) {
-    const pl = b.style.plume || {}, sh = b.style.shield || {};
-    c = {
-      plCol: lin(hexRGB(pl.color || b.style.palette.engine)), plCore: lin(hexRGB(pl.core || '#ffffff')),
-      plLen: pl.len || 4, plWid: pl.width || 1, plTurb: pl.turb || 0, plDia: pl.diamonds || 0, plSput: pl.sputter || 0, plPulse: pl.pulse || 0, plSpread: pl.spread || 0.3,
-      shCol: lin(hexRGB(sh.color || b.style.palette.emissive)), shPat: PATTERNS[sh.pattern] != null ? PATTERNS[sh.pattern] : 0, shStr: sh.strength == null ? 1 : sh.strength
-    };
-    brandCache.set(b, c);
-  }
-  return c;
-}
 const rot = (a, x, y) => [Math.cos(a) * x - Math.sin(a) * y, Math.sin(a) * x + Math.cos(a) * y];
 function shipThrottle(i, t) { return Math.min(1, state.throttle * (0.93 + 0.07 * Math.sin(t * 0.7 + i * 1.9))); }
-function plumePower(th) { return 0.12 + 1.6 * Math.pow(th, 1.3) + (th > 0.85 ? (th - 0.85) * 4 : 0); }
 
 // shield hits live in ship-local quad space so they ride with the ship
 const HIT_LIFE = 2.6;
@@ -576,7 +209,7 @@ let lastBarrage = 0;
 function frame(now) {
   if (state.view === 'fly') {
     if (FLY) { try { FLY.frame(now); } catch (e) { console.error(e); FLY_ERR = String(e.message || e); FLY = null; } }
-    if (!FLY) $('hint').textContent = 'Flight mode failed to start: ' + FLY_ERR;
+    if (!FLY) $('hint').textContent = FLY_ERR ? 'Flight mode failed to start: ' + FLY_ERR : 'Starting the sim core…';
     requestAnimationFrame(frame); return;
   }
   if (GENERIC[state.view]) {
@@ -749,46 +382,10 @@ function frame(now) {
   postProcess();
   requestAnimationFrame(frame);
 }
-function postProcess() {
-  gl.bindVertexArray(null);
-  const RW = canvas.width, RH = canvas.height;
-  // ---- bloom ----
-  const useBloom = state.bloom > 0.001;
-  if (useBloom) {
-    gl.useProgram(P.bright.p);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, chain[0].f); gl.viewport(0, 0, chain[0].w, chain[0].h);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, scene.t);
-    gl.uniform1i(P.bright.u.uSrc, 0); gl.uniform2f(P.bright.u.uTexel, 1 / RW, 1 / RH); gl.uniform1f(P.bright.u.uThresh, HDR ? 0.9 : 0.7);
-    draw();
-    gl.useProgram(P.down.p); gl.uniform1i(P.down.u.uSrc, 0);
-    for (let i = 1; i < chain.length; i++) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, chain[i].f); gl.viewport(0, 0, chain[i].w, chain[i].h);
-      gl.bindTexture(gl.TEXTURE_2D, chain[i - 1].t); gl.uniform2f(P.down.u.uTexel, 1 / chain[i - 1].w, 1 / chain[i - 1].h);
-      draw();
-    }
-    gl.useProgram(P.up.p); gl.uniform1i(P.up.u.uSrc, 0);
-    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-    for (let i = chain.length - 1; i > 0; i--) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, chain[i - 1].f); gl.viewport(0, 0, chain[i - 1].w, chain[i - 1].h);
-      gl.bindTexture(gl.TEXTURE_2D, chain[i].t); gl.uniform2f(P.up.u.uTexel, 1 / chain[i].w, 1 / chain[i].h);
-      draw();
-    }
-    gl.disable(gl.BLEND);
-  }
+function postProcess() { G.postProcess(state.bloom); }
 
-  // ---- composite ----
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, RW, RH);
-  gl.useProgram(P.comp.p);
-  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, scene.t);
-  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, chain[0].t);
-  gl.uniform1i(P.comp.u.uScene, 0); gl.uniform1i(P.comp.u.uBloom, 1);
-  gl.uniform1f(P.comp.u.uBloomK, useBloom ? state.bloom * 0.55 : 0);
-  gl.uniform1f(P.comp.u.uExposure, 1.15);
-  draw();
-}
-
+/*CORE*/
 /*FLY*/
-if (FLY) window.__fly = FLY; // test hook
 /*PLANETS*/
 /*SUNS*/
 /*STATIONS*/

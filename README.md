@@ -2,11 +2,13 @@
 
 An Escape Velocity-style space game for the browser, where the galaxy never runs out: ships, stations, planets, suns, asteroids and eventually factions, missions and lore are generated from structured JSON that an LLM can author.
 
-This repository holds the asset lab and flight prototype: one self-contained WebGL2 page with no dependencies and no build step needed to run it.
+This repository holds two self-contained WebGL2 pages with no dependencies and no build step needed to run them: the asset lab with its flight prototype, and the game, which is on its way to the first playable milestone (M1). Both run on the simulation core, a Rust crate compiled to WebAssembly and inlined into each page.
 
 ## Run it
 
-Open `index.html` in a browser with WebGL2 (any current Chrome, Firefox, Safari or Edge). That's it.
+Open `index.html` for the lab or `play.html` for the game, in a browser with WebGL2 (any current Chrome, Firefox, Safari or Edge). That's it.
+
+The game so far: fly one ship through a hand-authored system on the core's flight model, with a minimap and a navigation overlay (I) that labels or points to every planet with its distance and closing speed; save (F6) and load (F9), and export a replay of the session. Everything that changes game state runs in the core, so a save restores the exact state and a replay reruns identically, in the browser or natively.
 
 ## What's in the lab
 
@@ -37,6 +39,10 @@ Flight controls: W/S set speed (assist on) or main/reverse thrust (assist off), 
 
 **Planets and suns** are drawn analytically in fragment shaders: seamless 3D noise on a rotating sphere, equatorial rings that cast and receive shadows, moons on inclined orbits, blackbody star colors, granulation and corona, pulsar beams, and a ray-marched black hole with a Doppler-beamed disk that lenses the real sky behind it.
 
+**The sim core** (`core/`, Rust) owns flight physics. It keeps ships in fixed-capacity typed columns inside WASM memory; the page reads and writes them through zero-copy typed-array views built from a manifest the core exports, and calls one step per tick. The clock is a fixed 60 Hz tick, and the renderer draws from a pose the core interpolates between ticks, so motion is smooth at any refresh rate. Everything that feeds state is deterministic: a seeded generator, and its own sin, cos, atan2 and exp built from IEEE basic operations, so the native and WASM builds produce bit-identical states. Tuning constants are a named parameter column that can be changed live. In the lab's Fly tab, AI, weapons, shields, sensors and effects still run in JavaScript around each tick. The game page runs no game logic in JavaScript at all: the player flies by one input bitmask per tick, the world saves to a fixed-size byte image (allocated with the world, so saving never grows WASM memory), and a snapshot plus the log of input changes replays a session exactly. Mechanisms move into the core as the game needs them; rendering, UI and LLM calls stay in JavaScript.
+
+**Two pages, one kit.** Shader sources, the WebGL helpers and post-processing, the bake worker pool and the brand look helpers are shared modules that the build inlines into both pages.
+
 **Flight** keeps all entity state in typed arrays (structure of arrays): ships, bolts, particles and lights. Every ship has main, reverse and lateral thrusters under one Newtonian model; a drive taper caps self-propelled speed and dampers bleed off anything gravity or slingshots add. Flight assist is a controller that turns a desired velocity into thruster commands, and NPCs fly through the same controller. The sector carries coarse gas and radiation fields: gas adds drag, attenuates sensors and (ionized) drains shields; radiation follows the star with shadows behind planets and spikes during flares. Detection is signature over range squared, times gas transmission, over local noise. Rendering is instanced: one draw per ship type, one each for plumes, shields, bolts and particles. Hits test against the baked shield/hull field, so bolts strike the actual silhouette.
 
 **Everything is parameterized** for LLM authoring: categorical choices are enums (brand part roles, planet palettes, ring styles, star types), everything else is a bounded number. The JSON panels in the lab show exactly what a model would emit.
@@ -44,20 +50,43 @@ Flight controls: W/S set speed (assist on) or main/reverse thrust (assist off), 
 ## Layout
 
 ```
-index.html          built, self-contained page (open this)
+index.html          built lab page (open this)
+play.html           built game page (or this)
+core/               the sim core, a Rust crate (WASM for the pages, native for tests and replays)
+  src/world.rs      column groups, tuning params, the fixed-step clock and tick pipeline, handles, state hash
+  src/flight.rs     flight physics stages: assist control, gas fields, steering, forces, integration, engines
+  src/math.rs       deterministic sin, cos, atan2, exp
+  src/rng.rs        seeded PCG32
+  src/cols.rs       structure-of-arrays macro and the column manifest
+  src/ffi.rs        the exports the page calls
+  src/player.rs     the player's ship from one input bitmask per tick (assist set speed, raw thrust, retro)
+  src/snapshot.rs   save and load: the whole world as one fixed-size byte image
+  src/replay.rs     input logs, and rerunning them from a snapshot
+  src/scenario.rs   scripted world shared by native and WASM, for the determinism check
+  src/bin/          scenario (prints a scenario's hash) and replay (reruns an exported session)
 src/
+  core.js           loads the inlined WASM and wraps its columns in typed-array views
+  shaders.js        GLSL sources shared by both pages
+  gfx.js            the WebGL2 kit: context, programs, textures, HDR targets, bloom and tone map
+  bake.js           the bake worker pool and its texture uploads
+  look.js           colour helpers, star presets, brand plume and shield looks
+  play/             the game page: template.html and play.js
   catalog.json      size classes, the four brand catalogs, station archetypes and heavy hulls
   gen.js            ship and station assembly and baking (pure JS, runs in workers and Node)
-  app.js            renderer, yard and ship views, UI
+  app.js            the lab: yard and ship views, tabs, UI
   fly.js            flight simulation and instanced rendering
   planets.js        planet shader and builder
   suns.js           star, pulsar and black hole shaders, lens flare, builder
   stations.js       stations and heavies tabs: bakes via gen.js, builders
   asteroids.js      asteroid shader and builder
-  template.html     page shell and styles
+  template.html     lab page shell and styles
 tools/
-  build.py          assembles src/ into index.html
+  build.py          compiles core/ to WASM and assembles it with src/ into index.html and play.html
   check.js          boots the page against a stub WebGL context and validates every shader
+  core-test.js      core unit tests, native vs WASM state hashes, and a WASM session replayed natively
+  fly-smoke.py      drives the lab's Fly tab in headless Chromium: speeds, seeded replay, clock rate
+  play-smoke.py     drives the game page: flight, save and load, a browser session replayed natively
+  dev.js            dev server: rebuilds on change, live-reloads both pages
   preview.js        CPU bake of the whole catalog to a PNG grid
 ```
 
@@ -65,14 +94,28 @@ tools/
 
 ```
 npm install          # dev tools only: PNG writer and glslangValidator
-npm run build        # src/ -> index.html
-npm run check        # build, then validate all shaders
+npm run dev          # serve on :8000 (all interfaces; lab at /, game at /play.html), rebuild on save, live reload
+npm run build        # core/ -> WASM, then src/ + WASM -> index.html and play.html
+npm run check        # build, validate all shaders, run the core tests and the determinism checks
+npm test             # core tests and the determinism checks only
 npm run preview      # bake every ship on the CPU -> preview.png
+```
+
+Building needs Rust with the WASM target (`rustup target add wasm32-unknown-unknown`). `python3 tools/build.py --skip-core` reuses the last compiled core. The browser smoke tests need Playwright for Python: `python tools/fly-smoke.py` and `python tools/play-smoke.py` (on the dev box, use `~/.venvs/web/bin/python`).
+
+In the lab, `__fly.sim` is the core: `__fly.sim.param('damper', 0.8)` retunes live, `__fly.reset(seed)` starts a seeded sector, and `__fly.probe()` reports the tick and state hash. In the game, `__play` does the same (`__play.newGame(seed)`, `__play.advance(sec, keys)`, `__play.probe()`).
+
+To rerun a session exported from the game (Export replay downloads the starting snapshot and the input log; the log's header has the exact command and the hash to expect):
+
+```
+cd core && cargo run --release --bin replay -- driftward-save.bin driftward-inputs.txt <ticks>
 ```
 
 ## Design
 
 [The Book](docs/book.md) describes every game mechanism, tagged by the milestone that builds it, along with the build staging (M0 to M9), the M1 scope and the faction names. It is an export of the design doc; update it by re-exporting rather than editing it here.
+
+[Known issues](docs/known-issues.md) lists the performance costs and bugs we know about but have not fixed yet.
 
 ## Roadmap
 
