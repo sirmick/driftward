@@ -1,0 +1,7 @@
+{
+  "description": "M1's ambient traffic: which hulls each culture flies in each traffic role (a catalog brand and size class), and each population tier's weight in the gravity model that sets the flows between ports. The Ironhulls (miners) fly Rustline hulls, the catalog's mining guild. Rates, shares and speeds are core params (core/src/world.rs).",
+  "cultures": {
+    "ironhulls": { "brand": "rustline", "roles": { "shuttle": "fighter", "hauler": "frigate", "liner": "cruiser" } }
+  },
+  "population": { "outpost": 1, "colony": 3, "town": 10, "world": 30 }
+}

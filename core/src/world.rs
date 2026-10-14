@@ -4,6 +4,7 @@ use crate::cols::{params, soa, ColumnDesc};
 use crate::flight;
 use crate::market::MAX_GOODS;
 use crate::mission::{MAX_MISSIONS, MAX_OFFERS};
+use crate::traffic::N_ROLES;
 use crate::player::{self, Player};
 use crate::snapshot;
 use crate::math::wrap;
@@ -40,6 +41,9 @@ soa! {
         // interpolated render pose, f32 for direct GPU upload
         rx: f32, ry: f32, ra: f32,
         alive: u8,
+        // 1 while traffic.rs moves the ship along its route (on rails, or held for a launch or landing); the flight
+        // stages skip it
+        rail: u8,
         burn: u8,
         // control mode: 0 raw actuators, 1 assist (auto facing), 2 assist (facing want_face), 3 assist (turn untouched)
         ctl: u8,
@@ -59,8 +63,8 @@ soa! {
 
 soa! {
     /// Bodies (the star, planets, moons, stations): position, radius, well strength g (relative to the g_ref param),
-    /// kind (port.rs BODY_*), and whether it has a port the player can land at.
-    pub struct Bodies { x: f64, y: f64, r: f64, g: f64, kind: u8, port: u8 }
+    /// population weight (traffic flows: 0 for no one), kind (port.rs BODY_*), and whether it has a port to land at.
+    pub struct Bodies { x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8 }
 }
 
 soa! {
@@ -91,6 +95,28 @@ soa! {
     /// The player's missions, MAX_MISSIONS rows: state (mission.rs M_*), where from and to, the cargo, the pay, and
     /// the last day it may be delivered.
     pub struct Missions { state: u8, from: i16, dest: i16, good: u8, tons: u32, pay: u32, due: u32 }
+}
+
+soa! {
+    /// Traffic state per ship slot (traffic.rs): role (0: not traffic), phase, time left in a launch or landing, the
+    /// route (from and to bodies; start, waypoint and end points; length; which leg), progress along it, cruise speed,
+    /// and age.
+    pub struct Traffic {
+        role: u8, phase: u8, leg: u8, from: i16, to: i16,
+        timer: f64, s: f64, len: f64, cruise: f64, age: f64,
+        ax: f64, ay: f64, wx: f64, wy: f64, bx: f64, by: f64,
+    }
+}
+
+soa! {
+    /// Traffic roles (traffic.rs SHUTTLE, HAULER, LINER, in that order): the ship type each flies (content).
+    pub struct Roles { kind: u16 }
+}
+
+soa! {
+    /// Traffic lanes, per directed route and role ((from * max_bodies + to) * N_ROLES + role): arrival rate (ships a
+    /// second) and dwell (seconds a ship spends on the route). Planned at a new game (traffic.rs).
+    pub struct Lanes { rate: f64, dwell: f64 }
 }
 
 soa! {
@@ -130,6 +156,13 @@ params! {
     route_day = 20000.0;  "metres of route counted as a day when setting deadlines"
     slack_min = 1.5;      "tightest deadline, as a multiple of route days (pays the most)"
     slack_max = 3.0;      "loosest deadline, as a multiple of route days"
+    traffic_ships = 14.0; "ambient ships in flight at steady state (the Book: about 10 to 20 in M1)"
+    traffic_cap = 24.0;   "most ambient ships in flight at once"
+    share_shuttle = 0.3;  "shuttles' share of the traffic"
+    share_hauler = 0.5;   "haulers' share of the traffic"
+    share_liner = 0.2;    "liners' share of the traffic"
+    traffic_cruise = 0.7; "ambient ships cruise at this fraction of their top speed"
+    traffic_near = 8000.0; "within this many metres of the player, ambient ships fly full physics; beyond, rails"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -154,6 +187,9 @@ pub struct World {
     pub market: Market,
     pub offers: Offers,
     pub missions: Missions,
+    pub traffic: Traffic,
+    pub roles: Roles,
+    pub lanes: Lanes,
     pub params: Vec<f64>,
     /// live ship slots are 0..count
     pub count: usize,
@@ -182,6 +218,9 @@ impl World {
             market: Market::with_capacity(cfg.max_bodies * MAX_GOODS),
             offers: Offers::with_capacity(cfg.max_bodies * MAX_OFFERS),
             missions: Missions::with_capacity(MAX_MISSIONS),
+            traffic: Traffic::with_capacity(cfg.max_ships),
+            roles: Roles::with_capacity(N_ROLES),
+            lanes: Lanes::with_capacity(cfg.max_bodies * cfg.max_bodies * N_ROLES),
             params: param_defaults(),
             count: 0,
             n_bodies: 0,
@@ -213,6 +252,9 @@ impl World {
         self.market.describe("market", &mut c);
         self.offers.describe("offer", &mut c);
         self.missions.describe("mission", &mut c);
+        self.traffic.describe("traffic", &mut c);
+        self.roles.describe("role", &mut c);
+        self.lanes.describe("lane", &mut c);
         c.push(ColumnDesc::of("world", "params", &self.params));
         c
     }
@@ -234,14 +276,16 @@ impl World {
     }
 
     /// Start over: every ship column zeroed, the game row, hold, missions and boards emptied, no live slots, clock at
-    /// tick 0. Types, bodies, markets, gas, params and the generator are kept (reseed separately; post boards with
-    /// `post_boards`). Handles from before a clear are invalid.
+    /// tick 0, no traffic. Types, bodies, markets, traffic roles, gas, params and the generator are kept (reseed
+    /// separately; post boards with `post_boards`, start traffic with `plan_traffic` and `seed_traffic`). Handles from before a clear are invalid.
     pub fn clear(&mut self) {
         self.ships.clear();
         self.game.clear();
         self.hold.clear();
         self.offers.clear();
         self.missions.clear();
+        self.traffic.clear();
+        self.lanes.clear();
         self.count = 0;
         self.tick = 0;
         self.player.set = 0.0;
@@ -272,6 +316,7 @@ impl World {
     /// One fixed step of everything the core owns. Stages, in order:
     /// game (descent and launch sequences, see port.rs),
     /// player (this tick's input bitmask into commands, when a player slot is set),
+    /// traffic (arrivals, launches and landings, rails, and the AI flying ambient ships near the player),
     /// control (assist turns desired velocity into actuator commands), fields (gas at each ship),
     /// steer (angular motion), forces (thrust, drag, gravity), integrate (velocity, dampers, position),
     /// engines (glow). Trading and the day's costs are commands, applied between ticks (market.rs). Decide (AI) and the systems after motion still run in JS around this call.
@@ -283,6 +328,7 @@ impl World {
         s.prev_ang[..n].copy_from_slice(&s.ang[..n]);
         self.step_game();
         player::control(self);
+        self.step_traffic();
         flight::control(self);
         flight::fields(self);
         flight::steer(self);
@@ -359,6 +405,9 @@ impl World {
         let s = &self.ships;
         for i in 0..self.count {
             eat(s.alive[i] as u64 | (s.ctl[i] as u64) << 8 | (s.burn[i] as u64) << 16 | (s.kind[i] as u64) << 24 | (s.generation[i] as u64) << 32);
+            let t = &self.traffic;
+            eat(s.rail[i] as u64 | (t.role[i] as u64) << 8 | (t.phase[i] as u64) << 16 | (t.leg[i] as u64) << 24 | (t.to[i] as u16 as u64) << 32);
+            if t.role[i] != 0 { for col in [&t.timer, &t.s, &t.age] { eat(col[i].to_bits()); } }
             if s.alive[i] == 0 { continue; }
             for col in [&s.x, &s.y, &s.vx, &s.vy, &s.ang, &s.av, &s.turn_in, &s.main, &s.lat, &s.thr, &s.gas_h, &s.gas_d, &s.gas_i] {
                 eat(col[i].to_bits());

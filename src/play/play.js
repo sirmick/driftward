@@ -18,6 +18,8 @@ if (!loaded.system) { $('glerr').textContent = 'The system file is unusable: ' +
 const SYS = loaded.system, BODIES = loaded.bodies, STAR = BODIES[0];
 // the economy (src/economy.json): commodities, and each port role's price tier for each (validated by npm run check)
 const ECON = JSON.parse($('economy').textContent), GOODS = ECON.commodities;
+// ambient traffic (src/traffic.json): hulls by culture and role, population weights
+const TRAFFIC_DATA = JSON.parse($('traffic').textContent);
 const star = STARS[STAR.look] || STARS.sol;
 const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3 };
 // planets and moons, drawn by the planet shader
@@ -206,7 +208,12 @@ CORE_READY.then(CORE => {
   const CMD = CORE.CMD, MODE = CORE.MODE;
   BODIES.forEach((b, j) => {
     const B = sim.body; B.x[j] = b.x; B.y[j] = b.y; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
+    B.pop[j] = b.port ? TRAFFIC_DATA.population[b.port.population] || 1 : 0; // traffic's gravity model
   });
+  // traffic hulls: the owning culture's brand, a size class per role (src/traffic.json; validated by npm run check)
+  { const C = TRAFFIC_DATA.cultures[SYS.owner] || Object.values(TRAFFIC_DATA.cultures)[0];
+    const bi = Math.max(0, catalog.brands.findIndex(b => b.id === C.brand));
+    CORE.TRAFFIC.roles.forEach((r, k) => { sim.role.kind[k] = bi * nSizes + Math.max(0, catalog.sizes.findIndex(z => z.id === C.roles[r])); }); }
   sim.setBodies(BODIES.length);
   // Market prices: a port with a market trades what its role lists, at base price times the tier. Written at each new
   // game; a loaded save brings its own (prices are world state).
@@ -238,6 +245,7 @@ CORE_READY.then(CORE => {
     sim.game.day[0] = 1; // day one
     sim.game.credits[0] = ECON.start.credits; sim.game.debt[0] = ECON.start.debt; // a used fighter and a debt to a lender
     sim.postBoards();
+    sim.startTraffic(); // ambient traffic, already mid-flow
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
     missionSeen.set(sim.mission.state);
     startRecording();
@@ -302,6 +310,8 @@ CORE_READY.then(CORE => {
     const dt = last ? Math.min(0.25, (now - last) / 1000) : 1 / 60; last = now;
     fpsAcc += dt; fpsN++; if (fpsAcc > 0.5) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
     sim.checkViews();
+    // bake the traffic hulls up front (behind the start port's screen), not when the first one flies into view
+    for (let k = 0; k < 3; k++) typeReady(types[sim.role.kind[k]]);
     const bits = inputBits(IN);
     if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
     for (let n = sim.due(dt); n > 0; n--) sim.step();
@@ -457,6 +467,15 @@ CORE_READY.then(CORE => {
   // draw order: largest classes first, so small ships sit on top
   const order = types.map((_, k) => k).sort((a, b) => types[b].zi - types[a].zi);
   let scale = 1;
+  const sheaths = []; // [slot, sequence look] to draw this frame (reused)
+  const LAUNCH_S = 2.0, DESCENT_S = 2.5; // core/src/port.rs
+  const TR = sim.traffic, TRAFFIC = CORE.TRAFFIC;
+  // a landing or launch sequence's look at d (0 in flight .. 1 down) over body B: hull scale, plasma heat, fade-out
+  // into the atmosphere's tint
+  function seqLook(d, B) {
+    const st = B.kind === 'station', ss = x => x * x * (3 - 2 * x), seg = (a, b, x) => ss(Math.max(0, Math.min(1, (x - a) / (b - a))));
+    return { sc: st ? 1 - 0.45 * seg(0, 1, d) : 1 - 0.85 * seg(0.08, 1, d), heat: st ? 0 : seg(0, 0.2, d) * (1 - seg(0.88, 1, d)), fade: seg(0.5, 0.95, d), atm: (WORLDS.find(w => w.id === B.id) || {}).LA || [0.6, 0.7, 0.8] };
+  }
   function setView(prog, RW, RH, cx, cy) { gl.useProgram(prog.p); gl.uniform2f(prog.u.uRes, RW, RH); gl.uniform2f(prog.u.uCam, cx, cy); gl.uniform1f(prog.u.uScale, scale); }
   function render(t, cx, cy) {
     const RW = canvas.width, RH = canvas.height, T0 = types[SH.kind[0]], live = Math.min(MAXS, sim.count());
@@ -525,6 +544,20 @@ CORE_READY.then(CORE => {
       gl.bindVertexArray(null);
     }
 
+    // Landing and launch sequences, the player's and the traffic's: d runs 0 in flight .. 1 down. The player's ship
+    // is out of the flight sim meanwhile (drawn from the game state); a traffic ship stays in its slot, held by the
+    // core. Each shrinks into the surface inside a plasma sheath (docking at a station: a short shrink, no plasma).
+    sheaths.length = 0;
+    let pseq = null;
+    if ((mode === MODE.descending || mode === MODE.launching) && typeReady(T0)) {
+      const p = 1 - sim.game.timer[0] / (mode === MODE.descending ? DESCENT_S : LAUNCH_S);
+      pseq = seqLook(mode === MODE.descending ? p : 1 - p, BODIES[sim.game.at[0]]);
+    }
+    const npcSeq = i => {
+      const ph = TR.phase[i];
+      if (!TR.role[i] || (ph !== TRAFFIC.launch && ph !== TRAFFIC.land)) return null;
+      return ph === TRAFFIC.launch ? seqLook(TR.timer[i] / LAUNCH_S, BODIES[TR.from[i]]) : seqLook(1 - TR.timer[i] / DESCENT_S, BODIES[TR.to[i]]);
+    };
     // which ships are drawable and on screen
     typeCount.fill(0);
     const shown = i => {
@@ -592,25 +625,19 @@ CORE_READY.then(CORE => {
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nPl);
       gl.bindVertexArray(null);
     }
-    // hulls, bucketed by type
+    // hulls, bucketed by type (the player's sequence, if any, in its type's bucket)
+    if (pseq) typeCount[SH.kind[0]]++;
     let acc = 0;
     for (const k of order) { typeStart[k] = acc; acc += typeCount[k]; typeFill[k] = typeStart[k]; }
     for (let i = 0; i < live; i++) {
       if (!shown(i)) continue;
-      const o = typeFill[SH.kind[i]]++ * 6;
-      shipInst[o] = SH.rx[i]; shipInst[o + 1] = SH.ry[i]; shipInst[o + 2] = SH.ra[i]; shipInst[o + 3] = SH.thr[i]; shipInst[o + 4] = 0; shipInst[o + 5] = 0;
+      const o = typeFill[SH.kind[i]]++ * 6, q = npcSeq(i);
+      shipInst[o] = SH.rx[i]; shipInst[o + 1] = SH.ry[i]; shipInst[o + 2] = SH.ra[i]; shipInst[o + 3] = SH.thr[i]; shipInst[o + 4] = 0; shipInst[o + 5] = q ? q.sc : 0;
+      if (q && q.heat > 0.01) sheaths.push([i, q]);
     }
-    // the player's descent or launch: out of the flight sim, drawn from the game state, shrinking into the surface
-    // inside a plasma sheath (docking at a station: a short shrink into the clamps, no plasma)
-    let seq = null;
-    if ((mode === MODE.descending || mode === MODE.launching) && typeReady(T0)) {
-      const B = BODIES[sim.game.at[0]], total = mode === MODE.descending ? 2.5 : 2.0;
-      const p = 1 - sim.game.timer[0] / total, d = mode === MODE.descending ? p : 1 - p; // d: 0 in flight .. 1 down
-      const st = B.kind === 'station', ss = x => x * x * (3 - 2 * x), seg = (a, b, x) => ss(Math.max(0, Math.min(1, (x - a) / (b - a))));
-      seq = { sc: st ? 1 - 0.45 * seg(0, 1, d) : 1 - 0.85 * seg(0.08, 1, d), heat: st ? 0 : seg(0, 0.2, d) * (1 - seg(0.88, 1, d)), fade: seg(0.5, 0.95, d), atm: (WORLDS.find(w => w.id === B.id) || {}).LA || [0.6, 0.7, 0.8] };
-      const ti = SH.kind[0];
-      typeStart[ti] = acc; typeCount[ti] = 1;
-      shipInst.set([SH.x[0], SH.y[0], SH.ang[0], 0, 0, seq.sc], acc * 6); acc++;
+    if (pseq) {
+      shipInst.set([SH.x[0], SH.y[0], SH.ang[0], 0, 0, pseq.sc], typeFill[SH.kind[0]]++ * 6);
+      if (pseq.heat > 0.01) sheaths.push([0, pseq]);
     }
     if (acc) {
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -631,15 +658,19 @@ CORE_READY.then(CORE => {
       }
       gl.bindVertexArray(null);
     }
-    if (seq && seq.heat > 0.01) {
+    if (sheaths.length) {
       gl.blendFunc(gl.ONE, gl.ONE);
       setView(FP.sheath, RW, RH, cx, cy);
-      const u = FP.sheath.u, m = T0.s.maps;
-      gl.uniform2f(u.uC, SH.x[0], SH.y[0]); gl.uniform1f(u.uHalfM, T0.half * 1.15); gl.uniform1f(u.uAng, SH.ang[0]); gl.uniform1f(u.uSc, seq.sc);
-      gl.uniform1f(u.uS, m.shieldS); gl.uniform1f(u.uDmax, m.Dmax); gl.uniform1f(u.uHeat, seq.heat); gl.uniform1f(u.uFade, seq.fade);
-      gl.uniform1f(u.uTime, t); gl.uniform3fv(u.uAtm, seq.atm);
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, T0.s.tex[3]); gl.uniform1i(u.uX, 0);
-      draw();
+      const u = FP.sheath.u;
+      gl.uniform1f(u.uTime, t); gl.uniform1i(u.uX, 0); gl.activeTexture(gl.TEXTURE0);
+      for (const [i, q] of sheaths) {
+        const T = types[SH.kind[i]], m = T.s.maps, px = i === 0 && pseq ? SH.x[0] : SH.rx[i], py = i === 0 && pseq ? SH.y[0] : SH.ry[i];
+        gl.uniform2f(u.uC, px, py); gl.uniform1f(u.uHalfM, T.half * 1.15); gl.uniform1f(u.uAng, i === 0 && pseq ? SH.ang[0] : SH.ra[i]); gl.uniform1f(u.uSc, q.sc);
+        gl.uniform1f(u.uS, m.shieldS); gl.uniform1f(u.uDmax, m.Dmax); gl.uniform1f(u.uHeat, q.heat); gl.uniform1f(u.uFade, q.fade);
+        gl.uniform3fv(u.uAtm, q.atm);
+        gl.bindTexture(gl.TEXTURE_2D, T.s.tex[3]);
+        draw();
+      }
     }
     gl.disable(gl.BLEND);
     G.postProcess(bloomOn ? 0.9 : 0, nanView);
@@ -801,6 +832,13 @@ CORE_READY.then(CORE => {
       hx.beginPath(); hx.arc(cx + mx, cy + my, rr, 0, 6.283); hx.stroke();
       hx.fillStyle = hot ? NAV_HOT : o.mission ? MIS_COL : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
     }
+    // ambient ships: dots (the Book: ships appear only on the radar)
+    hx.fillStyle = 'rgba(219,224,231,.7)';
+    for (let i = 0; i < sim.count(); i++) {
+      if (!SH.alive[i] || i === 0) continue; // slot 0 is the player
+      const mx = (SH.rx[i] - px) * k, my = -(SH.ry[i] - py) * k;
+      if (mx * mx + my * my < R * R) hx.fillRect(cx + mx - 1.25, cy + my - 1.25, 2.5, 2.5);
+    }
     // the player: velocity line and heading arrow (world y up, screen y down)
     const vx = SH.vx[0] * k * 6, vy = -SH.vy[0] * k * 6;
     hx.strokeStyle = 'rgba(226,184,102,.8)'; hx.beginPath(); hx.moveTo(cx, cy); hx.lineTo(cx + vx, cy + vy); hx.stroke();
@@ -817,6 +855,8 @@ CORE_READY.then(CORE => {
   window.__play = {
     sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES, ECON,
     setNav, trade, repay, showPanel, accept, abandon,
+    // ambient traffic: every ship in flight, with its role, phase, route and whether it is on rails
+    traffic: () => { const out = []; for (let i = 0; i < sim.count(); i++) if (TR.role[i]) out.push({ i, role: TRAFFIC.roles[TR.role[i] - 1], phase: TR.phase[i], from: TR.from[i], to: TR.to[i], rail: SH.rail[i], x: SH.x[i], y: SH.y[i], v: Math.hypot(SH.vx[i], SH.vy[i]) }); return out; },
     // dev: put the (flying) player at rest over body j; a logged command, so replays still match
     teleport: j => command(CMD.teleport, j),
     // this port's offers and the player's active missions, as plain objects

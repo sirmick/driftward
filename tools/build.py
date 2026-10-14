@@ -57,15 +57,17 @@ def inline_modules(script, needed):
         script = script.replace(marker, (src / MODULES[marker]).read_text())
     return script
 
-# the game's system, and the schema it is validated (clamped) against at load; the economy (prices by port role)
+# the game's system, and the schema it is validated (clamped) against at load; the economy (prices by port role);
+# traffic (hulls by culture and role, population weights)
 system = json.dumps(json.loads((src / 'systems' / 'm1.json').read_text()))
 system_schema = json.dumps(json.loads((src / 'schema' / 'system.schema.json').read_text()))
 economy = json.dumps(json.loads((src / 'economy.json').read_text()))
-assert '</script' not in system + system_schema + economy
+traffic = json.dumps(json.loads((src / 'traffic.json').read_text()))
+assert '</script' not in system + system_schema + economy + traffic
 
 def page(template, script):
     t = template.replace('/*COREWASM*/', core_b64).replace('/*CATALOG*/', catalog).replace('/*GEN*/', gen).replace('/*APP*/', script)
-    return t.replace('/*SYSTEM*/', system).replace('/*SYSTEMSCHEMA*/', system_schema).replace('/*ECONOMY*/', economy)
+    return t.replace('/*SYSTEM*/', system).replace('/*SYSTEMSCHEMA*/', system_schema).replace('/*ECONOMY*/', economy).replace('/*TRAFFIC*/', traffic)
 
 # the lab: app.js pulls in the shared kit and every tab
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),

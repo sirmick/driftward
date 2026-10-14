@@ -1,6 +1,6 @@
 //! Flight physics: one Newtonian model for every ship, with flight assist as a controller on top.
 //! Ported from the M0 flight lab (src/fly.js), stage by stage. Every loop is over the live slots,
-//! skipping dead ones by the `alive` mask.
+//! skipping dead ones by the `alive` mask and ships on rails (traffic.rs moves those) by the `rail` mask.
 //!
 //! Gravity wells are game physics, not Newton's. Inside a body's reach (`well_reach` radii) a well field points
 //! inward, with a strength that is the body's (g / g_ref) at and below its surface and fades to zero at the edge.
@@ -38,7 +38,7 @@ pub fn control(w: &mut World) {
     let (face_dv, face_v) = (w.p(P::assist_face_dv), w.p(P::assist_face_v));
     let (s, t) = (&mut w.ships, &w.types);
     for i in 0..w.count {
-        if s.alive[i] == 0 || s.ctl[i] == 0 { continue; }
+        if s.alive[i] == 0 || s.rail[i] != 0 || s.ctl[i] == 0 { continue; }
         let k = s.kind[i] as usize;
         let (accel, turn, vmax) = (t.accel[k], t.turn[k], t.vmax[k]);
         let (hx, hy) = heading(s.ang[i]);
@@ -67,7 +67,7 @@ pub fn fields(w: &mut World) {
     let cell = w.cfg.env_w / n as f64;
     let (s, e) = (&mut w.ships, &w.env);
     for i in 0..w.count {
-        if s.alive[i] == 0 { continue; }
+        if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
         let fx = (s.x[i] + half) / cell - 0.5;
         let fy = (s.y[i] + half) / cell - 0.5;
         let (i0, j0) = (fx.floor(), fy.floor());
@@ -93,7 +93,7 @@ pub fn steer(w: &mut World) {
     let slew = w.p(P::turn_slew);
     let (s, t) = (&mut w.ships, &w.types);
     for i in 0..w.count {
-        if s.alive[i] == 0 { continue; }
+        if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
         let turn = t.turn[s.kind[i] as usize];
         let step = turn * slew * DT;
         if s.rot[i] == 1 {
@@ -140,7 +140,7 @@ pub fn forces(w: &mut World) {
     let (dh, dd, di) = (w.p(P::drag_h), w.p(P::drag_d), w.p(P::drag_i));
     let (s, t, b, nb) = (&mut w.ships, &w.types, &w.bodies, w.n_bodies);
     for i in 0..w.count {
-        if s.alive[i] == 0 { continue; }
+        if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
         let k = s.kind[i] as usize;
         let (accel, vmax, sens) = (t.accel[k], t.vmax[k], t.well[k]);
         let (hx, hy) = heading(s.ang[i]);
@@ -195,7 +195,7 @@ pub fn integrate(w: &mut World) {
     let (s, t) = (&mut w.ships, &w.types);
     let bleed = (damper * DT).min(1.0);
     for i in 0..w.count {
-        if s.alive[i] == 0 { continue; }
+        if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
         s.vx[i] += s.ax[i] * DT;
         s.vy[i] += s.ay[i] * DT;
         let burn = s.burn[i] != 0 && s.main[i] > 0.0;
@@ -220,7 +220,7 @@ pub fn engines(w: &mut World) {
     let rate = (w.p(P::thr_rate) * DT).min(1.0);
     let s = &mut w.ships;
     for i in 0..w.count {
-        if s.alive[i] == 0 { continue; }
+        if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
         let m = s.main[i];
         let burn = s.burn[i] != 0 && m > 0.0;
         let target = if m > 0.05 { if burn { 1.0 } else { 0.3 + 0.42 * m } } else { 0.06 };

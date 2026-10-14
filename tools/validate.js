@@ -1,5 +1,5 @@
 // Validate every system file against its schema with the game's own clamp (src/schema.js), check the economy's
-// price tables, and check the clamp itself on a deliberately bad system. Usage: node tools/validate.js (part of npm run check)
+// price tables and traffic's hulls, and check the clamp itself on a deliberately bad system. Usage: node tools/validate.js (part of npm run check)
 const fs = require('fs'), path = require('path');
 const { clampToSchema, loadSystem } = require('../src/schema.js');
 const root = path.join(__dirname, '..');
@@ -32,6 +32,18 @@ for (const [r, t] of Object.entries(econ.roles)) {
 if (econBad.length) { bad += econBad.length; econBad.forEach(m => console.log(`economy.json: ${m}`)); }
 else console.log(`economy.json: valid; ${ids.length} commodities, ${roles.length} role price tables`);
 
+// traffic: every culture's roles name a catalog brand and size; every population tier has a weight
+const traffic = JSON.parse(fs.readFileSync(path.join(root, 'src', 'traffic.json'), 'utf8'));
+const catalog = JSON.parse(fs.readFileSync(path.join(root, 'src', 'catalog.json'), 'utf8'));
+const tBad = [];
+for (const [id, c] of Object.entries(traffic.cultures)) {
+  if (!catalog.brands.some(b => b.id === c.brand)) tBad.push(`${id}: unknown brand ${c.brand}`);
+  for (const role of ['shuttle', 'hauler', 'liner']) if (!catalog.sizes.some(z => z.id === c.roles[role])) tBad.push(`${id}: ${role} has unknown size ${c.roles[role]}`);
+}
+for (const tier of schema.properties.bodies.items.properties.port.properties.population.enum) if (!(traffic.population[tier] > 0)) tBad.push(`no weight for population ${tier}`);
+if (tBad.length) { bad += tBad.length; tBad.forEach(m => console.log(`traffic.json: ${m}`)); }
+else console.log(`traffic.json: valid; ${Object.keys(traffic.cultures).length} culture(s)`);
+
 // the clamp on bad input: out-of-range numbers clamp, bad enums fall back to defaults, unknown fields drop,
 // a missing required field is fatal
 const notes = [];
@@ -48,5 +60,5 @@ for (const [p, ok] of expect) {
   const n = notes.find(n => n.path === p);
   if (!n || !ok(n)) { bad++; console.log(`clamp check failed at ${p}: ${n ? n.msg : 'no note'}`); }
 }
-console.log(bad ? `${bad} validation problem(s)` : 'schema clamp behaves; all systems and the economy valid');
+console.log(bad ? `${bad} validation problem(s)` : 'schema clamp behaves; all systems, the economy and traffic valid');
 process.exit(bad ? 1 : 0);

@@ -6,7 +6,8 @@
 //! feeds state is deterministic across targets (`math`, `rng`); `scenario` proves it. The player flies
 //! by one input bitmask per tick (`player`); the world saves to a fixed-size byte image (`snapshot`), and a
 //! snapshot plus an input log replays a session exactly (`replay`). Ports, landings and the day clock are in `port`;
-//! cargo, credits and markets in `market`; the mission board and deliveries in `mission`.
+//! cargo, credits and markets in `market`; the mission board and deliveries in `mission`; ambient traffic in
+//! `traffic`.
 
 pub mod cols;
 pub mod ffi;
@@ -20,6 +21,7 @@ pub mod replay;
 pub mod rng;
 pub mod scenario;
 pub mod snapshot;
+pub mod traffic;
 pub mod world;
 
 pub use world::{Config, World, DT};

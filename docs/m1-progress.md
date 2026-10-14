@@ -4,7 +4,7 @@ M1 in the Book is "Trade and delivery": one system, a game shell, the sim core a
 
 This file tracks that milestone against the Book's `[M1]` items. Update it as work lands. Status: **done**, **partial** (with what is missing), or **to do**.
 
-Last updated: 2026-10-14, with step 5 (the mission board and delivery missions).
+Last updated: 2026-10-14, with step 6 (ambient traffic).
 
 ## Summary
 
@@ -17,8 +17,8 @@ Last updated: 2026-10-14, with step 5 (the mission board and delivery missions).
 | Port screen | Partial: trade and missions work; bar, refuel and repair are placeholders |
 | Cargo, credits, markets, trading | Done |
 | Mission board and delivery missions | Done |
-| Ambient traffic | To do (next) |
-| HUD, targeting, system map, location list, shell | Partial |
+| Ambient traffic | Done |
+| HUD, targeting, system map, location list, shell | Partial (next) |
 | Lore, painted vistas and portraits (OpenRouter) | To do |
 | Exit test, headless | Every piece works and is tested; the single scripted test is to do |
 
@@ -43,6 +43,7 @@ Last updated: 2026-10-14, with step 5 (the mission board and delivery missions).
 - **Market screen.** Trade (T) on the port screen: what the port trades, price (green under base, amber over), tons aboard, buy and sell a ton or, shift-clicked, all you can; repay the lender. Credits and hold on the flight HUD.
 - **Mission board.** Each port's board holds 3 to 8 haulage offers (core columns, posted from the seeded generator, so boards replay). Each day expired offers drop (an offer lasts 2 to 5 days) and free slots fill by chance. An offer binds live state: a destination port, cargo the origin's market trades, 1 to 12 tons, a deadline of the route's length in days (20 km a day) times a slack of 1.5 to 3, plus one, and pay of a base plus tons times kilometres, times an urgency that rises as the slack falls. Risk and faction wealth are 1 in M1.
 - **Delivery missions.** Accept (a command) moves an offer to the player's missions (up to 4); its cargo takes hold space and cannot be sold. Landing at the destination delivers and pays; a day past the deadline fails it softly (the cargo is reclaimed, nothing is paid). Missions can be abandoned. The board panel (M) lists offers and your missions with days left; delivery and failure are reported as they happen; active missions show on the HUD, and their destinations on the nav overlay and minimap.
+- **Ambient traffic.** One culture (the Ironhulls, flying the catalog's Rustline hulls: fighter as shuttle, frigate as hauler, cruiser as liner; `src/traffic.json`). The core plans a lane per directed route and role from a gravity model: population times population over distance (shuttles over distance squared; haulers times how much dearer the destination's market is), scaled so about 14 ships are in flight at steady state, under a cap of 24. Ships undock as a Poisson process with the launch sequence, follow a route bent round the star and any planet in the way, and land or dock with the player's sequence and sheath, then are forgotten. A new game starts mid-flow (a Poisson number per lane, spread along the routes). Far from the player (over 8 km) ships run on rails; near, they fly the full physics under the assist controller, along the same route, and land by the player's rules. They show as dots on the minimap. Rates, shares, speeds and distances are core params; the traffic hulls bake at page load.
 - **Teleport (dev).** `__play.teleport(body)` puts the flying player at rest over a body, as a logged command, so tests can fly a delivery and still replay it.
 - **Dev server.** Node, live reload of both pages, the crate rebuilds on change.
 
@@ -58,11 +59,10 @@ Last updated: 2026-10-14, with step 5 (the mission board and delivery missions).
 
 In build order.
 
-1. **Ambient traffic (step 6).** The Ironhull hull family in three sizes (shuttle, hauler, liner), 10 to 20 ships. Flows between ports from a gravity model (population times population over distance, weighted by role complementarity). Poisson arrivals from undocking; steady state on entry; ships on rails far from the player and full physics and AI near; they land, dock and launch with the same animation. AI moves into the core.
-2. **HUD, targeting and maps.** T cycles targets with a nav target panel; M opens the system map (orbits, bodies, contacts, mission destinations; click to target; fly-to autopilot under full assist); the location list on the right, expanding the body whose zone the player is in; ship status; message log.
-3. **Shell.** Title, new game with a seed, continue from the last landing save, settings, pause. Death reloads the last landing save.
-4. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
-5. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
+1. **HUD, targeting and maps.** T cycles targets with a nav target panel; M opens the system map (orbits, bodies, contacts, mission destinations; click to target; fly-to autopilot under full assist); the location list on the right, expanding the body whose zone the player is in; ship status; message log.
+2. **Shell.** Title, new game with a seed, continue from the last landing save, settings, pause. Death reloads the last landing save.
+3. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
+4. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
 
 ## Deviations from the Book
 
@@ -71,6 +71,8 @@ In build order.
 - **Gravity is game physics,** by design: see `core/src/flight.rs`.
 - **Prices are content, not core code.** The Book's markets are columns in the core; M1's fixed prices are computed in the page from `src/economy.json` and written into them, so M5's moving prices can replace the writer without changing the columns or the trading commands.
 - **Missions are fixed code, not templates yet.** The Book's mission template (objective nodes, triggers, branches) is tagged M1, but M1 has one mission type, so delivery is written directly in `core/src/mission.rs`; the template machinery waits for a second type.
+- **Traffic hulls are stand-ins.** The Book's Ironhull family (shuttle, hauler, liner) does not exist in the catalog yet; the Rustline brand's fighter, frigate and cruiser stand in until M3's faction rosters.
+- **Traffic never meets the player.** Ships pass through each other and the player; no hails, scans or reactions until combat and law arrive.
 - **One price per commodity per port.** No buy and sell spread, as in EV: profit comes only from price gaps between ports.
 
 See also [Known issues](known-issues.md) and the Book's [Build staging](book.md#build-staging).

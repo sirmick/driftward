@@ -2,7 +2,8 @@
 
 Checks: the page starts on the sim core, landed at the system's start port, with no console errors; the market
 buys and sells through the core (panel and commands), within credits and hold space; the mission board offers
-deliveries, and one accepted, flown and landed at its destination pays; assist flight in open space
+deliveries, and one accepted, flown and landed at its destination pays; ambient traffic starts mid-flow and turns
+over (ships land and new ones launch); assist flight in open space
 matches the lab's numbers; launch, landing and a day passing (with its docking fee) work; save then load restores
 the exact state; a replay exported from the browser (snapshot + input log, trades included) reruns natively to the
 same state hash; the live clock ticks at 60 Hz.
@@ -69,6 +70,18 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape')
     check(not pg.is_visible('#trade'), 'Escape closes the market')
 
+    # ambient traffic: mid-flow from the start, Rustline hulls, and turning over (two minutes of sim time)
+    t0 = ev('__play.traffic()')
+    cap = ev("__play.sim.param('traffic_cap')")
+    check(3 <= len(t0) <= cap and all(t['phase'] == 2 for t in t0), f'{len(t0)} ships in flight at the start, all cruising')
+    tr = ev("""(() => { const P = __play, ids = new Set(P.traffic().map(t => P.sim.handle(t.i))), roles = new Set(), seen = [];
+      for (let k = 0; k < 24; k++) { P.advance(5, []); const t = P.traffic(); seen.push(t.length); t.forEach(x => roles.add(x.role)); }
+      const left = [...ids].filter(h => P.sim.resolve(h) >= 0).length;
+      return { seen, roles: [...roles], left, phases: P.traffic().map(t => t.phase) }; })()""")
+    print('traffic counts every 5 s', tr['seen'], 'roles', tr['roles'])
+    check(min(tr['seen']) >= 2 and max(tr['seen']) <= cap and len(tr['roles']) == 3, f"traffic stays between {min(tr['seen'])} and {max(tr['seen'])} ships, all three roles")
+    check(tr['left'] < len(t0), f"ships land and are forgotten ({len(t0) - tr['left']} of the first {len(t0)} landed in two minutes)")
+
     # the mission board at the start port
     pg.click('#svc-board')
     offers = ev('__play.offers()')
@@ -131,11 +144,12 @@ with sync_playwright() as p:
     check(out == f"tick {rep['tick']} hash {rep['hash']}", f"browser session ({rep['ticks']} ticks, {rep['log'].count(' cmd ')} commands, {rep['log'].count(chr(10)) - 3} log lines) replays natively")
 
     # the live clock, after a warm-up: the software renderer used headless compiles each shader on its first
-    # draw, which stalls a frame for up to a second (a real GPU compiles at link time)
+    # draw, which stalls a frame for up to a second (a real GPU compiles at link time), and uploads the traffic hulls'
+    # baked textures slowly
     # (in open space: under the software renderer a planet filling the view drops below 7.5 fps, where the clock's
     # 8-ticks-a-frame cap deliberately slows the sim rather than spiral)
     ev('__play.newGame(5, ' + SPACE + ')')
-    pg.wait_for_timeout(2000)
+    pg.wait_for_timeout(5000)
     t0, w0 = ev('__play.probe().tick'), time.time()
     pg.wait_for_timeout(3000)
     rate = (ev('__play.probe().tick') - t0) / (time.time() - w0)

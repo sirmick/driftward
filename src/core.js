@@ -27,6 +27,10 @@ const CORE_READY = (async () => {
       // mission boards (body * maxOffers + slot) and the player's missions (core/src/mission.rs)
       offer: groups.offer, mission: groups.mission, maxOffers: M.maxOffers, maxMissions: M.maxMissions,
       postBoards: () => X.dw_post_boards(w), // fresh boards at every port, for a new game
+      // ambient traffic (core/src/traffic.rs): per-ship state, the ship type per role, and the lanes
+      traffic: groups.traffic, role: groups.role, lane: groups.lane,
+      startTraffic: () => X.dw_start_traffic(w), // plan the lanes and seed the steady state, for a new game
+      trafficCount: () => X.dw_traffic_count(w),
       // tuning: core.param('damper') / core.param('damper', 0.6); names in core/src/world.rs
       param: (name, v) => { if (!(name in P)) throw new Error('unknown core param ' + name); if (v !== undefined) params[P[name]] = v; return params[P[name]]; },
       paramNames: M.params,
@@ -69,8 +73,9 @@ const CORE_READY = (async () => {
   // game commands, modes and results, mirrored from core/src/port.rs, market.rs and mission.rs
   const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, teleport: 100 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
+  const TRAFFIC = { launch: 1, cruise: 2, land: 3, roles: ['shuttle', 'hauler', 'liner'] };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3 };
   const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body' };
   const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };
-  return { world, IN, CMD, MODE, MISSION, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
+  return { world, IN, CMD, MODE, MISSION, TRAFFIC, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
 })();
