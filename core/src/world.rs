@@ -72,7 +72,8 @@ soa! {
     /// a descent or launch sequence, the strategic day, the player's credits and debt to the lender, and the fly-to
     /// autopilot's target body plus one (0: off; player.rs) and the point it is steering for (a waypoint round an
     /// obstacle, or the target).
-    pub struct Game { mode: u8, at: i16, timer: f64, day: u32, credits: u32, debt: u32, auto: i16, aim_x: f64, aim_y: f64 }
+    /// The landing and launch sequences curl round the port's body: `curl` 0 counter-clockwise, 1 clockwise (port.rs).
+    pub struct Game { mode: u8, at: i16, timer: f64, curl: u8, day: u32, credits: u32, debt: u32, auto: i16, aim_x: f64, aim_y: f64 }
 }
 
 soa! {
@@ -149,7 +150,8 @@ params! {
     well_out = 0.6;       "top speed heading out of a well: lowered by this, times strength and sensitivity"
     land_speed = 30.0;    "fastest a ship may be moving to land on a planet or moon, m/s"
     dock_speed = 12.0;    "fastest a ship may be moving to dock at a station, m/s"
-    launch_speed = 20.0;  "orbital speed a ship has when launch hands back control, m/s"
+    launch_speed = 20.0;  "speed a ship has when a launch from a station hands back control, m/s"
+    launch_frac = 1.4;    "a launch from a planet or moon hands back control at this multiple of the hull's top speed"
     dock_fee = 20.0;      "credits a day in port costs the player"
     interest = 0.002;     "the lender's interest on the player's debt, per day"
     offer_chance = 0.35;  "chance a free board slot gets a new offer each day, once the board has its minimum"
@@ -389,7 +391,7 @@ impl World {
         eat(self.game.mode[0] as u64 | (self.game.at[0] as u16 as u64) << 8 | (self.game.day[0] as u64) << 32);
         eat(self.game.timer[0].to_bits());
         eat(self.game.credits[0] as u64 | (self.game.debt[0] as u64) << 32);
-        eat(self.game.auto[0] as u16 as u64);
+        eat(self.game.auto[0] as u16 as u64 | (self.game.curl[0] as u64) << 16);
         for &t in &self.hold.tons { eat(t as u64); }
         for &p in &self.market.price[..self.n_bodies * MAX_GOODS] { eat(p as u64); }
         let f = &self.offers;

@@ -144,7 +144,7 @@ impl World {
 mod tests {
     use super::*;
     use crate::market::CMD_BUY;
-    use crate::port::{BODY_PLANET, CMD_LAND, CMD_LAUNCH, CMD_SKIP, CMD_WAIT, MODE_FLYING};
+    use crate::port::{BODY_PLANET, CMD_LAND, CMD_LAUNCH, CMD_SKIP, CMD_WAIT, DESCENT_S, MODE_FLYING};
     use crate::world::{Config, DT};
 
     /// Three ports 30 km apart in a line (bodies 0, 1, 2), each trading commodity 0; the player landed at body 0
@@ -176,7 +176,7 @@ mod tests {
         w.ships.y[0] = 0.0;
         w.ships.vx[0] = 0.0; w.ships.vy[0] = 0.0;
         assert_eq!(w.command(CMD_LAND, 0, 0), OK);
-        for _ in 0..(3.0 / DT) as usize { w.step(); }
+        for _ in 0..((DESCENT_S + 0.2) / DT) as usize { w.step(); }
         assert_eq!((w.mode(), w.game.at[0] as usize), (MODE_LANDED, j));
     }
 

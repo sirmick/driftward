@@ -20,7 +20,7 @@
 
 use crate::market::MAX_GOODS;
 use crate::math::{atan2, exp, hypot};
-use crate::port::{BODY_STAR, BODY_STATION, DESCENT_S, LAUNCH_S};
+use crate::port::{BODY_STAR, BODY_STATION, DESCENT_S, DONE, LAUNCH_S};
 use crate::world::{World, DT, P};
 
 /// Traffic roles (rows of the roles group); 0 in a ship's `traffic.role` means not traffic.
@@ -237,11 +237,11 @@ impl World {
             match self.traffic.phase[k] {
                 T_LAUNCH => {
                     self.traffic.timer[k] -= DT;
-                    if self.traffic.timer[k] <= 0.0 { self.traffic.phase[k] = T_CRUISE; self.place_on_route(k); }
+                    if self.traffic.timer[k] <= DONE { self.traffic.phase[k] = T_CRUISE; self.place_on_route(k); }
                 }
                 T_LAND => {
                     self.traffic.timer[k] -= DT;
-                    if self.traffic.timer[k] <= 0.0 { self.despawn(k); }
+                    if self.traffic.timer[k] <= DONE { self.despawn(k); }
                 }
                 _ => self.cruise_step(k, px, py, near, far),
             }

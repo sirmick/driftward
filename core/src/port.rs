@@ -2,6 +2,11 @@
 //! commands that change them. Commands are the page's only influence on the sim besides the input bitmask: the
 //! page applies them between ticks and records them in the replay log, so a replay lands where the session did.
 //!
+//! The sequences curl round the planet (the page draws them; the ship is out of the flight sim meanwhile): a landing
+//! turns across the planet and spirals out to its horizon, shrinking into the atmosphere; a launch rises at that
+//! horizon and spirals back in to the port, accelerating all the way, and hands back control at the speed it arrived
+//! at, a boost above top speed that the assist and the dampers bleed off. Which way round (`game.curl`) is chosen at landing from the ship's heading. Stations are a straight slide.
+//!
 //! From the Book (Docking and landing, Time): fly over a port's disc, slow to near-stationary, request landing;
 //! a short descent; landed, the player is safe and flight is paused for them; each landing advances the clock by
 //! a day, and so does waiting in port, which costs a docking fee. Stations need a slower approach than planets
@@ -10,6 +15,7 @@
 
 use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL, NO_CREDITS};
 use crate::mission::{CMD_ABANDON, CMD_ACCEPT};
+use crate::math::{atan2, hypot};
 use crate::world::{World, DT, P};
 
 pub const MODE_FLYING: u8 = 0;
@@ -43,8 +49,8 @@ pub const UNKNOWN_COMMAND: i32 = 4;
 pub const NO_SUCH_BODY: i32 = 12;
 
 /// Seconds the descent and the launch sequences take.
-pub const DESCENT_S: f64 = 2.5;
-pub const LAUNCH_S: f64 = 2.0;
+pub const DESCENT_S: f64 = 3.2;
+pub const LAUNCH_S: f64 = 3.2;
 
 /// The landing zone around a port body: most of a planet's or moon's disc, the middle of a station.
 fn zone(kind: u8, r: f64) -> f64 { if kind == BODY_STATION { r * 0.6 } else { r * 0.95 } }
@@ -77,6 +83,10 @@ impl World {
                 let Some((j, slow)) = self.port_below() else { return NOT_OVER_PORT };
                 if !slow { return TOO_FAST; }
                 let i = self.player.slot as usize;
+                // curl the way the ship already points: counter-clockwise round the port unless it faces clockwise
+                let (rx, ry) = (self.ships.x[i] - self.bodies.x[j], self.ships.y[i] - self.bodies.y[j]);
+                let (hx, hy) = crate::flight::heading(self.ships.ang[i]);
+                self.game.curl[0] = (rx * hy - ry * hx < 0.0) as u8;
                 let s = &mut self.ships;
                 s.alive[i] = 0; // out of the flight sim: the page draws the descent from the game state
                 s.vx[i] = 0.0; s.vy[i] = 0.0; s.av[i] = 0.0; s.main[i] = 0.0; s.lat[i] = 0.0; s.turn_in[i] = 0.0;
@@ -142,14 +152,36 @@ impl World {
         self.game.mode[0] = MODE_LANDED;
         self.game.at[0] = body as i16;
         self.game.timer[0] = 0.0;
+        self.game.curl[0] = 0;
     }
 
+    /// Where a launch hands back control at the port it left: the direction (a unit vector) and speed. From a planet
+    /// or moon, along the curl (the tangent round the body's centre) at a share of the hull's top speed; from a
+    /// station, straight out from its centre, slowly.
+    pub fn launch_velocity(&self) -> (f64, f64, f64) {
+        let j = self.game.at[0] as usize;
+        let Ok(i) = usize::try_from(self.player.slot) else { return (0.0, 1.0, 0.0) };
+        let (rx, ry) = (self.ships.x[i] - self.bodies.x[j], self.ships.y[i] - self.bodies.y[j]);
+        let d = hypot(rx, ry);
+        let (ux, uy) = if d < 1.0 { (1.0, 0.0) } else { (rx / d, ry / d) };
+        let ccw = if self.game.curl[0] == 0 { 1.0 } else { -1.0 };
+        if self.bodies.kind[j] == BODY_STATION && d >= 1.0 { return (ux, uy, self.p(P::launch_speed)); }
+        let vmax = self.types.vmax[self.ships.kind[i] as usize];
+        (-uy * ccw, ux * ccw, vmax * self.p(P::launch_frac))
+    }
+
+}
+
+/// A sequence timer counting down in DT steps lands a rounding error off zero; it is done within this.
+pub(crate) const DONE: f64 = 1e-9;
+
+impl World {
     /// The landing state machine, once per tick, before the flight stages.
     pub(crate) fn step_game(&mut self) {
         match self.mode() {
             MODE_DESCENDING => {
                 self.game.timer[0] -= DT;
-                if self.game.timer[0] <= 0.0 {
+                if self.game.timer[0] <= DONE {
                     self.game.timer[0] = 0.0;
                     self.game.mode[0] = MODE_LANDED;
                     self.next_day();
@@ -158,21 +190,23 @@ impl World {
             }
             MODE_LAUNCHING => {
                 self.game.timer[0] -= DT;
-                if self.game.timer[0] <= 0.0 {
+                if self.game.timer[0] <= DONE {
                     self.game.timer[0] = 0.0;
                     self.game.mode[0] = MODE_FLYING;
-                    let (j, orbit) = (self.game.at[0] as usize, self.p(P::launch_speed));
+                    let (tx, ty, v) = self.launch_velocity();
                     if let Ok(i) = usize::try_from(self.player.slot) {
                         let s = &mut self.ships;
                         s.alive[i] = 1;
-                        // a small orbital velocity: across the line to the port's centre, counter-clockwise
-                        let (dx, dy) = (s.x[i] - self.bodies.x[j], s.y[i] - self.bodies.y[j]);
-                        let d = dx.hypot(dy);
-                        let (tx, ty) = if d > 1e-6 { (-dy / d, dx / d) } else { (1.0, 0.0) };
-                        s.vx[i] = tx * orbit;
-                        s.vy[i] = ty * orbit;
+                        // moving the way the sequence swept, nose first, at its speed: the assist eases it back to
+                        // cruise (player.rs), and with assist off the dampers bleed it
+                        s.vx[i] = tx * v;
+                        s.vy[i] = ty * v;
+                        s.ang[i] = atan2(-tx, ty);
+                        s.av[i] = 0.0;
                         s.prev_x[i] = s.x[i];
                         s.prev_y[i] = s.y[i];
+                        s.prev_ang[i] = s.ang[i];
+                        self.player.set = v;
                     }
                 }
             }
@@ -221,11 +255,15 @@ mod tests {
         assert_eq!(w.command(CMD_WAIT, 0, 0), OK);
         assert_eq!((w.day(), w.credits()), (2, 1000 - w.dock_fee())); // and costs a docking fee
         assert_eq!(w.command(CMD_LAUNCH, 0, 0), OK);
-        run(&mut w, LAUNCH_S + 0.1);
+        run(&mut w, LAUNCH_S + 0.05);
         assert_eq!(w.mode(), MODE_FLYING);
         assert_eq!(w.ships.alive[0], 1);
-        let v = w.ships.vx[0].hypot(w.ships.vy[0]);
-        assert!(v > 5.0 && v < 40.0, "{v}"); // control returns with a small orbital velocity
+        // control returns moving round the planet (the ship landed at (100, 0) facing +y: counter-clockwise, so +y),
+        // nose first, boosted past the hull's top speed (200), a few ticks of flight on
+        let (vx, vy) = (w.ships.vx[0], w.ships.vy[0]);
+        assert!(vx.abs() < 15.0 && vy > 240.0 && vy <= 280.0, "{vx} {vy}");
+        let (hx, hy) = crate::flight::heading(w.ships.ang[0]);
+        assert!(hx.abs() < 0.2 && hy > 0.95, "{hx} {hy}");
     }
 
     #[test]
@@ -256,6 +294,20 @@ mod tests {
         assert_eq!(w.command(CMD_TELEPORT, 2, 0), NO_SUCH_BODY);
         assert_eq!(w.command(CMD_LAND, 0, 0), OK);
         assert_eq!(w.command(CMD_TELEPORT, 0, 0), WRONG_MODE);
+    }
+
+    #[test]
+    fn the_curl_follows_the_heading_and_stations_slide_straight_out() {
+        let mut w = world(100.0, 0.0);
+        w.ships.ang[0] = std::f64::consts::PI; // facing -y over the planet's +x side: clockwise
+        w.command(CMD_LAND, 0, 0);
+        assert_eq!(w.game.curl[0], 1);
+        let (tx, ty, _) = w.launch_velocity();
+        assert!(tx.abs() < 1e-9 && (ty + 1.0).abs() < 1e-9, "{tx} {ty}");
+        let mut w = world(5100.0, 0.0);
+        w.command(CMD_LAND, 0, 0);
+        let (tx, ty, v) = w.launch_velocity();
+        assert!((tx - 1.0).abs() < 1e-9 && ty.abs() < 1e-9 && v == w.p(P::launch_speed));
     }
 
     #[test]

@@ -138,12 +138,14 @@ with sync_playwright() as p:
     check(r[2]['hash'] == r[0]['hash'] and r[2]['tick'] == r[0]['tick'], f"load restores tick {r[0]['tick']} hash {r[0]['hash']}")
 
     # replay: a session recorded in the browser reruns natively to the same state
-    # a port visit: start landed, launch, land again at once (launch leaves you over the port, slow), wait a day
+    # a port visit: start landed, launch (it hands back control moving fast round the planet), brake, back to the port
+    # on the autopilot and land again, wait a day
     v = ev("""(() => { const P = __play, C = P.CMD, out = {}; P.newGame(77);
       out.buy = P.command(C.buy, P.good('goods'), 3); out.credits0 = P.probe().credits;
-      out.launch = P.command(C.launch); P.advance(2.2, []); out.flying = P.probe().mode;
-      P.advance(1, ['KeyW']); P.advance(3, ['KeyS']); P.advance(2, []);
-      out.land = P.command(C.land); P.advance(3, []); const a = P.probe(); out.landed = a.mode; out.day = a.day;
+      out.launch = P.command(C.launch); P.advance(3.4, []); const f = P.probe(); out.flying = f.mode; out.launchV = Math.round(f.v);
+      P.advance(3, ['KeyS']);
+      P.command(C.autopilot, f.at); let t = 0; while (P.probe().auto >= 0 && t < 120) { P.advance(1, []); t++; }
+      out.land = P.command(C.land); P.advance(3.4, []); const a = P.probe(); out.landed = a.mode; out.day = a.day;
       out.sell = P.command(C.sell, P.good('goods'), 2); out.repay = P.command(C.repay, 500);
       const b = P.probe(); out.wait = P.command(C.wait); const c = P.probe(); out.day2 = c.day; out.fee = b.credits - c.credits; out.hold = c.hold;
       out.launch2 = P.command(C.launch); P.advance(0.3, []); out.skip = P.command(C.skip); P.advance(0.1, []); out.flying2 = P.probe().mode;
@@ -151,12 +153,12 @@ with sync_playwright() as p:
     # a delivery: back at the start port (teleport, a logged dev command) take the smallest offer, launch, and let the
     # autopilot fly there (round the star if it is in the way) until it stops over the port; land: delivered, paid
     d = ev("""(() => { const P = __play, C = P.CMD, out = {};
-      out.teleHome = P.teleport(P.probe().at); P.advance(0.5, []); out.landHome = P.command(C.land); P.advance(3, []);
+      out.teleHome = P.teleport(P.probe().at); P.advance(0.5, []); out.landHome = P.command(C.land); P.advance(3.4, []);
       const o = P.offers().sort((a, b) => a.tons - b.tons)[0]; out.offer = o;
-      out.accept = P.accept(o.k); out.before = P.probe(); out.launch = P.command(C.launch); P.advance(2.2, []);
+      out.accept = P.accept(o.k); out.before = P.probe(); out.launch = P.command(C.launch); P.advance(3.4, []);
       out.auto = P.command(C.autopilot, o.dest); let t = 0;
       while (P.probe().auto >= 0 && t < 600) { P.advance(1, []); t++; }
-      out.flight = t; out.below = P.sim.portBelow(); out.land = P.command(C.land); P.advance(3, []);
+      out.flight = t; out.below = P.sim.portBelow(); out.land = P.command(C.land); P.advance(3.4, []);
       out.after = P.probe(); out.mission = P.missions()[0]; return out; })()""")
     print('delivery', json.dumps({k: d[k] for k in ('offer', 'accept', 'auto', 'flight', 'below', 'land')}))
     check(d['auto'] == 0 and d['flight'] < 600 and d['below'] == {'body': d['offer']['dest'], 'slow': True}, f"the autopilot flies there in {d['flight']} s and stops clear to land")
@@ -165,7 +167,7 @@ with sync_playwright() as p:
     check(d['after']['credits'] == d['before']['credits'] + d['offer']['pay'] and d['after']['hold'] == d['before']['hold'],
           f"and pays {d['offer']['pay']} cr, freeing the hold")
     print('port visit', json.dumps(v))
-    check(v['launch'] == 0 and v['flying'] == 0, 'launch hands back control')
+    check(v['launch'] == 0 and v['flying'] == 0 and 400 < v['launchV'] < 600, f"launch hands back control at the speed it arrived at ({v['launchV']} m/s)")
     check(v['land'] == 0 and v['landed'] == 2 and v['day'] == 2, 'landing takes a day')
     check(v['wait'] == 0 and v['day2'] == 3 and v['fee'] == ev("__play.sim.param('dock_fee')"), f"waiting in port takes a day and a {v['fee']} cr docking fee")
     check(v['buy'] == 0 and v['sell'] == 0 and v['repay'] == 0 and v['hold'] == {'goods': 1}, 'trades and a repayment in the recorded session')
@@ -190,7 +192,8 @@ with sync_playwright() as p:
         ev("__play.newGame(5, { space: [0, -8000] })"); pg.keyboard.down('KeyW'); pg.wait_for_timeout(2500); pg.screenshot(path=shot); pg.keyboard.up('KeyW')
     # the title's Continue: the last landing's autosave, as its note says. A landing the page's frames see (the
     # scripted steps above start and end landed, so no frame saw them fly): launch, a frame or two, land
-    ev("(() => { const P = __play, C = P.CMD; P.newGame(9); P.command(C.buy, P.good('goods'), 2); P.command(C.launch); P.command(C.skip); P.advance(0.2, []); })()")
+    ev("""(() => { const P = __play, C = P.CMD; P.newGame(9); P.command(C.buy, P.good('goods'), 2); P.command(C.launch); P.command(C.skip); P.advance(0.2, []);
+      P.command(C.autopilot, P.probe().at); let t = 0; while (P.probe().auto >= 0 && t < 120) { P.advance(1, []); t++; } })()""")
     pg.wait_for_timeout(500)
     ev("(() => { const P = __play, C = P.CMD; P.command(C.land); P.command(C.skip); P.advance(0.1, []); })()")
     pg.wait_for_timeout(500)

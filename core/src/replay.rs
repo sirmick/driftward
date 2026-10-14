@@ -83,7 +83,7 @@ mod tests {
         type Step = (u64, Option<u32>, Option<(u32, i32, i32)>); // tick, buttons, command
         let script: [Step; 12] = [
             (0, Some(IN_ASSIST | IN_THRUST), None), (40, Some(IN_ASSIST | IN_REVERSE), None), (200, Some(IN_ASSIST), None),
-            (260, None, Some((CMD_LAND, 0, 0))), (450, None, Some((CMD_BUY, 1, 6))), (500, None, Some((CMD_WAIT, 0, 0))),
+            (260, None, Some((CMD_LAND, 0, 0))), (470, None, Some((CMD_BUY, 1, 6))), (500, None, Some((CMD_WAIT, 0, 0))),
             (505, None, Some((CMD_SELL, 1, 2))), (507, None, Some((CMD_ACCEPT, offer, 0))), (510, None, Some((CMD_REPAY, 300, 0))), (520, None, Some((CMD_LAUNCH, 0, 0))),
             (700, Some(IN_ASSIST | IN_THRUST | IN_BURN), None), (800, Some(IN_ASSIST | IN_LEFT), None),
         ];

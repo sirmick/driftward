@@ -282,7 +282,7 @@ CORE_READY.then(CORE => {
     sim.postBoards();
     sim.startTraffic(); // ambient traffic, already mid-flow
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
-    navTarget = null;
+    navTarget = null; viewScale = 0; // the view snaps rather than glides to a new game
     if (sim.game.auto) sim.game.auto[0] = 0;
     if (opts && opts.backdrop) SH.alive[0] = 0; // nobody flies the title
     else { closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav); zoom = 1; }
@@ -329,7 +329,7 @@ CORE_READY.then(CORE => {
     if (err) { toast(`Save is unreadable (error ${err}): saved by an older build?`); return false; }
     const meta = JSON.parse(localStorage.getItem(key + '.meta') || '{}');
     seedNow = meta.seed >>> 0;
-    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; missionSeen.set(sim.mission.state); startRecording();
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; viewScale = 0; missionSeen.set(sim.mission.state); startRecording();
     closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav);
     toast(`Loaded day ${sim.day()}`);
     return true;
@@ -410,7 +410,7 @@ CORE_READY.then(CORE => {
   const t0 = performance.now();
   function frame(now) {
     requestAnimationFrame(frame);
-    const dt = last ? Math.min(0.25, (now - last) / 1000) : 1 / 60; last = now;
+    const dt = last ? Math.min(0.25, (now - last) / 1000) : 1 / 60; last = now; frameDt = dt;
     fpsAcc += dt; fpsN++; if (fpsAcc > 0.5) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
     sim.checkViews();
     // bake the traffic hulls up front (behind the start port's screen), not when the first one flies into view
@@ -427,7 +427,7 @@ CORE_READY.then(CORE => {
     const k = Math.min(1, dt * 3.5);
     if (mode === MODE.landed) { const B = BODIES[sim.game.at[0]]; camX += (B.x - camX) * k; camY += (B.y - camY) * k; }
     else if (mode === MODE.flying) { const lead = 0.35; camX += (SH.rx[0] + SH.vx[0] * lead - camX) * k; camY += (SH.ry[0] + SH.vy[0] * lead - camY) * k; }
-    else { camX += (SH.x[0] - camX) * k; camY += (SH.y[0] - camY) * k; }
+    else { const q = playerSeq().pose, lead = 0.35; camX += (q.x + q.vx * lead - camX) * k; camY += (q.y + q.vy * lead - camY) * k; } // following the curl, leading as in flight
     render((now - t0) / 1000, camX, camY);
     drawHUD();
     drawMap();
@@ -576,7 +576,7 @@ CORE_READY.then(CORE => {
   const order = types.map((_, k) => k).sort((a, b) => types[b].zi - types[a].zi);
   let scale = 1;
   const sheaths = []; // [slot, sequence look] to draw this frame (reused)
-  const LAUNCH_S = 2.0, DESCENT_S = 2.5; // core/src/port.rs
+  const LAUNCH_S = 3.2, DESCENT_S = 3.2; // core/src/port.rs
   const TR = sim.traffic, TRAFFIC = CORE.TRAFFIC;
   // a landing or launch sequence's look at d (0 in flight .. 1 down) over body B: hull scale, plasma heat, fade-out
   // into the atmosphere's tint
@@ -584,15 +584,124 @@ CORE_READY.then(CORE => {
     const st = B.kind === 'station', ss = x => x * x * (3 - 2 * x), seg = (a, b, x) => ss(Math.max(0, Math.min(1, (x - a) / (b - a))));
     return { sc: st ? 1 - 0.45 * seg(0, 1, d) : 1 - 0.85 * seg(0.08, 1, d), heat: st ? 0 : seg(0, 0.2, d) * (1 - seg(0.88, 1, d)), fade: seg(0.5, 0.95, d), atm: (WORLDS.find(w => w.id === B.id) || {}).LA || [0.6, 0.7, 0.8] };
   }
+  // ---------- the sequences' path: the curl ----------
+  // A landing turns across the planet and spirals out to its horizon (the limb), shrinking into the atmosphere; a
+  // launch rises at the horizon and curls back in to the port, accelerating all the way, its last stretch straight
+  // along the velocity the core hands back. Only drawn: the ship is out of the flight sim meanwhile, and the path meets the core's pose at both
+  // ends (where a landing starts, where a launch ends). Stations: a straight slide into the clamps and back out.
+  const angOf = (x, y) => Math.atan2(-x, y), wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+  const smooth = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+  // The spiral from (px, py) out to the horizon of body B, leaving the port going round it (dir +1 counter-clockwise,
+  // -1 clockwise): its radius eases out from the port's to just inside the limb while it sweeps round; the sweep is
+  // sized so the path is about `budget` metres. Returns sampled points with arc lengths from the port.
+  function spiral(B, px, py, dir, budget) {
+    const dx = px - B.x, dy = py - B.y, d0 = Math.hypot(dx, dy), th0 = Math.atan2(dy, dx), rh = Math.max(d0, B.r * 0.97);
+    const dr = rh - d0, rm = Math.max(B.r * 0.3, (d0 + rh) / 2);
+    const sweep = Math.max(0.5, Math.min(1.9, Math.sqrt(Math.max(0, budget * budget - dr * dr)) / rm));
+    const N = 40, pts = [];
+    let len = 0;
+    for (let k = 0; k <= N; k++) {
+      const u = k / N, r = d0 + dr * Math.pow(u, 1.6), th = th0 + dir * sweep * u; // r' = 0 at the port: it leaves along the curl
+      const x = B.x + Math.cos(th) * r, y = B.y + Math.sin(th) * r;
+      if (k) len += Math.hypot(x - pts[k - 1].x, y - pts[k - 1].y);
+      pts.push({ x, y, s: len });
+    }
+    return { pts, len };
+  }
+  // The launch's path, built backwards from the hand-off at (px, py) moving along (ux, uy): a straight run-in (the
+  // last stretch is already on the course the flight sim carries on along, so nothing swerves when it takes over),
+  // and before that the curl: going back, the heading swings by up to `turn` (dir +1: the ship turns
+  // counter-clockwise as it comes in), easing in and out, so the path bends out to the horizon. Cut where it first
+  // reaches the limb, if it does. Same shape as `spiral`: points with distances from the port.
+  function launchPath(B, px, py, ux, uy, dir, budget) {
+    const N = 60, ds = budget / N, run = budget * 0.35, turn = 1.4, a0 = Math.atan2(uy, ux), limb = B.r * 0.97;
+    const pts = [{ x: px, y: py, s: 0 }];
+    let x = px, y = py;
+    for (let k = 1; k <= N; k++) {
+      const sm = (k - 0.5) * ds, a = a0 + dir * turn * smooth((sm - run) / (budget - run));
+      x -= Math.cos(a) * ds; y -= Math.sin(a) * ds;
+      pts.push({ x, y, s: k * ds });
+      if (Math.hypot(x - B.x, y - B.y) >= limb && Math.hypot(px - B.x, py - B.y) < limb) break;
+    }
+    return { pts, len: pts[pts.length - 1].s };
+  }
+  // the point at arc length s from the port, and the outward direction there
+  function along(sp, s) {
+    const P = sp.pts;
+    s = Math.max(0, Math.min(sp.len, s));
+    let k = 1;
+    while (k < P.length - 1 && P[k].s < s) k++;
+    const a = P[k - 1], b = P[k], f = (s - a.s) / Math.max(1e-6, b.s - a.s), ux = b.x - a.x, uy = b.y - a.y, l = Math.hypot(ux, uy) || 1;
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, ux: ux / l, uy: uy / l };
+  }
+  // The drawn pose at progress p (0..1) of a sequence over body B. (x, y, ang): the core's pose, where a landing
+  // starts or a launch ends. dir: which way round the port the path leaves it (+1 counter-clockwise). v: the speed a
+  // launch ends at (the core hands it back), or a landing starts at. Speeds are kept honest: a launch accelerates
+  // from the horizon (s = len p^n, so it ends at n len / T = v), and a path too long for that is trimmed.
+  function seqPose(landing, p, x, y, ang, dir, v, B, T) {
+    if (B.kind === 'station') { // straight in to the clamps, or out of them, easing
+      const e = smooth(p), f = landing ? e : 1 - e, dx = x - B.x, dy = y - B.y;
+      return { x: B.x + dx * (1 - f), y: B.y + dy * (1 - f), ang: landing || Math.hypot(dx, dy) < 1 ? ang : angOf(dx, dy) };
+    }
+    const full = Math.max(B.r * 0.6, B.r * 1.3), budget = landing ? full : Math.min(full, Math.max(150, v * T / 1.2));
+    const hx = -Math.sin(ang), hy = Math.cos(ang);
+    const sp = landing ? spiral(B, x, y, dir, budget) : launchPath(B, x, y, hx, hy, dir, budget), L = sp.len;
+    if (landing) {
+      // the nose swings onto the path first; it speeds up from rest (or from the speed it came in at) through the
+      // middle, then slows as it sinks over the horizon: a cubic with start slope k0 and end slope K1 (in units of
+      // the path's mean speed)
+      const k0 = Math.min(1, v * T / L), K1 = 0.3, h = (k0 + K1 - 2) * p * p * p + (3 - 2 * k0 - K1) * p * p + k0 * p;
+      const q = along(sp, L * h);
+      const turn = smooth(p / 0.25), a1 = angOf(q.ux, q.uy);
+      return { x: q.x, y: q.y, ang: ang + wrapA(a1 - ang) * turn };
+    }
+    // accelerating in from the horizon (s = L p^n back from the port, so it arrives at n L / T = v), nose first
+    const n = Math.max(1.2, Math.min(4, v * T / L)), s = L * (1 - Math.pow(p, n)), q = along(sp, s);
+    return { x: q.x, y: q.y, ang: s < 1 ? ang : angOf(-q.ux, -q.uy) };
+  }
+  // A sequence's progress, 0..1, from its timer in the core, interpolated between ticks like every other drawn pose:
+  // the timer moves in 60 Hz steps, and at launch speeds a step is metres, which a faster display shows as a doubled,
+  // flickering ship.
+  const seqProgress = (timer, T) => Math.max(0, Math.min(1, 1 - (timer - sim.alpha() * sim.DT) / T));
+  // which way round body B a ship at (x, y) heading (hx, hy) is going: +1 counter-clockwise
+  const roundDir = (B, x, y, hx, hy) => (x - B.x) * hy - (y - B.y) * hx >= 0 ? 1 : -1;
+  // the player's sequence pose now (the core's game state; launch direction and speed as core/src/port.rs gives them)
+  function playerSeq() {
+    const mode = sim.mode(), landing = mode === MODE.descending, B = BODIES[sim.game.at[0]];
+    const T = landing ? DESCENT_S : LAUNCH_S, p = seqProgress(sim.game.timer[0], T), x = SH.x[0], y = SH.y[0];
+    const r = Math.hypot(x - B.x, y - B.y) || 1, dir = sim.game.curl[0] ? -1 : 1;
+    const tx = -(y - B.y) / r * dir, ty = (x - B.x) / r * dir; // round the body, the curl's way: the launch's heading
+    const v = landing ? 0 : types[SH.kind[0]].vmax * sim.param('launch_frac');
+    const pose = seqPose(landing, p, x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);
+    // its drawn velocity, for the camera's lead (as in flight, so the hand-off does not jolt the view)
+    const dp = 0.004, ahead = seqPose(landing, Math.min(1, p + dp), x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);
+    const live = Math.min(1, p + dp) - p;
+    pose.vx = live > 0 ? (ahead.x - pose.x) / (live * T) : (landing ? 0 : v * tx);
+    pose.vy = live > 0 ? (ahead.y - pose.y) / (live * T) : (landing ? 0 : v * ty);
+    return { p, B, landing, pose };
+  }
+  // a traffic ship's: it lands the way it was flying, and launches into its route at cruise
+  function npcPose(i) {
+    const landing = TR.phase[i] === TRAFFIC.land, B = BODIES[landing ? TR.to[i] : TR.from[i]], T = landing ? DESCENT_S : LAUNCH_S;
+    const p = seqProgress(TR.timer[i], T), hx = -Math.sin(SH.ang[i]), hy = Math.cos(SH.ang[i]);
+    return { p, B, landing, pose: seqPose(landing, p, SH.x[i], SH.y[i], SH.ang[i], roundDir(B, SH.x[i], SH.y[i], hx, hy), landing ? 0 : TR.cruise[i], B, T) };
+  }
+  // the view's scale glides between flight, a sequence (pulled back a little) and the port's vista, rather than
+  // jumping
+  let viewScale = 0, frameDt = 1 / 60;
   function setView(prog, RW, RH, cx, cy) { gl.useProgram(prog.p); gl.uniform2f(prog.u.uRes, RW, RH); gl.uniform2f(prog.u.uCam, cx, cy); gl.uniform1f(prog.u.uScale, scale); }
   function render(t, cx, cy) {
     const RW = canvas.width, RH = canvas.height, T0 = types[SH.kind[0]], live = Math.min(MAXS, sim.count());
     const mode = sim.mode();
-    scale = RW / (Math.max(700, T0.L * 16) / zoom);
+    let want = RW / (Math.max(700, T0.L * 16) / zoom);
     if (mode === MODE.landed) { // the port screen's vista: the body you are on, filling the view
       const B = BODIES[sim.game.at[0]];
-      scale = Math.min(RW, RH) * (B.kind === 'station' ? 0.75 : 0.95) / (2 * B.r * (B.kind === 'station' ? 1.6 : 1));
+      want = Math.min(RW, RH) * (B.kind === 'station' ? 0.75 : 0.95) / (2 * B.r * (B.kind === 'station' ? 1.6 : 1));
+    } else if ((mode === MODE.descending || mode === MODE.launching) && BODIES[sim.game.at[0]].kind !== 'station') {
+      want *= 0.6; // pulled back a little: the camera follows the ship round its curl, so it must stay big enough to see
     }
+    viewScale = viewScale > 0 ? Math.exp(Math.log(viewScale) + (Math.log(want) - Math.log(viewScale)) * (1 - Math.exp(-frameDt * 2.5))) : want;
+    scale = viewScale;
     const sunCam = sunFrom(cx, cy), sl = Math.hypot(sunCam[0], sunCam[1]) || 1;
     const halfW = RW / scale / 2, halfH = RH / scale / 2;
     gl.bindVertexArray(null);
@@ -658,13 +767,14 @@ CORE_READY.then(CORE => {
     sheaths.length = 0;
     let pseq = null;
     if ((mode === MODE.descending || mode === MODE.launching) && typeReady(T0)) {
-      const p = 1 - sim.game.timer[0] / (mode === MODE.descending ? DESCENT_S : LAUNCH_S);
-      pseq = seqLook(mode === MODE.descending ? p : 1 - p, BODIES[sim.game.at[0]]);
+      const q = playerSeq();
+      pseq = Object.assign(seqLook(q.landing ? q.p : 1 - q.p, q.B), q.pose);
     }
     const npcSeq = i => {
       const ph = TR.phase[i];
       if (!TR.role[i] || (ph !== TRAFFIC.launch && ph !== TRAFFIC.land)) return null;
-      return ph === TRAFFIC.launch ? seqLook(TR.timer[i] / LAUNCH_S, BODIES[TR.from[i]]) : seqLook(1 - TR.timer[i] / DESCENT_S, BODIES[TR.to[i]]);
+      const q = npcPose(i);
+      return Object.assign(seqLook(q.landing ? q.p : 1 - q.p, q.B), q.pose);
     };
     // which ships are drawable and on screen
     typeCount.fill(0);
@@ -740,11 +850,12 @@ CORE_READY.then(CORE => {
     for (let i = 0; i < live; i++) {
       if (!shown(i)) continue;
       const o = typeFill[SH.kind[i]]++ * 6, q = npcSeq(i);
-      shipInst[o] = SH.rx[i]; shipInst[o + 1] = SH.ry[i]; shipInst[o + 2] = SH.ra[i]; shipInst[o + 3] = SH.thr[i]; shipInst[o + 4] = 0; shipInst[o + 5] = q ? q.sc : 0;
+      shipInst[o] = q ? q.x : SH.rx[i]; shipInst[o + 1] = q ? q.y : SH.ry[i]; shipInst[o + 2] = q ? q.ang : SH.ra[i];
+      shipInst[o + 3] = SH.thr[i]; shipInst[o + 4] = 0; shipInst[o + 5] = q ? q.sc : 0;
       if (q && q.heat > 0.01) sheaths.push([i, q]);
     }
     if (pseq) {
-      shipInst.set([SH.x[0], SH.y[0], SH.ang[0], 0, 0, pseq.sc], typeFill[SH.kind[0]]++ * 6);
+      shipInst.set([pseq.x, pseq.y, pseq.ang, 0, 0, pseq.sc], typeFill[SH.kind[0]]++ * 6);
       if (pseq.heat > 0.01) sheaths.push([0, pseq]);
     }
     if (acc) {
@@ -772,8 +883,8 @@ CORE_READY.then(CORE => {
       const u = FP.sheath.u;
       gl.uniform1f(u.uTime, t); gl.uniform1i(u.uX, 0); gl.activeTexture(gl.TEXTURE0);
       for (const [i, q] of sheaths) {
-        const T = types[SH.kind[i]], m = T.s.maps, px = i === 0 && pseq ? SH.x[0] : SH.rx[i], py = i === 0 && pseq ? SH.y[0] : SH.ry[i];
-        gl.uniform2f(u.uC, px, py); gl.uniform1f(u.uHalfM, T.half * 1.15); gl.uniform1f(u.uAng, i === 0 && pseq ? SH.ang[0] : SH.ra[i]); gl.uniform1f(u.uSc, q.sc);
+        const T = types[SH.kind[i]], m = T.s.maps;
+        gl.uniform2f(u.uC, q.x, q.y); gl.uniform1f(u.uHalfM, T.half); gl.uniform1f(u.uPad, 1.15); gl.uniform1f(u.uAng, q.ang); gl.uniform1f(u.uSc, q.sc);
         gl.uniform1f(u.uS, m.shieldS); gl.uniform1f(u.uDmax, m.Dmax); gl.uniform1f(u.uHeat, q.heat); gl.uniform1f(u.uFade, q.fade);
         gl.uniform3fv(u.uAtm, q.atm);
         gl.bindTexture(gl.TEXTURE_2D, T.s.tex[3]);
@@ -1201,6 +1312,8 @@ CORE_READY.then(CORE => {
   // test hook: drive and inspect the session from a console or a headless browser
   window.__play = {
     sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES, ECON, showTitle, pauseGame,
+    // the player's landing or launch sequence now: progress and the drawn pose (null when not in one)
+    seq: () => sim.mode() === MODE.descending || sim.mode() === MODE.launching ? playerSeq() : null,
     setNav, trade, repay, showPanel, accept, abandon, setTarget, flyTo, cycleTarget, toggleMap, pickLocation,
     target: () => navTarget && (navTarget.body !== undefined ? { body: navTarget.body } : { ship: sim.resolve(navTarget.ship) }),
     locations: () => locRows.map(([j, child]) => ({ j, name: BODIES[j].name, child })),

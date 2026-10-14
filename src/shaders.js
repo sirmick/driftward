@@ -519,9 +519,11 @@ void main(){
 const SHEATH_VS = `#version 300 es
 in vec2 aPos;
 ${WORLD_POS}
-uniform vec2 uC; uniform float uHalfM, uAng, uSc;
+uniform vec2 uC; uniform float uHalfM, uAng, uSc, uPad;
 out vec2 vQ;
-void main(){ vQ = aPos; float c = cos(uAng), s = sin(uAng); gl_Position = clipOf(uC + mat2(c,s,-s,c)*(aPos*uHalfM*uSc)); }`;
+// the quad is uPad times the hull's, for the halo; vQ stays in the hull's own frame (-1..1 over its bake), so the
+// sheath's silhouette lines up with the hull drawn under it
+void main(){ vQ = aPos*uPad; float c = cos(uAng), s = sin(uAng); gl_Position = clipOf(uC + mat2(c,s,-s,c)*(aPos*uPad*uHalfM*uSc)); }`;
 const SHEATH_FS = `#version 300 es
 precision highp float; in vec2 vQ; out vec4 o;
 uniform sampler2D uX; uniform float uS, uDmax, uHeat, uFade, uTime; uniform vec3 uAtm;
@@ -534,7 +536,7 @@ void main(){
   float near = 1. - .5*(textureLod(uX, uv, 4.5).r + textureLod(uX, uv, 6.).r);
   float shell = clamp((near - .2)*2.2 - inside*.7, 0., 1.);  // strong nearness only: faint blur adds nothing
   shell *= shell;
-  shell *= (1. - smoothstep(.55, .95, abs(vQ.x)))*(1. - smoothstep(.55, .95, abs(vQ.y))); // nothing at the quad's edges
+  shell *= (1. - smoothstep(.6, 1.05, abs(vQ.x)))*(1. - smoothstep(.6, 1.05, abs(vQ.y))); // nothing at the quad's edges
   float lead = clamp(vQ.y*.6 + .45, 0., 1.);             // the nose leads the descent
   float n = fbm(vQ*5. + vec2(vQ.x*2., -uTime*5.));
   vec3 hot = mix(vec3(1., .16, .04), vec3(1., .9, .72)*2.4, pow(lead, 2.));
