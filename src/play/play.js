@@ -11,20 +11,24 @@ const G = makeGfx(canvas);
 if (!G) { $('glerr').hidden = false; return; }
 const { gl, compile, P, quad, draw, tex } = G;
 
-// ---------- the system (hand-authored until the system schema lands) ----------
-const SYSTEM = {
-  star: 'sol', sunAz: 135, sunEl: 35, start: [1800, 1800],
-  planets: [
-    // g: well strength (40 is full strength at the surface; see core/src/flight.rs). Within 3 radii a well pulls you
-    // in and bends your top speed: faster heading in, a crawl heading out; capital ships feel it most.
-    { x: -3200, y: 2600, r: 1300, g: 40, kind: 0, c1: '#1d4f7a', c2: '#5d7a3c', c3: '#d8cba8', atm: '#6fb3ff', seed: 1.3, name: 'Tessaly', city: 1 },
-    { x: 6800, y: -4400, r: 2700, g: 45, kind: 1, c1: '#c9925c', c2: '#7d4e33', c3: '#ecd9b0', atm: '#ffc98a', seed: 4.1, name: 'Orrin' },
-    { x: -8200, y: -6400, r: 820, g: 20, kind: 2, c1: '#5e5953', c2: '#8a8178', c3: '#c9c0b4', atm: '#b0a8a0', seed: 7.7, name: 'Kell' }
-  ]
-};
-const PLANETS = SYSTEM.planets.map(p => Object.assign({}, p, { L1: hexRGB(p.c1), L2: hexRGB(p.c2), L3: hexRGB(p.c3), LA: lin(hexRGB(p.atm)) }));
-const star = STARS[SYSTEM.star];
-const sunVec = (() => { const az = SYSTEM.sunAz * Math.PI / 180, el = SYSTEM.sunEl * Math.PI / 180; return [Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el)]; })();
+// ---------- the system: validated (clamped) against its schema, then laid out (src/schema.js) ----------
+const loaded = loadSystem(JSON.parse($('system').textContent), JSON.parse($('system-schema').textContent));
+loaded.notes.forEach(n => console.warn(`system ${n.path}: ${n.msg}`));
+if (!loaded.system) { $('glerr').textContent = 'The system file is unusable: ' + loaded.notes.filter(n => n.fatal).map(n => `${n.path} ${n.msg}`).join('; '); $('glerr').hidden = false; return; }
+const SYS = loaded.system, BODIES = loaded.bodies, STAR = BODIES[0];
+const star = STARS[STAR.look] || STARS.sol;
+const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3 };
+// planets and moons, drawn by the planet shader
+const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
+  const L = b.look || {}, pal = L.palette || ['#5e5953', '#8a8178', '#c9c0b4'];
+  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere || '#9fb4c8')), seed: L.seed || 1, surface: SURFACE[L.surface] || 0, city: L.cityLights || 0 });
+});
+// light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
+function sunFrom(x, y) {
+  const dx = STAR.x - x, dy = STAR.y - y, l = Math.hypot(dx, dy);
+  const v = l > 1 ? [dx / l, dy / l, 0.45] : [0, 0, 1], n = Math.hypot(v[0], v[1], v[2]);
+  return [v[0] / n, v[1] / n, v[2] / n];
+}
 
 // ---------- ship types: one per brand x size; flight stats from the catalog, looks from the bake ----------
 const baker = makeBaker({
@@ -72,6 +76,20 @@ function hullAnchors(s, m) {
   const [fl, fr] = edges(fy), [rl, rr] = edges(ry), [nl, nr] = edges(ny);
   return { fl: [fl, ly(fy)], fr: [fr, ly(fy)], rl: [rl, ly(ry)], rr: [rr, ly(ry)], nl: [nl * 0.6, ly(ny)], nr: [nr * 0.6, ly(ny)] };
 }
+// stations, baked from their catalog archetype in an owning brand's style; drawn like ships, slowly spinning
+const STATIONS = BODIES.filter(b => b.kind === 'station').map(b => {
+  const st = b.station || {}, arch = catalog.stations.find(a => a.id === st.archetype) || catalog.stations[0];
+  const brand = catalog.brands.find(x => x.id === st.brand) || catalog.brands[0];
+  return Object.assign({}, b, { key: 'stn|' + b.id, req: { station: arch.id, brand: brand.id, seed: st.seed || b.id }, brand, spin: arch.spin || 0.01, s: null });
+});
+STATIONS.forEach(S => baker.enqueue(S.key, false, S.req));
+baker.pump();
+function stationReady(S) {
+  if (S.s) return true;
+  const s = baker.ships.get(S.key);
+  if (!s || !s.ready || !s.tex) return false;
+  S.s = s; S.half = s.maps.extent / 2; return true;
+}
 function playerTypeIndex() {
   const q = new URLSearchParams(location.search).get('ship') || 'halcyon:fighter';
   const [b, z] = q.split(':');
@@ -83,7 +101,9 @@ function playerTypeIndex() {
 const FP = {
   ship: compile(FLY_SHIP_VS, derive(SHIP_FS, DERIVE.ship), { iA: 1, iB: 2 }),
   plume: compile(FLY_PLUME_VS, derive(PLUME_FS, DERIVE.plume), { iN: 1, iP: 2, iB: 3 }),
-  planet: compile(PLANET_VS, PLANET_FS)
+  planet: compile(PLANET_VS, PLANET_FS),
+  star: compile(STARBODY_VS, STARBODY_FS),
+  sheath: compile(SHEATH_VS, SHEATH_FS)
 };
 function instVAO(sizes) {
   const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
@@ -137,6 +157,9 @@ window.addEventListener('keydown', e => {
     // debugging the flashing black squares: B toggles bloom, N paints bad scene pixels (see postProcess)
     if (e.code === 'KeyB') { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
     if (e.code === 'KeyN') { nanView = 1 - nanView; toast(nanView ? 'NaN view: magenta = bad scene pixel, cyan = bad bloom, yellow = negative' : 'NaN view off'); }
+    if (e.code === 'KeyL') landOrLaunch();
+    if (e.code === 'Enter' || e.code === 'Escape') skipSequence();
+    if (e.code === 'KeyW' && inPort()) waitDay();
     if (e.code === 'F6') saveGame();
     if (e.code === 'F9') loadGame();
     if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(zoom * 1.25);
@@ -163,39 +186,68 @@ const b64 = bytes => { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 // these need the core; bound once it loads
-let saveGame = () => {}, loadGame = () => {};
+let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
 
 CORE_READY.then(CORE => {
   const sim = CORE.world({ maxShips: 64, maxTypes: 64, maxBodies: 8, envN: 16, envW: 40000, seed: 1 });
   const SH = sim.ship, IN = CORE.IN;
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; });
-  PLANETS.forEach((p, j) => { sim.body.x[j] = p.x; sim.body.y[j] = p.y; sim.body.r[j] = p.r; sim.body.g[j] = p.g; });
-  sim.setBodies(PLANETS.length);
+  const CMD = CORE.CMD, MODE = CORE.MODE;
+  BODIES.forEach((b, j) => {
+    const B = sim.body; B.x[j] = b.x; B.y[j] = b.y; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
+  });
+  sim.setBodies(BODIES.length);
+  const startBody = Math.max(1, BODIES.findIndex(b => b.id === SYS.start && b.port), BODIES.findIndex(b => b.port));
 
   // replay recording: the snapshot at the start of the session plus every input change since
   let rec = null, lastBits = -1;
   function startRecording() { rec = { start: sim.save(), startTick: sim.tick(), log: [] }; lastBits = -1; }
 
-  function newGame(seed) {
+  // A new game starts landed at the system's start port, as in EV. opts.space = [x, y] starts flying there instead
+  // (tests and the debug hook use it).
+  function newGame(seed, opts) {
     sim.clear(); sim.reseed(seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed);
     sim.setCount(1);
-    SH.kind[0] = playerTypeIndex(); SH.alive[0] = 1;
-    SH.x[0] = SYSTEM.start[0]; SH.y[0] = SYSTEM.start[1]; SH.ang[0] = 0;
-    sim.slotReset(0, true); sim.setPlayer(0);
-    camX = SH.x[0]; camY = SH.y[0];
+    SH.kind[0] = playerTypeIndex(); SH.alive[0] = 1; SH.ang[0] = 0;
+    sim.setPlayer(0);
+    if (opts && opts.space) { SH.x[0] = opts.space[0]; SH.y[0] = opts.space[1]; sim.slotReset(0, true); }
+    else { sim.slotReset(0, true); sim.placeLanded(startBody); }
+    sim.game.day[0] = 1; // day one
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
     startRecording();
   }
+  // commands go through here: applied now (between ticks) and logged for replays when they take effect
+  function command(code, a, b) {
+    const r = sim.command(code, a || 0, b || 0);
+    if (r === 0) rec.log.push([sim.tick(), 'cmd', code, a || 0, b || 0]);
+    return r;
+  }
+  landOrLaunch = () => {
+    const m = sim.mode();
+    if (m === MODE.landed) { command(CMD.launch); return; }
+    if (m !== MODE.flying) return;
+    const r = command(CMD.land);
+    if (r === 1) toast('Nothing to land on here: fly over a port');
+    else if (r === 2) { const pb = sim.portBelow(), st = pb && BODIES[pb.body].kind === 'station'; toast(`Too fast to ${st ? 'dock' : 'land'}: slow below ${sim.param(st ? 'dock_speed' : 'land_speed')} m/s`); }
+  };
+  skipSequence = () => command(CMD.skip);
+  waitDay = () => { if (command(CMD.wait) === 0) { toast(`Day ${sim.day()}`); if (sim.onDay) sim.onDay(); } };
+  inPort = () => sim.mode() === MODE.landed;
+  $('svc-wait').onclick = () => { waitDay(); canvas.focus(); };
+  $('svc-launch').onclick = () => { landOrLaunch(); canvas.focus(); };
   saveGame = () => { localStorage.setItem('driftward.save', b64(sim.save())); toast(`Saved at tick ${sim.tick()}`); };
   loadGame = () => {
-    const s = localStorage.getItem('driftward.save');
+    const s = localStorage.getItem('driftward.save') || localStorage.getItem('driftward.autosave');
     if (!s) { toast('No saved game'); return; }
     const err = sim.load(unb64(s));
     if (err) { toast(`Save is unreadable (error ${err})`); return; }
-    camX = SH.x[0]; camY = SH.y[0]; startRecording(); toast(`Loaded tick ${sim.tick()}`);
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; startRecording(); toast(`Loaded day ${sim.day()}`);
   };
+  // autosave on landing, as in EV (the Book: death reloads the last landing save)
+  function autosave() { localStorage.setItem('driftward.autosave', b64(sim.save())); }
   function exportReplay() {
     const ticks = sim.tick() - rec.startTick, hash = sim.hash();
-    const log = `# driftward input log: replay with\n#   cargo run --release --bin replay -- driftward-save.bin driftward-inputs.txt ${ticks}\n# expect: tick ${sim.tick()} hash ${hash}\n` + rec.log.map(([t, b]) => `${t} ${b}`).join('\n') + '\n';
+    const log = `# driftward input log: replay with\n#   cargo run --release --bin replay -- driftward-save.bin driftward-inputs.txt ${ticks}\n# expect: tick ${sim.tick()} hash ${hash}\n` + rec.log.map(e => e[1] === 'cmd' ? `${e[0]} cmd ${e[2]} ${e[3]} ${e[4]}` : `${e[0]} ${e[1]}`).join('\n') + '\n';
     return { save: rec.start, log, ticks, tick: sim.tick(), hash };
   }
   function download(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
@@ -210,7 +262,7 @@ CORE_READY.then(CORE => {
   };
 
   // ---------- frame ----------
-  let last = 0, camX = 0, camY = 0, fps = 60, fpsAcc = 0, fpsN = 0;
+  let last = 0, camX = 0, camY = 0, fps = 60, fpsAcc = 0, fpsN = 0, lastMode = -1;
   const t0 = performance.now();
   function frame(now) {
     requestAnimationFrame(frame);
@@ -221,11 +273,30 @@ CORE_READY.then(CORE => {
     if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
     for (let n = sim.due(dt); n > 0; n--) sim.step();
     sim.interpolate();
-    const lead = 0.35, k = Math.min(1, dt * 3.5);
-    camX += (SH.rx[0] + SH.vx[0] * lead - camX) * k; camY += (SH.ry[0] + SH.vy[0] * lead - camY) * k;
+    const mode = sim.mode();
+    if (mode !== lastMode) { onMode(mode, lastMode); lastMode = mode; }
+    const k = Math.min(1, dt * 3.5);
+    if (mode === MODE.landed) { const B = BODIES[sim.game.at[0]]; camX += (B.x - camX) * k; camY += (B.y - camY) * k; }
+    else if (mode === MODE.flying) { const lead = 0.35; camX += (SH.rx[0] + SH.vx[0] * lead - camX) * k; camY += (SH.ry[0] + SH.vy[0] * lead - camY) * k; }
+    else { camX += (SH.x[0] - camX) * k; camY += (SH.y[0] - camY) * k; }
     render((now - t0) / 1000, camX, camY);
     drawHUD();
   }
+
+  // the game mode changed: show or hide the port screen, autosave on landing
+  function onMode(mode, prev) {
+    const port = $('port');
+    if (mode === MODE.landed) {
+      const B = BODIES[sim.game.at[0]], P0 = B.port;
+      $('port-kicker').textContent = [B.name, P0.role.replace('-', ' '), P0.population].join(' · ');
+      $('port-name').textContent = P0.name;
+      $('port-desc').textContent = P0.description || '';
+      $('port-day').textContent = `Day ${sim.day()} · ${SYS.name} system`;
+      port.hidden = false;
+      if (prev === MODE.descending) { autosave(); toast(`Landed at ${P0.name}: day ${sim.day()}, saved`); }
+    } else port.hidden = true;
+  }
+  sim.onDay = () => { $('port-day').textContent = `Day ${sim.day()} · ${SYS.name} system`; };
 
   // ---------- render ----------
   const MAXS = 64;
@@ -238,14 +309,21 @@ CORE_READY.then(CORE => {
   const spinVis = new Float32Array(MAXS); // per-slot turning-jet pulse, decaying (visual only)
   const turnSlew = sim.param('turn_slew');
   plCol.set(lin([0.72, 0.78, 0.88]), RCS * 3); plCore.set([1, 1, 1], RCS * 3); plP.set([0.5, 0, 0.25, 0], RCS * 4); plSpread[RCS] = 0.9; plBurn.set(plCol.subarray(RCS * 3, RCS * 3 + 3), RCS * 3);
-  const sunCol = lin(star.col), sl = Math.hypot(sunVec[0], sunVec[1]) || 1;
+  const sunCol = lin(star.col), starCol = lin(star.col);
+  const stInst = new Float32Array(6);
   // draw order: largest classes first, so small ships sit on top
   const order = types.map((_, k) => k).sort((a, b) => types[b].zi - types[a].zi);
   let scale = 1;
   function setView(prog, RW, RH, cx, cy) { gl.useProgram(prog.p); gl.uniform2f(prog.u.uRes, RW, RH); gl.uniform2f(prog.u.uCam, cx, cy); gl.uniform1f(prog.u.uScale, scale); }
   function render(t, cx, cy) {
     const RW = canvas.width, RH = canvas.height, T0 = types[SH.kind[0]], live = Math.min(MAXS, sim.count());
+    const mode = sim.mode();
     scale = RW / (Math.max(700, T0.L * 16) / zoom);
+    if (mode === MODE.landed) { // the port screen's vista: the body you are on, filling the view
+      const B = BODIES[sim.game.at[0]];
+      scale = Math.min(RW, RH) * (B.kind === 'station' ? 0.75 : 0.95) / (2 * B.r * (B.kind === 'station' ? 1.6 : 1));
+    }
+    const sunCam = sunFrom(cx, cy), sl = Math.hypot(sunCam[0], sunCam[1]) || 1;
     const halfW = RW / scale / 2, halfH = RH / scale / 2;
     gl.bindVertexArray(null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, G.targets.scene.f); gl.viewport(0, 0, RW, RH);
@@ -253,21 +331,56 @@ CORE_READY.then(CORE => {
     gl.useProgram(P.bg.p);
     gl.uniform2f(P.bg.u.uRes, RW, RH); gl.uniform1f(P.bg.u.uTime, t);
     gl.uniform3fv(P.bg.u.uStar, star.col); gl.uniform3fv(P.bg.u.uNeb, star.neb);
-    gl.uniform2f(P.bg.u.uSunDir, sunVec[0] / sl, sunVec[1] / sl);
+    gl.uniform2f(P.bg.u.uSunDir, sunCam[0] / sl, sunCam[1] / sl);
     gl.uniform2f(P.bg.u.uOff, cx * scale * 0.04, cy * scale * 0.04);
     draw();
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
+    // the star
+    if (Math.abs(STAR.x - cx) < halfW + STAR.r * 2.4 && Math.abs(STAR.y - cy) < halfH + STAR.r * 2.4) {
+      setView(FP.star, RW, RH, cx, cy);
+      const u = FP.star.u;
+      gl.uniform2f(u.uC, STAR.x, STAR.y); gl.uniform1f(u.uR, STAR.r); gl.uniform3fv(u.uCol, starCol);
+      gl.uniform1f(u.uTime, t); gl.uniform1f(u.uPx, 1 / (STAR.r * scale));
+      draw();
+    }
+    // planets and moons, each lit from the star's direction
     setView(FP.planet, RW, RH, cx, cy);
     { const u = FP.planet.u;
-      gl.uniform3fv(u.uSun, sunVec); gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
-      for (const p of PLANETS) {
+      gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
+      for (const p of WORLDS) {
         if (Math.abs(p.x - cx) > halfW + p.r * 1.3 || Math.abs(p.y - cy) > halfH + p.r * 1.3) continue;
+        gl.uniform3fv(u.uSun, sunFrom(p.x, p.y));
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
         gl.uniform3fv(u.uC1, p.L1); gl.uniform3fv(u.uC2, p.L2); gl.uniform3fv(u.uC3, p.L3); gl.uniform3fv(u.uAtm, p.LA);
-        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.kind); gl.uniform1f(u.uCity, p.city || 0);
+        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city);
         draw();
       } }
+    // stations: one draw each, with the ship shader and their own bake
+    const shipUniforms = (u, sun) => {
+      gl.uniform3fv(u.uSun, sun); gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb);
+      gl.uniform1f(u.uTime, t); gl.uniform1i(u.uMode, 0); gl.uniform1f(u.uShadow, 1);
+      gl.uniform1i(u.uA, 0); gl.uniform1i(u.uN, 1); gl.uniform1i(u.uE, 2); gl.uniform1i(u.uX, 3);
+    };
+    const bindLook = (u, s, half, brand) => {
+      const m = brand.style.material, mp = s.maps;
+      gl.uniform1f(u.uHalfM, half); gl.uniform1f(u.uExtent, mp.extent); gl.uniform1f(u.uHRange, mp.hRange);
+      gl.uniform1f(u.uDmax, mp.Dmax); gl.uniform1f(u.uS, mp.shieldS);
+      gl.uniform1f(u.uGloss, m.gloss); gl.uniform1f(u.uSpecK, 0.6 + m.spec * 1.4); gl.uniform1f(u.uWrap, m.wrap); gl.uniform1f(u.uIrid, m.irid); gl.uniform1f(u.uRim, m.rim);
+      for (let q = 0; q < 4; q++) { gl.activeTexture(gl.TEXTURE0 + q); gl.bindTexture(gl.TEXTURE_2D, s.tex[q]); }
+    };
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    for (const S of STATIONS) {
+      if (!stationReady(S) || Math.abs(S.x - cx) > halfW + S.half || Math.abs(S.y - cy) > halfH + S.half) continue;
+      setView(FP.ship, RW, RH, cx, cy);
+      const u = FP.ship.u;
+      shipUniforms(u, sunFrom(S.x, S.y)); gl.uniform1i(u.uLN, 0);
+      bindLook(u, S.s, S.half, S.brand);
+      stInst.set([S.x, S.y, t * S.spin, 0, 0, 1]);
+      gl.bindVertexArray(VS.ship.vao); upload(VS.ship, stInst, 1); pointAt(VS.ship, 0);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
+      gl.bindVertexArray(null);
+    }
 
     // which ships are drawable and on screen
     typeCount.fill(0);
@@ -344,14 +457,24 @@ CORE_READY.then(CORE => {
       const o = typeFill[SH.kind[i]]++ * 6;
       shipInst[o] = SH.rx[i]; shipInst[o + 1] = SH.ry[i]; shipInst[o + 2] = SH.ra[i]; shipInst[o + 3] = SH.thr[i]; shipInst[o + 4] = 0; shipInst[o + 5] = 0;
     }
+    // the player's descent or launch: out of the flight sim, drawn from the game state, shrinking into the surface
+    // inside a plasma sheath (docking at a station: a short shrink into the clamps, no plasma)
+    let seq = null;
+    if ((mode === MODE.descending || mode === MODE.launching) && typeReady(T0)) {
+      const B = BODIES[sim.game.at[0]], total = mode === MODE.descending ? 2.5 : 2.0;
+      const p = 1 - sim.game.timer[0] / total, d = mode === MODE.descending ? p : 1 - p; // d: 0 in flight .. 1 down
+      const st = B.kind === 'station', ss = x => x * x * (3 - 2 * x), seg = (a, b, x) => ss(Math.max(0, Math.min(1, (x - a) / (b - a))));
+      seq = { sc: st ? 1 - 0.45 * seg(0, 1, d) : 1 - 0.85 * seg(0.08, 1, d), heat: st ? 0 : seg(0, 0.2, d) * (1 - seg(0.88, 1, d)), fade: seg(0.5, 0.95, d), atm: (WORLDS.find(w => w.id === B.id) || {}).LA || [0.6, 0.7, 0.8] };
+      const ti = SH.kind[0];
+      typeStart[ti] = acc; typeCount[ti] = 1;
+      shipInst.set([SH.x[0], SH.y[0], SH.ang[0], 0, 0, seq.sc], acc * 6); acc++;
+    }
     if (acc) {
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       setView(FP.ship, RW, RH, cx, cy);
       const u = FP.ship.u;
-      gl.uniform3fv(u.uSun, sunVec); gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb);
-      gl.uniform1f(u.uTime, t); gl.uniform1i(u.uMode, 0); gl.uniform1f(u.uShadow, 1);
+      shipUniforms(u, sunCam);
       gl.uniform4fv(u.uLP, LP); gl.uniform4fv(u.uLC, LC); gl.uniform1i(u.uLN, nL);
-      gl.uniform1i(u.uA, 0); gl.uniform1i(u.uN, 1); gl.uniform1i(u.uE, 2); gl.uniform1i(u.uX, 3);
       gl.bindVertexArray(VS.ship.vao); upload(VS.ship, shipInst, acc);
       for (const k of order) {
         if (!typeCount[k]) continue;
@@ -365,6 +488,16 @@ CORE_READY.then(CORE => {
       }
       gl.bindVertexArray(null);
     }
+    if (seq && seq.heat > 0.01) {
+      gl.blendFunc(gl.ONE, gl.ONE);
+      setView(FP.sheath, RW, RH, cx, cy);
+      const u = FP.sheath.u, m = T0.s.maps;
+      gl.uniform2f(u.uC, SH.x[0], SH.y[0]); gl.uniform1f(u.uHalfM, T0.half * 1.15); gl.uniform1f(u.uAng, SH.ang[0]); gl.uniform1f(u.uSc, seq.sc);
+      gl.uniform1f(u.uS, m.shieldS); gl.uniform1f(u.uDmax, m.Dmax); gl.uniform1f(u.uHeat, seq.heat); gl.uniform1f(u.uFade, seq.fade);
+      gl.uniform1f(u.uTime, t); gl.uniform3fv(u.uAtm, seq.atm);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, T0.s.tex[3]); gl.uniform1i(u.uX, 0);
+      draw();
+    }
     gl.disable(gl.BLEND);
     G.postProcess(bloomOn ? 0.9 : 0, nanView);
   }
@@ -373,6 +506,14 @@ CORE_READY.then(CORE => {
   function drawHUD() {
     hx.setTransform(dpr, 0, 0, dpr, 0, 0);
     hx.clearRect(0, 0, W, H);
+    const mode = sim.mode();
+    if (mode === MODE.landed) return; // the port screen is the HUD
+    if (mode !== MODE.flying) { // in a landing or launch sequence: the day and how to skip it
+      hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle'; hx.textAlign = 'center';
+      const B = BODIES[sim.game.at[0]];
+      label(`${mode === MODE.descending ? (B.kind === 'station' ? 'DOCKING AT' : 'LANDING AT') : 'LAUNCHING FROM'} ${B.port.name.toUpperCase()}  ·  ENTER TO SKIP`, W / 2, H - stripH - 40);
+      hx.textAlign = 'left'; return;
+    }
     const T0 = types[SH.kind[0]], sp = Math.hypot(SH.vx[0], SH.vy[0]), hd = ((-SH.ang[0] * 180 / Math.PI) % 360 + 360) % 360;
     const burn = SH.burn[0] && SH.main[0] > 0;
     // top speed along the nose here, by the core's rule: raised pointing into a well, lowered pointing out
@@ -380,7 +521,7 @@ CORE_READY.then(CORE => {
     const wk = SH.well[0] * T0.well * (sim.param('well_in') * Math.max(cIn, 0) - sim.param('well_out') * Math.max(-cIn, 0));
     const topNow = Math.max(0.15, 1 + wk) * T0.vmax * (burn ? sim.param('burn_cap') : 1);
     const lines = [
-      [T0.name, '#dbe0e7'],
+      [`DAY ${sim.day()}  ·  ${T0.name}`, '#dbe0e7'],
       [`SPD ${sp.toFixed(0).padStart(4)} / ${topNow.toFixed(0)} m/s${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, wk < -0.03 ? '#e08a4a' : wk > 0.03 ? '#7fd08a' : '#dbe0e7'],
       [`HDG ${hd.toFixed(0).padStart(3, '0')}°  ${ASSIST[assistMode].hud}${burn ? '  BURN' : ''}`, burn ? '#e2b866' : assistMode ? '#c8a27a' : '#8a95a4'],
       [`TICK ${sim.tick()}  ${fps.toFixed(0)} fps`, '#8a95a4']
@@ -390,6 +531,7 @@ CORE_READY.then(CORE => {
     lines.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + k * 17); });
     if (!typeReady(T0)) { hx.fillStyle = '#e2b866'; hx.fillText('Baking your ship…', 14, 20 + lines.length * 17 + 28); }
     drawShipMarks(T0);
+    drawLandingPrompt();
     const navs = navObjects().map(o => Object.assign(o, navInfo(o)));
     drawNav(navs);
     drawMinimap(navs);
@@ -422,10 +564,21 @@ CORE_READY.then(CORE => {
     }
   }
 
+  // over a port: say so, and whether the ship is slow enough to land (the Book: be over it and nearly still)
+  function drawLandingPrompt() {
+    const pb = sim.portBelow();
+    if (!pb) return;
+    const B = BODIES[pb.body], st = B.kind === 'station', limit = sim.param(st ? 'dock_speed' : 'land_speed');
+    hx.font = '600 13px "IBM Plex Mono", ui-monospace, monospace'; hx.textAlign = 'center'; hx.textBaseline = 'middle';
+    hx.fillStyle = pb.slow ? '#7fd08a' : '#e2b866';
+    label(pb.slow ? `L  ${st ? 'DOCK AT' : 'LAND AT'} ${B.port.name.toUpperCase()}` : `${B.port.name.toUpperCase()}: SLOW BELOW ${limit} M/S TO ${st ? 'DOCK' : 'LAND'}`, W / 2, H - stripH - 40);
+    hx.textAlign = 'left';
+  }
+
   // ---------- navigation: what is where ----------
   // Everything the player might steer for, from the player's drawn (interpolated) position. Planets for now;
   // stations, ports and targets join this list as they arrive.
-  const navObjects = () => PLANETS.map(p => ({ name: p.name, x: p.x, y: p.y, r: p.r, kind: 'planet' }));
+  const navObjects = () => BODIES.map(b => ({ name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x: b.x, y: b.y, r: b.r, kind: b.kind, port: !!b.port }));
   function navInfo(o) {
     const dx = o.x - SH.rx[0], dy = o.y - SH.ry[0], d = Math.hypot(dx, dy) || 1;
     return { d, surf: d - o.r, closing: (SH.vx[0] * dx + SH.vy[0] * dy) / d }; // surface distance; closing speed > 0
@@ -477,7 +630,7 @@ CORE_READY.then(CORE => {
   }
 
   // Minimap: north up, centred on the player, bodies to scale; anything beyond the range sits on the rim.
-  const MAP_RANGE = 16000; // meters from centre to rim
+  const MAP_RANGE = 24000; // meters from centre to rim
   function drawMinimap(navs) {
     const R = Math.max(60, Math.min(96, Math.min(W, H) * 0.14)), cx = W - R - 14, cy = H - stripH - R - 14, k = R / MAP_RANGE;
     const px = SH.rx[0], py = SH.ry[0];
@@ -497,7 +650,7 @@ CORE_READY.then(CORE => {
       }
       hx.strokeStyle = hot ? NAV_HOT : 'rgba(159,180,200,.75)'; hx.lineWidth = hot ? 1.5 : 1;
       hx.beginPath(); hx.arc(cx + mx, cy + my, rr, 0, 6.283); hx.stroke();
-      hx.fillStyle = hot ? NAV_HOT : 'rgba(159,180,200,.85)'; hx.fillText(o.name.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
+      hx.fillStyle = hot ? NAV_HOT : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
     }
     // the player: velocity line and heading arrow (world y up, screen y down)
     const vx = SH.vx[0] * k * 6, vy = -SH.vy[0] * k * 6;
@@ -513,9 +666,9 @@ CORE_READY.then(CORE => {
 
   // test hook: drive and inspect the session from a console or a headless browser
   window.__play = {
-    sim, IN, newGame, exportReplay,
+    sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES,
     setNav,
-    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, ready: typeReady(types[SH.kind[0]]) }),
+    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]) }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {
       const saved = new Set(keys); keys.clear(); (held || []).forEach(k => keys.add(k));

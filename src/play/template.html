@@ -45,6 +45,22 @@ button { font: inherit; color: inherit; }
 }
 #toast.on { opacity: 1; }
 #glerr { position: fixed; inset: 0; display: grid; place-items: center; color: var(--bad); font: 15px var(--f-mono); }
+/* the port screen: the world you landed on fills the view, dimmed; the port's card sits over its left side */
+#port { position: fixed; inset: 0 0 auto 0; bottom: 0; display: grid; align-items: center; padding: 24px 24px 72px;
+  background: linear-gradient(90deg, rgba(7,9,12,.88) 0%, rgba(7,9,12,.62) 42%, rgba(7,9,12,.08) 75%); }
+.port-card { max-width: 460px; }
+.port-kicker { margin: 0 0 6px; color: var(--amber); font: 600 12px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; }
+.port-card h2 { margin: 0 0 12px; font: 700 40px/1 var(--f-display); letter-spacing: .03em; }
+.port-desc { margin: 0 0 22px; color: #c4ccd6; font-size: 15px; line-height: 1.55; }
+.port-services { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.port-services button { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; text-align: left;
+  background: rgba(18,24,33,.86); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; cursor: pointer;
+  font: 600 13.5px var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: var(--fg); }
+.port-services button span { color: var(--muted); font: 400 11px var(--f-mono); text-transform: none; letter-spacing: 0; }
+.port-services button:hover:not(:disabled) { border-color: var(--amber); }
+.port-services button:disabled { cursor: default; color: var(--muted); }
+.port-services button.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+.port-day { margin: 18px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -53,9 +69,25 @@ button { font: inherit; color: inherit; }
 <canvas id="hud" aria-hidden="true"></canvas>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="glerr" hidden>This needs WebGL2.</div>
+<section id="port" hidden aria-label="Port">
+  <div class="port-card">
+    <p class="port-kicker" id="port-kicker"></p>
+    <h2 id="port-name"></h2>
+    <p class="port-desc" id="port-desc"></p>
+    <div class="port-services">
+      <button type="button" disabled>Trade<span>next</span></button>
+      <button type="button" disabled>Mission board<span>next</span></button>
+      <button type="button" disabled>Bar<span>later</span></button>
+      <button type="button" disabled>Refuel &amp; repair<span>later</span></button>
+      <button type="button" id="svc-wait">Wait a day<span>W</span></button>
+      <button type="button" id="svc-launch" class="primary">Launch<span>L</span></button>
+    </div>
+    <p class="port-day" id="port-day"></p>
+  </div>
+</section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · F assist level · I nav · wheel zoom</span>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · F assist level · L land · I nav · wheel zoom</span>
   <span class="spacer"></span>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
   <button type="button" id="b-save" title="F6">Save</button>
@@ -67,6 +99,8 @@ button { font: inherit; color: inherit; }
 
 <script id="core-wasm" type="application/octet-stream">/*COREWASM*/</script>
 <script id="catalog" type="application/json">/*CATALOG*/</script>
+<script id="system" type="application/json">/*SYSTEM*/</script>
+<script id="system-schema" type="application/json">/*SYSTEMSCHEMA*/</script>
 <script id="gen">/*GEN*/</script>
 <script>
 (function () {
@@ -76,6 +110,7 @@ button { font: inherit; color: inherit; }
 /*GFX*/
 /*BAKE*/
 /*CORE*/
+/*SCHEMA*/
 /*PLAY*/
 })();
 </script>

@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://driftward.game/schema/system.schema.json",
+  "title": "Driftward star system",
+  "description": "One star system: its star, bodies and ports. The contract an LLM authors against and the validator that clamps what it writes (src/schema.js). Distances are metres; the star sits at the origin; angles are degrees counter-clockwise from +x. Bodies hold still in M1.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "owner",
+    "ring",
+    "star",
+    "bodies"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "maxLength": 40
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "owner": {
+      "description": "The faction that holds the system (the Book's appendix, by role).",
+      "enum": [
+        "federation",
+        "prism",
+        "ironhulls",
+        "blackhulls",
+        "freeflag",
+        "bloom",
+        "glass",
+        "shadow",
+        "none"
+      ]
+    },
+    "ring": {
+      "description": "Inner rings are prosperous, the outer ring poor and lawless.",
+      "enum": [
+        "inner",
+        "middle",
+        "outer"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 800,
+      "default": ""
+    },
+    "star": {
+      "type": "object",
+      "required": [
+        "name",
+        "class"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "class": {
+          "enum": [
+            "red-dwarf",
+            "orange",
+            "yellow",
+            "white",
+            "blue-giant"
+          ],
+          "default": "yellow"
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 800,
+          "maximum": 6000,
+          "default": 2400
+        },
+        "gravity": {
+          "description": "Well strength at the surface; 40 is a full-strength well.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 80,
+          "default": 55
+        }
+      }
+    },
+    "start": {
+      "description": "The id of the port body a new game starts landed at.",
+      "type": "string",
+      "default": ""
+    },
+    "bodies": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "orbit",
+          "radius"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "kind": {
+            "enum": [
+              "planet",
+              "moon",
+              "station"
+            ]
+          },
+          "parent": {
+            "description": "Id of the body a moon or station orbits; omit to orbit the star.",
+            "type": "string",
+            "default": ""
+          },
+          "orbit": {
+            "type": "object",
+            "required": [
+              "radius",
+              "angle"
+            ],
+            "properties": {
+              "radius": {
+                "type": "number",
+                "minimum": 1500,
+                "maximum": 60000
+              },
+              "angle": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360
+              }
+            }
+          },
+          "radius": {
+            "description": "Planets and moons: the body. Stations: the docking zone's reach.",
+            "type": "number",
+            "minimum": 150,
+            "maximum": 4000
+          },
+          "gravity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 60,
+            "default": 30
+          },
+          "look": {
+            "description": "How a planet or moon is drawn.",
+            "type": "object",
+            "properties": {
+              "surface": {
+                "enum": [
+                  "terran",
+                  "giant",
+                  "rock"
+                ],
+                "default": "rock"
+              },
+              "palette": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "default": [
+                  "#5e5953",
+                  "#8a8178",
+                  "#c9c0b4"
+                ]
+              },
+              "atmosphere": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$",
+                "default": "#9fb4c8"
+              },
+              "seed": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "default": 1
+              },
+              "cityLights": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0
+              }
+            }
+          },
+          "station": {
+            "description": "How a station is built: a catalog archetype in an owning brand's style.",
+            "type": "object",
+            "properties": {
+              "archetype": {
+                "enum": [
+                  "ring",
+                  "port",
+                  "forge",
+                  "refinery",
+                  "shipyard",
+                  "relay"
+                ],
+                "default": "port"
+              },
+              "brand": {
+                "enum": [
+                  "vaelith",
+                  "rustline",
+                  "halcyon",
+                  "concord"
+                ],
+                "default": "rustline"
+              },
+              "seed": {
+                "type": "string",
+                "maxLength": 40,
+                "default": "station-1"
+              }
+            }
+          },
+          "port": {
+            "description": "Present if the body has a port the player can land at.",
+            "type": "object",
+            "required": [
+              "name",
+              "role"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "role": {
+                "description": "The facility's economic role (the Book's Facilities table).",
+                "enum": [
+                  "mining",
+                  "ice",
+                  "gas",
+                  "refinery",
+                  "forge",
+                  "agri",
+                  "habitat",
+                  "container-port",
+                  "shipyard",
+                  "relay",
+                  "military",
+                  "research",
+                  "haven"
+                ]
+              },
+              "population": {
+                "enum": [
+                  "outpost",
+                  "colony",
+                  "town",
+                  "world"
+                ],
+                "default": "colony"
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 1200,
+                "default": ""
+              },
+              "services": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "market",
+                    "missions",
+                    "bar",
+                    "refuel",
+                    "repair",
+                    "outfitter",
+                    "shipyard"
+                  ]
+                },
+                "default": [
+                  "market",
+                  "missions",
+                  "bar",
+                  "refuel",
+                  "repair"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -284,7 +284,8 @@ ${WORLD_POS}
 uniform float uHalfM;
 out vec2 vQ; out vec2 vWorld; flat out float vAng; flat out float vThr; flat out float vDmg;
 void main(){ vQ=aPos; float c=cos(iA.z), s=sin(iA.z);
-  vec2 w = iA.xy + mat2(c,s,-s,c)*(aPos*uHalfM); vWorld=w;
+  float sc = iB.y > 0. ? iB.y : 1.; // per-instance scale (0 means 1): ships shrink into a landing
+  vec2 w = iA.xy + mat2(c,s,-s,c)*(aPos*uHalfM*sc); vWorld=w;
   vAng=iA.z; vThr=iA.w; vDmg=iB.x; gl_Position=clipOf(w); }`;
 const FLY_SHIELD_VS = `#version 300 es
 in vec2 aPos; in vec4 iA; in vec4 iH1; in vec4 iH2;
@@ -484,6 +485,61 @@ void main(){
   col += uAtm*uSunCol*rim*(.25+max(dot(N, L), 0.))*1.2;
   float aa = 1.-smoothstep(1.-uPx*1.5, 1., r);
   o = vec4(col*aa, aa);
+}`;
+// A star, in world space on a quad 2.4 radii wide: a granulated, limb-darkened disc, HDR-bright so it blooms, inside
+// a corona that streams outward. uCol is the star's linear colour.
+const STARBODY_VS = `#version 300 es
+in vec2 aPos;
+${WORLD_POS}
+uniform vec2 uC; uniform float uR;
+out vec2 vQ;
+void main(){ vQ = aPos*2.4; gl_Position = clipOf(uC + aPos*uR*2.4); }`;
+const STARBODY_FS = `#version 300 es
+precision highp float; in vec2 vQ; out vec4 o;
+uniform vec3 uCol; uniform float uTime, uPx;
+${NOISE}
+void main(){
+  float r = length(vQ), a = atan(vQ.y, vQ.x);
+  float rr = max(r, 1.);
+  float cor = (exp(-(rr-1.)*3.)*.7 + exp(-(rr-1.)*11.)*1.6) * (.75 + .5*fbm(vec2(a*2.6, rr*1.4 - uTime*.08)));
+  cor *= 1. - smoothstep(1.9, 2.4, r);
+  vec3 col = uCol*cor;
+  float aa = 1. - smoothstep(1. - uPx*1.5, 1., r);
+  if (r < 1.) {
+    float z = sqrt(1. - r*r);
+    float gran = fbm(vQ*16./(.35 + z) + vec2(uTime*.04, -uTime*.03));
+    vec3 disc = uCol*(3.2 + 1.6*gran)*(.42 + .58*pow(z, .55));
+    col = mix(col, disc, aa);
+  }
+  o = vec4(col, aa);
+}`;
+// The plasma sheath a ship wears on descent and launch (the Book's landing sequence): a glow that hugs the hull's
+// silhouette, read from the bake's distance field, so it fits every generated shape. Red-hot, white at the nose,
+// which leads the descent; uFade blends it toward the atmosphere's tint as the ship sinks into it.
+const SHEATH_VS = `#version 300 es
+in vec2 aPos;
+${WORLD_POS}
+uniform vec2 uC; uniform float uHalfM, uAng, uSc;
+out vec2 vQ;
+void main(){ vQ = aPos; float c = cos(uAng), s = sin(uAng); gl_Position = clipOf(uC + mat2(c,s,-s,c)*(aPos*uHalfM*uSc)); }`;
+const SHEATH_FS = `#version 300 es
+precision highp float; in vec2 vQ; out vec4 o;
+uniform sampler2D uX; uniform float uS, uDmax, uHeat, uFade, uTime; uniform vec3 uAtm;
+${NOISE}
+void main(){
+  vec2 uv = vec2(vQ.x*.5+.5, .5-vQ.y*.5);
+  // the bake's distance field only reaches a little past the hull; its blurrier mips spread that into a halo
+  // several metres deep, which is what a sheath needs at flight zoom
+  float inside = 1. - textureLod(uX, uv, 1.).r;
+  float near = 1. - .5*(textureLod(uX, uv, 4.5).r + textureLod(uX, uv, 6.).r);
+  float shell = clamp((near - .2)*2.2 - inside*.7, 0., 1.);  // strong nearness only: faint blur adds nothing
+  shell *= shell;
+  shell *= (1. - smoothstep(.55, .95, abs(vQ.x)))*(1. - smoothstep(.55, .95, abs(vQ.y))); // nothing at the quad's edges
+  float lead = clamp(vQ.y*.6 + .45, 0., 1.);             // the nose leads the descent
+  float n = fbm(vQ*5. + vec2(vQ.x*2., -uTime*5.));
+  vec3 hot = mix(vec3(1., .16, .04), vec3(1., .9, .72)*2.4, pow(lead, 2.));
+  vec3 col = mix(hot, uAtm*1.6, uFade)*shell*(.55 + .9*n)*uHeat;
+  o = vec4(col*3.2, 0.);
 }`;
 // Nebula gas and flare radiation, drawn twice: a full back layer under the ships and a thin haze over them.
 const NEB_VS = `#version 300 es

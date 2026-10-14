@@ -1,0 +1,170 @@
+{
+  "id": "brannock",
+  "name": "Brannock",
+  "owner": "ironhulls",
+  "ring": "middle",
+  "description": "An Ironhull system of the middle ring: an orange star, a scorched mining world, a cloudy habitat world where most of its people live, a gas giant whose moon refines what the mines dig up, and a shipyard station where the Ironhulls weld their hulls.",
+  "star": {
+    "name": "Brannock",
+    "class": "orange",
+    "radius": 2400,
+    "gravity": 55
+  },
+  "start": "halde",
+  "bodies": [
+    {
+      "id": "cinder",
+      "name": "Cinder",
+      "kind": "planet",
+      "orbit": {
+        "radius": 11000,
+        "angle": 35
+      },
+      "radius": 900,
+      "gravity": 25,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#4a3a33",
+          "#7a5a46",
+          "#c08a5a"
+        ],
+        "atmosphere": "#d08a58",
+        "seed": 3.3
+      },
+      "port": {
+        "name": "Cinder Deep",
+        "role": "mining",
+        "population": "outpost",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "Shafts sunk into a world too close to its star. The day side cooks; the crews live and work on the night side, in tunnels that follow the ore. Ore goes up the lift to waiting tugs; food, water and spare parts come down."
+      }
+    },
+    {
+      "id": "halde",
+      "name": "Halde",
+      "kind": "planet",
+      "orbit": {
+        "radius": 19000,
+        "angle": 200
+      },
+      "radius": 1500,
+      "gravity": 40,
+      "look": {
+        "surface": "terran",
+        "palette": [
+          "#1d4f7a",
+          "#5d7a3c",
+          "#d8cba8"
+        ],
+        "atmosphere": "#6fb3ff",
+        "seed": 1.3,
+        "cityLights": 1
+      },
+      "port": {
+        "name": "Halde Landing",
+        "role": "habitat",
+        "population": "town",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "The system's only real town: terraces of habitat blocks along a cold coast, a landing field cut into the cliffs above them. Most of Brannock's people live here, and most of its money changes hands in the market halls by the field."
+      }
+    },
+    {
+      "id": "vast",
+      "name": "Vast",
+      "kind": "planet",
+      "orbit": {
+        "radius": 32000,
+        "angle": 110
+      },
+      "radius": 3000,
+      "gravity": 45,
+      "look": {
+        "surface": "giant",
+        "palette": [
+          "#c9925c",
+          "#7d4e33",
+          "#ecd9b0"
+        ],
+        "atmosphere": "#ffc98a",
+        "seed": 4.1
+      }
+    },
+    {
+      "id": "tallow",
+      "name": "Tallow",
+      "kind": "moon",
+      "parent": "vast",
+      "orbit": {
+        "radius": 6500,
+        "angle": 250
+      },
+      "radius": 600,
+      "gravity": 15,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#5e5953",
+          "#8a8178",
+          "#c9c0b4"
+        ],
+        "atmosphere": "#b0a8a0",
+        "seed": 7.7
+      },
+      "port": {
+        "name": "Tallow Works",
+        "role": "refinery",
+        "population": "colony",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "Refinery towers on a grey moon, lit orange by their own flares and by Vast hanging overhead. Ore from Cinder comes in raw and leaves as metal; the air in the dome tastes of it."
+      }
+    },
+    {
+      "id": "kettle",
+      "name": "Kettle Yard",
+      "kind": "station",
+      "orbit": {
+        "radius": 15000,
+        "angle": 300
+      },
+      "radius": 450,
+      "gravity": 4,
+      "station": {
+        "archetype": "shipyard",
+        "brand": "rustline",
+        "seed": "kettle-yard"
+      },
+      "port": {
+        "name": "Kettle Yard",
+        "role": "shipyard",
+        "population": "colony",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "A cradle of girders where the Ironhulls build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."
+      }
+    }
+  ]
+}

@@ -18,6 +18,8 @@ pub fn build(seed: u64) -> Box<World> {
         w.bodies.y[j] = y;
         w.bodies.r[j] = r;
         w.bodies.g[j] = 0.004 * r;
+        w.bodies.kind[j] = crate::port::BODY_PLANET;
+        w.bodies.port[j] = 1;
     }
     w.n_bodies = 2;
     let (ph, pd, pi) = (w.rng.range(0.0, TAU), w.rng.range(0.0, TAU), w.rng.range(0.0, TAU));

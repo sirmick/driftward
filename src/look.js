@@ -7,7 +7,9 @@ const lin = c => c.map(v => Math.pow(v, 2.2)); // sRGB-ish to linear
 const STARS = {
   sol:  { name: 'Yellow', col: [1.0, 0.95, 0.86], amb: [0.030, 0.034, 0.046], neb: [0.10, 0.12, 0.20] },
   red:  { name: 'Red dwarf', col: [1.0, 0.58, 0.38], amb: [0.040, 0.026, 0.030], neb: [0.20, 0.08, 0.07] },
-  blue: { name: 'Blue giant', col: [0.72, 0.84, 1.0], amb: [0.024, 0.034, 0.055], neb: [0.06, 0.12, 0.24] }
+  blue: { name: 'Blue giant', col: [0.72, 0.84, 1.0], amb: [0.024, 0.034, 0.055], neb: [0.06, 0.12, 0.24] },
+  orange: { name: 'Orange', col: [1.0, 0.76, 0.52], amb: [0.036, 0.030, 0.034], neb: [0.16, 0.10, 0.08] },
+  white: { name: 'White', col: [0.9, 0.93, 1.0], amb: [0.028, 0.032, 0.044], neb: [0.08, 0.11, 0.18] }
 };
 const PATTERNS = { hex: 0, grid: 1, flow: 2, ragged: 3 };
 const brandCache = new Map();

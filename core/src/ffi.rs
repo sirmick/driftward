@@ -130,6 +130,26 @@ pub unsafe extern "C" fn dw_set_input(w: *mut World, input: u32) { unsafe { worl
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dw_player_set(w: *mut World) -> f64 { unsafe { world(w) }.player.set }
 
+/// Apply a game command now, between ticks (codes and results in port.rs). The page records it in the replay log.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_command(w: *mut World, code: u32, a: i32, b: i32) -> i32 { unsafe { world(w) }.command(code, a, b) }
+
+/// Put the player down at a port's body without the landing sequence (new games start landed).
+/// # Safety
+/// See `world`; `body` must be below the body capacity.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_place_landed(w: *mut World, body: u32) { unsafe { world(w) }.place_landed(body as usize) }
+
+/// The port body under the player: index, plus 1000 if slow enough to land now; -1 if not over a port.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_port_below(w: *mut World) -> i32 {
+    unsafe { world(w) }.port_below().map_or(-1, |(j, slow)| j as i32 + if slow { 1000 } else { 0 })
+}
+
 /// Write the world into the "world/snapshot" column; returns its length in bytes.
 /// # Safety
 /// See `world`.

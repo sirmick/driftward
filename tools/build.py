@@ -48,7 +48,7 @@ gen = (src / 'gen.js').read_text()
 MODULES = {
     '/*LOOK*/': 'look.js', '/*SHADERS*/': 'shaders.js', '/*GFX*/': 'gfx.js', '/*BAKE*/': 'bake.js', '/*CORE*/': 'core.js',
     '/*FLY*/': 'fly.js', '/*PLANETS*/': 'planets.js', '/*SUNS*/': 'suns.js', '/*STATIONS*/': 'stations.js',
-    '/*ASTEROIDS*/': 'asteroids.js', '/*PLAY*/': 'play/play.js',
+    '/*ASTEROIDS*/': 'asteroids.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js',
 }
 
 def inline_modules(script, needed):
@@ -57,14 +57,20 @@ def inline_modules(script, needed):
         script = script.replace(marker, (src / MODULES[marker]).read_text())
     return script
 
+# the game's system, and the schema it is validated (clamped) against at load
+system = json.dumps(json.loads((src / 'systems' / 'm1.json').read_text()))
+system_schema = json.dumps(json.loads((src / 'schema' / 'system.schema.json').read_text()))
+assert '</script' not in system + system_schema
+
 def page(template, script):
-    return template.replace('/*COREWASM*/', core_b64).replace('/*CATALOG*/', catalog).replace('/*GEN*/', gen).replace('/*APP*/', script)
+    t = template.replace('/*COREWASM*/', core_b64).replace('/*CATALOG*/', catalog).replace('/*GEN*/', gen).replace('/*APP*/', script)
+    return t.replace('/*SYSTEM*/', system).replace('/*SYSTEMSCHEMA*/', system_schema)
 
 # the lab: app.js pulls in the shared kit and every tab
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),
     ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*PLANETS*/', '/*SUNS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
 # the game: its template carries the script shell and markers itself
-game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*PLAY*/']), '')
+game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*SCHEMA*/', '/*PLAY*/']), '')
 
 for name, html in (('index.html', lab), ('play.html', game)):
     (root / name).write_text(html)

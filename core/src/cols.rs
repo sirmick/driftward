@@ -14,6 +14,8 @@ impl Elem for f32 { const KIND: &'static str = "f32"; }
 impl Elem for u32 { const KIND: &'static str = "u32"; }
 impl Elem for u16 { const KIND: &'static str = "u16"; }
 impl Elem for u8 { const KIND: &'static str = "u8"; }
+impl Elem for i32 { const KIND: &'static str = "i32"; }
+impl Elem for i16 { const KIND: &'static str = "i16"; }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ColumnDesc {

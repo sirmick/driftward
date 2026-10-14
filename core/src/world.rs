@@ -56,8 +56,15 @@ soa! {
 }
 
 soa! {
-    /// Gravity bodies (planets): position, radius, and well strength g (relative to the g_ref param).
-    pub struct Bodies { x: f64, y: f64, r: f64, g: f64 }
+    /// Bodies (the star, planets, moons, stations): position, radius, well strength g (relative to the g_ref param),
+    /// kind (port.rs BODY_*), and whether it has a port the player can land at.
+    pub struct Bodies { x: f64, y: f64, r: f64, g: f64, kind: u8, port: u8 }
+}
+
+soa! {
+    /// The player's game state, one row: mode (port.rs MODE_*), the body landed at or heading for, the time left in
+    /// a descent or launch sequence, and the strategic day.
+    pub struct Game { mode: u8, at: i16, timer: f64, day: u32 }
 }
 
 soa! {
@@ -86,6 +93,9 @@ params! {
     pull = 0.6;           "a well's pull at strength 1, as a share of the ship's thrust, times the hull's sensitivity"
     well_in = 1.0;        "top speed heading into a well: raised by this, times strength and sensitivity"
     well_out = 0.6;       "top speed heading out of a well: lowered by this, times strength and sensitivity"
+    land_speed = 30.0;    "fastest a ship may be moving to land on a planet or moon, m/s"
+    dock_speed = 12.0;    "fastest a ship may be moving to dock at a station, m/s"
+    launch_speed = 20.0;  "orbital speed a ship has when launch hands back control, m/s"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -105,6 +115,7 @@ pub struct World {
     pub types: Types,
     pub bodies: Bodies,
     pub env: Env,
+    pub game: Game,
     pub params: Vec<f64>,
     /// live ship slots are 0..count
     pub count: usize,
@@ -128,6 +139,7 @@ impl World {
             types: Types::with_capacity(cfg.max_types),
             bodies: Bodies::with_capacity(cfg.max_bodies),
             env: Env::with_capacity(cfg.env_n * cfg.env_n),
+            game: Game::with_capacity(1),
             params: param_defaults(),
             count: 0,
             n_bodies: 0,
@@ -154,6 +166,7 @@ impl World {
         self.types.describe("type", &mut c);
         self.bodies.describe("body", &mut c);
         self.env.describe("env", &mut c);
+        self.game.describe("game", &mut c);
         c.push(ColumnDesc::of("world", "params", &self.params));
         c
     }
@@ -178,6 +191,7 @@ impl World {
     /// and the generator are kept (reseed separately). Handles from before a clear are invalid.
     pub fn clear(&mut self) {
         self.ships.clear();
+        self.game.clear();
         self.count = 0;
         self.tick = 0;
         self.player.set = 0.0;
@@ -206,6 +220,7 @@ impl World {
     // ---------- tick pipeline ----------
 
     /// One fixed step of everything the core owns. Stages, in order:
+    /// game (descent and launch sequences, see port.rs),
     /// player (this tick's input bitmask into commands, when a player slot is set),
     /// control (assist turns desired velocity into actuator commands), fields (gas at each ship),
     /// steer (angular motion), forces (thrust, drag, gravity), integrate (velocity, dampers, position),
@@ -216,6 +231,7 @@ impl World {
         s.prev_x[..n].copy_from_slice(&s.x[..n]);
         s.prev_y[..n].copy_from_slice(&s.y[..n]);
         s.prev_ang[..n].copy_from_slice(&s.ang[..n]);
+        self.step_game();
         player::control(self);
         flight::control(self);
         flight::fields(self);
@@ -272,6 +288,8 @@ impl World {
         eat(self.count as u64);
         eat(self.player.set.to_bits());
         eat(self.player.slot as u32 as u64 | (self.player.input as u64) << 32);
+        eat(self.game.mode[0] as u64 | (self.game.at[0] as u16 as u64) << 8 | (self.game.day[0] as u64) << 32);
+        eat(self.game.timer[0].to_bits());
         let s = &self.ships;
         for i in 0..self.count {
             eat(s.alive[i] as u64 | (s.ctl[i] as u64) << 8 | (s.burn[i] as u64) << 16 | (s.kind[i] as u64) << 24 | (s.generation[i] as u64) << 32);
