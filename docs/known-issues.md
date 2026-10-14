@@ -19,6 +19,11 @@ None of these hurt at today's scale (about 60 ships). They are the costs that gr
 - **Two flight renderers.** The lab's Fly tab (`src/fly.js`) and the game (`src/play/play.js`) each build their own instanced ship and plume draws from the same shaders. The game's is the one that grows; the Fly tab should move onto it once it covers shields, bolts and particles.
 - **The lab page has no doctype.** `src/template.html` starts at `<title>`, so the lab renders in quirks mode. The game page has one.
 
+## Gameplay gaps
+
+- **Ships fly through planets.** Nothing collides, and a well's pull fades out near a body's centre, so a dive carries a ship straight through and out the far side. Landing (M1) needs a surface: approach speed limits, a landing zone, and what happens on impact.
+- **The well model is untuned game physics.** Wells pull with a share of each hull's thrust and bend its top speed by direction (`core/src/flight.rs`); a slingshot works as momentum carried through a well, not as a speed gain. The numbers (`pull`, `well_in`, `well_out`, `well_reach`, and each hull class's `well` in the catalog) are first guesses, tunable live from the console.
+
 ## Bugs
 
 - **Black squares flashed over the canvas (symptom fixed, source unconfirmed).** Seen on both pages on the user's GPU, never under the headless software renderer. Turning bloom off stopped them, which fits one bad (NaN or infinite) scene pixel being spread by the bloom chain's six half-size levels into squares of 2 to 64 pixels. The bloom bright pass now drops non-finite samples and caps hot ones, and the composite ignores bad bloom texels. What still makes the bad pixel on that GPU is unknown: on the game page, N paints raw non-finite scene pixels magenta (bloom cyan, negative values yellow), which would locate it; B toggles bloom.

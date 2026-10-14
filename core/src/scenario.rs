@@ -11,6 +11,7 @@ pub fn build(seed: u64) -> Box<World> {
         w.types.accel[k] = accel;
         w.types.turn[k] = turn;
         w.types.vmax[k] = vmax;
+        w.types.well[k] = 0.35 + 0.2 * k as f64;
     }
     for (j, (x, y, r)) in [(-3200.0, 2600.0, 1300.0), (6800.0, -4400.0, 2700.0)].into_iter().enumerate() {
         w.bodies.x[j] = x;

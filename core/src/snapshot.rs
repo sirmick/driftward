@@ -11,7 +11,7 @@ use crate::world::{Config, World};
 
 pub const MAGIC: [u8; 4] = *b"DWSV";
 /// Bump when the layout changes (a new column, a reordered header).
-pub const VERSION: u32 = 1;
+pub const VERSION: u32 = 5; // 2: ships.rot; 3, 4: Newtonian wells; 5: game wells (ships.well_x/y, types.well, params)
 pub const HEADER_LEN: usize = 80;
 
 #[derive(Debug, PartialEq, Eq)]

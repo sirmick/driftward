@@ -1,11 +1,15 @@
 //! The player's ship, driven by one input bitmask per tick. The bitmask is the whole of the player's
 //! influence on the sim, so a recorded log of it replays a session exactly.
 //!
-//! Ported from the M0 flight lab's `playerInput`. Assist on: thrust and reverse move a set speed along the
-//! nose, and the assist controller holds it and cancels drift. Assist off: raw main, reverse and lateral
-//! thrusters, with retro turning the nose against the velocity.
+//! The Book's three assist levels, on the same thrusters and limits:
+//! - full assist (IN_ASSIST): thrust and reverse move a set speed along the nose; the assist controller holds
+//!   that velocity, cancelling drift and gravity, with the side thrusters. Strafe does nothing here.
+//! - drift off (neither bit): raw main, reverse and lateral thrusters, Newtonian; rotation still rate-controlled.
+//! - full off (IN_TORQUE): as drift off, but rotation is torque: a spin persists until countered.
+//!
+//! In both off modes retro turns the nose against the velocity (rate-controlled while held).
 
-use crate::flight::heading;
+use crate::flight::{dir_cap, heading};
 use crate::math::{atan2, clamp1, hypot, wrap};
 use crate::world::{World, DT, P};
 
@@ -18,8 +22,10 @@ pub const IN_STRAFE_R: u32 = 1 << 5;
 pub const IN_BURN: u32 = 1 << 6;
 pub const IN_FIRE: u32 = 1 << 7;
 pub const IN_RETRO: u32 = 1 << 8;
-/// Flight assist on. A level, not an edge: the page owns the toggle and sends the current mode every tick.
+/// Full assist. A level, not an edge: the page owns the mode and sends it every tick.
 pub const IN_ASSIST: u32 = 1 << 9;
+/// Full off: torque rotation (only read when IN_ASSIST is clear).
+pub const IN_TORQUE: u32 = 1 << 10;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Player {
@@ -42,6 +48,7 @@ pub fn control(w: &mut World) {
     let i = p.slot as usize;
     if w.ships.alive[i] == 0 { return; }
     let (b_acc, b_cap, k_turn) = (w.p(P::burn_accel), w.p(P::burn_cap), w.p(P::assist_turn));
+    let (k_in, k_out) = (w.p(P::well_in), w.p(P::well_out));
     let (s, t) = (&mut w.ships, &w.types);
     let k = s.kind[i] as usize;
     let (accel, turn, vmax) = (t.accel[k], t.turn[k], t.vmax[k]);
@@ -53,20 +60,26 @@ pub fn control(w: &mut World) {
     let (hx, hy) = heading(s.ang[i]);
     let mut set = p.set;
     if held(IN_ASSIST) {
-        let cap = vmax * if burn { b_cap } else { 1.0 };
+        // the set speed's ceiling is the top speed along the nose, so the well raises it pointing in and lowers it
+        // pointing out (from last tick's well, which the forces stage keeps per ship)
+        let well_cap = |base: f64| dir_cap(base, s.well[i], s.well_x[i], s.well_y[i], hx, hy, t.well[k], k_in, k_out);
+        let (cap, cruise) = (well_cap(vmax * if burn { b_cap } else { 1.0 }), well_cap(vmax));
         if up { set = cap.min(set + accel * if burn { b_acc } else { 1.0 } * DT); }
         if down { set = (set - accel * DT).max(0.0); }
-        if !burn && set > vmax { set = vmax.max(set - accel * 0.6 * DT); }
+        if !burn && set > cruise { set = cruise.max(set - accel * 0.6 * DT); }
         s.ctl[i] = 3; // assist holds the velocity; the turn command stays the player's
+        s.rot[i] = 0;
         s.want_vx[i] = hx * set;
         s.want_vy[i] = hy * set;
     } else {
         s.ctl[i] = 0;
+        s.rot[i] = held(IN_TORQUE) as u8;
         s.main[i] = if up { 1.0 } else if down { -1.0 } else { 0.0 };
         s.lat[i] = (held(IN_STRAFE_R) as i32 - held(IN_STRAFE_L) as i32) as f64;
         let (vx, vy) = (s.vx[i], s.vy[i]);
         if held(IN_RETRO) && !left && !right && hypot(vx, vy) > 2.0 {
             s.turn_in[i] = clamp1(wrap(atan2(vx, -vy) - s.ang[i]) * k_turn / turn);
+            s.rot[i] = 0; // the retro autopilot steers by rate, in either off mode
         }
         set = (vx * hx + vy * hy).max(0.0);
     }
@@ -125,6 +138,28 @@ mod tests {
         assert!(wrap(w.ships.ang[0] - std::f64::consts::PI).abs() < 0.1, "{}", w.ships.ang[0]);
         hold(&mut w, IN_THRUST, 3.0); // and the main engine now brakes
         assert!(w.ships.vy[0] < 20.0, "{}", w.ships.vy[0]);
+    }
+
+    #[test]
+    fn strafe_slides_in_drift_off_and_does_nothing_in_full_assist() {
+        let mut w = world();
+        hold(&mut w, IN_STRAFE_R, 1.0);
+        assert!(w.ships.vx[0] > 15.0, "{}", w.ships.vx[0]); // right is +x at angle 0
+        let vx = w.ships.vx[0];
+        hold(&mut w, 0, 1.0);
+        assert!((w.ships.vx[0] - vx).abs() < 1e-9); // Newtonian: the slide persists
+        hold(&mut w, IN_ASSIST | IN_STRAFE_R, 3.0);
+        assert!(w.ships.vx[0].abs() < 1.0, "{}", w.ships.vx[0]); // full assist cancels the drift, strafe or not
+    }
+
+    #[test]
+    fn full_off_spin_persists_drift_off_stops() {
+        let mut w = world();
+        hold(&mut w, IN_TORQUE | IN_LEFT, 0.5);
+        hold(&mut w, IN_TORQUE, 1.0);
+        assert!(w.ships.av[0] > 0.9, "{}", w.ships.av[0]);
+        hold(&mut w, 0, 0.5);
+        assert_eq!(w.ships.av[0], 0.0);
     }
 
     #[test]

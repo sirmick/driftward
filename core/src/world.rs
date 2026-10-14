@@ -26,6 +26,9 @@ soa! {
         want_vx: f64, want_vy: f64, want_face: f64,
         // forces scratch, written by the forces stage
         ax: f64, ay: f64,
+        // the gravity well here, written by the forces stage: strength (0 outside every well) and the unit
+        // direction into it (see flight.rs)
+        well: f64, well_x: f64, well_y: f64,
         // fields gathered at the ship each tick: hydrogen, dust, ionized gas density
         gas_h: f64, gas_d: f64, gas_i: f64,
         // engine glow 0..1, smoothed toward the throttle
@@ -38,18 +41,22 @@ soa! {
         burn: u8,
         // control mode: 0 raw actuators, 1 assist (auto facing), 2 assist (facing want_face), 3 assist (turn untouched)
         ctl: u8,
+        // rotation: 0 rate-controlled (the turn command sets a turn rate; release stops the turn),
+        // 1 torque (the turn command is angular acceleration; spin persists until countered)
+        rot: u8,
         kind: u16,
         generation: u32,
     }
 }
 
 soa! {
-    /// Ship types (one per brand x size): flight stats from the catalog.
-    pub struct Types { accel: f64, turn: f64, vmax: f64 }
+    /// Ship types (one per brand x size): flight stats from the catalog. `well` is how strongly gravity wells
+    /// affect the hull (0 not at all; fighters about .35, capital ships about .75).
+    pub struct Types { accel: f64, turn: f64, vmax: f64, well: f64 }
 }
 
 soa! {
-    /// Gravity bodies (planets): position, radius, surface gravity.
+    /// Gravity bodies (planets): position, radius, and well strength g (relative to the g_ref param).
     pub struct Bodies { x: f64, y: f64, r: f64, g: f64 }
 }
 
@@ -65,7 +72,7 @@ params! {
     burn_cap = 1.3;       "burner speed cap multiplier"
     turn_slew = 8.0;      "angular acceleration, in units of the type's turn rate per second"
     lat_cap = 0.6;        "lateral taper cap as a fraction of the speed cap"
-    damper = 0.4;         "inertial damper rate above the speed limit, per second"
+    damper = 0.2;         "inertial damper rate above the speed limit, per second (slow, so a slingshot's boost lasts)"
     drag_h = 6e-4;        "drag coefficient of hydrogen"
     drag_d = 3e-3;        "drag coefficient of dust"
     drag_i = 1.5e-3;      "drag coefficient of ionized gas"
@@ -74,6 +81,11 @@ params! {
     assist_face_dv = 0.6; "assist: face the velocity error when it exceeds this many accels"
     assist_face_v = 0.08; "assist: else face the target velocity when above this fraction of vmax"
     thr_rate = 6.0;       "engine glow response rate, per second"
+    well_reach = 3.0;     "a body's well reaches this many radii"
+    g_ref = 40.0;         "a body with g = g_ref has a well of strength 1 at its surface"
+    pull = 0.6;           "a well's pull at strength 1, as a share of the ship's thrust, times the hull's sensitivity"
+    well_in = 1.0;        "top speed heading into a well: raised by this, times strength and sensitivity"
+    well_out = 0.6;       "top speed heading out of a well: lowered by this, times strength and sensitivity"
 }
 
 #[derive(Clone, Copy, Debug)]

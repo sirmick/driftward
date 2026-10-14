@@ -8,7 +8,7 @@ This repository holds two self-contained WebGL2 pages with no dependencies and n
 
 Open `index.html` for the lab or `play.html` for the game, in a browser with WebGL2 (any current Chrome, Firefox, Safari or Edge). That's it.
 
-The game so far: fly one ship through a hand-authored system on the core's flight model, with a minimap and a navigation overlay (I) that labels or points to every planet with its distance and closing speed; save (F6) and load (F9), and export a replay of the session. Everything that changes game state runs in the core, so a save restores the exact state and a replay reruns identically, in the browser or natively.
+The game so far: fly one ship through a hand-authored system on the core's flight model, with the Book's three assist levels on F (full assist; drift off, with Q/E strafe and X retro; full off, where spins persist), side, reverse and turning thruster jets on each hull, gravity wells that pull you in and bend your top speed, so you fall in fast and crawl out (game physics, stronger on bigger hulls, though every hull can climb out), a minimap and a navigation overlay (I) that labels or points to every planet with its distance and closing speed; save (F6) and load (F9), and export a replay of the session. Everything that changes game state runs in the core, so a save restores the exact state and a replay reruns identically, in the browser or natively.
 
 ## What's in the lab
 

@@ -297,7 +297,7 @@ void main(){ vQ=aPos; float c=cos(iA.z), s=sin(iA.z);
 const FLY_PLUME_VS = `#version 300 es
 in vec2 aPos; in vec4 iN; in vec4 iP; in vec2 iB;
 ${WORLD_POS}
-uniform vec3 uPlCol[4]; uniform vec3 uPlCore[4]; uniform vec4 uPlP[4]; uniform float uPlSpread[4];
+uniform vec3 uPlCol[5]; uniform vec3 uPlCore[5]; uniform vec4 uPlP[5]; uniform float uPlSpread[5]; uniform vec3 uPlBurn[5]; // 4 brands + thruster gas
 out vec2 vST; flat out vec3 vCol; flat out vec3 vCore; flat out vec4 vP; flat out float vSeed; flat out float vPow;
 void main(){
   int b = int(iB.x+.5);
@@ -305,7 +305,8 @@ void main(){
   vec2 dir = iN.zw, perp = vec2(-dir.y, dir.x);
   float wid = max(iP.y, 2.5/uScale);
   vec2 w = iN.xy + dir*s*iP.x + perp*t*wid*.5*(1.+max(s,0.)*(.6+uPlSpread[b]*2.));
-  vST=vec2(s,t); vCol=uPlCol[b]; vCore=mix(uPlCore[b], vec3(1.), clamp(iB.y,0.,1.)*.8); vP=uPlP[b]; vSeed=iP.z; vPow=iP.w;
+  float burn = clamp(iB.y,0.,1.); // 0 cruise .. 1 full burner: the body takes the brand's burner tint
+  vST=vec2(s,t); vCol=mix(uPlCol[b], uPlBurn[b], burn); vCore=mix(uPlCore[b], uPlBurn[b]*.5 + .5, burn*.6); vP=uPlP[b]; vSeed=iP.z; vPow=iP.w;
   gl_Position=clipOf(w);
 }`;
 const FLY_BOLT_VS = `#version 300 es

@@ -1,8 +1,9 @@
 // ======================= PLAY =======================
 // The game page, on the way to M1. Rule: anything that changes game state runs in the sim core, so a session
 // saves, loads and replays exactly (natively too). This page only turns keys into one input bitmask per tick,
-// and draws what the core's columns say. Flight is the core's player model: assist on holds a set speed along
-// the nose; assist off is raw thrust.
+// and draws what the core's columns say. Flight is the core's player model, with the Book's three assist levels:
+// full assist holds a set speed along the nose (and cancels drift and gravity); drift off is raw Newtonian thrust
+// with strafe; full off adds torque rotation, where a spin keeps going until countered.
 const $ = id => document.getElementById(id);
 const catalog = JSON.parse($('catalog').textContent);
 const canvas = $('view'), hud = $('hud'), hx = hud.getContext('2d');
@@ -14,12 +15,14 @@ const { gl, compile, P, quad, draw, tex } = G;
 const SYSTEM = {
   star: 'sol', sunAz: 135, sunEl: 35, start: [1800, 1800],
   planets: [
-    { x: -3200, y: 2600, r: 1300, kind: 0, c1: '#1d4f7a', c2: '#5d7a3c', c3: '#d8cba8', atm: '#6fb3ff', seed: 1.3, name: 'Tessaly', city: 1 },
-    { x: 6800, y: -4400, r: 2700, kind: 1, c1: '#c9925c', c2: '#7d4e33', c3: '#ecd9b0', atm: '#ffc98a', seed: 4.1, name: 'Orrin' },
-    { x: -8200, y: -6400, r: 820, kind: 2, c1: '#5e5953', c2: '#8a8178', c3: '#c9c0b4', atm: '#b0a8a0', seed: 7.7, name: 'Kell' }
+    // g: well strength (40 is full strength at the surface; see core/src/flight.rs). Within 3 radii a well pulls you
+    // in and bends your top speed: faster heading in, a crawl heading out; capital ships feel it most.
+    { x: -3200, y: 2600, r: 1300, g: 40, kind: 0, c1: '#1d4f7a', c2: '#5d7a3c', c3: '#d8cba8', atm: '#6fb3ff', seed: 1.3, name: 'Tessaly', city: 1 },
+    { x: 6800, y: -4400, r: 2700, g: 45, kind: 1, c1: '#c9925c', c2: '#7d4e33', c3: '#ecd9b0', atm: '#ffc98a', seed: 4.1, name: 'Orrin' },
+    { x: -8200, y: -6400, r: 820, g: 20, kind: 2, c1: '#5e5953', c2: '#8a8178', c3: '#c9c0b4', atm: '#b0a8a0', seed: 7.7, name: 'Kell' }
   ]
 };
-const PLANETS = SYSTEM.planets.map(p => Object.assign({}, p, { g: 0.004 * p.r, L1: hexRGB(p.c1), L2: hexRGB(p.c2), L3: hexRGB(p.c3), LA: lin(hexRGB(p.atm)) }));
+const PLANETS = SYSTEM.planets.map(p => Object.assign({}, p, { L1: hexRGB(p.c1), L2: hexRGB(p.c2), L3: hexRGB(p.c3), LA: lin(hexRGB(p.atm)) }));
 const star = STARS[SYSTEM.star];
 const sunVec = (() => { const az = SYSTEM.sunAz * Math.PI / 180, el = SYSTEM.sunEl * Math.PI / 180; return [Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el)]; })();
 
@@ -35,6 +38,7 @@ catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
   types.push({
     bi, zi, brand: b, L: z.length, name: b.name + ' ' + z.name, key: baker.keyOf(b.id, z.id), br: brandRender(b),
     accel: (fz.accel || 60) * (fb.accel || 1), turn: (fz.turn || 1) * (fb.turn || 1), vmax: (fz.vmax || 200) * (fb.vmax || 1),
+    well: fz.well == null ? 0.5 : fz.well, // how much gravity wells pull this hull and bend its top speed
     s: null, half: z.length / 2
   });
 }));
@@ -51,7 +55,22 @@ function typeReady(T) {
   T.eng = m.engines.map(e => ({ lx: (e.u - 0.5) * m.extent, ly: (0.5 - e.v) * m.extent, w: e.w * m.extent, dx: e.dx, dy: e.dy }));
   let ax = 0, ay = 0; T.eng.forEach(e => { ax += e.lx; ay += e.ly; });
   T.engX = T.eng.length ? ax / T.eng.length : 0; T.engY = T.eng.length ? ay / T.eng.length : -T.half * 0.6;
+  T.rcs = hullAnchors(s, m);
   return true;
+}
+// Thruster anchors on the actual hull, from the bake's CPU copy of the aux map (red: distance outside the hull,
+// zero inside). Side jets sit on the flanks a quarter of the way back from the nose and a fifth from the tail;
+// reverse jets on the nose. Local metres: +x right, +y forward.
+function hullAnchors(s, m) {
+  const res = m.res, ext = m.extent, aux = s.aux, inside = (ix, iy) => aux[(iy * res + ix) * 4] < 2;
+  const lx = ix => ((ix + 0.5) / res - 0.5) * ext, ly = iy => (0.5 - (iy + 0.5) / res) * ext;
+  let top = -1, bot = -1;
+  for (let iy = 0; iy < res; iy++) for (let ix = 0; ix < res; ix++) if (inside(ix, iy)) { if (top < 0) top = iy; bot = iy; break; }
+  if (top < 0) return null;
+  const edges = iy => { let a = -1, b = -1; for (let ix = 0; ix < res; ix++) if (inside(ix, iy)) { if (a < 0) a = ix; b = ix; } return [lx(a), lx(b)]; };
+  const fy = Math.round(top + 0.25 * (bot - top)), ry = Math.round(top + 0.8 * (bot - top)), ny = Math.round(top + 0.03 * (bot - top));
+  const [fl, fr] = edges(fy), [rl, rr] = edges(ry), [nl, nr] = edges(ny);
+  return { fl: [fl, ly(fy)], fr: [fr, ly(fy)], rl: [rl, ly(ry)], rr: [rr, ly(ry)], nl: [nl * 0.6, ly(ny)], nr: [nr * 0.6, ly(ny)] };
 }
 function playerTypeIndex() {
   const q = new URLSearchParams(location.search).get('ship') || 'halcyon:fighter';
@@ -99,13 +118,21 @@ resize();
 
 // ---------- input: keys -> one bitmask per tick ----------
 const keys = new Set();
-let assist = true, zoom = 1, bloomOn = true, nanView = 0, navOn = false;
+// assist level: 0 full assist, 1 drift off, 2 full off (the Book's three levels); F cycles
+const ASSIST = [
+  { hud: 'FULL ASSIST', toast: 'Full assist: W/S set speed, drift and gravity cancelled' },
+  { hud: 'DRIFT OFF', toast: 'Drift off: raw thrust, Q/E strafe, X points retrograde' },
+  { hud: 'FULL OFF', toast: 'Full off: as drift off, and spins persist until you counter-turn' }
+];
+let assistMode = 0, zoom = 1, bloomOn = true, nanView = 0, navOn = false;
+const assist = () => assistMode === 0;
 function setNav(on) { navOn = on; $('b-nav').setAttribute('aria-pressed', String(on)); }
 $('b-nav').onclick = () => { setNav(!navOn); canvas.focus(); };
 window.addEventListener('keydown', e => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
   if (!keys.has(e.code)) {
-    if (e.code === 'KeyF') assist = !assist;
+    if (e.code === 'KeyF') { assistMode = (assistMode + 1) % 3; toast(ASSIST[assistMode].toast); }
+    if ((e.code === 'KeyQ' || e.code === 'KeyE') && assist()) toast('Strafe works with assist off: press F');
     if (e.code === 'KeyI') setNav(!navOn);
     // debugging the flashing black squares: B toggles bloom, N paints bad scene pixels (see postProcess)
     if (e.code === 'KeyB') { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
@@ -127,7 +154,7 @@ function inputBits(IN) {
     | (k('KeyA') || k('ArrowLeft') ? IN.left : 0) | (k('KeyD') || k('ArrowRight') ? IN.right : 0)
     | (k('KeyQ') ? IN.strafeL : 0) | (k('KeyE') ? IN.strafeR : 0)
     | (k('ShiftLeft') || k('ShiftRight') ? IN.burn : 0) | (k('Space') ? IN.fire : 0) | (k('KeyX') ? IN.retro : 0)
-    | (assist ? IN.assist : 0);
+    | (assistMode === 0 ? IN.assist : 0) | (assistMode === 2 ? IN.torque : 0);
 }
 
 let toastT = 0;
@@ -141,7 +168,7 @@ let saveGame = () => {}, loadGame = () => {};
 CORE_READY.then(CORE => {
   const sim = CORE.world({ maxShips: 64, maxTypes: 64, maxBodies: 8, envN: 16, envW: 40000, seed: 1 });
   const SH = sim.ship, IN = CORE.IN;
-  types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; });
+  types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; });
   PLANETS.forEach((p, j) => { sim.body.x[j] = p.x; sim.body.y[j] = p.y; sim.body.r[j] = p.r; sim.body.g[j] = p.g; });
   sim.setBodies(PLANETS.length);
 
@@ -205,8 +232,12 @@ CORE_READY.then(CORE => {
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
   const typeCount = new Int32Array(types.length), typeStart = new Int32Array(types.length), typeFill = new Int32Array(types.length);
   const LP = new Float32Array(64), LC = new Float32Array(64);
-  const plCol = new Float32Array(12), plCore = new Float32Array(12), plP = new Float32Array(16), plSpread = new Float32Array(4);
-  catalog.brands.slice(0, 4).forEach((b, k) => { const br = brandRender(b); plCol.set(br.plCol, k * 3); plCore.set(br.plCore, k * 3); plP.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); plSpread[k] = br.plSpread; });
+  const plCol = new Float32Array(15), plCore = new Float32Array(15), plP = new Float32Array(20), plSpread = new Float32Array(5), plBurn = new Float32Array(15);
+  catalog.brands.slice(0, 4).forEach((b, k) => { const br = brandRender(b); plCol.set(br.plCol, k * 3); plCore.set(br.plCore, k * 3); plP.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); plSpread[k] = br.plSpread; plBurn.set(br.plBurn, k * 3); });
+  const RCS = 4; // the fifth look: cold thruster gas for the side, reverse and turning jets
+  const spinVis = new Float32Array(MAXS); // per-slot turning-jet pulse, decaying (visual only)
+  const turnSlew = sim.param('turn_slew');
+  plCol.set(lin([0.72, 0.78, 0.88]), RCS * 3); plCore.set([1, 1, 1], RCS * 3); plP.set([0.5, 0, 0.25, 0], RCS * 4); plSpread[RCS] = 0.9; plBurn.set(plCol.subarray(RCS * 3, RCS * 3 + 3), RCS * 3);
   const sunCol = lin(star.col), sl = Math.hypot(sunVec[0], sunVec[1]) || 1;
   // draw order: largest classes first, so small ships sit on top
   const order = types.map((_, k) => k).sort((a, b) => types[b].zi - types[a].zi);
@@ -252,19 +283,47 @@ CORE_READY.then(CORE => {
       if (!shown(i)) continue;
       const T = types[SH.kind[i]], c = Math.cos(SH.ra[i]), s = Math.sin(SH.ra[i]), th = SH.thr[i];
       typeCount[SH.kind[i]]++;
-      const burn = SH.burn[i] && SH.main[i] > 0 ? 1 : 0, pw = plumePower(th) * (burn ? 1.3 : 1);
+      // burner intensity follows the engine glow, which ramps toward 1 only on the burner (cruise tops out at .72),
+      // so the tint, length and brightness flare in and fade out over a few frames instead of snapping
+      const bi = Math.max(0, Math.min(1, (th - 0.72) / 0.28)), pw = plumePower(th) * 1.35 * (1 + 0.35 * bi);
       if (th >= 0.05 && nL < 16) { // engine light on the hull
         const ex = T.engX, ey = T.engY - T.L * 0.12, k = pw * 1.5;
         LP.set([SH.rx[i] + c * ex - s * ey, SH.ry[i] + s * ex + c * ey, T.L * 0.05 + 1.5, T.L * 1.6 + 8], nL * 4);
         LC.set([T.br.plCol[0] * k, T.br.plCol[1] * k, T.br.plCol[2] * k, 0], nL * 4); nL++;
       }
+      // thruster jets: side jets fire away from the push (lateral thrust +x pushes right), reverse jets out of the nose
+      const jet = (lx, ly, dx, dy, k) => {
+        if (nPl >= MAXS * 12) return;
+        const o = nPl * 10;
+        plumeInst[o] = SH.rx[i] + c * lx - s * ly; plumeInst[o + 1] = SH.ry[i] + s * lx + c * ly;
+        plumeInst[o + 2] = c * dx - s * dy; plumeInst[o + 3] = s * dx + c * dy;
+        plumeInst[o + 4] = T.L * (0.08 + 0.22 * k); plumeInst[o + 5] = T.L * 0.05; plumeInst[o + 6] = i * 3.1 + lx; plumeInst[o + 7] = 0.35 + 0.9 * k;
+        plumeInst[o + 8] = RCS; plumeInst[o + 9] = 0; nPl++;
+      };
+      const lat = SH.lat[i], rev = -Math.min(0, SH.main[i]);
+      const A = T.rcs || { fl: [-T.half * 0.3, T.half * 0.28], fr: [T.half * 0.3, T.half * 0.28], rl: [-T.half * 0.3, -T.half * 0.24], rr: [T.half * 0.3, -T.half * 0.24], nl: [-T.half * 0.12, T.half * 0.42], nr: [T.half * 0.12, T.half * 0.42] };
+      // turning: diagonal pairs (front-right with rear-left turns left, the other pair right). The torque is what the
+      // core's steer stage applies this tick: the turn command itself in full off, else the step toward the target
+      // rate. Pulses linger a few frames, and a faint trim shows while the ship is turning, so a turn reads clearly.
+      const turnT = T.turn, step = turnT * turnSlew * sim.DT;
+      const torque = SH.rot[i] ? SH.turn_in[i] : Math.max(-1, Math.min(1, (SH.turn_in[i] * turnT - SH.av[i]) / step));
+      spinVis[i] = Math.abs(torque) >= Math.abs(spinVis[i]) * 0.86 ? torque : spinVis[i] * 0.86;
+      const spin = Math.max(-1, Math.min(1, spinVis[i] + 0.25 * SH.av[i] / turnT)), ks = Math.abs(spin);
+      if (ks > 0.06) {
+        // turning left (counter-clockwise): front-right and rear-left fire outward; turning right, the other pair
+        if (spin > 0) { jet(A.fr[0], A.fr[1], 1, 0, ks); jet(A.rl[0], A.rl[1], -1, 0, ks); }
+        else { jet(A.fl[0], A.fl[1], -1, 0, ks); jet(A.rr[0], A.rr[1], 1, 0, ks); }
+      }
+      // strafing right (+x) fires the left flank outward, front and rear; strafing left, the right flank
+      if (Math.abs(lat) > 0.05) { const k = Math.abs(lat); if (lat > 0) { jet(A.fl[0], A.fl[1], -1, 0, k); jet(A.rl[0], A.rl[1], -1, 0, k); } else { jet(A.fr[0], A.fr[1], 1, 0, k); jet(A.rr[0], A.rr[1], 1, 0, k); } }
+      if (rev > 0.05) { jet(A.nl[0], A.nl[1], 0, 1, rev); jet(A.nr[0], A.nr[1], 0, 1, rev); }
       if (th < 0.03) continue;
       for (let e = 0; e < T.eng.length && nPl < MAXS * 12; e++) {
         const E = T.eng[e], o = nPl * 10;
         plumeInst[o] = SH.rx[i] + c * E.lx - s * E.ly; plumeInst[o + 1] = SH.ry[i] + s * E.lx + c * E.ly;
         plumeInst[o + 2] = c * E.dx - s * E.dy; plumeInst[o + 3] = s * E.dx + c * E.dy;
-        plumeInst[o + 4] = E.w * T.br.plLen * (0.3 + 1.7 * th) * (burn ? 1.6 : 1); plumeInst[o + 5] = E.w * T.br.plWid * 1.1;
-        plumeInst[o + 6] = i * 7.3 + e * 1.37; plumeInst[o + 7] = pw; plumeInst[o + 8] = T.bi; plumeInst[o + 9] = burn;
+        plumeInst[o + 4] = E.w * T.br.plLen * (0.5 + 2.6 * th) * (1 + 1.2 * bi); plumeInst[o + 5] = E.w * T.br.plWid * 1.35 * (1 + 0.3 * bi);
+        plumeInst[o + 6] = i * 7.3 + e * 1.37; plumeInst[o + 7] = pw; plumeInst[o + 8] = T.bi; plumeInst[o + 9] = bi;
         nPl++;
       }
     }
@@ -272,7 +331,7 @@ CORE_READY.then(CORE => {
       gl.blendFunc(gl.ONE, gl.ONE);
       setView(FP.plume, RW, RH, cx, cy);
       const u = FP.plume.u; gl.uniform1f(u.uTime, t);
-      gl.uniform3fv(u.uPlCol, plCol); gl.uniform3fv(u.uPlCore, plCore); gl.uniform4fv(u.uPlP, plP); gl.uniform1fv(u.uPlSpread, plSpread);
+      gl.uniform3fv(u.uPlCol, plCol); gl.uniform3fv(u.uPlCore, plCore); gl.uniform4fv(u.uPlP, plP); gl.uniform1fv(u.uPlSpread, plSpread); gl.uniform3fv(u.uPlBurn, plBurn);
       gl.bindVertexArray(VS.plume.vao); upload(VS.plume, plumeInst, nPl);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nPl);
       gl.bindVertexArray(null);
@@ -316,10 +375,14 @@ CORE_READY.then(CORE => {
     hx.clearRect(0, 0, W, H);
     const T0 = types[SH.kind[0]], sp = Math.hypot(SH.vx[0], SH.vy[0]), hd = ((-SH.ang[0] * 180 / Math.PI) % 360 + 360) % 360;
     const burn = SH.burn[0] && SH.main[0] > 0;
+    // top speed along the nose here, by the core's rule: raised pointing into a well, lowered pointing out
+    const nx0 = -Math.sin(SH.ang[0]), ny0 = Math.cos(SH.ang[0]), cIn = nx0 * SH.well_x[0] + ny0 * SH.well_y[0];
+    const wk = SH.well[0] * T0.well * (sim.param('well_in') * Math.max(cIn, 0) - sim.param('well_out') * Math.max(-cIn, 0));
+    const topNow = Math.max(0.15, 1 + wk) * T0.vmax * (burn ? sim.param('burn_cap') : 1);
     const lines = [
       [T0.name, '#dbe0e7'],
-      [`SPD ${sp.toFixed(0).padStart(4)} / ${T0.vmax.toFixed(0)} m/s${assist ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, '#dbe0e7'],
-      [`HDG ${hd.toFixed(0).padStart(3, '0')}°  ${assist ? 'ASSIST' : 'MANUAL'}${burn ? '  BURN' : ''}`, burn ? '#e2b866' : '#8a95a4'],
+      [`SPD ${sp.toFixed(0).padStart(4)} / ${topNow.toFixed(0)} m/s${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, wk < -0.03 ? '#e08a4a' : wk > 0.03 ? '#7fd08a' : '#dbe0e7'],
+      [`HDG ${hd.toFixed(0).padStart(3, '0')}°  ${ASSIST[assistMode].hud}${burn ? '  BURN' : ''}`, burn ? '#e2b866' : assistMode ? '#c8a27a' : '#8a95a4'],
       [`TICK ${sim.tick()}  ${fps.toFixed(0)} fps`, '#8a95a4']
     ];
     hx.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle';
@@ -345,7 +408,7 @@ CORE_READY.then(CORE => {
       hx.beginPath(); hx.arc(cx + ux * (r0 + len), cy + uy * (r0 + len), 4, 0, 6.283); hx.stroke();
     }
     const nx = -Math.sin(SH.ra[0]), ny = -Math.cos(SH.ra[0]); // nose direction on screen
-    if (assist) {
+    if (assist()) {
       const len = 30 + 60 * Math.min(1.3, sim.playerSet() / T0.vmax), qx = cx + nx * (r0 + len), qy = cy + ny * (r0 + len);
       hx.strokeStyle = 'rgba(159,180,200,.75)';
       hx.beginPath(); hx.moveTo(qx - ny * 6, qy + nx * 6); hx.lineTo(qx + ny * 6, qy - nx * 6); hx.stroke();
@@ -381,7 +444,8 @@ CORE_READY.then(CORE => {
     for (const o of navs) if (o.surf < near.surf) near = o;
     hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace';
     hx.fillStyle = near.surf <= 0 ? NAV_HOT : NAV_COL;
-    hx.fillText(near.surf <= 0 ? `OVER ${near.name.toUpperCase()}` : `NEAREST ${near.name.toUpperCase()} ${fmtDist(near.surf)}`, 14, 20 + 4 * 17);
+    const well = SH.well[0]; // strength of the well here (1: a full-strength planet's surface)
+    hx.fillText((near.surf <= 0 ? `OVER ${near.name.toUpperCase()}` : `NEAREST ${near.name.toUpperCase()} ${fmtDist(near.surf)}`) + (well > 0.01 ? `  WELL ${Math.round(well * 100)}%` : ''), 14, 20 + 4 * 17);
     if (!navOn) return;
     const m = 34, x0 = m, y0 = m, x1 = W - m, y1 = H - stripH - m, cx = W / 2, cy = (H - stripH) / 2;
     hx.textBaseline = 'middle';
@@ -451,7 +515,7 @@ CORE_READY.then(CORE => {
   window.__play = {
     sim, IN, newGame, exportReplay,
     setNav,
-    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist, ready: typeReady(types[SH.kind[0]]) }),
+    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, ready: typeReady(types[SH.kind[0]]) }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {
       const saved = new Set(keys); keys.clear(); (held || []).forEach(k => keys.add(k));

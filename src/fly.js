@@ -185,7 +185,7 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
         T.hullEps = T.Dmax / 255 * 1.5;
       }
       const ti = types.length;
-      sim.type.accel[ti] = T.accel; sim.type.turn[ti] = T.turn; sim.type.vmax[ti] = T.vmax;
+      sim.type.accel[ti] = T.accel; sim.type.turn[ti] = T.turn; sim.type.vmax[ti] = T.vmax; sim.type.well[ti] = fz.well == null ? 0.5 : fz.well;
       types.push(T);
     }));
   }
@@ -603,9 +603,9 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
       gl.blendFunc(gl.ONE, gl.ONE);
       setView(FP.plume, RW, RH);
       const u = FP.plume.u; gl.uniform1f(u.uTime, t);
-      const col = new Float32Array(12), core = new Float32Array(12), pp = new Float32Array(16), spr = new Float32Array(4);
-      catalog.brands.slice(0, 4).forEach((b, k) => { const br = brandRender(b); col.set(br.plCol, k * 3); core.set(br.plCore, k * 3); pp.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); spr[k] = br.plSpread; });
-      gl.uniform3fv(u.uPlCol, col); gl.uniform3fv(u.uPlCore, core); gl.uniform4fv(u.uPlP, pp); gl.uniform1fv(u.uPlSpread, spr);
+      const col = new Float32Array(12), core = new Float32Array(12), pp = new Float32Array(16), spr = new Float32Array(4), bcol = new Float32Array(12);
+      catalog.brands.slice(0, 4).forEach((b, k) => { const br = brandRender(b); col.set(br.plCol, k * 3); core.set(br.plCore, k * 3); pp.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); spr[k] = br.plSpread; bcol.set(br.plBurn, k * 3); });
+      gl.uniform3fv(u.uPlCol, col); gl.uniform3fv(u.uPlCore, core); gl.uniform4fv(u.uPlP, pp); gl.uniform1fv(u.uPlSpread, spr); gl.uniform3fv(u.uPlBurn, bcol);
       gl.bindVertexArray(VS.plume.vao); upload(VS.plume, plumeInst, nPl);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nPl);
       gl.bindVertexArray(null);

@@ -53,6 +53,6 @@ const CORE_READY = (async () => {
     };
   }
   // input bits, mirrored from core/src/player.rs
-  const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512 };
+  const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };
   return { world, IN, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
 })();
