@@ -69,8 +69,10 @@ soa! {
 
 soa! {
     /// The player's game state, one row: mode (port.rs MODE_*), the body landed at or heading for, the time left in
-    /// a descent or launch sequence, the strategic day, and the player's credits and debt to the lender.
-    pub struct Game { mode: u8, at: i16, timer: f64, day: u32, credits: u32, debt: u32 }
+    /// a descent or launch sequence, the strategic day, the player's credits and debt to the lender, and the fly-to
+    /// autopilot's target body plus one (0: off; player.rs) and the point it is steering for (a waypoint round an
+    /// obstacle, or the target).
+    pub struct Game { mode: u8, at: i16, timer: f64, day: u32, credits: u32, debt: u32, auto: i16, aim_x: f64, aim_y: f64 }
 }
 
 soa! {
@@ -387,6 +389,7 @@ impl World {
         eat(self.game.mode[0] as u64 | (self.game.at[0] as u16 as u64) << 8 | (self.game.day[0] as u64) << 32);
         eat(self.game.timer[0].to_bits());
         eat(self.game.credits[0] as u64 | (self.game.debt[0] as u64) << 32);
+        eat(self.game.auto[0] as u16 as u64);
         for &t in &self.hold.tons { eat(t as u64); }
         for &p in &self.market.price[..self.n_bodies * MAX_GOODS] { eat(p as u64); }
         let f = &self.offers;

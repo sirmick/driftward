@@ -4,7 +4,7 @@ M1 in the Book is "Trade and delivery": one system, a game shell, the sim core a
 
 This file tracks that milestone against the Book's `[M1]` items. Update it as work lands. Status: **done**, **partial** (with what is missing), or **to do**.
 
-Last updated: 2026-10-14, with step 6 (ambient traffic).
+Last updated: 2026-10-14, with step 7 (HUD, targeting and the system map).
 
 ## Summary
 
@@ -18,7 +18,8 @@ Last updated: 2026-10-14, with step 6 (ambient traffic).
 | Cargo, credits, markets, trading | Done |
 | Mission board and delivery missions | Done |
 | Ambient traffic | Done |
-| HUD, targeting, system map, location list, shell | Partial (next) |
+| HUD, targeting, system map, location list | Done, but for ship status and sensor error radii |
+| Shell | Partial (next) |
 | Lore, painted vistas and portraits (OpenRouter) | To do |
 | Exit test, headless | Every piece works and is tested; the single scripted test is to do |
 
@@ -42,27 +43,30 @@ Last updated: 2026-10-14, with step 6 (ambient traffic).
 - **Docking fees.** Waiting a day in port costs 20 credits (the `dock_fee` param); you cannot wait if you cannot pay.
 - **Market screen.** Trade (T) on the port screen: what the port trades, price (green under base, amber over), tons aboard, buy and sell a ton or, shift-clicked, all you can; repay the lender. Credits and hold on the flight HUD.
 - **Mission board.** Each port's board holds 3 to 8 haulage offers (core columns, posted from the seeded generator, so boards replay). Each day expired offers drop (an offer lasts 2 to 5 days) and free slots fill by chance. An offer binds live state: a destination port, cargo the origin's market trades, 1 to 12 tons, a deadline of the route's length in days (20 km a day) times a slack of 1.5 to 3, plus one, and pay of a base plus tons times kilometres, times an urgency that rises as the slack falls. Risk and faction wealth are 1 in M1.
-- **Delivery missions.** Accept (a command) moves an offer to the player's missions (up to 4); its cargo takes hold space and cannot be sold. Landing at the destination delivers and pays; a day past the deadline fails it softly (the cargo is reclaimed, nothing is paid). Missions can be abandoned. The board panel (M) lists offers and your missions with days left; delivery and failure are reported as they happen; active missions show on the HUD, and their destinations on the nav overlay and minimap.
-- **Ambient traffic.** One culture (the Ironhulls, flying the catalog's Rustline hulls: fighter as shuttle, frigate as hauler, cruiser as liner; `src/traffic.json`). The core plans a lane per directed route and role from a gravity model: population times population over distance (shuttles over distance squared; haulers times how much dearer the destination's market is), scaled so about 14 ships are in flight at steady state, under a cap of 24. Ships undock as a Poisson process with the launch sequence, follow a route bent round the star and any planet in the way, and land or dock with the player's sequence and sheath, then are forgotten. A new game starts mid-flow (a Poisson number per lane, spread along the routes). Far from the player (over 8 km) ships run on rails; near, they fly the full physics under the assist controller, along the same route, and land by the player's rules. They show as dots on the minimap. Rates, shares, speeds and distances are core params; the traffic hulls bake at page load.
+- **Delivery missions.** Accept (a command) moves an offer to the player's missions (up to 4); its cargo takes hold space and cannot be sold. Landing at the destination delivers and pays; a day past the deadline fails it softly (the cargo is reclaimed, nothing is paid). Missions can be abandoned. The board panel (M) lists offers and your missions with days left; delivery and failure are reported as they happen; active missions show on the HUD, and their destinations on the nav overlay, radar and map.
+- **Ambient traffic.** One culture (the Ironhulls, flying the catalog's Rustline hulls: fighter as shuttle, frigate as hauler, cruiser as liner; `src/traffic.json`). The core plans a lane per directed route and role from a gravity model: population times population over distance (shuttles over distance squared; haulers times how much dearer the destination's market is), scaled so about 14 ships are in flight at steady state, under a cap of 24. Ships undock as a Poisson process with the launch sequence, follow a route bent round the star and any planet in the way, and land or dock with the player's sequence and sheath, then are forgotten. A new game starts mid-flow (a Poisson number per lane, spread along the routes). Far from the player (over 8 km) ships run on rails; near, they fly the full physics under the assist controller, along the same route, and land by the player's rules. They show as dots on the radar. Rates, shares, speeds and distances are core params; the traffic hulls bake at page load.
+- **Flight HUD.** As the Book lays it out: day, credits, hold and flight status top-left, with the autopilot and active missions; radar top-right (ships appear only here, as dots); the location list under it (the star, planets and free stations in orbital order; the body whose zone, 6 radii in and 7 out, the player is in expands to its moons and stations; range, LAND, DOCK and mission markers; click or 1 to 9 to target); the nav target bottom-right (range, closing speed, and for a port whether you are clear to land); the message log bottom-left.
+- **Targeting.** T cycles the ships on the radar, nearest first; bodies from the location list or the map. A body or ship target is bracketed on screen, or marked by an arrow on the screen edge; a ship target lapses when it lands.
+- **System map (M).** Orbits, bodies, ports, ships, mission destinations, the target and the autopilot's course; click to target.
+- **Fly-to autopilot (G).** A core command, so it replays: under full assist it flies to the target body, round the star or a planet in the way (the same detour traffic uses), and brakes to stop over it, clear to land. Thrust, reverse or turn, or leaving full assist, takes over. The smoke test flies a delivery with it and replays the session natively.
 - **Teleport (dev).** `__play.teleport(body)` puts the flying player at rest over a body, as a logged command, so tests can fly a delivery and still replay it.
 - **Dev server.** Node, live reload of both pages, the crate rebuilds on change.
 
 ## Partial
 
 - **Port screen.** Name, body, role, population, description and a vista of the body; trade, the mission board, wait a day and launch work. Missing: bar, refuel and repair (shown disabled), painted vista and lore.
-- **HUD.** Day, credits, hold, speed, top speed, assist level, nearest body, well strength, minimap, navigation overlay (I), velocity and heading marks. Missing: ship status (shields, hull, energy, heat, fuel), nav target bottom-right (range, relative speed, clear to land), message log, radar contacts at their error radius.
+- **HUD.** Missing: ship status (shields, hull, energy, heat, fuel), which waits for damage and fuel in the core, and radar contacts drawn at their sensor error radius, which waits for sensors in the core.
 - **Shell.** New game, save and load buttons, replay export. Missing: title screen, new game from a seed, continue from the last landing save, settings, pause.
 - **Debug control plane.** The page exposes `window.__play` (new game, advance, commands, teleport, probe, save, load, export replay), which headless tests drive. Missing: a local API (time scale, teleport, spawn, state inspector, replay and diff) that Claude Code can drive without a browser script.
-- **Controls.** Arrows or WASD, Shift burner, L land, wheel zoom work; in port, T trade and M the mission board. Missing: T to cycle targets, M for the map; assist level is on F, not Tab.
+- **Controls.** As the Book's: arrows or WASD, Shift burner, Tab assist level (F too), T targets, L land, M map, wheel zoom; plus 1 to 9 for locations, G fly to, I the nav overlay; in port, T trade and M the mission board. Missing: J to jump (M4), gamepad.
 
 ## To do
 
 In build order.
 
-1. **HUD, targeting and maps.** T cycles targets with a nav target panel; M opens the system map (orbits, bodies, contacts, mission destinations; click to target; fly-to autopilot under full assist); the location list on the right, expanding the body whose zone the player is in; ship status; message log.
-2. **Shell.** Title, new game with a seed, continue from the last landing save, settings, pause. Death reloads the last landing save.
-3. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
-4. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
+1. **Shell.** Title, new game with a seed, continue from the last landing save, settings, pause. Death reloads the last landing save.
+2. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
+3. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
 
 ## Deviations from the Book
 

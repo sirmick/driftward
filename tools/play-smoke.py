@@ -2,7 +2,8 @@
 
 Checks: the page starts on the sim core, landed at the system's start port, with no console errors; the market
 buys and sells through the core (panel and commands), within credits and hold space; the mission board offers
-deliveries, and one accepted, flown and landed at its destination pays; ambient traffic starts mid-flow and turns
+deliveries, and one accepted, flown there by the autopilot and landed pays; the flight HUD's keys (locations,
+targets, the map) work; ambient traffic starts mid-flow and turns
 over (ships land and new ones launch); assist flight in open space
 matches the lab's numbers; launch, landing and a day passing (with its docking fee) work; save then load restores
 the exact state; a replay exported from the browser (snapshot + input log, trades included) reruns natively to the
@@ -96,6 +97,24 @@ with sync_playwright() as p:
     check(ev('__play.missions()')[0]['state'] == 0, 'abandoning it')
     pg.keyboard.press('Escape')
 
+    # the flight HUD: launch, then the location list, number keys, T for ships, G for the autopilot, M for the map
+    ev("(() => { const P = __play; P.newGame(31); P.command(P.CMD.launch); P.command(P.CMD.skip); P.advance(0.3, []); })()")
+    pg.wait_for_timeout(600)  # the list refreshes with the frames
+    h = ev('__play.locations()')
+    rows = pg.locator('#loc button').count()
+    check(rows == len(h) and rows >= 5 and pg.is_visible('#loc'), f'the location list shows {rows} rows: ' + ', '.join(r['name'] for r in h))
+    pg.keyboard.press('Digit2'); pg.wait_for_timeout(100)
+    check(ev('__play.target()') == {'body': h[1]['j']}, f"2 targets {h[1]['name']}")
+    pg.keyboard.press('KeyT'); pg.wait_for_timeout(100)
+    tgt = ev('__play.target()')
+    check(tgt is not None and tgt.get('ship', -1) > 0, 'T targets the nearest ship')
+    pg.keyboard.press('Digit2'); pg.keyboard.press('KeyG'); pg.wait_for_timeout(100)
+    check(ev('__play.probe().auto') == h[1]['j'], 'G engages the autopilot to the target body')
+    pg.keyboard.press('KeyM'); pg.wait_for_timeout(300)
+    check(pg.is_visible('#map') and not pg.is_visible('#loc'), 'M opens the system map')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+    check(not pg.is_visible('#map'), 'Escape closes it')
+
     # flight: the same numbers as the lab's Fly tab (Halcyon fighter, from rest, clear space)
     a = ev("(() => { const P = __play; P.newGame(4242, " + SPACE + "); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe()]; })()")
     print('after 4 s W   ', json.dumps({k: a[0][k] for k in ('tick', 'v', 'set')}))
@@ -119,16 +138,19 @@ with sync_playwright() as p:
       const b = P.probe(); out.wait = P.command(C.wait); const c = P.probe(); out.day2 = c.day; out.fee = b.credits - c.credits; out.hold = c.hold;
       out.launch2 = P.command(C.launch); P.advance(0.3, []); out.skip = P.command(C.skip); P.advance(0.1, []); out.flying2 = P.probe().mode;
       return out; })()""")
-    # a delivery: back at the start port take the smallest offer, teleport (a logged dev command) over its
-    # destination, land: delivered on landing, paid
+    # a delivery: back at the start port (teleport, a logged dev command) take the smallest offer, launch, and let the
+    # autopilot fly there (round the star if it is in the way) until it stops over the port; land: delivered, paid
     d = ev("""(() => { const P = __play, C = P.CMD, out = {};
       out.teleHome = P.teleport(P.probe().at); P.advance(0.5, []); out.landHome = P.command(C.land); P.advance(3, []);
       const o = P.offers().sort((a, b) => a.tons - b.tons)[0]; out.offer = o;
       out.accept = P.accept(o.k); out.before = P.probe(); out.launch = P.command(C.launch); P.advance(2.2, []);
-      out.tele = P.teleport(o.dest); P.advance(0.5, []); out.land = P.command(C.land); P.advance(3, []);
+      out.auto = P.command(C.autopilot, o.dest); let t = 0;
+      while (P.probe().auto >= 0 && t < 600) { P.advance(1, []); t++; }
+      out.flight = t; out.below = P.sim.portBelow(); out.land = P.command(C.land); P.advance(3, []);
       out.after = P.probe(); out.mission = P.missions()[0]; return out; })()""")
-    print('delivery', json.dumps({k: d[k] for k in ('offer', 'accept', 'tele', 'land')}))
-    check(d['accept'] == 0 and d['tele'] == 0 and d['land'] == 0 and d['after']['at'] == d['offer']['dest'] and d['mission']['state'] == 2,
+    print('delivery', json.dumps({k: d[k] for k in ('offer', 'accept', 'auto', 'flight', 'below', 'land')}))
+    check(d['auto'] == 0 and d['flight'] < 600 and d['below'] == {'body': d['offer']['dest'], 'slow': True}, f"the autopilot flies there in {d['flight']} s and stops clear to land")
+    check(d['accept'] == 0 and d['land'] == 0 and d['after']['at'] == d['offer']['dest'] and d['mission']['state'] == 2,
           f"a delivery to body {d['offer']['dest']} completes on landing")
     check(d['after']['credits'] == d['before']['credits'] + d['offer']['pay'] and d['after']['hold'] == d['before']['hold'],
           f"and pays {d['offer']['pay']} cr, freeing the hold")

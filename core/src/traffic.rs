@@ -49,30 +49,32 @@ impl World {
         let (ux, uy) = (dx / d, dy / d);
         let a = (b.x[from] + ux * b.r[from] * SPOT, b.y[from] + uy * b.r[from] * SPOT);
         let e = (b.x[to] - ux * b.r[to] * SPOT, b.y[to] - uy * b.r[to] * SPOT);
+        let wp = self.detour(a, e, [from, to]).unwrap_or(((a.0 + e.0) / 2.0, (a.1 + e.1) / 2.0));
+        [a, wp, e]
+    }
+
+    /// A waypoint round the body that intrudes deepest into its clearance circle (the star's 2 radii, others' 1.6)
+    /// along the straight line from `a` to `e`, if any. Bodies in `skip`, and any whose clearance holds `a` (the one
+    /// being left), are ignored. Traffic routes and the player's autopilot both steer by it.
+    pub fn detour(&self, a: (f64, f64), e: (f64, f64), skip: [usize; 2]) -> Option<(f64, f64)> {
+        let b = &self.bodies;
         let (sx, sy) = (e.0 - a.0, e.1 - a.1);
         let len2 = (sx * sx + sy * sy).max(1e-6);
-        // the body that intrudes deepest into its clearance circle along the straight line, if any
-        let mut worst: Option<(f64, f64, f64, f64, f64)> = None; // intrusion, closest point x, y, body centre x, y
-        let mut clear_r = 0.0;
+        let mut worst: Option<(f64, f64, f64, f64, f64, f64)> = None; // intrusion, closest point x, y, centre x, y, clearance
         for j in 0..self.n_bodies {
-            if j == from || j == to { continue; }
+            if skip.contains(&j) { continue; }
             let clear = b.r[j] * if b.kind[j] == BODY_STAR { 2.0 } else { 1.6 };
+            if hypot(a.0 - b.x[j], a.1 - b.y[j]) < clear { continue; }
             let t = (((b.x[j] - a.0) * sx + (b.y[j] - a.1) * sy) / len2).clamp(0.0, 1.0);
             let (px, py) = (a.0 + sx * t, a.1 + sy * t);
             let dist = hypot(px - b.x[j], py - b.y[j]);
-            if dist < clear && worst.is_none_or(|w| clear - dist > w.0) { worst = Some((clear - dist, px, py, b.x[j], b.y[j])); clear_r = clear; }
+            if dist < clear && worst.is_none_or(|w| clear - dist > w.0) { worst = Some((clear - dist, px, py, b.x[j], b.y[j], clear)); }
         }
-        let wp = match worst {
-            None => ((a.0 + e.0) / 2.0, (a.1 + e.1) / 2.0),
-            Some((_, px, py, cx, cy)) => {
-                let (mut nx, mut ny) = (px - cx, py - cy);
-                let l = hypot(nx, ny);
-                if l < 1e-3 { nx = -sy; ny = sx; } // dead centre: go round either side
-                let l = hypot(nx, ny);
-                (cx + nx / l * clear_r * 1.15, cy + ny / l * clear_r * 1.15)
-            }
-        };
-        [a, wp, e]
+        let (_, px, py, cx, cy, clear) = worst?;
+        let (mut nx, mut ny) = (px - cx, py - cy);
+        if hypot(nx, ny) < 1e-3 { nx = -sy; ny = sx; } // dead centre: go round either side
+        let l = hypot(nx, ny);
+        Some((cx + nx / l * clear * 1.15, cy + ny / l * clear * 1.15))
     }
 
     /// Plan the lanes: each directed route's arrival rate (ships a second) and dwell (seconds a ship spends on it,

@@ -143,7 +143,7 @@ resize();
 
 // ---------- input: keys -> one bitmask per tick ----------
 const keys = new Set();
-// assist level: 0 full assist, 1 drift off, 2 full off (the Book's three levels); F cycles
+// assist level: 0 full assist, 1 drift off, 2 full off (the Book's three levels); Tab cycles (F too)
 const ASSIST = [
   { hud: 'FULL ASSIST', toast: 'Full assist: W/S set speed, drift and gravity cancelled' },
   { hud: 'DRIFT OFF', toast: 'Drift off: raw thrust, Q/E strafe, X points retrograde' },
@@ -156,8 +156,16 @@ $('b-nav').onclick = () => { setNav(!navOn); canvas.focus(); };
 window.addEventListener('keydown', e => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
   if (!keys.has(e.code)) {
-    if (e.code === 'KeyF') { assistMode = (assistMode + 1) % 3; toast(ASSIST[assistMode].toast); }
-    if ((e.code === 'KeyQ' || e.code === 'KeyE') && assist()) toast('Strafe works with assist off: press F');
+    if (e.code === 'Tab' || e.code === 'KeyF') { assistMode = (assistMode + 1) % 3; toast(ASSIST[assistMode].toast); }
+    if ((e.code === 'KeyQ' || e.code === 'KeyE') && assist()) toast('Strafe works with assist off: press Tab');
+    // flight: T cycles ship targets, 1-9 pick from the location list, G flies to the target, M opens the map
+    if (inFlight()) {
+      if (e.code === 'KeyT') cycleTarget();
+      if (e.code === 'KeyG') flyTo();
+      if (e.code === 'KeyM') toggleMap();
+      if (/^Digit[1-9]$/.test(e.code)) pickLocation(+e.code.slice(5));
+      if (e.code === 'Escape') escapeFlight();
+    }
     if (e.code === 'KeyI') setNav(!navOn);
     // debugging the flashing black squares: B toggles bloom, N paints bad scene pixels (see postProcess)
     if (e.code === 'KeyB') { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
@@ -188,13 +196,19 @@ function inputBits(IN) {
     | (assistMode === 0 ? IN.assist : 0) | (assistMode === 2 ? IN.torque : 0);
 }
 
+// messages: a toast at the top, and in flight the message log (bottom left) keeps the last few
 let toastT = 0;
-function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200); }
+const msgLog = [];
+function toast(msg) {
+  const el = $('toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200);
+  msgLog.push({ text: msg, at: performance.now() }); if (msgLog.length > 6) msgLog.shift();
+}
 const b64 = bytes => { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); };
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
+let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => {};
 // the port screen's panels beside the port card: the market or the mission board, one at a time
 const PANELS = ['trade', 'board'];
 const panelOpen = () => PANELS.find(p => !$(p).hidden) || null;
@@ -247,6 +261,7 @@ CORE_READY.then(CORE => {
     sim.postBoards();
     sim.startTraffic(); // ambient traffic, already mid-flow
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
+    navTarget = null;
     missionSeen.set(sim.mission.state);
     startRecording();
   }
@@ -282,7 +297,7 @@ CORE_READY.then(CORE => {
     if (!s) { toast('No saved game'); return; }
     const err = sim.load(unb64(s));
     if (err) { toast(`Save is unreadable (error ${err})`); return; }
-    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; missionSeen.set(sim.mission.state); startRecording(); toast(`Loaded day ${sim.day()}`);
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; missionSeen.set(sim.mission.state); startRecording(); toast(`Loaded day ${sim.day()}`);
   };
   // autosave on landing, as in EV (the Book: death reloads the last landing save)
   function autosave() { localStorage.setItem('driftward.autosave', b64(sim.save())); }
@@ -325,6 +340,7 @@ CORE_READY.then(CORE => {
     else { camX += (SH.x[0] - camX) * k; camY += (SH.y[0] - camY) * k; }
     render((now - t0) / 1000, camX, camY);
     drawHUD();
+    drawMap();
   }
 
   // the game mode changed: show or hide the port screen, autosave on landing
@@ -677,10 +693,15 @@ CORE_READY.then(CORE => {
   }
 
   // ---------- HUD ----------
+  // The Book's flight HUD: day, credits and status top-left; radar top-right with the location list under it;
+  // the nav target bottom-right; the message log bottom-left; prompts bottom centre. (Ship status, and radar
+  // contacts at their sensor error radius, wait for damage, fuel and sensors in the core.)
   function drawHUD() {
     hx.setTransform(dpr, 0, 0, dpr, 0, 0);
     hx.clearRect(0, 0, W, H);
     const mode = sim.mode();
+    $('loc').hidden = mode !== MODE.flying || mapOn;
+    if (mode !== MODE.flying && mapOn) toggleMap(false);
     if (mode === MODE.landed) return; // the port screen is the HUD
     if (mode !== MODE.flying) { // in a landing or launch sequence: the day and how to skip it
       hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle'; hx.textAlign = 'center';
@@ -694,6 +715,7 @@ CORE_READY.then(CORE => {
     const nx0 = -Math.sin(SH.ang[0]), ny0 = Math.cos(SH.ang[0]), cIn = nx0 * SH.well_x[0] + ny0 * SH.well_y[0];
     const wk = SH.well[0] * T0.well * (sim.param('well_in') * Math.max(cIn, 0) - sim.param('well_out') * Math.max(-cIn, 0));
     const topNow = Math.max(0.15, 1 + wk) * T0.vmax * (burn ? sim.param('burn_cap') : 1);
+    const auto = sim.game.auto[0] - 1;
     const lines = [
       [`DAY ${sim.day()}  ·  ${fmtCr(sim.credits())} CR  ·  HOLD ${sim.holdUsed()}/${holdCap()} T`, '#dbe0e7'],
       [`SPD ${sp.toFixed(0).padStart(4)} / ${topNow.toFixed(0)} m/s${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, wk < -0.03 ? '#e08a4a' : wk > 0.03 ? '#7fd08a' : '#dbe0e7'],
@@ -701,8 +723,9 @@ CORE_READY.then(CORE => {
       [`${T0.name.toUpperCase()}  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps`, '#8a95a4']
     ];
     hx.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle';
-    // the active missions under the nearest-body line, with days left
+    // under the nearest-body line: the autopilot, then the active missions with days left
     const ms = activeMissions().map(k => { const left = MS.due[k] - sim.day(); return [`→ ${portName(MS.dest[k]).toUpperCase()}  ${MS.tons[k]} T  ${fmtCr(MS.pay[k])} CR  ${daysText(left).toUpperCase()}`, left <= 1 ? NAV_HOT : MIS_COL]; });
+    if (auto >= 0) ms.unshift([`AUTOPILOT → ${BODIES[auto].name.toUpperCase()}  ·  STICK TO TAKE OVER`, '#7fd08a']);
     hx.fillStyle = 'rgba(7,9,12,.55)'; hx.fillRect(6, 6, 340, (lines.length + ms.length) * 17 + 31); // + the nearest-body line
     lines.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + k * 17); });
     ms.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + (lines.length + 1 + k) * 17); });
@@ -711,7 +734,11 @@ CORE_READY.then(CORE => {
     drawLandingPrompt();
     const navs = navObjects().map(o => Object.assign(o, navInfo(o)));
     drawNav(navs);
-    drawMinimap(navs);
+    drawTargetMark();
+    drawRadar(navs);
+    drawTarget();
+    drawLog();
+    refreshLocations();
   }
 
   // Around the player's ship: the velocity vector (amber line and ring, longer with speed), the assist set-speed
@@ -753,11 +780,10 @@ CORE_READY.then(CORE => {
   }
 
   // ---------- navigation: what is where ----------
-  // Everything the player might steer for, from the player's drawn (interpolated) position. Planets for now;
-  // stations, ports and targets join this list as they arrive.
+  // Every body, from the player's drawn (interpolated) position, with its mission marker.
   const navObjects = () => {
     const dest = new Set(activeMissions().map(k => MS.dest[k]));
-    return BODIES.map((b, j) => ({ name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x: b.x, y: b.y, r: b.r, kind: b.kind, port: !!b.port, mission: dest.has(j) }));
+    return BODIES.map((b, j) => ({ j, name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x: b.x, y: b.y, r: b.r, kind: b.kind, port: !!b.port, mission: dest.has(j) }));
   };
   function navInfo(o) {
     const dx = o.x - SH.rx[0], dy = o.y - SH.ry[0], d = Math.hypot(dx, dy) || 1;
@@ -766,9 +792,24 @@ CORE_READY.then(CORE => {
   const fmtDist = m => m < 1000 ? `${Math.max(0, m).toFixed(0)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
   const fmtClose = v => Math.abs(v) < 1 ? '' : `${v > 0 ? 'closing' : 'opening'} ${Math.abs(v).toFixed(0)} m/s`;
   const toScreen = (x, y) => [(x - camX) * scale / dpr + W / 2, H / 2 - (y - camY) * scale / dpr];
-  const NAV_COL = '#9fb4c8', NAV_HOT = '#e2b866', MIS_COL = '#8fd3ff'; // mission destinations in light blue
+  const NAV_COL = '#9fb4c8', NAV_HOT = '#e2b866', MIS_COL = '#8fd3ff', TGT_COL = '#e2b866'; // mission destinations in light blue
   // text with a dark outline, readable over bright cloud tops
   function label(text, x, y) { hx.lineWidth = 3.5; hx.lineJoin = 'round'; hx.strokeStyle = 'rgba(7,9,12,.85)'; hx.strokeText(text, x, y); hx.fillText(text, x, y); }
+  // the inset box off-screen markers sit on, and where the line from the view centre to (sx, sy) leaves it
+  function edgePoint(sx, sy) {
+    const m = 34, x0 = m, y0 = m, x1 = W - m, y1 = H - stripH - m, cx = W / 2, cy = (H - stripH) / 2;
+    if (sx > x0 && sx < x1 && sy > y0 && sy < y1) return null;
+    let dx = sx - cx, dy = sy - cy; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    const t = Math.min(dx > 0 ? (x1 - cx) / dx : dx < 0 ? (x0 - cx) / dx : 1e9, dy > 0 ? (y1 - cy) / dy : dy < 0 ? (y0 - cy) / dy : 1e9);
+    return { x: cx + dx * t, y: cy + dy * t, dx, dy };
+  }
+  function edgeArrow(e, col) {
+    const a = Math.atan2(e.dy, e.dx);
+    hx.fillStyle = col;
+    hx.beginPath(); hx.moveTo(e.x + Math.cos(a) * 11, e.y + Math.sin(a) * 11);
+    hx.lineTo(e.x + Math.cos(a + 2.5) * 10, e.y + Math.sin(a + 2.5) * 10); hx.lineTo(e.x + Math.cos(a - 2.5) * 10, e.y + Math.sin(a - 2.5) * 10);
+    hx.closePath(); hx.lineWidth = 3; hx.strokeStyle = 'rgba(7,9,12,.85)'; hx.stroke(); hx.fill();
+  }
 
   // The status line names the nearest body; with the overlay on (I), every body gets a label where it is on
   // screen, or an arrow on the screen edge pointing at it, with surface distance and closing speed.
@@ -780,40 +821,175 @@ CORE_READY.then(CORE => {
     const well = SH.well[0]; // strength of the well here (1: a full-strength planet's surface)
     hx.fillText((near.surf <= 0 ? `OVER ${near.name.toUpperCase()}` : `NEAREST ${near.name.toUpperCase()} ${fmtDist(near.surf)}`) + (well > 0.01 ? `  WELL ${Math.round(well * 100)}%` : ''), 14, 20 + 4 * 17);
     if (!navOn) return;
-    const m = 34, x0 = m, y0 = m, x1 = W - m, y1 = H - stripH - m, cx = W / 2, cy = (H - stripH) / 2;
     hx.textBaseline = 'middle';
     for (const o of navs) {
       const [sx, sy] = toScreen(o.x, o.y), hot = o.surf <= 0, col = hot ? NAV_HOT : o.mission ? MIS_COL : NAV_COL;
       const name = (o.mission ? 'DELIVER: ' : '') + o.name.toUpperCase(), sub = hot ? 'OVER' : `${fmtDist(o.surf)}  ${fmtClose(o.closing)}`.trim();
       hx.fillStyle = col; hx.strokeStyle = col; hx.lineWidth = 1.5;
-      if (sx > x0 && sx < x1 && sy > y0 && sy < y1) { // centre on screen: label it there
+      const e = edgePoint(sx, sy);
+      if (!e) { // centre on screen: label it there
         hx.textAlign = 'center';
         hx.beginPath(); hx.arc(sx, sy, 5, 0, 6.283); hx.stroke();
         hx.font = '600 13px "IBM Plex Mono", ui-monospace, monospace'; label(name, sx, sy - 16);
         hx.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; label(sub, sx, sy + 17);
         continue;
       }
-      // off screen: an arrow where the line from the view centre leaves the inset box
-      let dx = sx - cx, dy = sy - cy; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
-      const t = Math.min(dx > 0 ? (x1 - cx) / dx : dx < 0 ? (x0 - cx) / dx : 1e9, dy > 0 ? (y1 - cy) / dy : dy < 0 ? (y0 - cy) / dy : 1e9);
-      const ax = cx + dx * t, ay = cy + dy * t, a = Math.atan2(dy, dx);
-      hx.beginPath(); hx.moveTo(ax + Math.cos(a) * 11, ay + Math.sin(a) * 11);
-      hx.lineTo(ax + Math.cos(a + 2.5) * 10, ay + Math.sin(a + 2.5) * 10); hx.lineTo(ax + Math.cos(a - 2.5) * 10, ay + Math.sin(a - 2.5) * 10);
-      hx.closePath(); hx.lineWidth = 3; hx.strokeStyle = 'rgba(7,9,12,.85)'; hx.stroke(); hx.fill();
-      hx.strokeStyle = col;
-      const lx = ax - dx * 26, ly = ay - dy * 26; // label just inside the arrow
-      hx.textAlign = dx > 0.5 ? 'right' : dx < -0.5 ? 'left' : 'center';
+      edgeArrow(e, col);
+      hx.fillStyle = col;
+      const lx = e.x - e.dx * 26, ly = e.y - e.dy * 26; // label just inside the arrow
+      hx.textAlign = e.dx > 0.5 ? 'right' : e.dx < -0.5 ? 'left' : 'center';
       hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; label(name, lx, ly - 7);
       hx.font = '500 11px "IBM Plex Mono", ui-monospace, monospace'; label(sub, lx, ly + 8);
     }
     hx.textAlign = 'left';
   }
 
-  // Minimap: north up, centred on the player, bodies to scale; anything beyond the range sits on the rim.
+  // ---------- targeting ----------
+  // The nav target is the page's (what the panels show); only flying to it is a core command. A body target is
+  // { body: j }; a ship target holds the core's handle, so it lapses when the ship lands and its slot is reused.
+  let navTarget = null;
+  function setTarget(t, quiet) {
+    navTarget = t;
+    if (!quiet && t) toast(`Target: ${targetName(t)}`);
+  }
+  const targetBody = () => navTarget && navTarget.body !== undefined ? navTarget.body : -1;
+  const targetShip = () => navTarget && navTarget.ship !== undefined ? sim.resolve(navTarget.ship) : -1;
+  const ROLE_NAME = { shuttle: 'Shuttle', hauler: 'Hauler', liner: 'Liner' };
+  const owner = (SYS.owner || '').replace(/s$/, '');
+  function targetName(t) {
+    if (t.body !== undefined) { const B = BODIES[t.body]; return B.port ? `${B.name} (${B.port.name})` : B.name; }
+    const i = sim.resolve(t.ship);
+    return i < 0 ? 'lost' : `${owner ? owner[0].toUpperCase() + owner.slice(1) + ' ' : ''}${ROLE_NAME[TRAFFIC.roles[TR.role[i] - 1]] || 'ship'}`;
+  }
+  // T: ships within radar range, nearest first; each press takes the next
+  cycleTarget = () => {
+    const px = SH.rx[0], py = SH.ry[0], list = [];
+    for (let i = 1; i < sim.count(); i++) if (SH.alive[i] && Math.hypot(SH.rx[i] - px, SH.ry[i] - py) < MAP_RANGE) list.push(i);
+    if (!list.length) { toast('No ships on the radar'); return; }
+    list.sort((a, b) => Math.hypot(SH.rx[a] - px, SH.ry[a] - py) - Math.hypot(SH.rx[b] - px, SH.ry[b] - py));
+    const cur = targetShip(), k = list.indexOf(cur);
+    setTarget({ ship: sim.handle(list[(k + 1) % list.length]) });
+  };
+  // G: the autopilot to the target body, under full assist; G again disengages
+  flyTo = () => {
+    const j = targetBody();
+    if (sim.game.auto[0] > 0) { command(CMD.autopilot, -1); toast('Autopilot off'); return; }
+    if (j < 0) { toast('Pick a body to fly to: a location (1-9) or the map (M)'); return; }
+    if (!assist()) { toast('The autopilot flies under full assist: press Tab'); return; }
+    if (command(CMD.autopilot, j) === 0) toast(`Autopilot: flying to ${targetName(navTarget)}`);
+  };
+  escapeFlight = () => { if (mapOn) toggleMap(false); else if (navTarget) { setTarget(null); toast('Target cleared'); } };
+  inFlight = () => sim.mode() === MODE.flying;
+
+  // the target, marked where it is: corner brackets round it on screen, or an arrow on the screen edge
+  function drawTargetMark() {
+    let x, y, r;
+    const j = targetBody(), i = targetShip();
+    if (j >= 0) { x = BODIES[j].x; y = BODIES[j].y; r = BODIES[j].r * scale / dpr; }
+    else if (i >= 0) { x = SH.rx[i]; y = SH.ry[i]; r = Math.max(12, types[SH.kind[i]].half * scale / dpr * 1.2); }
+    else { if (navTarget && navTarget.ship !== undefined) { setTarget(null); toast('Target lost: it landed'); } return; }
+    const [sx, sy] = toScreen(x, y), e = edgePoint(sx, sy);
+    if (e) { edgeArrow(e, TGT_COL); return; }
+    const k = Math.min(r * 0.4, 16);
+    hx.strokeStyle = TGT_COL; hx.lineWidth = 1.5;
+    for (const [ux, uy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const cx = sx + ux * r, cy = sy + uy * r;
+      hx.beginPath(); hx.moveTo(cx - ux * k, cy); hx.lineTo(cx, cy); hx.lineTo(cx, cy - uy * k); hx.stroke();
+    }
+  }
+
+  // Nav target panel, bottom right: what it is, range, relative speed, and for a port whether you are clear to land.
+  function drawTarget() {
+    const j = targetBody(), i = targetShip();
+    if (j < 0 && i < 0) return;
+    const w = 268, x = W - w - 14, rows = [];
+    let range, close, title, sub;
+    if (j >= 0) {
+      const B = BODIES[j], o = navInfo({ x: B.x, y: B.y, r: B.r });
+      title = B.port ? B.port.name : B.name;
+      sub = [B.name !== title ? B.name : '', B.kind, B.port ? B.port.role.replace('-', ' ') : ''].filter(Boolean).join(' · ');
+      range = fmtDist(o.surf); close = o.closing;
+      if (B.port) {
+        const pb = sim.portBelow(), st = B.kind === 'station', limit = sim.param(st ? 'dock_speed' : 'land_speed');
+        if (pb && pb.body === j) rows.push(pb.slow ? [`CLEAR TO ${st ? 'DOCK' : 'LAND'}  ·  L`, '#7fd08a'] : [`SLOW BELOW ${limit} M/S TO ${st ? 'DOCK' : 'LAND'}`, NAV_HOT]);
+        else rows.push([`${st ? 'DOCK' : 'LAND'} OVER IT BELOW ${limit} M/S`, '#8a95a4']);
+      }
+      if (activeMissions().some(k => MS.dest[k] === j)) rows.push(['MISSION DESTINATION', MIS_COL]);
+      if (sim.game.auto[0] - 1 === j) rows.push(['AUTOPILOT ENGAGED', '#7fd08a']);
+      else if (!rows.length || B.port) rows.push(['G  FLY TO IT', '#8a95a4']);
+    } else {
+      const dx = SH.rx[i] - SH.rx[0], dy = SH.ry[i] - SH.ry[0], d = Math.hypot(dx, dy) || 1;
+      title = targetName(navTarget);
+      sub = `${TR.phase[i] === TRAFFIC.launch ? 'launching from' : TR.phase[i] === TRAFFIC.land ? 'landing at' : 'bound for'} ${portName(TR.phase[i] === TRAFFIC.launch ? TR.from[i] : TR.to[i])}`;
+      range = fmtDist(d); close = ((SH.vx[0] - SH.vx[i]) * dx + (SH.vy[0] - SH.vy[i]) * dy) / d;
+      rows.push([`SPEED ${Math.hypot(SH.vx[i], SH.vy[i]).toFixed(0)} M/S`, '#8a95a4']);
+    }
+    const h = 64 + rows.length * 16, y = H - stripH - h - 14;
+    hx.fillStyle = 'rgba(7,9,12,.72)'; hx.fillRect(x, y, w, h);
+    hx.strokeStyle = 'rgba(226,184,102,.55)'; hx.lineWidth = 1; hx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    hx.textBaseline = 'middle'; hx.textAlign = 'left';
+    hx.fillStyle = '#8a95a4'; hx.font = '500 10px "IBM Plex Mono", ui-monospace, monospace'; hx.fillText('NAV TARGET', x + 10, y + 12);
+    hx.fillStyle = TGT_COL; hx.font = '600 13px "IBM Plex Mono", ui-monospace, monospace'; hx.fillText(title.toUpperCase().slice(0, 30), x + 10, y + 28);
+    hx.fillStyle = '#9fb4c8'; hx.font = '500 11px "IBM Plex Mono", ui-monospace, monospace'; hx.fillText(sub.slice(0, 40), x + 10, y + 43);
+    hx.fillStyle = '#dbe0e7'; hx.fillText(`RANGE ${range}   ${Math.abs(close) < 1 ? 'HOLDING' : `${close > 0 ? 'CLOSING' : 'OPENING'} ${Math.abs(close).toFixed(0)} M/S`}`, x + 10, y + 58);
+    rows.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, x + 10, y + 74 + k * 16); });
+  }
+
+  // Message log, bottom left: the last few messages, fading after a while.
+  function drawLog() {
+    const now = performance.now(), live = msgLog.filter(m => now - m.at < 12000).slice(-5);
+    hx.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle'; hx.textAlign = 'left';
+    live.forEach((m, k) => {
+      const a = Math.min(1, (12000 - (now - m.at)) / 2000);
+      hx.globalAlpha = a; hx.fillStyle = k === live.length - 1 ? '#dbe0e7' : '#9fb4c8';
+      label(m.text, 14, H - stripH - 18 - (live.length - 1 - k) * 17);
+    });
+    hx.globalAlpha = 1;
+  }
+
+  // ---------- the location list (right, under the radar) ----------
+  // The Book: the star, planets and free-orbiting stations in orbital order; the body whose local zone the player is
+  // in (ZONE_IN radii, left at ZONE_OUT) expands to show its moons and stations. A row shows the range and landable,
+  // dockable and mission markers; a click or its number key sets the nav target.
+  const ZONE_IN = 6, ZONE_OUT = 7;
+  const fromStar = j => Math.hypot(BODIES[j].x - STAR.x, BODIES[j].y - STAR.y);
+  const TOP = BODIES.map((_, j) => j).filter(j => j === 0 || BODIES[j].parent === STAR.id).sort((a, b) => fromStar(a) - fromStar(b));
+  const KIDS = TOP.map(p => BODIES.map((_, j) => j).filter(j => BODIES[j].parent === BODIES[p].id)
+    .sort((a, b) => Math.hypot(BODIES[a].x - BODIES[p].x, BODIES[a].y - BODIES[p].y) - Math.hypot(BODIES[b].x - BODIES[p].x, BODIES[b].y - BODIES[p].y)));
+  const ICON = { star: '✹', planet: '●', moon: '•', station: '◇' };
+  let expanded = -1, locRows = [], locAt = 0;
+  function refreshLocations() {
+    const now = performance.now();
+    if (now - locAt < 250) return; // a few times a second is plenty, and keeps clicks landing on stable rows
+    locAt = now;
+    const px = SH.rx[0], py = SH.ry[0], dist = j => Math.hypot(BODIES[j].x - px, BODIES[j].y - py);
+    if (expanded >= 0 && dist(TOP[expanded]) > BODIES[TOP[expanded]].r * ZONE_OUT) expanded = -1;
+    if (expanded < 0) TOP.forEach((p, k) => { if (KIDS[k].length && dist(p) < BODIES[p].r * ZONE_IN) expanded = k; });
+    locRows = [];
+    TOP.forEach((p, k) => { locRows.push([p, false]); if (k === expanded) KIDS[k].forEach(c => locRows.push([c, true])); });
+    const dest = new Set(activeMissions().map(k => MS.dest[k])), tb = targetBody();
+    const el = $('loc');
+    el.style.top = `${radarBox().y + radarBox().h + 12}px`;
+    el.innerHTML = locRows.map(([j, child], n) => {
+      const B = BODIES[j], tags = (B.port ? `<span class="tag">${B.kind === 'station' ? 'DOCK' : 'LAND'}</span>` : '') + (dest.has(j) ? '<span class="tag m">◆</span>' : '');
+      return `<button type="button" data-j="${j}" class="${child ? 'child' : ''}${j === tb ? ' target' : ''}"><span class="n">${n < 9 ? n + 1 : ''}</span><span class="ico">${ICON[B.kind] || '•'}</span>`
+        + `<span>${B.name}${tags}</span><span class="r">${fmtDist(dist(j) - B.r)}</span></button>`;
+    }).join('');
+  }
+  pickLocation = n => { const row = locRows[n - 1]; if (row) setTarget({ body: row[0] }); locAt = 0; };
+  $('loc').addEventListener('pointerdown', e => {
+    const b = e.target.closest('button[data-j]');
+    if (b) { setTarget({ body: +b.dataset.j }); locAt = 0; e.preventDefault(); canvas.focus(); }
+  });
+
+  // ---------- radar (top right) ----------
+  // North up, centred on the player, bodies to scale; anything beyond the range sits on the rim. Ships appear only
+  // here (the Book), as dots; the target is ringed.
   const MAP_RANGE = 24000; // meters from centre to rim
-  function drawMinimap(navs) {
-    const R = Math.max(60, Math.min(96, Math.min(W, H) * 0.14)), cx = W - R - 14, cy = H - stripH - R - 14, k = R / MAP_RANGE;
-    const px = SH.rx[0], py = SH.ry[0];
+  const radarBox = () => { const R = Math.max(60, Math.min(96, Math.min(W, H) * 0.14)); return { R, x: W - 2 * R - 14, y: 14, h: 2 * R + 14 }; };
+  function drawRadar(navs) {
+    const { R } = radarBox(), cx = W - R - 14, cy = R + 24, k = R / MAP_RANGE;
+    const px = SH.rx[0], py = SH.ry[0], tb = targetBody(), ts = targetShip();
     hx.save();
     hx.beginPath(); hx.arc(cx, cy, R, 0, 6.283); hx.fillStyle = 'rgba(7,9,12,.72)'; hx.fill(); hx.clip();
     hx.strokeStyle = 'rgba(138,149,164,.18)'; hx.lineWidth = 1;
@@ -822,39 +998,116 @@ CORE_READY.then(CORE => {
     hx.font = '500 10px "IBM Plex Mono", ui-monospace, monospace'; hx.textAlign = 'center'; hx.textBaseline = 'middle';
     for (const o of navs) {
       let mx = (o.x - px) * k, my = -(o.y - py) * k;
-      const md = Math.hypot(mx, my), rr = Math.max(2.5, o.r * k), hot = o.surf <= 0;
+      const md = Math.hypot(mx, my), rr = Math.max(2.5, o.r * k), hot = o.surf <= 0, tgt = o.j === tb;
       if (md - rr > R) { // beyond range: a pip on the rim
         mx *= (R - 4) / md; my *= (R - 4) / md;
-        hx.fillStyle = o.mission ? MIS_COL : NAV_COL; hx.beginPath(); hx.arc(cx + mx, cy + my, o.mission ? 3.5 : 2.5, 0, 6.283); hx.fill();
+        hx.fillStyle = tgt ? TGT_COL : o.mission ? MIS_COL : NAV_COL; hx.beginPath(); hx.arc(cx + mx, cy + my, tgt || o.mission ? 3.5 : 2.5, 0, 6.283); hx.fill();
         continue;
       }
-      hx.strokeStyle = hot ? NAV_HOT : o.mission ? MIS_COL : 'rgba(159,180,200,.75)'; hx.lineWidth = hot || o.mission ? 1.5 : 1;
+      hx.strokeStyle = tgt || hot ? NAV_HOT : o.mission ? MIS_COL : 'rgba(159,180,200,.75)'; hx.lineWidth = hot || o.mission || tgt ? 1.5 : 1;
       hx.beginPath(); hx.arc(cx + mx, cy + my, rr, 0, 6.283); hx.stroke();
-      hx.fillStyle = hot ? NAV_HOT : o.mission ? MIS_COL : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
+      hx.fillStyle = tgt || hot ? NAV_HOT : o.mission ? MIS_COL : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
     }
-    // ambient ships: dots (the Book: ships appear only on the radar)
-    hx.fillStyle = 'rgba(219,224,231,.7)';
-    for (let i = 0; i < sim.count(); i++) {
-      if (!SH.alive[i] || i === 0) continue; // slot 0 is the player
+    for (let i = 1; i < sim.count(); i++) { // slot 0 is the player
+      if (!SH.alive[i]) continue;
       const mx = (SH.rx[i] - px) * k, my = -(SH.ry[i] - py) * k;
-      if (mx * mx + my * my < R * R) hx.fillRect(cx + mx - 1.25, cy + my - 1.25, 2.5, 2.5);
+      if (mx * mx + my * my > R * R) continue;
+      hx.fillStyle = 'rgba(219,224,231,.75)'; hx.fillRect(cx + mx - 1.25, cy + my - 1.25, 2.5, 2.5);
+      if (i === ts) { hx.strokeStyle = TGT_COL; hx.lineWidth = 1.5; hx.beginPath(); hx.arc(cx + mx, cy + my, 5, 0, 6.283); hx.stroke(); }
     }
     // the player: velocity line and heading arrow (world y up, screen y down)
     const vx = SH.vx[0] * k * 6, vy = -SH.vy[0] * k * 6;
-    hx.strokeStyle = 'rgba(226,184,102,.8)'; hx.beginPath(); hx.moveTo(cx, cy); hx.lineTo(cx + vx, cy + vy); hx.stroke();
+    hx.strokeStyle = 'rgba(226,184,102,.8)'; hx.lineWidth = 1; hx.beginPath(); hx.moveTo(cx, cy); hx.lineTo(cx + vx, cy + vy); hx.stroke();
     hx.translate(cx, cy); hx.rotate(-SH.ra[0]);
     hx.fillStyle = '#dbe0e7'; hx.beginPath(); hx.moveTo(0, -6); hx.lineTo(4, 5); hx.lineTo(-4, 5); hx.closePath(); hx.fill();
     hx.restore();
     hx.strokeStyle = 'rgba(138,149,164,.45)'; hx.lineWidth = 1; hx.beginPath(); hx.arc(cx, cy, R, 0, 6.283); hx.stroke();
     hx.fillStyle = '#8a95a4'; hx.font = '500 10px "IBM Plex Mono", ui-monospace, monospace'; hx.textAlign = 'right';
-    hx.fillText(`${MAP_RANGE / 1000} km`, cx + R, cy - R - 8);
+    hx.fillText(`RADAR ${MAP_RANGE / 1000} km`, cx + R, cy + R + 9);
     hx.textAlign = 'left';
   }
+
+  // ---------- the system map (M) ----------
+  // Orbits, bodies, ships, mission destinations and the target, the whole system in view. Click a body (or a ship)
+  // to target it; G flies there. The sim runs on underneath.
+  const mapEl = $('map'), mx2 = mapEl.getContext('2d');
+  let mapOn = false;
+  const mapExtent = Math.max(...BODIES.map(b => Math.hypot(b.x - STAR.x, b.y - STAR.y) + b.r)) * 1.08;
+  const MAP_TOP = 76; // the title and help lines
+  const mapView = () => { const h = H - stripH, s = Math.min(W, h - MAP_TOP) / 2 / mapExtent; return { s, cx: W / 2, cy: MAP_TOP + (h - MAP_TOP) / 2, h }; };
+  toggleMap = on => {
+    mapOn = on === undefined ? !mapOn : on;
+    mapEl.hidden = !mapOn;
+    if (mapOn) { mapEl.width = Math.round(W * dpr); mapEl.height = Math.round((H - stripH) * dpr); mapEl.style.height = `${H - stripH}px`; }
+  };
+  const mapPos = (x, y, v) => [v.cx + (x - STAR.x) * v.s, v.cy - (y - STAR.y) * v.s];
+  function drawMap() {
+    if (!mapOn) return;
+    if (mapEl.width !== Math.round(W * dpr) || mapEl.height !== Math.round((H - stripH) * dpr)) toggleMap(true); // resized
+    const v = mapView(), c = mx2, dest = new Set(activeMissions().map(k => MS.dest[k])), tb = targetBody(), ts = targetShip();
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.fillStyle = 'rgba(7,9,12,.94)'; c.fillRect(0, 0, W, v.h);
+    // orbits round each body's parent
+    c.strokeStyle = 'rgba(138,149,164,.22)'; c.lineWidth = 1;
+    for (const B of BODIES) {
+      if (!B.parent) continue;
+      const P = BODIES.find(o => o.id === B.parent) || STAR, [px, py] = mapPos(P.x, P.y, v);
+      c.beginPath(); c.arc(px, py, Math.hypot(B.x - P.x, B.y - P.y) * v.s, 0, 6.283); c.stroke();
+    }
+    // the autopilot's course: to the point it is steering for (round any obstacle), then the target
+    const auto = sim.game.auto[0] - 1;
+    if (auto >= 0) {
+      const [ax, ay] = mapPos(SH.rx[0], SH.ry[0], v), [wx, wy] = mapPos(sim.game.aim_x[0], sim.game.aim_y[0], v), [bx, by] = mapPos(BODIES[auto].x, BODIES[auto].y, v);
+      c.setLineDash([5, 5]); c.strokeStyle = 'rgba(127,208,138,.8)'; c.beginPath(); c.moveTo(ax, ay); c.lineTo(wx, wy); c.lineTo(bx, by); c.stroke(); c.setLineDash([]);
+    }
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    BODIES.forEach((B, j) => {
+      const [x, y] = mapPos(B.x, B.y, v), r = Math.max(B.kind === 'star' ? 7 : 3.5, B.r * v.s);
+      c.fillStyle = B.kind === 'star' ? '#f2b26b' : B.kind === 'station' ? '#c9d2dc' : '#6f8296';
+      if (B.kind === 'station') { c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillRect(-r, -r, 2 * r, 2 * r); c.restore(); }
+      else { c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); }
+      if (j === tb) { c.strokeStyle = TGT_COL; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 6, 0, 6.283); c.stroke(); }
+      if (dest.has(j)) { c.strokeStyle = MIS_COL; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, r + 10, 0, 6.283); c.stroke(); }
+      c.font = '600 12px "IBM Plex Mono", ui-monospace, monospace';
+      c.fillStyle = j === tb ? TGT_COL : dest.has(j) ? MIS_COL : B.port ? '#7fd08a' : '#9fb4c8';
+      c.fillText(B.name.toUpperCase(), x, y - r - 12);
+      if (B.port) { c.font = '500 10.5px "IBM Plex Mono", ui-monospace, monospace'; c.fillStyle = '#8a95a4'; c.fillText(B.port.name, x, y + r + 12); }
+    });
+    for (let i = 1; i < sim.count(); i++) {
+      if (!SH.alive[i]) continue;
+      const [x, y] = mapPos(SH.rx[i], SH.ry[i], v);
+      c.fillStyle = 'rgba(219,224,231,.8)'; c.fillRect(x - 1.5, y - 1.5, 3, 3);
+      if (i === ts) { c.strokeStyle = TGT_COL; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 6, 0, 6.283); c.stroke(); }
+    }
+    const [px, py] = mapPos(SH.rx[0], SH.ry[0], v);
+    c.save(); c.translate(px, py); c.rotate(-SH.ra[0]);
+    c.fillStyle = TGT_COL; c.beginPath(); c.moveTo(0, -8); c.lineTo(5.5, 6); c.lineTo(-5.5, 6); c.closePath(); c.fill();
+    c.restore();
+    c.textAlign = 'left'; c.font = '700 18px "Saira Semi Condensed", system-ui, sans-serif'; c.fillStyle = '#dbe0e7';
+    c.fillText(`${SYS.name.toUpperCase()} SYSTEM`, 20, 26);
+    c.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; c.fillStyle = '#8a95a4';
+    c.fillText('Click a body or ship to target it  ·  G fly to the target (full assist)  ·  M or Esc close', 20, 48);
+    if (navTarget) { c.fillStyle = TGT_COL; c.fillText(`Target: ${targetName(navTarget)}${auto >= 0 ? '  ·  autopilot engaged' : ''}`, 20, 66); }
+  }
+  mapEl.addEventListener('pointerdown', e => {
+    const v = mapView(), r = mapEl.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    let best = null, bd = 22;
+    BODIES.forEach((B, j) => { const [bx, by] = mapPos(B.x, B.y, v), d = Math.hypot(bx - x, by - y) - Math.max(0, B.r * v.s - 4); if (d < bd) { bd = d; best = { body: j }; } });
+    for (let i = 1; i < sim.count(); i++) {
+      if (!SH.alive[i]) continue;
+      const [sx, sy] = mapPos(SH.rx[i], SH.ry[i], v), d = Math.hypot(sx - x, sy - y);
+      if (d < Math.min(bd, 8)) { bd = d; best = { ship: sim.handle(i) }; }
+    }
+    if (best) setTarget(best);
+    e.preventDefault(); canvas.focus();
+  });
 
   // test hook: drive and inspect the session from a console or a headless browser
   window.__play = {
     sim, IN, CMD, MODE, newGame, exportReplay, command, BODIES, ECON,
-    setNav, trade, repay, showPanel, accept, abandon,
+    setNav, trade, repay, showPanel, accept, abandon, setTarget, flyTo, cycleTarget, toggleMap, pickLocation,
+    target: () => navTarget && (navTarget.body !== undefined ? { body: navTarget.body } : { ship: sim.resolve(navTarget.ship) }),
+    locations: () => locRows.map(([j, child]) => ({ j, name: BODIES[j].name, child })),
     // ambient traffic: every ship in flight, with its role, phase, route and whether it is on rails
     traffic: () => { const out = []; for (let i = 0; i < sim.count(); i++) if (TR.role[i]) out.push({ i, role: TRAFFIC.roles[TR.role[i] - 1], phase: TR.phase[i], from: TR.from[i], to: TR.to[i], rail: SH.rail[i], x: SH.x[i], y: SH.y[i], v: Math.hypot(SH.vx[i], SH.vy[i]) }); return out; },
     // dev: put the (flying) player at rest over body j; a logged command, so replays still match
@@ -865,7 +1118,7 @@ CORE_READY.then(CORE => {
     // commodity index by id, and its price where the player is landed
     good: id => GOODS.findIndex(c => c.id === id),
     price: id => sim.price(sim.game.at[0], GOODS.findIndex(c => c.id === id)),
-    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]),
+    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn,
       credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap() }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {

@@ -8,8 +8,13 @@
 //! - full off (IN_TORQUE): as drift off, but rotation is torque: a spin persists until countered.
 //!
 //! In both off modes retro turns the nose against the velocity (rate-controlled while held).
+//!
+//! The fly-to autopilot (the Book's, from the system map; port.rs CMD_AUTOPILOT) flies under full assist: it heads for
+//! the target body, round the star or any planet in the way (traffic.rs `detour`), and brakes to stop slow over it,
+//! ready to land. Touching thrust, reverse or turn, or leaving full assist, hands control back.
 
 use crate::flight::{dir_cap, heading};
+use crate::port::BODY_STATION;
 use crate::math::{atan2, clamp1, hypot, wrap};
 use crate::world::{World, DT, P};
 
@@ -47,18 +52,25 @@ pub fn control(w: &mut World) {
     if p.slot < 0 || p.slot as usize >= w.count { return; }
     let i = p.slot as usize;
     if w.ships.alive[i] == 0 { return; }
+    let held = |bit: u32| p.input & bit != 0;
+    let (up, down, left, right) = (held(IN_THRUST), held(IN_REVERSE), held(IN_LEFT), held(IN_RIGHT));
+    if w.game.auto[0] > 0 {
+        if held(IN_ASSIST) && !(up || down || left || right) { autopilot(w, i); return; }
+        w.game.auto[0] = 0; // the player took the stick: carry on at the speed along the nose
+        let (hx, hy) = heading(w.ships.ang[i]);
+        w.player.set = (w.ships.vx[i] * hx + w.ships.vy[i] * hy).max(0.0);
+    }
+    let set0 = w.player.set;
     let (b_acc, b_cap, k_turn) = (w.p(P::burn_accel), w.p(P::burn_cap), w.p(P::assist_turn));
     let (k_in, k_out) = (w.p(P::well_in), w.p(P::well_out));
     let (s, t) = (&mut w.ships, &w.types);
     let k = s.kind[i] as usize;
     let (accel, turn, vmax) = (t.accel[k], t.turn[k], t.vmax[k]);
-    let held = |bit: u32| p.input & bit != 0;
-    let (up, down, left, right) = (held(IN_THRUST), held(IN_REVERSE), held(IN_LEFT), held(IN_RIGHT));
     s.turn_in[i] = (left as i32 - right as i32) as f64;
     let burn = up && held(IN_BURN);
     s.burn[i] = burn as u8;
     let (hx, hy) = heading(s.ang[i]);
-    let mut set = p.set;
+    let mut set = set0;
     if held(IN_ASSIST) {
         // the set speed's ceiling is the top speed along the nose, so the well raises it pointing in and lowers it
         // pointing out (from last tick's well, which the forces stage keeps per ship)
@@ -84,6 +96,41 @@ pub fn control(w: &mut World) {
         set = (vx * hx + vy * hy).max(0.0);
     }
     w.player.set = set;
+}
+
+/// The autopilot's tick: a desired velocity toward the next point (a waypoint round an obstacle, or the target),
+/// capped by the hull's top speed and by a braking curve that reaches half the landing limit at `stop` metres out;
+/// there, slow, it disengages, holding still over the port.
+fn autopilot(w: &mut World, i: usize) {
+    let j = (w.game.auto[0] - 1) as usize;
+    let (x, y) = (w.ships.x[i], w.ships.y[i]);
+    let (bx, by) = (w.bodies.x[j], w.bodies.y[j]);
+    let (tx, ty) = w.detour((x, y), (bx, by), [j, j]).unwrap_or((bx, by));
+    (w.game.aim_x[0], w.game.aim_y[0]) = (tx, ty);
+    let k = w.ships.kind[i] as usize;
+    let (accel, vmax) = (w.types.accel[k], w.types.vmax[k]);
+    let limit = if w.bodies.kind[j] == BODY_STATION { w.p(P::dock_speed) } else { w.p(P::land_speed) };
+    let stop = (w.bodies.r[j] * 0.25).max(80.0);
+    let d_end = hypot(bx - x, by - y);
+    let sp = hypot(w.ships.vx[i], w.ships.vy[i]);
+    let s = &mut w.ships;
+    if d_end < stop && sp < limit * 0.6 {
+        w.game.auto[0] = 0;
+        w.player.set = 0.0;
+        s.ctl[i] = 3; s.want_vx[i] = 0.0; s.want_vy[i] = 0.0;
+        return;
+    }
+    let (dx, dy) = (tx - x, ty - y);
+    let d = hypot(dx, dy).max(1e-6);
+    // brake for the target only on the last leg (a waypoint is passed at speed)
+    let v = if (tx, ty) == (bx, by) { vmax.min((2.0 * accel * 0.5 * (d - stop).max(0.0)).sqrt() * 0.8).max(limit * 0.4) } else { vmax };
+    s.ctl[i] = 1; // assist faces the velocity it wants
+    s.rot[i] = 0;
+    s.burn[i] = 0;
+    s.turn_in[i] = 0.0;
+    s.want_vx[i] = dx / d * v;
+    s.want_vy[i] = dy / d * v;
+    w.player.set = v;
 }
 
 #[cfg(test)]
@@ -160,6 +207,37 @@ mod tests {
         assert!(w.ships.av[0] > 0.9, "{}", w.ships.av[0]);
         hold(&mut w, 0, 0.5);
         assert_eq!(w.ships.av[0], 0.0);
+    }
+
+    #[test]
+    fn autopilot_flies_round_a_body_and_stops_over_the_target() {
+        use crate::port::{BODY_PLANET, CMD_AUTOPILOT, OK};
+        let mut w = World::new(Config { max_ships: 2, max_types: 1, max_bodies: 2, env_n: 8, env_w: 1000.0 }, 1);
+        (w.types.accel[0], w.types.turn[0], w.types.vmax[0], w.types.well[0]) = (60.0, 1.5, 200.0, 0.35);
+        w.n_bodies = 2;
+        // an obstacle planet halfway along, and the target port beyond it
+        for (j, x) in [10_000.0, 20_000.0].into_iter().enumerate() {
+            (w.bodies.x[j], w.bodies.r[j], w.bodies.g[j], w.bodies.kind[j]) = (x, 1000.0, 30.0, BODY_PLANET);
+        }
+        w.bodies.port[1] = 1;
+        (w.count, w.ships.alive[0], w.player.slot) = (1, 1, 0);
+        assert_eq!(w.command(CMD_AUTOPILOT, 1, 0), OK);
+        w.player.input = IN_ASSIST;
+        let mut closest = f64::MAX;
+        for _ in 0..(400.0 / DT) as usize {
+            w.step();
+            closest = closest.min(hypot(w.ships.x[0] - 10_000.0, w.ships.y[0]));
+            if w.game.auto[0] == 0 { break; }
+        }
+        assert_eq!(w.game.auto[0], 0, "never arrived: at {} {}", w.ships.x[0], w.ships.y[0]);
+        assert!(closest > 1000.0, "flew through the obstacle ({closest} m from its centre)");
+        assert_eq!(w.port_below().map(|(j, _)| j), Some(1));
+        hold(&mut w, IN_ASSIST, 3.0);
+        assert_eq!(w.port_below(), Some((1, true))); // and it holds still there: clear to land
+        // the stick takes over
+        w.command(CMD_AUTOPILOT, 0, 0);
+        hold(&mut w, IN_ASSIST | IN_LEFT, 0.1);
+        assert_eq!(w.game.auto[0], 0);
     }
 
     #[test]

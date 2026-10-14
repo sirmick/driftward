@@ -30,6 +30,8 @@ pub const CMD_LAUNCH: u32 = 2;
 pub const CMD_WAIT: u32 = 3;
 /// Finish a descent or launch now (the sequence is skippable).
 pub const CMD_SKIP: u32 = 4;
+/// Engage the fly-to autopilot toward body `a` (-1: disengage). It flies under full assist; see player.rs.
+pub const CMD_AUTOPILOT: u32 = 10;
 /// Debug control plane: put the flying player at rest over body `a` (a dev action, logged so replays still match).
 pub const CMD_TELEPORT: u32 = 100;
 
@@ -80,6 +82,7 @@ impl World {
                 s.vx[i] = 0.0; s.vy[i] = 0.0; s.av[i] = 0.0; s.main[i] = 0.0; s.lat[i] = 0.0; s.turn_in[i] = 0.0;
                 self.game.mode[0] = MODE_DESCENDING;
                 self.game.at[0] = j as i16;
+                self.game.auto[0] = 0;
                 self.game.timer[0] = DESCENT_S;
                 self.player.set = 0.0;
                 OK
@@ -105,6 +108,12 @@ impl World {
             }
             CMD_BUY | CMD_SELL | CMD_REPAY => self.trade(code, a, b),
             CMD_ACCEPT | CMD_ABANDON => self.mission_command(code, a),
+            CMD_AUTOPILOT => {
+                if mode != MODE_FLYING { return WRONG_MODE; }
+                if a < -1 || a >= self.n_bodies as i32 { return NO_SUCH_BODY; }
+                self.game.auto[0] = (a + 1) as i16;
+                OK
+            }
             CMD_TELEPORT => {
                 if mode != MODE_FLYING { return WRONG_MODE; }
                 let (Some(j), Ok(i)) = (usize::try_from(a).ok().filter(|&j| j < self.n_bodies), usize::try_from(self.player.slot)) else { return NO_SUCH_BODY };

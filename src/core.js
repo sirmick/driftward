@@ -71,7 +71,7 @@ const CORE_READY = (async () => {
   }
   // input bits, mirrored from core/src/player.rs
   // game commands, modes and results, mirrored from core/src/port.rs, market.rs and mission.rs
-  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, teleport: 100 };
+  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, teleport: 100 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
   const TRAFFIC = { launch: 1, cruise: 2, land: 3, roles: ['shuttle', 'hauler', 'liner'] };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3 };

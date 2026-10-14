@@ -85,6 +85,19 @@ button { font: inherit; color: inherit; }
 .trade-foot { display: flex; align-items: center; gap: 4px; margin: 12px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
 .trade-foot span { flex: 1; }
 .trade-note { margin: 8px 0 0; color: var(--muted); font: 400 11.5px var(--f-mono); }
+/* flight: the location list on the right, under the radar; the system map over everything but the strip */
+#loc { position: fixed; right: 14px; width: 238px; display: grid; gap: 2px; font: 500 12px var(--f-mono); }
+#loc button { display: grid; grid-template-columns: 14px 12px 1fr auto; align-items: baseline; gap: 6px; padding: 4px 8px; text-align: left;
+  background: rgba(7,9,12,.62); border: 1px solid transparent; border-radius: 5px; cursor: pointer; color: var(--fg); font: inherit; }
+#loc button:hover { border-color: var(--line); }
+#loc button.target { border-color: var(--amber); }
+#loc button.child { margin-left: 16px; }
+#loc .n { color: var(--muted); font-size: 10.5px; }
+#loc .ico { font-size: 10px; text-align: center; }
+#loc .r { color: var(--muted); font-size: 11px; }
+#loc .tag { margin-left: 4px; padding: 0 4px; border-radius: 3px; font-size: 9.5px; letter-spacing: .06em; color: #7fd08a; border: 1px solid rgba(127,208,138,.45); }
+#loc .tag.m { color: #8fd3ff; border-color: rgba(143,211,255,.5); }
+#map { position: fixed; left: 0; top: 0; width: 100%; cursor: crosshair; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -92,6 +105,8 @@ button { font: inherit; color: inherit; }
 <canvas id="view" tabindex="0" aria-label="Flight view"></canvas>
 <canvas id="hud" aria-hidden="true"></canvas>
 <div id="toast" role="status" aria-live="polite"></div>
+<nav id="loc" hidden aria-label="Locations"></nav>
+<canvas id="map" hidden aria-label="System map"></canvas>
 <div id="glerr" hidden>This needs WebGL2.</div>
 <section id="port" hidden aria-label="Port">
   <div class="port-card">
@@ -133,7 +148,7 @@ button { font: inherit; color: inherit; }
 </section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · F assist · L land · T trade · M missions · I nav · wheel zoom</span>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · Tab assist · L land · T target · 1–9 locations · G fly to · M map · I nav · wheel zoom</span>
   <span class="spacer"></span>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
   <button type="button" id="b-save" title="F6">Save</button>
