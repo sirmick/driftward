@@ -120,7 +120,7 @@ cd core && cargo run --release --bin replay -- driftward-save.bin driftward-inpu
 
 [The Book](docs/book.md) describes every game mechanism, tagged by the milestone that builds it, along with the build staging (M0 to M9), the M1 scope and the faction names. It is an export of the design doc; update it by re-exporting rather than editing it here.
 
-[Known issues](docs/known-issues.md) lists the performance costs and bugs we know about but have not fixed yet.
+[M1 progress](docs/m1-progress.md) tracks the first playable milestone: what is done and what is left. [Known issues](docs/known-issues.md) lists the performance costs and bugs we know about but have not fixed yet.
 
 ## Roadmap
 
