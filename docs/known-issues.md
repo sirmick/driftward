@@ -25,7 +25,8 @@ None of these hurt at today's scale (about 60 ships). They are the costs that gr
 - **The well model is untuned game physics.** Wells pull with a share of each hull's thrust and bend its top speed by direction (`core/src/flight.rs`); a slingshot works as momentum carried through a well, not as a speed gain. The numbers (`pull`, `well_in`, `well_out`, `well_reach`, and each hull class's `well` in the catalog) are first guesses, tunable live from the console.
 
 - **Bodies hold still.** Planets, moons and stations sit at fixed points (EV style), so "slow relative to the port" is just "slow"; the Book's orbiting and spinning stations, where assist matches their velocity, come later. Stations spin only visually.
-- **Ports are screens without services yet.** Trade, the mission board, the bar and refuel and repair are shown but disabled until M1's next steps; only wait-a-day and launch work.
+- **Some port services are not built yet.** The mission board, the bar and refuel and repair are shown but disabled until M1's next steps; trade, wait-a-day and launch work.
+- **The lender has no teeth.** The debt gathers interest, and you can repay it at any port, but nothing happens if you never do.
 
 ## Bugs
 

@@ -1,5 +1,6 @@
 //! Replays: a snapshot to start from plus a log of what the player did, keyed by world tick: input changes (the
-//! buttons held from that tick on) and commands (land, launch, ...; see port.rs), applied before that tick's step.
+//! buttons held from that tick on) and commands (land, launch, buy, ...; see port.rs and market.rs), applied before
+//! that tick's step.
 //! The page records the log as you play; `cargo run --bin replay` reruns it headless.
 
 use crate::world::World;
@@ -56,14 +57,18 @@ pub fn run(w: &mut World, log: &[LogEntry], ticks: u64) {
 mod tests {
     use super::*;
     use crate::player::{IN_ASSIST, IN_BURN, IN_LEFT, IN_REVERSE, IN_THRUST};
+    use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL};
     use crate::port::{CMD_LAND, CMD_LAUNCH, CMD_WAIT, MODE_FLYING, OK};
     use crate::scenario;
 
     #[test]
     fn replay_from_a_save_reproduces_the_session() {
-        // play a session that flies, lands at a port, waits a day and launches, recording it as the page does
+        // play a session that flies, lands at a port, trades, waits a day and launches, recording it as the page does
         let mut live = scenario::build(9);
         live.player.slot = 0;
+        live.types.cargo[live.ships.kind[0] as usize] = 10;
+        live.market.price[1] = 37; // the port (body 0) trades commodity 1
+        (live.game.credits[0], live.game.debt[0]) = (1000, 5000);
         let (px, py) = (live.bodies.x[0], live.bodies.y[0]); // the scenario's first body is a port
         live.ships.x[0] = px + 100.0;
         live.ships.y[0] = py;
@@ -72,9 +77,11 @@ mod tests {
         live.slot_reset(0, false);
         live.save();
         let start = live.snapshot().to_vec();
-        let script: [(u64, Option<u32>, Option<u32>); 8] = [
+        type Step = (u64, Option<u32>, Option<(u32, i32, i32)>); // tick, buttons, command
+        let script: [Step; 11] = [
             (0, Some(IN_ASSIST | IN_THRUST), None), (40, Some(IN_ASSIST | IN_REVERSE), None), (200, Some(IN_ASSIST), None),
-            (260, None, Some(CMD_LAND)), (500, None, Some(CMD_WAIT)), (520, None, Some(CMD_LAUNCH)),
+            (260, None, Some((CMD_LAND, 0, 0))), (450, None, Some((CMD_BUY, 1, 6))), (500, None, Some((CMD_WAIT, 0, 0))),
+            (505, None, Some((CMD_SELL, 1, 2))), (510, None, Some((CMD_REPAY, 300, 0))), (520, None, Some((CMD_LAUNCH, 0, 0))),
             (700, Some(IN_ASSIST | IN_THRUST | IN_BURN), None), (800, Some(IN_ASSIST | IN_LEFT), None),
         ];
         let mut log = Vec::new();
@@ -82,11 +89,12 @@ mod tests {
             for &(at, input, cmd) in &script {
                 if at != t { continue; }
                 if let Some(input) = input { live.player.input = input; log.push(LogEntry::Input { tick: live.tick, input }); }
-                if let Some(code) = cmd { assert_eq!(live.command(code, 0, 0), OK, "command {code} at {t}"); log.push(LogEntry::Command { tick: live.tick, code, a: 0, b: 0 }); }
+                if let Some((code, a, b)) = cmd { assert_eq!(live.command(code, a, b), OK, "command {code} at {t}"); log.push(LogEntry::Command { tick: live.tick, code, a, b }); }
             }
             live.step();
         }
-        assert_eq!((live.mode(), live.day()), (MODE_FLYING, 2));
+        assert_eq!((live.mode(), live.day(), live.hold.tons[1]), (MODE_FLYING, 2, 4));
+        assert_eq!(live.credits(), 1000 - 6 * 37 - live.dock_fee() + 2 * 37 - 300);
         let mut again = World::from_snapshot(&start).unwrap();
         run(&mut again, &log, 1000);
         assert_eq!(live.hash(), again.hash());

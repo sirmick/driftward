@@ -45,8 +45,10 @@ button { font: inherit; color: inherit; }
 }
 #toast.on { opacity: 1; }
 #glerr { position: fixed; inset: 0; display: grid; place-items: center; color: var(--bad); font: 15px var(--f-mono); }
-/* the port screen: the world you landed on fills the view, dimmed; the port's card sits over its left side */
-#port { position: fixed; inset: 0 0 auto 0; bottom: 0; display: grid; align-items: center; padding: 24px 24px 72px;
+/* the port screen: the world you landed on fills the view, dimmed; the port's card sits over its left side, and
+   the market opens beside it */
+#port { position: fixed; inset: 0 0 auto 0; bottom: 0; display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 540px);
+  gap: 32px; align-items: center; padding: 24px 24px 72px;
   background: linear-gradient(90deg, rgba(7,9,12,.88) 0%, rgba(7,9,12,.62) 42%, rgba(7,9,12,.08) 75%); }
 .port-card { max-width: 460px; }
 .port-kicker { margin: 0 0 6px; color: var(--amber); font: 600 12px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; }
@@ -61,6 +63,25 @@ button { font: inherit; color: inherit; }
 .port-services button:disabled { cursor: default; color: var(--muted); }
 .port-services button.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
 .port-day { margin: 18px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
+.port-money { margin: 6px 0 0; color: var(--fg); font: 500 12px var(--f-mono); }
+.port-services button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+#trade { background: rgba(12,16,21,.92); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+.trade-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.trade-head h3 { margin: 0; font: 700 20px/1 var(--f-display); letter-spacing: .05em; text-transform: uppercase; }
+.trade-head span { color: var(--muted); font: 500 12px var(--f-mono); }
+#trade table { width: 100%; border-collapse: collapse; font: 500 13px var(--f-mono); }
+#trade th { color: var(--muted); font: 500 11px var(--f-mono); text-align: left; padding: 0 6px 6px; border-bottom: 1px solid var(--line); }
+#trade td { padding: 5px 6px; border-bottom: 1px solid rgba(30,38,48,.6); }
+#trade td.num, #trade th.num { text-align: right; }
+#trade td.low { color: #7fd08a; } #trade td.high { color: var(--amber); } #trade td.none { color: var(--muted); }
+#trade td.act { text-align: right; white-space: nowrap; }
+#trade button { background: #121821; border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; margin-left: 4px; cursor: pointer;
+  font: 600 11.5px var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: var(--fg); }
+#trade button:hover:not(:disabled) { border-color: var(--amber); }
+#trade button:disabled { cursor: default; color: #4d5663; }
+.trade-foot { display: flex; align-items: center; gap: 4px; margin: 12px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
+.trade-foot span { flex: 1; }
+.trade-note { margin: 8px 0 0; color: var(--muted); font: 400 11.5px var(--f-mono); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -75,7 +96,7 @@ button { font: inherit; color: inherit; }
     <h2 id="port-name"></h2>
     <p class="port-desc" id="port-desc"></p>
     <div class="port-services">
-      <button type="button" disabled>Trade<span>next</span></button>
+      <button type="button" id="svc-trade" aria-pressed="false">Trade<span>T</span></button>
       <button type="button" disabled>Mission board<span>next</span></button>
       <button type="button" disabled>Bar<span>later</span></button>
       <button type="button" disabled>Refuel &amp; repair<span>later</span></button>
@@ -83,11 +104,21 @@ button { font: inherit; color: inherit; }
       <button type="button" id="svc-launch" class="primary">Launch<span>L</span></button>
     </div>
     <p class="port-day" id="port-day"></p>
+    <p class="port-money" id="port-money"></p>
+  </div>
+  <div id="trade" hidden aria-label="Market">
+    <div class="trade-head"><h3>Market</h3><span id="trade-sum"></span></div>
+    <table>
+      <thead><tr><th>Commodity</th><th class="num">Price</th><th class="num">Aboard</th><th></th></tr></thead>
+      <tbody id="trade-rows"></tbody>
+    </table>
+    <div class="trade-foot"><span id="trade-debt"></span><button type="button" id="repay-1k">Repay 1,000</button><button type="button" id="repay-max">Repay max</button></div>
+    <p class="trade-note">Prices are per ton. Click for one ton; Shift-click buys all you can, or sells all aboard.</p>
   </div>
 </section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · F assist level · L land · I nav · wheel zoom</span>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · F assist level · L land · T trade · I nav · wheel zoom</span>
   <span class="spacer"></span>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
   <button type="button" id="b-save" title="F6">Save</button>
@@ -101,6 +132,7 @@ button { font: inherit; color: inherit; }
 <script id="catalog" type="application/json">/*CATALOG*/</script>
 <script id="system" type="application/json">/*SYSTEM*/</script>
 <script id="system-schema" type="application/json">/*SYSTEMSCHEMA*/</script>
+<script id="economy" type="application/json">/*ECONOMY*/</script>
 <script id="gen">/*GEN*/</script>
 <script>
 (function () {

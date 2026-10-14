@@ -22,6 +22,8 @@ const CORE_READY = (async () => {
     return {
       manifest: M, DT: M.dt,
       ship: groups.ship, type: groups.type, body: groups.body, env: groups.env, game: groups.game,
+      // the player's hold (tons per commodity) and every market's prices (body * maxGoods + commodity; 0 not traded)
+      hold: groups.hold, market: groups.market, maxGoods: M.maxGoods,
       // tuning: core.param('damper') / core.param('damper', 0.6); names in core/src/world.rs
       param: (name, v) => { if (!(name in P)) throw new Error('unknown core param ' + name); if (v !== undefined) params[P[name]] = v; return params[P[name]]; },
       paramNames: M.params,
@@ -46,6 +48,9 @@ const CORE_READY = (async () => {
       placeLanded: body => X.dw_place_landed(w, body),
       portBelow: () => { const v = X.dw_port_below(w); return v < 0 ? null : { body: v % 1000, slow: v >= 1000 }; },
       mode: () => groups.game.mode[0], day: () => groups.game.day[0],
+      credits: () => groups.game.credits[0], debt: () => groups.game.debt[0],
+      price: (body, g) => groups.market.price[body * M.maxGoods + g],
+      holdUsed: () => groups.hold.tons.reduce((a, b) => a + b, 0),
       setInput: bits => X.dw_set_input(w, bits >>> 0),
       playerSet: () => X.dw_player_set(w), // assist set speed, m/s
       // save: a copy of the whole world as bytes; load(bytes): 0 ok, else an error code (see snapshot.rs)
@@ -58,10 +63,10 @@ const CORE_READY = (async () => {
     };
   }
   // input bits, mirrored from core/src/player.rs
-  // game commands, modes and results, mirrored from core/src/port.rs
-  const CMD = { land: 1, launch: 2, wait: 3, skip: 4 };
+  // game commands, modes and results, mirrored from core/src/port.rs and core/src/market.rs
+  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7 };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3 };
-  const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command' };
+  const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount' };
   const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };
   return { world, IN, CMD, MODE, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
 })();

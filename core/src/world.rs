@@ -2,6 +2,7 @@
 
 use crate::cols::{params, soa, ColumnDesc};
 use crate::flight;
+use crate::market::MAX_GOODS;
 use crate::player::{self, Player};
 use crate::snapshot;
 use crate::math::wrap;
@@ -51,8 +52,8 @@ soa! {
 
 soa! {
     /// Ship types (one per brand x size): flight stats from the catalog. `well` is how strongly gravity wells
-    /// affect the hull (0 not at all; fighters about .35, capital ships about .75).
-    pub struct Types { accel: f64, turn: f64, vmax: f64, well: f64 }
+    /// affect the hull (0 not at all; fighters about .35, capital ships about .75); `cargo` is the hold, in tons.
+    pub struct Types { accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32 }
 }
 
 soa! {
@@ -63,8 +64,19 @@ soa! {
 
 soa! {
     /// The player's game state, one row: mode (port.rs MODE_*), the body landed at or heading for, the time left in
-    /// a descent or launch sequence, and the strategic day.
-    pub struct Game { mode: u8, at: i16, timer: f64, day: u32 }
+    /// a descent or launch sequence, the strategic day, and the player's credits and debt to the lender.
+    pub struct Game { mode: u8, at: i16, timer: f64, day: u32, credits: u32, debt: u32 }
+}
+
+soa! {
+    /// The player's cargo hold: tons of each commodity (market.rs MAX_GOODS rows).
+    pub struct Hold { tons: u32 }
+}
+
+soa! {
+    /// Markets: one row per body and commodity (body * MAX_GOODS + commodity), the price in credits per ton;
+    /// 0 where the port does not trade it.
+    pub struct Market { price: u32 }
 }
 
 soa! {
@@ -96,6 +108,8 @@ params! {
     land_speed = 30.0;    "fastest a ship may be moving to land on a planet or moon, m/s"
     dock_speed = 12.0;    "fastest a ship may be moving to dock at a station, m/s"
     launch_speed = 20.0;  "orbital speed a ship has when launch hands back control, m/s"
+    dock_fee = 20.0;      "credits a day in port costs the player"
+    interest = 0.002;     "the lender's interest on the player's debt, per day"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -116,6 +130,8 @@ pub struct World {
     pub bodies: Bodies,
     pub env: Env,
     pub game: Game,
+    pub hold: Hold,
+    pub market: Market,
     pub params: Vec<f64>,
     /// live ship slots are 0..count
     pub count: usize,
@@ -140,6 +156,8 @@ impl World {
             bodies: Bodies::with_capacity(cfg.max_bodies),
             env: Env::with_capacity(cfg.env_n * cfg.env_n),
             game: Game::with_capacity(1),
+            hold: Hold::with_capacity(MAX_GOODS),
+            market: Market::with_capacity(cfg.max_bodies * MAX_GOODS),
             params: param_defaults(),
             count: 0,
             n_bodies: 0,
@@ -167,6 +185,8 @@ impl World {
         self.bodies.describe("body", &mut c);
         self.env.describe("env", &mut c);
         self.game.describe("game", &mut c);
+        self.hold.describe("hold", &mut c);
+        self.market.describe("market", &mut c);
         c.push(ColumnDesc::of("world", "params", &self.params));
         c
     }
@@ -181,17 +201,19 @@ impl World {
         )).collect();
         let names: Vec<String> = PARAM_NAMES.iter().map(|n| format!("\"{n}\"")).collect();
         format!(
-            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"envN":{},"envW":{},"params":[{}],"columns":[{}]}}"#,
-            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, self.cfg.env_n, self.cfg.env_w,
+            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"envN":{},"envW":{},"params":[{}],"columns":[{}]}}"#,
+            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, self.cfg.env_n, self.cfg.env_w,
             names.join(","), cols.join(",")
         )
     }
 
-    /// Start over: every ship column zeroed, no live slots, clock at tick 0. Types, bodies, gas, params
-    /// and the generator are kept (reseed separately). Handles from before a clear are invalid.
+    /// Start over: every ship column zeroed, the game row and hold emptied, no live slots, clock at tick 0. Types,
+    /// bodies, markets, gas, params and the generator are kept (reseed separately). Handles from before a clear are
+    /// invalid.
     pub fn clear(&mut self) {
         self.ships.clear();
         self.game.clear();
+        self.hold.clear();
         self.count = 0;
         self.tick = 0;
         self.player.set = 0.0;
@@ -224,7 +246,7 @@ impl World {
     /// player (this tick's input bitmask into commands, when a player slot is set),
     /// control (assist turns desired velocity into actuator commands), fields (gas at each ship),
     /// steer (angular motion), forces (thrust, drag, gravity), integrate (velocity, dampers, position),
-    /// engines (glow). Decide (AI) and the systems after motion still run in JS around this call.
+    /// engines (glow). Trading and the day's costs are commands, applied between ticks (market.rs). Decide (AI) and the systems after motion still run in JS around this call.
     pub fn step(&mut self) {
         let n = self.count;
         let s = &mut self.ships;
@@ -290,6 +312,9 @@ impl World {
         eat(self.player.slot as u32 as u64 | (self.player.input as u64) << 32);
         eat(self.game.mode[0] as u64 | (self.game.at[0] as u16 as u64) << 8 | (self.game.day[0] as u64) << 32);
         eat(self.game.timer[0].to_bits());
+        eat(self.game.credits[0] as u64 | (self.game.debt[0] as u64) << 32);
+        for &t in &self.hold.tons { eat(t as u64); }
+        for &p in &self.market.price[..self.n_bodies * MAX_GOODS] { eat(p as u64); }
         let s = &self.ships;
         for i in 0..self.count {
             eat(s.alive[i] as u64 | (s.ctl[i] as u64) << 8 | (s.burn[i] as u64) << 16 | (s.kind[i] as u64) << 24 | (s.generation[i] as u64) << 32);

@@ -5,11 +5,13 @@
 //! 60 Hz tick (`world`); flight physics is the first mechanism ported in (`flight`). All math that
 //! feeds state is deterministic across targets (`math`, `rng`); `scenario` proves it. The player flies
 //! by one input bitmask per tick (`player`); the world saves to a fixed-size byte image (`snapshot`), and a
-//! snapshot plus an input log replays a session exactly (`replay`). Ports, landings and the day clock are in `port`.
+//! snapshot plus an input log replays a session exactly (`replay`). Ports, landings and the day clock are in `port`;
+//! cargo, credits and markets in `market`.
 
 pub mod cols;
 pub mod ffi;
 pub mod flight;
+pub mod market;
 pub mod math;
 pub mod player;
 pub mod port;

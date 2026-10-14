@@ -1,0 +1,32 @@
+{
+  "description": "M1's economy: fixed prices by port role (the Book: 'fixed prices that vary with the port's role'). A port trades the commodities its role lists, at the commodity's base price times its tier: low where the role makes it, high where the role needs it. Commodities are core rows in this order (at most 16). The player starts with credits and a debt to a lender.",
+  "start": { "credits": 1500, "debt": 12000 },
+  "tiers": { "low": 0.7, "medium": 1.0, "high": 1.4 },
+  "commodities": [
+    { "id": "food", "name": "Food", "base": 25 },
+    { "id": "water", "name": "Water", "base": 12 },
+    { "id": "ore", "name": "Ore", "base": 35 },
+    { "id": "metals", "name": "Metals", "base": 80 },
+    { "id": "fuel", "name": "Fuel", "base": 45 },
+    { "id": "chemicals", "name": "Chemicals", "base": 65 },
+    { "id": "alloys", "name": "Alloys", "base": 130 },
+    { "id": "components", "name": "Components", "base": 170 },
+    { "id": "goods", "name": "Consumer goods", "base": 110 },
+    { "id": "medicine", "name": "Medicine", "base": 220 }
+  ],
+  "roles": {
+    "mining": { "ore": "low", "fuel": "medium", "food": "high", "water": "high", "components": "high", "goods": "high", "medicine": "high" },
+    "ice": { "water": "low", "chemicals": "medium", "fuel": "medium", "food": "high", "components": "high", "goods": "high" },
+    "gas": { "fuel": "low", "chemicals": "low", "water": "medium", "food": "high", "components": "high", "goods": "medium" },
+    "refinery": { "metals": "low", "chemicals": "low", "fuel": "medium", "ore": "high", "water": "high", "food": "high", "components": "medium" },
+    "forge": { "alloys": "low", "components": "low", "fuel": "medium", "metals": "high", "chemicals": "high", "food": "high" },
+    "agri": { "food": "low", "water": "medium", "chemicals": "high", "components": "high", "goods": "high", "medicine": "medium" },
+    "habitat": { "goods": "low", "medicine": "medium", "food": "high", "water": "medium", "fuel": "medium", "metals": "medium", "components": "medium" },
+    "container-port": { "food": "medium", "water": "medium", "ore": "medium", "metals": "medium", "fuel": "medium", "chemicals": "medium", "alloys": "medium", "components": "medium", "goods": "medium", "medicine": "medium" },
+    "shipyard": { "fuel": "medium", "chemicals": "medium", "metals": "high", "alloys": "high", "components": "high", "goods": "medium", "food": "medium" },
+    "relay": { "food": "medium", "goods": "medium", "fuel": "medium", "medicine": "medium", "components": "high" },
+    "military": { "fuel": "medium", "alloys": "medium", "components": "medium", "food": "high", "medicine": "high" },
+    "research": { "medicine": "low", "chemicals": "high", "components": "high", "goods": "medium", "food": "medium" },
+    "haven": { "fuel": "medium", "food": "medium", "goods": "high", "medicine": "high", "alloys": "medium" }
+  }
+}

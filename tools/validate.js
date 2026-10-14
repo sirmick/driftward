@@ -1,5 +1,5 @@
-// Validate every system file against its schema with the game's own clamp (src/schema.js), and check the clamp
-// itself on a deliberately bad system. Usage: node tools/validate.js (part of npm run check)
+// Validate every system file against its schema with the game's own clamp (src/schema.js), check the economy's
+// price tables, and check the clamp itself on a deliberately bad system. Usage: node tools/validate.js (part of npm run check)
 const fs = require('fs'), path = require('path');
 const { clampToSchema, loadSystem } = require('../src/schema.js');
 const root = path.join(__dirname, '..');
@@ -12,6 +12,25 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
   if (!system || notes.length) { bad++; console.log(`${f}: ${notes.length} problem(s)`); notes.forEach(n => console.log(`  ${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`)); }
   else console.log(`${f}: valid; ${bodies.length} bodies, ${ports.length} ports (${ports.join(', ')})`);
 }
+
+// the economy: at most the core's 16 commodities, a price table for every port role the schema allows, naming only
+// known commodities and tiers
+const econ = JSON.parse(fs.readFileSync(path.join(root, 'src', 'economy.json'), 'utf8'));
+const roles = schema.properties.bodies.items.properties.port.properties.role.enum, ids = econ.commodities.map(c => c.id);
+const econBad = [];
+if (ids.length > 16) econBad.push(`${ids.length} commodities; the core holds 16`);
+if (new Set(ids).size !== ids.length) econBad.push('duplicate commodity ids');
+econ.commodities.forEach(c => { if (!(c.base > 0 && Number.isInteger(c.base))) econBad.push(`${c.id}: base price must be a positive integer`); });
+for (const r of roles) if (!econ.roles[r]) econBad.push(`no price table for role ${r}`);
+for (const [r, t] of Object.entries(econ.roles)) {
+  if (!roles.includes(r)) econBad.push(`price table for unknown role ${r}`);
+  for (const [g, tier] of Object.entries(t)) {
+    if (!ids.includes(g)) econBad.push(`${r}: unknown commodity ${g}`);
+    if (!(tier in econ.tiers)) econBad.push(`${r}.${g}: unknown tier ${tier}`);
+  }
+}
+if (econBad.length) { bad += econBad.length; econBad.forEach(m => console.log(`economy.json: ${m}`)); }
+else console.log(`economy.json: valid; ${ids.length} commodities, ${roles.length} role price tables`);
 
 // the clamp on bad input: out-of-range numbers clamp, bad enums fall back to defaults, unknown fields drop,
 // a missing required field is fatal
@@ -29,5 +48,5 @@ for (const [p, ok] of expect) {
   const n = notes.find(n => n.path === p);
   if (!n || !ok(n)) { bad++; console.log(`clamp check failed at ${p}: ${n ? n.msg : 'no note'}`); }
 }
-console.log(bad ? `${bad} validation problem(s)` : 'schema clamp behaves; all systems valid');
+console.log(bad ? `${bad} validation problem(s)` : 'schema clamp behaves; all systems and the economy valid');
 process.exit(bad ? 1 : 0);

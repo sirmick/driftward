@@ -8,7 +8,7 @@ This repository holds two self-contained WebGL2 pages with no dependencies and n
 
 Open `index.html` for the lab or `play.html` for the game, in a browser with WebGL2 (any current Chrome, Firefox, Safari or Edge). That's it.
 
-The game so far: the Book's M1 system, Brannock (an orange star, three planets, a moon and a shipyard station, four of them ports), loaded from a schema-validated file. You start landed at Halde Landing; launch, fly, and land or dock at any port (be over it and slow, press L: a short descent inside a plasma sheath, a day passes, the game autosaves). Flight runs on the core's model, with the Book's three assist levels on F (full assist; drift off, with Q/E strafe and X retro; full off, where spins persist), side, reverse and turning thruster jets on each hull, gravity wells that pull you in and bend your top speed, so you fall in fast and crawl out (game physics, stronger on bigger hulls, though every hull can climb out), a minimap and a navigation overlay (I) that labels or points to every planet with its distance and closing speed; save (F6) and load (F9), and export a replay of the session. Everything that changes game state runs in the core, so a save restores the exact state and a replay reruns identically, in the browser or natively.
+The game so far: the Book's M1 system, Brannock (an orange star, three planets, a moon and a shipyard station, four of them ports), loaded from a schema-validated file. You start landed at Halde Landing in a used fighter with 1,500 credits and a 12,000-credit debt to a lender; launch, fly, and land or dock at any port (be over it and slow, press L: a short descent inside a plasma sheath, a day passes, the game autosaves). Each port's market (T) trades commodities at fixed prices set by its role (a mine sells ore cheap and pays well for food and goods; the refinery buys ore and sells metals), so buying low at one port and selling high at another pays; waiting in port costs a docking fee, and the debt gathers interest daily. Flight runs on the core's model, with the Book's three assist levels on F (full assist; drift off, with Q/E strafe and X retro; full off, where spins persist), side, reverse and turning thruster jets on each hull, gravity wells that pull you in and bend your top speed, so you fall in fast and crawl out (game physics, stronger on bigger hulls, though every hull can climb out), a minimap and a navigation overlay (I) that labels or points to every planet with its distance and closing speed; save (F6) and load (F9), and export a replay of the session. Everything that changes game state runs in the core, so a save restores the exact state and a replay reruns identically, in the browser or natively.
 
 ## What's in the lab
 
@@ -63,6 +63,7 @@ core/               the sim core, a Rust crate (WASM for the pages, native for t
   src/snapshot.rs   save and load: the whole world as one fixed-size byte image
   src/replay.rs     input logs, and rerunning them from a snapshot
   src/port.rs       ports and landings: flying, descending, landed, launching; the day; the game commands
+  src/market.rs     cargo hold, credits, the lender, markets: buy, sell and repay commands
   src/scenario.rs   scripted world shared by native and WASM, for the determinism check
   src/bin/          scenario (prints a scenario's hash) and replay (reruns an exported session)
 src/
@@ -74,6 +75,7 @@ src/
   schema.js         clamps content to its JSON Schema before use; lays out a star system
   schema/           JSON Schemas: the contract for LLM-authored content (system.schema.json)
   systems/          star systems (m1.json: Brannock, the Book's M1 system)
+  economy.json      commodities, price tiers by port role, the starting credits and debt
   play/             the game page: template.html and play.js
   catalog.json      size classes, the four brand catalogs, station archetypes and heavy hulls
   gen.js            ship and station assembly and baking (pure JS, runs in workers and Node)
@@ -89,7 +91,7 @@ tools/
   check.js          boots the page against a stub WebGL context and validates every shader
   core-test.js      core unit tests, native vs WASM state hashes, and a WASM session replayed natively
   fly-smoke.py      drives the lab's Fly tab in headless Chromium: speeds, seeded replay, clock rate
-  play-smoke.py     drives the game page: start landed, flight, a port visit, save and load, a browser session replayed natively
+  play-smoke.py     drives the game page: start landed, the market, flight, a port visit, save and load, a browser session replayed natively
   validate.js       validates every system file against its schema, and checks the clamp itself
   dev.js            dev server: rebuilds on change, live-reloads both pages
   preview.js        CPU bake of the whole catalog to a PNG grid

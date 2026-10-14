@@ -4,8 +4,10 @@
 //!
 //! From the Book (Docking and landing, Time): fly over a port's disc, slow to near-stationary, request landing;
 //! a short descent; landed, the player is safe and flight is paused for them; each landing advances the clock by
-//! a day, and so does waiting in port. Stations need a slower approach than planets (clamps, not a descent).
+//! a day, and so does waiting in port, which costs a docking fee. Stations need a slower approach than planets
+//! (clamps, not a descent). Trading commands are in market.rs.
 
+use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL, NO_CREDITS};
 use crate::world::{World, DT, P};
 
 pub const MODE_FLYING: u8 = 0;
@@ -22,7 +24,7 @@ pub const BODY_STATION: u8 = 3;
 pub const CMD_LAND: u32 = 1;
 /// Take off from the port the player is landed at.
 pub const CMD_LAUNCH: u32 = 2;
-/// Wait a day in port.
+/// Wait a day in port, paying the docking fee.
 pub const CMD_WAIT: u32 = 3;
 /// Finish a descent or launch now (the sequence is skippable).
 pub const CMD_SKIP: u32 = 4;
@@ -60,7 +62,7 @@ impl World {
     }
 
     /// Apply a command now (between ticks). Returns OK or why not.
-    pub fn command(&mut self, code: u32, _a: i32, _b: i32) -> i32 {
+    pub fn command(&mut self, code: u32, a: i32, b: i32) -> i32 {
         let mode = self.mode();
         match code {
             CMD_LAND => {
@@ -85,7 +87,10 @@ impl World {
             }
             CMD_WAIT => {
                 if mode != MODE_LANDED { return WRONG_MODE; }
-                self.game.day[0] += 1;
+                let fee = self.dock_fee();
+                if self.credits() < fee { return NO_CREDITS; }
+                self.game.credits[0] -= fee;
+                self.next_day();
                 OK
             }
             CMD_SKIP => {
@@ -93,6 +98,7 @@ impl World {
                 self.game.timer[0] = 0.0;
                 OK
             }
+            CMD_BUY | CMD_SELL | CMD_REPAY => self.trade(code, a, b),
             _ => UNKNOWN_COMMAND,
         }
     }
@@ -120,7 +126,7 @@ impl World {
                 if self.game.timer[0] <= 0.0 {
                     self.game.timer[0] = 0.0;
                     self.game.mode[0] = MODE_LANDED;
-                    self.game.day[0] += 1;
+                    self.next_day();
                 }
             }
             MODE_LAUNCHING => {
@@ -167,6 +173,7 @@ mod tests {
         w.ships.x[0] = x;
         w.ships.y[0] = y;
         w.player.slot = 0;
+        w.game.credits[0] = 1000;
         w
     }
     fn run(w: &mut World, secs: f64) { for _ in 0..(secs / DT).round() as usize { w.step(); } }
@@ -185,7 +192,7 @@ mod tests {
         run(&mut w, 10.0);
         assert_eq!((w.ships.x[0], w.ships.y[0]), (x, y)); // landed: the ship is out of the flight sim
         assert_eq!(w.command(CMD_WAIT, 0, 0), OK);
-        assert_eq!(w.day(), 2);
+        assert_eq!((w.day(), w.credits()), (2, 1000 - w.dock_fee())); // and costs a docking fee
         assert_eq!(w.command(CMD_LAUNCH, 0, 0), OK);
         run(&mut w, LAUNCH_S + 0.1);
         assert_eq!(w.mode(), MODE_FLYING);
