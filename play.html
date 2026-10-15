@@ -89,6 +89,11 @@ button { font: inherit; color: inherit; }
    the port screen's gradient sits on top of it */
 #vista { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s; pointer-events: none; }
 #vista.on { opacity: 1; }
+/* big or high-DPI screens: the vista as a framed picture at about its own size, the live world behind it */
+body.vista-framed #vista { inset: auto; left: var(--vista-x); top: 50%; width: var(--vista-w); height: auto;
+  transform: translateY(-50%); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 30px 90px rgba(0,0,0,.7), 0 0 0 6px rgba(7,9,12,.55); }
+/* the card's shade stops at the card, so it doesn't dim the framed picture */
+body.vista-framed #port { background: linear-gradient(90deg, rgba(7,9,12,.88) 0px, rgba(7,9,12,.6) 420px, rgba(7,9,12,0) 500px); }
 .port-more { margin: -12px 0 20px; padding: 0; background: none; border: 0; cursor: pointer; color: var(--amber); font: 500 12px var(--f-mono); }
 .port-more:hover { text-decoration: underline; }
 .port-more span { color: var(--muted); }
@@ -6056,6 +6061,20 @@ function resize() {
   canvas.width = Math.max(1, Math.round(W * dpr)); canvas.height = Math.max(1, Math.round(H * dpr));
   hud.width = canvas.width; hud.height = canvas.height;
   G.buildTargets();
+  frameVista();
+}
+// The port's painted vista fills the screen while that stretches it no more than VISTA_STRETCH times its own pixels
+// (real device pixels: a high-DPI screen counts double). Past that it would go soft, so it becomes a framed picture
+// at about its own size, right of the port card, with the live world you landed on filling the view behind it;
+// if there is no room for the frame there, it stays full screen.
+const VISTA_STRETCH = 1.25, VISTA_MIN_W = 640, PORT_CARD_W = 520;
+function frameVista() {
+  const img = $('vista'), nw = img.naturalWidth || 1600, nh = img.naturalHeight || 900, ddpr = window.devicePixelRatio || 1;
+  const big = W * ddpr > nw * VISTA_STRETCH || H * ddpr > nh * VISTA_STRETCH;
+  const room = W - PORT_CARD_W - 48, w = Math.min(nw * VISTA_STRETCH / ddpr, room, (H - 140) * nw / nh);
+  const framed = big && w >= VISTA_MIN_W;
+  document.body.classList.toggle('vista-framed', framed);
+  if (framed) { img.style.setProperty('--vista-w', `${Math.round(w)}px`); img.style.setProperty('--vista-x', `${Math.round(PORT_CARD_W + (room - w) / 2)}px`); }
 }
 window.addEventListener('resize', resize);
 resize();
@@ -6394,7 +6413,7 @@ CORE_READY.then(CORE => {
     if (yv) { yard.render((now - t0) / 1000, yv.cells, yv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     // nothing to see under the port's painted vista, the map, the debug screen or the pause menu: the canvas keeps
     // its last frame (pause shows it frozen behind the menu), and the GPU rests
-    const covered = $('vista').classList.contains('on') || mapOn || debug.isOpen() || (paused && !titleUp());
+    const covered = ($('vista').classList.contains('on') && !document.body.classList.contains('vista-framed')) || mapOn || debug.isOpen() || (paused && !titleUp());
     if (!covered || sceneStale) { render((now - t0) / 1000, camX, camY); sceneStale = false; }
     drawHUD();
     drawMap();
@@ -6426,7 +6445,7 @@ CORE_READY.then(CORE => {
     const img = $('vista'), src = id && ART.vistas[id];
     img.classList.remove('on');
     if (!src) { img.removeAttribute('src'); return; }
-    img.onload = () => { if (img.getAttribute('src') === src) img.classList.add('on'); };
+    img.onload = () => { if (img.getAttribute('src') === src) { frameVista(); img.classList.add('on'); } };
     img.onerror = () => console.warn(`vista ${src} did not load; showing the procedural view`);
     img.src = src;
   }
