@@ -26,6 +26,8 @@ const TRAFFIC_DATA = JSON.parse($('traffic').textContent);
 const LORE = (raw => raw ? loadLore(raw, JSON.parse($('lore-schema').textContent), SYS) : { lore: null, ports: new Map(), notes: [] })(JSON.parse($('lore').textContent));
 LORE.notes.forEach(n => console.warn(`lore ${n.path}: ${n.msg}`));
 const ART = JSON.parse($('art').textContent);
+// the debug screen (backquote): how this system's content was made (src/play/debug.js)
+const debug = makeDebug({ el: $('debug'), raw: JSON.parse($('system').textContent), loaded, econ: ECON, lore: LORE, art: ART, log: JSON.parse($('content-log').textContent) });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const star = STARS[STAR.look] || STARS.sol;
 const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3 };
@@ -169,6 +171,9 @@ $('b-nav').onclick = () => { setNav(!navOn); canvas.focus(); };
 window.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) { if (e.code === 'Escape') e.target.blur(); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
+  // the debug screen takes every key but its own: backquote opens and closes it, as does Esc
+  if (e.code === 'Backquote' && !e.repeat) { if (debug.isOpen()) debug.close(); else { debug.open(); keys.clear(); } e.preventDefault(); return; }
+  if (debug.isOpen()) { if (e.code === 'Escape') debug.close(); return; }
   // with a shell screen up, the game takes no keys: Esc and P step back out
   if (shellOpen()) { if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyP')) shellBack(); return; }
   if (!keys.has(e.code)) {
@@ -427,7 +432,7 @@ CORE_READY.then(CORE => {
     sim.checkViews();
     // bake the traffic hulls up front (behind the start port's screen), not when the first one flies into view
     for (let k = 0; k < 3; k++) typeReady(types[sim.role.kind[k]]);
-    if (!paused) { // paused: the clock stops (the replay log is by tick, so a pause leaves no trace)
+    if (!paused && !debug.isOpen()) { // paused (or debugging): the clock stops (the replay log is by tick, so a pause leaves no trace)
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
       for (let n = sim.due(dt); n > 0; n--) sim.step();
@@ -550,6 +555,28 @@ CORE_READY.then(CORE => {
     }
     refreshPort();
   };
+  // the debug screen's Player tab: a snapshot of the player's ship, flight, money, hold and missions
+  debug.setLive(() => {
+    const k = SH.kind[0], T = types[k], at = sim.game.at[0], mode = sim.mode(), landed = mode === MODE.landed, below = sim.portBelow();
+    const ports = BODIES.map((b, j) => ({ j, b })).filter(o => o.b.port), price = (j, g) => sim.price(j, g);
+    const missions = activeMissions().map(m => ({ k: m, dest: portName(MS.dest[m]), good: (GOODS[MS.good[m]] || { name: '?' }).name.toLowerCase(), tons: MS.tons[m], pay: MS.pay[m], due: MS.due[m], left: MS.due[m] - sim.day() }));
+    const missionTons = missions.reduce((n, m) => n + m.tons, 0);
+    const goods = GOODS.map((c, g) => ({ name: c.name, base: c.base, aboard: Math.max(0, sim.hold.tons[g] - missions.filter(m => MS.good[m.k] === g).reduce((n, m) => n + m.tons, 0)), prices: ports.map(o => price(o.j, g)) }));
+    const tradeTons = goods.reduce((n, g) => n + g.aboard, 0);
+    return {
+      ship: { name: T.name, kind: k, length: T.L, accel: sim.type.accel[k], turn: sim.type.turn[k], vmax: sim.type.vmax[k], well: sim.type.well[k], cargo: sim.type.cargo[k] },
+      mode: Object.keys(MODE).find(m => MODE[m] === mode), assist: ASSIST[assistMode].hud.toLowerCase(),
+      at: landed || mode !== MODE.flying ? portName(at) : '', below: mode === MODE.flying && below ? `${portName(below.body)}${below.slow ? ', slow enough to land' : ', too fast to land'}` : '',
+      x: SH.x[0], y: SH.y[0], vx: SH.vx[0], vy: SH.vy[0], v: Math.hypot(SH.vx[0], SH.vy[0]), heading: ((SH.ang[0] * 180 / Math.PI) % 360 + 360) % 360, av: SH.av[0],
+      set: sim.playerSet(), auto: sim.game.auto[0] ? BODIES[sim.game.auto[0] - 1].name : '',
+      credits: sim.credits(), debt: sim.debt(), interest: sim.param('interest'), dockFee: sim.param('dock_fee'),
+      here: landed ? portName(at) : '', cargoHere: landed ? goods.reduce((n, g, gi) => n + g.aboard * price(at, gi), 0) : 0,
+      cargoBest: goods.reduce((n, g) => n + g.aboard * Math.max(0, ...g.prices), 0),
+      holdUsed: sim.holdUsed(), tradeTons, missionTons,
+      ports: ports.map(o => ({ name: o.b.port.name, role: o.b.port.role, here: landed && o.j === at })), goods, missions,
+      day: sim.day(), tick: sim.tick(), hash: sim.hash(), seed: seedNow
+    };
+  });
   // buy or sell n tons (n omitted: all that fits or is aboard); returns the core's result
   function trade(act, g, n) {
     const price = sim.price(sim.game.at[0], g), c = GOODS[g];

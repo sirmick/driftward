@@ -142,6 +142,53 @@ button { font: inherit; color: inherit; }
 .shell .setting select { background: #0c1015; color: var(--fg); border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; font: 500 12px var(--f-mono); }
 .shell .foot { margin: 14px 0 0; color: var(--muted); font: 400 11.5px var(--f-mono); }
 .shell .note { margin: 0 0 6px; color: var(--muted); font: 400 11.5px var(--f-mono); }
+/* the debug screen (backquote): tabs along the top; Content has a section list on the left and the sections */
+#debug { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr; background: rgba(7,9,12,.97); z-index: 10; font: 13px/1.5 var(--f-body); }
+.dbg-head { display: flex; align-items: center; gap: 14px; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+.dbg-head h2 { margin: 0; font: 700 18px/1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--amber); }
+.dbg-head .hint { margin-left: auto; color: var(--muted); font: 500 12px var(--f-mono); }
+.dbg-tabs { display: flex; gap: 6px; }
+.dbg-tabs button { background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; font: 600 12.5px var(--f-display); letter-spacing: .05em; text-transform: uppercase; color: var(--fg); }
+.dbg-tabs button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.dbg-pane { display: grid; grid-template-columns: 170px 1fr; min-height: 0; }
+.dbg-nav { display: grid; align-content: start; gap: 2px; padding: 14px 10px; border-right: 1px solid var(--line); }
+.dbg-nav a { padding: 5px 8px; border-radius: 5px; color: var(--fg); text-decoration: none; font: 500 12.5px var(--f-mono); }
+.dbg-nav a:hover { background: #121821; color: var(--amber); }
+.dbg-body { overflow-y: auto; padding: 4px 24px 40px; min-height: 0; }
+.dbg-body section { padding: 14px 0 18px; border-bottom: 1px solid var(--line); max-width: 1400px; }
+.dbg-body h3 { margin: 0 0 10px; font: 700 17px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+.dbg-body p { margin: 0 0 8px; color: #c4ccd6; }
+.dbg-body code, .dbg-body small { font: 500 11.5px var(--f-mono); color: var(--muted); }
+.dbg-note { color: var(--muted) !important; font: 400 12px var(--f-mono); }
+.dbg-body .warn { color: var(--bad) !important; }
+.dbg-sub { margin: 12px 0 4px !important; color: var(--amber) !important; font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; }
+.dbg-kv { border-collapse: collapse; }
+.dbg-kv th { text-align: left; vertical-align: top; padding: 3px 16px 3px 0; color: var(--muted); font: 500 12px var(--f-mono); white-space: nowrap; }
+.dbg-kv td { padding: 3px 0; color: var(--fg); }
+.dbg-grid { border-collapse: collapse; font: 500 12px var(--f-mono); margin: 0 0 8px; }
+.dbg-grid th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 10px 6px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+.dbg-grid td { padding: 6px 10px 6px 0; border-bottom: 1px solid rgba(30,38,48,.6); vertical-align: top; }
+.dbg-grid .n { text-align: right; }
+.dbg-grid td.low { color: #7fd08a; } .dbg-grid td.high { color: var(--amber); } .dbg-grid td.none { color: #4d5663; }
+.dbg-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,.2); vertical-align: -2px; margin-right: 5px; }
+.dbg-json, .dbg-text { margin: 6px 0; padding: 10px 12px; max-height: 60vh; overflow: auto; background: #0c1015; border: 1px solid var(--line); border-radius: 6px;
+  color: #c4ccd6; font: 400 11.5px/1.5 var(--f-mono); white-space: pre-wrap; word-break: break-word; }
+.dbg-fold { margin: 6px 0; }
+.dbg-fold summary { cursor: pointer; color: var(--fg); font: 600 12.5px var(--f-mono); padding: 3px 0; }
+.dbg-fold summary:hover { color: var(--amber); }
+.dbg-fold > :not(summary) { margin-left: 14px; }
+.dbg-head-line { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 14px 0 10px; border-bottom: 1px solid var(--line); font: 500 12px var(--f-mono); color: var(--muted); }
+.dbg-head-line b { color: var(--fg); font: 700 15px var(--f-display); letter-spacing: .04em; }
+.dbg-port { margin: 0 0 18px; padding: 12px 14px; background: #0c1015; border: 1px solid var(--line); border-radius: 8px; }
+.dbg-port h4 { margin: 0 0 10px; font: 700 18px/1.1 var(--f-display); letter-spacing: .03em; }
+.dbg-cols { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.3fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.dbg-cols .dbg-kv th { padding-right: 10px; }
+.dbg-port img { width: 100%; border-radius: 5px; border: 1px solid var(--line); background: #121821; display: block; margin: 0 0 4px; }
+.dbg-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; }
+.dbg-person { display: grid; grid-template-columns: 120px 1fr; gap: 12px; }
+.dbg-person p { margin: 4px 0 !important; font-size: 12.5px; }
+.dbg-grid th.here, .dbg-grid td.here { background: rgba(226,184,102,.08); }
+.dbg-grid td.best { outline: 1px solid var(--amber); outline-offset: -2px; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -240,9 +287,13 @@ button { font: inherit; color: inherit; }
     <p class="note">Settings are kept in this browser.</p>
   </div>
 </section>
+<section id="debug" hidden aria-label="Debug">
+  <div class="dbg-head"><h2>Debug</h2><div class="dbg-tabs"></div><span class="hint">` or Esc closes · the clock is stopped</span></div>
+  <div class="dbg-pane"></div>
+</section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · P pause · Tab assist · L land · T target · 1–9 locations · G fly to · M map · I nav · wheel zoom</span>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · P pause · Tab assist · L land · T target · 1–9 locations · G fly to · M map · I nav · wheel zoom · ` debug</span>
   <span class="spacer"></span>
   <button type="button" id="b-menu" title="P">Menu</button>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
@@ -261,6 +312,7 @@ button { font: inherit; color: inherit; }
 <script id="lore" type="application/json">/*LORE*/</script>
 <script id="lore-schema" type="application/json">/*LORESCHEMA*/</script>
 <script id="art" type="application/json">/*ART*/</script>
+<script id="content-log" type="application/json">/*CONTENTLOG*/</script>
 <script id="gen">/*GEN*/</script>
 <script>
 (function () {
@@ -271,6 +323,7 @@ button { font: inherit; color: inherit; }
 /*BAKE*/
 /*CORE*/
 /*SCHEMA*/
+/*DEBUG*/
 /*PLAY*/
 })();
 </script>

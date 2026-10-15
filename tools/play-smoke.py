@@ -52,6 +52,8 @@ with sync_playwright() as p:
     check(t['shell'] == 'title' and pg.is_visible('#title') and pg.is_disabled('#t-continue'), 'starts on the title (nothing to continue yet)')
     pg.fill('#t-seed', '1'); pg.click('#t-new'); pg.wait_for_timeout(300)
     start = ev('__play.probe()')
+    traffic0 = ev('__play.traffic()')
+    econ0 = ev('__play.ECON')  # traffic as the game starts (checked below; the clock runs meanwhile)
     check(start['shell'] is None and start['seed'] == 1, 'New game with seed 1')
     check(start['mode'] == 2 and start['day'] == 1 and pg.is_visible('#port'), f"starts landed on day 1 at {pg.inner_text('#port-name')}")
     SPACE = '{ space: [0, -8000] }'  # open space: outside every well
@@ -70,6 +72,19 @@ with sync_playwright() as p:
         check(pg.is_visible('#about') and not pg.is_visible('#bar') and pg.locator('#about-places li').count() == len(L['places']), f"I opens the about page with {len(L['places'])} places")
         pg.keyboard.press('Escape')
         check(not pg.is_visible('#about'), 'Escape closes it')
+        # the debug screen: backquote opens it over the game with the clock stopped; its Content tab has every
+        # section, the lore prompt and a card per image; Esc closes it
+        t0 = ev('__play.probe().tick')
+        pg.keyboard.press('Backquote'); pg.wait_for_timeout(600)
+        d = ev("({ open: !document.getElementById('debug').hidden, sections: [...document.querySelectorAll('.dbg-body section')].map(s => s.id), ports: document.querySelectorAll('.dbg-port').length, images: document.querySelectorAll('.dbg-port img').length, prompt: document.querySelectorAll('#dbg-pipeline details[open] .dbg-text').length, tick: __play.probe().tick })")
+        check(d['open'] and d['sections'] == ['dbg-pipeline', 'dbg-ports', 'dbg-raw'] and d['prompt'] == 2 and d['ports'] == len(lore['ports'])
+              and d['images'] == len(list((lore_file.parent.parent.parent / 'art' / 'brannock').glob('*.webp'))) and d['tick'] == t0,
+              f"` opens the debug screen with the clock stopped: the pipeline with the lore prompt, {d['ports']} port cards with {d['images']} images, the raw files")
+        pg.click('.dbg-tabs button[data-tab="player"]'); pg.wait_for_timeout(200)
+        pl = ev("({ sections: document.querySelectorAll('.dbg-body section').length, ship: document.querySelector('#dbg-ship').innerText, rows: document.querySelectorAll('#dbg-hold tbody tr').length })")
+        check(pl['sections'] == 6 and 'Fighter' in pl['ship'] and pl['rows'] == len(econ0['commodities']), f"its Player tab shows the ship, flight, money, the hold priced at every port, missions and the session")
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+        check(not pg.is_visible('#debug'), 'Escape closes it')
         if (lore_file.parent.parent.parent / 'art' / 'brannock' / 'vista-halde.webp').exists():
             pg.wait_for_function("document.getElementById('vista').classList.contains('on')", timeout=5000)
             check(True, 'the painted vista shows')
@@ -102,7 +117,7 @@ with sync_playwright() as p:
     # ambient traffic: mid-flow from the start, Rustline hulls, and turning over (two minutes of sim time)
     t0 = ev('__play.traffic()')
     cap = ev("__play.sim.param('traffic_cap')")
-    check(3 <= len(t0) <= cap and all(t['phase'] == 2 for t in t0), f'{len(t0)} ships in flight at the start, all cruising')
+    check(3 <= len(traffic0) <= cap and all(t['phase'] == 2 for t in traffic0), f'{len(traffic0)} ships in flight at the start, all cruising')
     tr = ev("""(() => { const P = __play, ids = new Set(P.traffic().map(t => P.sim.handle(t.i))), roles = new Set(), seen = [];
       for (let k = 0; k < 24; k++) { P.advance(5, []); const t = P.traffic(); seen.push(t.length); t.forEach(x => roles.add(x.role)); }
       const left = [...ids].filter(h => P.sim.resolve(h) >= 0).length;

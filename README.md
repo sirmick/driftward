@@ -80,7 +80,7 @@ src/
   lore/             each system's lore, written by tools/gen-content.js: history, culture, art bible, ports' people and rumors
   economy.json      commodities, price tiers by port role, the starting credits and debt
   traffic.json      traffic hulls by culture and role, population weights for the flows
-  play/             the game page: template.html and play.js
+  play/             the game page: template.html, play.js, and debug.js (the debug screen)
   catalog.json      size classes, the four brand catalogs, station archetypes and heavy hulls
   gen.js            ship and station assembly and baking (pure JS, runs in workers and Node)
   app.js            the lab: yard and ship views, tabs, UI
@@ -115,6 +115,8 @@ npm run preview      # bake every ship on the CPU -> preview.png
 ```
 
 Building needs Rust with the WASM target (`rustup target add wasm32-unknown-unknown`). `python3 tools/build.py --skip-core` reuses the last compiled core. The browser smoke tests need Playwright for Python: `python tools/fly-smoke.py` and `python tools/play-smoke.py` (on the dev box, use `~/.venvs/web/bin/python`).
+
+In the game, backquote opens the debug screen: Content shows how the system's content was made (the lore prompt, the art bible and prompt templates, and per port its body, lore and images with their own prompts and costs); Player shows the ship, flight, money, the hold priced at every port and missions, live.
 
 Lore and art are generated ahead of time and committed: `node tools/gen-content.js lore` writes `src/lore/<system>.json`, `node tools/gen-content.js art` paints `art/<system>/` from it (`--dry` prints the prompts; `--only id,id --force` redoes a port's vista or a person's portrait). It needs an OpenRouter key in `OPENROUTER_API_KEY` or `~/openrouter.token`, and Python with Pillow for the WebP conversion.
 

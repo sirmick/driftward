@@ -48,7 +48,7 @@ gen = (src / 'gen.js').read_text()
 MODULES = {
     '/*LOOK*/': 'look.js', '/*SHADERS*/': 'shaders.js', '/*GFX*/': 'gfx.js', '/*BAKE*/': 'bake.js', '/*CORE*/': 'core.js',
     '/*FLY*/': 'fly.js', '/*PLANETS*/': 'planets.js', '/*SUNS*/': 'suns.js', '/*STATIONS*/': 'stations.js',
-    '/*ASTEROIDS*/': 'asteroids.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js',
+    '/*ASTEROIDS*/': 'asteroids.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js', '/*DEBUG*/': 'play/debug.js',
 }
 
 def inline_modules(script, needed):
@@ -79,18 +79,23 @@ for f in sorted(art_dir.glob('*.webp')) if art_dir.exists() else []:
     if kind in ('vista', 'portrait'):
         art[kind + 's'][name] = f.relative_to(root).as_posix()
 art = json.dumps(art)
-assert '</script' not in lore + lore_schema + art
+# how the content was made, for the debug screen: the lore run's record (facts, messages, model, cost) and the art
+# log (every image's prompt, model, seed, reference and cost)
+def read_json(f):
+    return json.loads(f.read_text()) if f.exists() else None
+content_log = json.dumps({'lore': read_json(src / 'lore' / f'{system_id}.log.json'), 'art': read_json(art_dir / 'log.json')})
+assert '</script' not in lore + lore_schema + art + content_log
 
 def page(template, script):
     t = template.replace('/*COREWASM*/', core_b64).replace('/*CATALOG*/', catalog).replace('/*GEN*/', gen).replace('/*APP*/', script)
-    t = t.replace('/*LORE*/', lore).replace('/*LORESCHEMA*/', lore_schema).replace('/*ART*/', art)
+    t = t.replace('/*LORE*/', lore).replace('/*LORESCHEMA*/', lore_schema).replace('/*ART*/', art).replace('/*CONTENTLOG*/', content_log)
     return t.replace('/*SYSTEM*/', system).replace('/*SYSTEMSCHEMA*/', system_schema).replace('/*ECONOMY*/', economy).replace('/*TRAFFIC*/', traffic)
 
 # the lab: app.js pulls in the shared kit and every tab
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),
     ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*PLANETS*/', '/*SUNS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
 # the game: its template carries the script shell and markers itself
-game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*SCHEMA*/', '/*PLAY*/']), '')
+game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*SCHEMA*/', '/*DEBUG*/', '/*PLAY*/']), '')
 
 for name, html in (('index.html', lab), ('play.html', game)):
     (root / name).write_text(html)

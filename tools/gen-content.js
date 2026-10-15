@@ -16,6 +16,8 @@
 //   --only   port body ids and person ids to (re)generate; art only
 //   --force  regenerate what exists (lore always regenerates)
 //   --dry    print the prompts; no calls, no key needed
+//   --save   with lore --dry: record the prompt in src/lore/<id>.log.json, unsent (a real lore run always records it)
+//   --no-ref paint without the style reference (when an image copies the reference's layout, not just its style)
 // The key: OPENROUTER_API_KEY, else openrouter.token here (gitignored), else ~/openrouter.token. Images are
 // converted to WebP with Python's Pillow; the raw PNGs stay in art/<id>/raw/ (gitignored).
 'use strict';
@@ -29,7 +31,7 @@ const argv = process.argv.slice(2), cmd = argv[0];
 const opt = (name, def) => { const i = argv.indexOf('--' + name); return i < 0 ? def : argv[i + 1]; };
 const flag = name => argv.includes('--' + name);
 if (!['lore', 'art', 'all'].includes(cmd)) { console.log(fs.readFileSync(__filename, 'utf8').split('\n').filter(l => l.startsWith('//')).map(l => l.slice(3)).join('\n')); process.exit(cmd ? 1 : 0); }
-const DRY = flag('dry'), FORCE = flag('force'), ONLY = opt('only') ? new Set(opt('only').split(',')) : null;
+const DRY = flag('dry'), FORCE = flag('force'), NO_REF = flag('no-ref'), ONLY = opt('only') ? new Set(opt('only').split(',')) : null;
 const TEXT_MODEL = opt('text-model', 'anthropic/claude-sonnet-5.5');
 const IMAGE_MODEL = opt('image-model', 'google/gemini-3.1-flash-image');
 const WORKERS = 3;
@@ -59,7 +61,39 @@ const FACTIONS = {
 };
 const RING = { inner: 'the inner ring (prosperous)', middle: 'the middle ring (industrial, hard)', outer: 'the outer ring (poor and lawless)' };
 const STAR_WORDS = { 'red-dwarf': 'a dim red dwarf', orange: 'an orange star', yellow: 'a yellow star', white: 'a white star', 'blue-giant': 'a blue giant' };
-const bodyWords = b => ({ rock: `a rocky ${b.kind}`, terran: `a temperate ${b.kind} of seas and cloud`, giant: 'a gas giant' })[(b.look || {}).surface] || `a ${b.kind}`;
+
+// Image models read colour words, not hex codes, so every colour a prompt carries is named: a hue, darkened or
+// paled by lightness, with near-greys named as greys (warm greys as ashen, cool ones as slate).
+function colourName(hex) {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  const l = (mx + mn) / 2, d = mx - mn, s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  const h = d === 0 ? 0 : mx === r ? 60 * (((g - b) / d + 6) % 6) : mx === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+  if (s < 0.12 || d < 0.085) {
+    const tint = d < 0.02 ? '' : h < 70 ? 'ashen ' : h > 180 && h < 260 ? 'slate ' : '';
+    return l < 0.16 ? 'charcoal' : l < 0.32 ? `dark ${tint}grey` : l < 0.62 ? `${tint || 'mid '}grey` : l < 0.82 ? `pale ${tint}grey` : 'off-white';
+  }
+  const dark = l < 0.3, pale = l > 0.68;
+  if (h < 12 || h >= 345) return dark ? 'oxblood' : pale ? 'rose pink' : 'red';
+  if (h < 40) return dark ? 'dark brown' : l < 0.45 ? 'rust brown' : pale ? 'peach' : s < 0.55 ? 'tan' : 'burnt orange';
+  if (h < 58) return dark ? 'umber' : pale ? (s < 0.65 ? 'cream' : 'pale gold') : s < 0.45 ? 'sand' : 'ochre';
+  if (h < 80) return dark ? 'dark olive' : pale ? 'pale khaki' : 'olive';
+  if (h < 160) return dark ? 'deep forest green' : pale ? 'pale green' : s < 0.4 ? 'olive green' : 'green';
+  if (h < 195) return dark ? 'dark teal' : pale ? 'pale aqua' : 'teal';
+  if (h < 250) return dark ? 'deep navy blue' : l < 0.45 ? 'deep sea blue' : pale ? 'pale sky blue' : 'sky blue';
+  if (h < 290) return dark ? 'deep indigo' : pale ? 'lavender' : 'violet';
+  return dark ? 'dark plum' : pale ? 'pink' : 'magenta';
+}
+const names = list => { const n = [...new Set(list.map(colourName))]; return n.length > 1 ? n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1] : n[0]; };
+// What a body looks like from close, in the words a painter needs, from the same look the planet shader draws: each
+// palette slot means what the shader uses it for (seas, lowlands, highlands; bands and storms; floors, ground, rims)
+function bodyLooks(b) {
+  const L = b.look || {}, [c1, c2, c3] = (L.palette || []).map(colourName), atm = L.atmosphere ? colourName(L.atmosphere) : null;
+  if (b.kind === 'station' || !c1) return '';
+  if (L.surface === 'terran') return `a water world: ${c1} seas, ${c2} lowlands and ${c3} highlands with snow on the peaks, under drifting white cloud; its sky is ${atm || 'blue'}${L.cityLights ? ', and its settlements show warm lights at dusk' : ''}`;
+  if (L.surface === 'giant') return `a gas giant banded ${c1} and ${c2}, streaked with ${c3} storms`;
+  const all = (L.palette || []).map(colourName), grey = all.every(n => /grey|charcoal|off-white/.test(n));
+  return `${grey ? 'an ashen grey' : /^[aeiou]/.test(c2) ? `an ${c2}` : `a ${c2}`} world of bare rock and dust with no water and no plants: ${c1} plains and crater floors, ${c2} higher ground, ${c3} ridges and crater rims${atm ? `, under a thin ${atm} haze` : ', under a black sky'}`;
+}
 const byId = id => BODIES.find(b => b.id === id);
 const ports = BODIES.filter(b => b.port);
 
@@ -79,7 +113,7 @@ function bodyFacts(b) {
   return {
     id: b.id, name: b.name, kind: b.kind, orbits: parent ? parent.name : SYS.star.name,
     position: parent ? `a moon of ${parent.name}` : `the ${ORDINAL[fromStar.indexOf(b)]} body out from the star`, size: sizeWord(b),
-    surface: b.look && b.look.surface, colours: b.look && b.look.palette, atmosphere: b.look && b.look.atmosphere,
+    surface: b.look && b.look.surface, looks: bodyLooks(b) || undefined,
     cityLights: !!(b.look && b.look.cityLights), station: b.station ? b.station.archetype : undefined,
     port: b.port ? {
       name: b.port.name, role: b.port.role, population: b.port.population, services: b.port.services,
@@ -143,20 +177,36 @@ function parseJSON(text) {
   const s = String(text || ''), a = s.indexOf('{'), b = s.lastIndexOf('}');
   return JSON.parse(a >= 0 && b > a ? s.slice(a, b + 1) : s);
 }
+// The lore run's record, beside the lore (src/lore/<id>.log.json): the facts, the messages sent, the model, seed,
+// cost and each attempt's problems; the game's debug screen shows it. `lore --dry --save` records the prompt as the
+// tool builds it now without sending it (sent: false), for lore written before the log existed.
+const loreLogFile = loreFile.replace(/\.json$/, '.log.json');
+const LORE_PARAMS = { seed: seedOf('lore'), temperature: 0.8, max_tokens: 16000 };
+function writeLoreLog(rec) {
+  fs.mkdirSync(path.dirname(loreLogFile), { recursive: true });
+  fs.writeFileSync(loreLogFile, JSON.stringify(Object.assign({ date: new Date().toISOString().slice(0, 10), model: TEXT_MODEL }, LORE_PARAMS, rec, { facts, messages: lorePrompt(rec.feedback) }), null, 1) + '\n');
+}
 async function genLore() {
-  if (DRY) { lorePrompt().forEach(m => console.log(`--- ${m.role} ---\n${m.content}\n`)); return null; }
+  if (DRY) {
+    lorePrompt().forEach(m => console.log(`--- ${m.role} ---\n${m.content}\n`));
+    if (flag('save')) { writeLoreLog({ sent: false, note: 'Recorded with --dry --save: the prompt as the tool builds it now, not necessarily the one the lore was written from.' }); console.log(`wrote ${path.relative(root, loreLogFile)} (unsent)`); }
+    return null;
+  }
   let feedback = '', total = 0;
+  const attempts = [], t0 = Date.now();
   for (let attempt = 1; attempt <= 3; attempt++) {
     const t = Date.now();
-    const { msg, cost } = await chat({ model: TEXT_MODEL, messages: lorePrompt(feedback), seed: seedOf('lore'), temperature: 0.8, max_tokens: 16000 });
+    const { msg, cost } = await chat(Object.assign({ model: TEXT_MODEL, messages: lorePrompt(feedback) }, LORE_PARAMS));
     total += cost;
     let raw;
-    try { raw = parseJSON(msg.content); } catch (e) { feedback = `not valid JSON: ${e.message}`; console.log(`lore attempt ${attempt}: ${feedback}`); continue; }
+    try { raw = parseJSON(msg.content); } catch (e) { attempts.push({ cost, problems: [`not valid JSON: ${e.message}`] }); feedback = `not valid JSON: ${e.message}`; console.log(`lore attempt ${attempt}: ${feedback}`); continue; }
     const { lore, notes } = loadLore(raw, loreSchema, SYS);
     notes.forEach(n => console.log(`  ${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`));
+    attempts.push({ cost, problems: notes.map(n => `${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`) });
     if (!lore || notes.some(n => /no lore for port|dropped/.test(n.msg))) { feedback = notes.map(n => `${n.path}: ${n.msg}`).join('\n'); console.log(`lore attempt ${attempt}: ${notes.length} problem(s), retrying`); continue; }
     fs.mkdirSync(path.dirname(loreFile), { recursive: true });
     fs.writeFileSync(loreFile, JSON.stringify(lore, null, 2) + '\n');
+    writeLoreLog({ sent: true, cost: total, seconds: Math.round((Date.now() - t0) / 1000), attempts, feedback });
     console.log(`wrote ${path.relative(root, loreFile)}: ${lore.ports.length} ports, ${lore.ports.reduce((n, p) => n + p.people.length, 0)} people (${TEXT_MODEL}, ${((Date.now() - t) / 1000).toFixed(0)} s, $${total.toFixed(3)})`);
     return lore;
   }
@@ -166,16 +216,17 @@ async function genLore() {
 // ---------- art ----------
 const VISTA_STYLE = 'A painted vista for the landing screen of a space trading game: futuristic, painterly, a cinematic matte painting with visible brushwork, wide 16:9. No text, lettering, logos, UI, borders or frames.';
 const PORTRAIT_STYLE = 'A character portrait in a painterly fantasy-realism style, the classic CRPG portrait look: head and shoulders, three-quarter view, looking at the viewer, dramatic soft key light, a dark, softly painted background. No text, lettering, borders or frames.';
-const bibleText = lore => { const a = lore.artBible; return `Art bible for the ${SYS.name} system. Palette: ${a.palette.join(', ')}. Lighting: ${a.lighting} Architecture: ${a.architecture} Materials: ${a.materials} Mood: ${a.mood} Design language: ${a.design}`; };
+const bibleText = lore => { const a = lore.artBible; return `Art bible for the ${SYS.name} system. Palette: ${names(a.palette)}. Lighting: ${a.lighting} Architecture: ${a.architecture} Materials: ${a.materials} Mood: ${a.mood} Design language: ${a.design}`; };
 function vistaPrompt(lore, b, ref) {
   const p = lore.ports.find(q => q.body === b.id), L = b.look || {}, parent = b.parent && b.parent !== 'star' ? byId(b.parent) : null;
+  const an = w => (/^[aeiou]/.test(w) ? 'an ' : 'a ') + w;
   const where = b.kind === 'station'
-    ? `${b.port.name}, a ${b.port.population} ${b.port.role} station (a ${b.station.archetype}) in open space between the worlds.`
-    : `${b.port.name}, a ${b.port.population} ${b.port.role} port on ${b.name}, ${bodyWords(b)}${parent ? ` of ${parent.name}` : ''}. Its ground and rock read as ${L.palette.join(', ')}; its sky and atmosphere glow ${L.atmosphere}${L.cityLights ? '; settlements show warm lights' : ''}.`;
-  const sky = parent && parent.look ? ` ${parent.name}, ${bodyWords(parent)} banded ${parent.look.palette.join(', ')}, hangs huge in the sky.` : '';
+    ? `${b.port.name}, ${an(b.port.population)} ${b.port.role} station (a ${b.station.archetype}) in open space between the worlds.`
+    : `${b.port.name}, ${an(b.port.population)} ${b.port.role} port on ${b.name}${parent ? `, a moon of ${parent.name}` : ''}. ${b.name} is ${bodyLooks(b)}.`;
+  const sky = parent && parent.look ? ` ${parent.name}, ${bodyLooks(parent)}, hangs huge in the sky.` : '';
   return [VISTA_STYLE, bibleText(lore), `The place: ${where}${sky} The light comes from ${STAR_WORDS[SYS.star.class]}.`, `The scene: ${p.vista}`,
     'Composition: keep the left two fifths of the image darker and calmer, with no focal point there, because the port\'s text panel is drawn over it; the main interest sits right of centre.',
-    ref ? 'The attached image is this system\'s style reference: match its painting style, brushwork, palette treatment and light, but paint the place described here, not the reference\'s content.' : ''].filter(Boolean).join('\n\n');
+    ref ? 'The attached image is this system\'s style reference for the painting only: match its brushwork, finish and treatment of light. Take nothing else from it: not its landscape, sea, cliffs, buildings, rings or layout. The ground, sky and colours come from the description above.' : ''].filter(Boolean).join('\n\n');
 }
 function portraitPrompt(lore, b, q, ref) {
   return [PORTRAIT_STYLE, bibleText(lore), `${q.name}, ${q.role}, at ${b.port.name} (${b.name}). ${q.look}`, `Who they are: ${q.text}`, `Their people: ${lore.culture}`,
@@ -220,7 +271,7 @@ async function genArt(lore) {
   const portraitJobs = lore.ports.flatMap(p => p.people.map(q => ({ kind: 'portrait', id: q.id, name: `portrait-${q.id}`, make: ref => portraitPrompt(lore, byId(p.body), q, ref) })));
   let total = 0, made = 0;
   const run = async (job, refJob) => {
-    const ref = refJob && job !== refJob ? path.join(rawDir, refJob.name + '.png') : null, prompt = job.make(!!ref), spec = ART[job.kind];
+    const ref = refJob && job !== refJob && !NO_REF ? path.join(rawDir, refJob.name + '.png') : null, prompt = job.make(!!ref), spec = ART[job.kind];
     if (DRY) { console.log(`--- ${job.name}${ref ? ` (reference ${refJob.name})` : ''} ---\n${prompt}\n`); return; }
     const t = Date.now(), seed = seedOf(job.name);
     const { png, cost } = await image(prompt, spec.aspect, seed, ref && fs.existsSync(ref) ? fs.readFileSync(ref) : null);

@@ -48,7 +48,7 @@ else console.log(`traffic.json: valid; ${Object.keys(traffic.cultures).length} c
 // for every port, and every portrait and vista in art/<id>/ naming a person or port the lore has
 const loreSchema = JSON.parse(fs.readFileSync(path.join(root, 'src', 'schema', 'lore.schema.json'), 'utf8'));
 const loreDir = path.join(root, 'src', 'lore');
-for (const f of fs.existsSync(loreDir) ? fs.readdirSync(loreDir).filter(f => f.endsWith('.json')) : []) {
+for (const f of fs.existsSync(loreDir) ? fs.readdirSync(loreDir).filter(f => f.endsWith('.json') && !f.endsWith('.log.json')) : []) {
   const raw = JSON.parse(fs.readFileSync(path.join(loreDir, f), 'utf8'));
   const sysF = fs.readdirSync(path.join(root, 'src', 'systems')).find(s => JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', s), 'utf8')).id === raw.system);
   if (!sysF) { bad++; console.log(`lore/${f}: no system ${raw.system}`); continue; }

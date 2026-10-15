@@ -36,9 +36,9 @@ fs.watch(path.join(root, 'src'), { recursive: true }, () => changed(false));
 fs.watch(path.join(root, 'core', 'src'), { recursive: true }, () => changed(true));
 fs.watch(path.join(root, 'core', 'Cargo.toml'), () => changed(true));
 fs.watch(path.join(root, 'tools', 'build.py'), () => changed(false));
-// the build lists the art it finds, so new or redone images rebuild too
+// the build lists the art it finds and inlines its log, so new or redone images rebuild too
 fs.mkdirSync(path.join(root, 'art'), { recursive: true });
-fs.watch(path.join(root, 'art'), { recursive: true }, (ev, f) => { if (f && f.endsWith('.webp') && !f.includes('raw')) changed(false); });
+fs.watch(path.join(root, 'art'), { recursive: true }, (ev, f) => { if (f && (f.endsWith('.webp') || f.endsWith('log.json')) && !f.includes('raw')) changed(false); });
 
 http.createServer((req, res) => {
   const url = req.url.split('?')[0];
