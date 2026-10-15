@@ -19,6 +19,16 @@ Status: **agreed**, or **open** with the options on the table.
 | Glass | Military | Platonic solids, by number of faces | Tetra | Cube | Octa | Dodeca | Icosa | Agreed |
 | Shadow | Military | Swords, ending in the broadsword | Dagger | Shortsword | Sabre | Longsword | Broadsword | Agreed |
 
+## Unique hulls
+
+Single special hulls a faction builds (catalog lines marked unique); unnamed so far, more to come.
+
+| Faction | Class | What it is |
+| :-- | :-- | :-- |
+| Federation | IV | Container carrier: rows of shipping containers down a long spine, every one a different colour |
+| Prism | IV | Container liner: a white hull with neat, flush rows of containers in Prism's light colours |
+| Ironhulls | V | Container hauler: a truss stacked two high with containers, gaps where some fell off |
+
 ## Heavies
 
 Each specialist hull will have a name of its own; not named yet.

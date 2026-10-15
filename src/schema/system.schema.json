@@ -220,13 +220,14 @@
                 "default": "port"
               },
               "brand": {
+                "description": "The faction whose style the station is built in (catalog factions; the Book's appendix).",
                 "enum": [
-                  "vaelith",
-                  "rustline",
-                  "halcyon",
-                  "concord"
+                  "federation",
+                  "prism",
+                  "ironhulls",
+                  "bloom"
                 ],
-                "default": "rustline"
+                "default": "ironhulls"
               },
               "seed": {
                 "type": "string",

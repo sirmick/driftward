@@ -28,7 +28,8 @@ global.Blob = function () {}; global.URL = { createObjectURL: () => 'blob:x' };
 global.requestAnimationFrame = () => {}; global.performance = { now: () => 0 };
 global.self = global;
 const errs = []; console.error = e => errs.push(String((e && e.message) || e));
-eval(genTxt); eval(app);
+eval(genTxt); global.ShipGen = global.ShipGen || require('../src/gen.js'); // in Node, gen.js exports rather than setting ShipGen
+eval(app);
 (async () => {
 await window.__flyReady; // flight mode compiles its shaders once the sim core has loaded
 if (!window.__fly) errs.push('flight mode did not start');

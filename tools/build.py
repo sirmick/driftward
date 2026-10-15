@@ -48,7 +48,7 @@ gen = (src / 'gen.js').read_text()
 MODULES = {
     '/*LOOK*/': 'look.js', '/*SHADERS*/': 'shaders.js', '/*GFX*/': 'gfx.js', '/*BAKE*/': 'bake.js', '/*CORE*/': 'core.js',
     '/*FLY*/': 'fly.js', '/*PLANETS*/': 'planets.js', '/*SUNS*/': 'suns.js', '/*STATIONS*/': 'stations.js',
-    '/*ASTEROIDS*/': 'asteroids.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js', '/*DEBUG*/': 'play/debug.js',
+    '/*ASTEROIDS*/': 'asteroids.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js', '/*DEBUG*/': 'play/debug.js', '/*SHIPYARD*/': 'play/shipyard.js',
 }
 
 def inline_modules(script, needed):
@@ -95,7 +95,7 @@ def page(template, script):
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),
     ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*PLANETS*/', '/*SUNS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
 # the game: its template carries the script shell and markers itself
-game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*SCHEMA*/', '/*DEBUG*/', '/*PLAY*/']), '')
+game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*PLAY*/']), '')
 
 for name, html in (('index.html', lab), ('play.html', game)):
     (root / name).write_text(html)

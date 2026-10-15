@@ -189,6 +189,29 @@ button { font: inherit; color: inherit; }
 .dbg-person p { margin: 4px 0 !important; font-size: 12.5px; }
 .dbg-grid th.here, .dbg-grid td.here { background: rgba(226,184,102,.08); }
 .dbg-grid td.best { outline: 1px solid var(--amber); outline-offset: -2px; }
+/* the Ships tab: see-through, so the hulls the game's canvas draws behind it show; the rest of the page hides */
+body.dbg-clear > :not(#debug):not(#view) { visibility: hidden; }
+body.dbg-clear #debug { background: rgba(7,9,12,0); }
+body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
+.dbg-yard { grid-column: 1 / -1; overflow-y: auto; min-height: 0; padding: 0 16px 30px; }
+.dbg-yard-bar { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 0; background: rgba(7,9,12,.94); border-bottom: 1px solid var(--line); font: 500 12px var(--f-mono); color: var(--muted); }
+.dbg-yard-bar label { display: flex; align-items: center; gap: 6px; color: var(--fg); }
+.dbg-yard-bar button { background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; font: 600 12px var(--f-display); letter-spacing: .05em; text-transform: uppercase; color: var(--fg); }
+.dbg-yard-bar button:hover { border-color: var(--amber); }
+.dbg-yard-bar .hint { margin-left: auto; }
+.dbg-yard-grid { display: grid; gap: 8px; padding-top: 8px; }
+.dbg-yard-col { align-self: end; padding: 4px 0; text-align: center; font: 500 11px var(--f-mono); color: var(--muted); }
+.dbg-yard-col b { display: block; color: var(--fg); font: 700 13px var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+.dbg-yard-row { display: grid; align-content: center; gap: 2px; padding: 10px 12px; background: rgba(12,16,21,.82); border: 1px solid var(--line); border-radius: 8px; }
+.dbg-yard-row b { font: 700 15px var(--f-display); letter-spacing: .04em; }
+.dbg-yard-row span { color: var(--amber); font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; }
+.dbg-yard-row small { color: var(--muted); font: 400 11px/1.4 var(--f-body); }
+.dbg-ship { position: relative; aspect-ratio: 1 / 1.16; border: 1px solid rgba(30,38,48,.7); border-radius: 8px; cursor: pointer; }
+.dbg-ship:hover { border-color: var(--amber); }
+.dbg-ship .lbl { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 1px; padding: 4px 6px 5px; text-align: center; background: linear-gradient(transparent, rgba(7,9,12,.85) 40%); border-radius: 0 0 8px 8px; pointer-events: none; }
+.dbg-ship .lbl b { font: 700 13.5px var(--f-display); letter-spacing: .04em; }
+.dbg-ship .lbl small { color: var(--muted); font: 500 10.5px var(--f-mono); }
+.dbg-ship .lbl .seed { color: #6f7b8a; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -258,7 +281,7 @@ button { font: inherit; color: inherit; }
     <h2>Driftward</h2>
     <p class="sub" id="title-sub"></p>
     <button type="button" class="item primary" id="t-continue">Continue<span id="t-continue-sub"></span></button>
-    <button type="button" class="item" id="t-new">New game<span>a used fighter and a debt</span></button>
+    <button type="button" class="item" id="t-new">New game<span>a used Copperhaul and a debt</span></button>
     <label class="seed">Seed <input type="text" id="t-seed" placeholder="blank: random" maxlength="24" spellcheck="false"></label>
     <button type="button" class="item" id="t-settings">Settings</button>
     <p class="foot">An Escape Velocity-style game in progress: milestone M1, one system. Trade, haul, and pay off the lender.</p>
@@ -308,8 +331,8 @@ button { font: inherit; color: inherit; }
  "units": "Shape values are fractions of ship length L. For non-core parts, z and H are multiples of the core height. Detail sizes are meters.",
  "sizes": [
   {
-   "id": "fighter",
-   "name": "Fighter",
+   "id": "c1",
+   "name": "Class I",
    "length": 18,
    "res": 192,
    "flight": {
@@ -325,8 +348,8 @@ button { font: inherit; color: inherit; }
    }
   },
   {
-   "id": "corvette",
-   "name": "Corvette",
+   "id": "c2",
+   "name": "Class II",
    "length": 34,
    "res": 256,
    "flight": {
@@ -342,8 +365,8 @@ button { font: inherit; color: inherit; }
    }
   },
   {
-   "id": "frigate",
-   "name": "Frigate",
+   "id": "c3",
+   "name": "Class III",
    "length": 60,
    "res": 352,
    "flight": {
@@ -359,8 +382,8 @@ button { font: inherit; color: inherit; }
    }
   },
   {
-   "id": "cruiser",
-   "name": "Cruiser",
+   "id": "c4",
+   "name": "Class IV",
    "length": 100,
    "res": 480,
    "flight": {
@@ -376,8 +399,8 @@ button { font: inherit; color: inherit; }
    }
   },
   {
-   "id": "capital",
-   "name": "Capital",
+   "id": "c5",
+   "name": "Class V",
    "length": 160,
    "res": 640,
    "flight": {
@@ -393,12 +416,1904 @@ button { font: inherit; color: inherit; }
    }
   }
  ],
- "brands": [
+ "factions": [
   {
-   "id": "vaelith",
-   "name": "Vaelith Bloom",
-   "kind": "Organic",
-   "blurb": "Grown, not built. Hulls fuse into one skin, ribbed and veined, lit from within.",
+   "id": "federation",
+   "name": "The Federation",
+   "role": "Navy",
+   "design": "Disciplined, symmetrical, armored; grey and white with heraldic markings; monumental architecture",
+   "style": {
+    "union": "hard",
+    "blend": 0,
+    "symmetry": 1.0,
+    "drift": 0,
+    "posJitter": 0,
+    "angJitter": 0,
+    "angleQuant": 15,
+    "bevel": "chamfer",
+    "bevelW": 0.3,
+    "heightScale": 1.1,
+    "detail": {
+     "panelSpacing": 2.6,
+     "panelAspect": 1.6,
+     "panelDepth": 0.55,
+     "panelDark": 0.45,
+     "panelTone": 0.12,
+     "rivets": 0,
+     "rust": 0,
+     "patches": 0,
+     "grime": 0.12,
+     "ribs": 0,
+     "ribSpacing": 0,
+     "veins": 0,
+     "spots": 0,
+     "stripes": 1.0,
+     "accentLines": 0,
+     "windows": 0.5,
+     "lamps": 0.02
+    },
+    "palette": {
+     "hull": [
+      "#9aa3ad",
+      "#c9ced4",
+      "#e2e5e9"
+     ],
+     "trim": "#56606c",
+     "accent": "#c9a24a",
+     "glass": "#15243a",
+     "engine": "#7fb2ff",
+     "window": "#eaf2ff",
+     "emissive": "#ffffff",
+     "rust": "#000000"
+    },
+    "material": {
+     "spec": 0.4,
+     "gloss": 24,
+     "wrap": 0.05,
+     "irid": 0,
+     "rim": 0.25
+    },
+    "plume": {
+     "color": "#5f97ff",
+     "burn": "#ffe08a",
+     "core": "#f2f6ff",
+     "len": 5.5,
+     "width": 0.85,
+     "turb": 0.2,
+     "diamonds": 1,
+     "sputter": 0,
+     "pulse": 0,
+     "spread": 0.25
+    },
+    "shield": {
+     "color": "#86b0ff",
+     "pattern": "grid",
+     "standoff": 0.035,
+     "strength": 1.1
+    },
+    "flight": {
+     "accel": 1.0,
+     "turn": 1.0,
+     "vmax": 1.0,
+     "hull": 1.2,
+     "shield": 1.1
+    }
+   },
+   "parts": [
+    {
+     "id": "cn.core.hull",
+     "role": "core",
+     "prim": "trap",
+     "len": [
+      0.84,
+      0.94
+     ],
+     "rear": [
+      0.1,
+      0.13
+     ],
+     "nose": [
+      0.025,
+      0.045
+     ],
+     "H": 0.06
+    },
+    {
+     "id": "cn.core.block",
+     "role": "core",
+     "prim": "rbox",
+     "len": [
+      0.82,
+      0.92
+     ],
+     "hw": [
+      0.085,
+      0.105
+     ],
+     "rad": 0.08,
+     "H": 0.06
+    },
+    {
+     "id": "cn.hull.armor",
+     "role": "hull",
+     "prim": "rbox",
+     "len": [
+      0.14,
+      0.28
+     ],
+     "hw": [
+      0.025,
+      0.05
+     ],
+     "rad": 0.06,
+     "along": [
+      -0.38,
+      0.25
+     ],
+     "out": [
+      0.35,
+      0.75
+     ],
+     "ang": 0,
+     "z": 0.4,
+     "H": 0.4,
+     "w": 2
+    },
+    {
+     "id": "cn.hull.sponson",
+     "role": "hull",
+     "prim": "trap",
+     "len": [
+      0.24,
+      0.38
+     ],
+     "rear": [
+      0.045,
+      0.065
+     ],
+     "nose": [
+      0.015,
+      0.03
+     ],
+     "along": [
+      -0.35,
+      0.05
+     ],
+     "out": [
+      0.85,
+      1.2
+     ],
+     "ang": [
+      -15,
+      0
+     ],
+     "z": -0.3,
+     "H": 0.7,
+     "w": 1.5
+    },
+    {
+     "id": "cn.wing.delta",
+     "role": "wing",
+     "span": [
+      0.17,
+      0.25
+     ],
+     "root": [
+      0.34,
+      0.44
+     ],
+     "tip": [
+      0.05,
+      0.09
+     ],
+     "sweep": [
+      0.55,
+      1.0
+     ],
+     "curve": 0,
+     "at": [
+      -0.3,
+      -0.1
+     ],
+     "z": -0.6,
+     "H": 0.35
+    },
+    {
+     "id": "cn.fin.stab",
+     "role": "fin",
+     "span": [
+      0.06,
+      0.09
+     ],
+     "root": [
+      0.08,
+      0.12
+     ],
+     "tip": [
+      0.03,
+      0.05
+     ],
+     "sweep": [
+      0.4,
+      0.75
+     ],
+     "curve": 0,
+     "at": "mixed",
+     "z": -0.55,
+     "H": 0.3
+    },
+    {
+     "id": "cn.nac.block",
+     "role": "nacelle",
+     "prim": "ucap",
+     "len": [
+      0.3,
+      0.4
+     ],
+     "r": [
+      0.032,
+      0.042
+     ],
+     "nose": [
+      0.8,
+      0.95
+     ],
+     "at": [
+      -0.35,
+      -0.15
+     ],
+     "gap": 0.3,
+     "z": -0.2,
+     "H": 0.8
+    },
+    {
+     "id": "cn.eng.nozzle",
+     "role": "engine",
+     "len": [
+      0.05,
+      0.07
+     ],
+     "front": [
+      0.02,
+      0.025
+     ],
+     "rear": [
+      0.025,
+      0.034
+     ],
+     "z": -0.2,
+     "H": 0.6,
+     "glow": 0.55
+    },
+    {
+     "id": "cn.wpn.turret",
+     "role": "weapon",
+     "r": [
+      0.02,
+      0.028
+     ],
+     "barrels": 2,
+     "blen": [
+      0.035,
+      0.05
+     ],
+     "bw": 0.0035,
+     "style": "turret",
+     "z": 0.75,
+     "H": 0.35
+    },
+    {
+     "id": "cn.pod.bay",
+     "role": "pod",
+     "prim": "rbox",
+     "len": [
+      0.12,
+      0.17
+     ],
+     "hw": [
+      0.022,
+      0.03
+     ],
+     "rad": 0.1,
+     "at": [
+      -0.25,
+      0.2
+     ],
+     "z": -0.1,
+     "H": 0.7
+    },
+    {
+     "id": "cn.bridge.tower",
+     "role": "bridge",
+     "prim": "rbox",
+     "len": [
+      0.07,
+      0.1
+     ],
+     "hw": [
+      0.03,
+      0.04
+     ],
+     "rad": 0.15,
+     "at": [
+      -0.22,
+      -0.08
+     ],
+     "z": 0.6,
+     "H": 0.6,
+     "glass": false
+    }
+   ],
+   "core": {
+    "c1": [
+     "cn.core.hull"
+    ],
+    "c2": [
+     "cn.core.hull"
+    ],
+    "c3": [
+     "cn.core.hull"
+    ],
+    "c4": [
+     "cn.core.hull",
+     "cn.core.block"
+    ],
+    "c5": [
+     "cn.core.block",
+     "cn.core.hull"
+    ]
+   },
+   "loadout": {
+    "c1": {
+     "hull": 1,
+     "wing": 1,
+     "fin": 1,
+     "nacelle": 0,
+     "engine": [
+      1,
+      2
+     ],
+     "weapon": 2,
+     "pod": 0,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c2": {
+     "hull": 2,
+     "wing": [
+      0,
+      1
+     ],
+     "fin": 1,
+     "nacelle": 0,
+     "engine": 2,
+     "weapon": [
+      2,
+      3
+     ],
+     "pod": 0,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c3": {
+     "hull": 3,
+     "wing": 0,
+     "fin": 1,
+     "nacelle": [
+      0,
+      1
+     ],
+     "engine": 3,
+     "weapon": 4,
+     "pod": 0,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c4": {
+     "hull": 4,
+     "wing": 0,
+     "fin": 1,
+     "nacelle": 1,
+     "engine": 4,
+     "weapon": 6,
+     "pod": 1,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c5": {
+     "hull": 6,
+     "wing": 0,
+     "fin": 1,
+     "nacelle": 1,
+     "engine": 5,
+     "weapon": 9,
+     "pod": 2,
+     "ring": 0,
+     "bridge": 1
+    }
+   },
+   "lines": [
+    {
+     "id": "military",
+     "name": "Military",
+     "blurb": "The navy's line warships: armored, symmetrical, heraldry down the flanks.",
+     "series": [
+      "Fighter",
+      "Frigate",
+      "Destroyer",
+      "Cruiser",
+      "Battleship"
+     ],
+     "flight": {
+      "cargo": 0.3
+     },
+     "style": {
+      "palette": {
+       "hull": [
+        "#3c434c",
+        "#48505a",
+        "#555d67"
+       ],
+       "trim": "#242a31",
+       "accent": "#c9a24a"
+      }
+     }
+    },
+    {
+     "id": "civilian",
+     "name": "Civilian",
+     "blurb": "Civil-service haulers and liners, each the largest hull a core-world port's docks take: plainer, unarmored.",
+     "series": [
+      "BarnardMax",
+      "WolfMax",
+      "EridaniMax",
+      "TCetiMax",
+      "AlphaCMax"
+     ],
+     "flight": {
+      "accel": 0.85,
+      "turn": 0.85,
+      "vmax": 0.9,
+      "hull": 0.9,
+      "shield": 0.6,
+      "cargo": 1.0
+     },
+     "style": {
+      "detail": {
+       "stripes": 0.4
+      },
+      "palette": {
+       "hull": [
+        "#c6ccd3",
+        "#dadfe4",
+        "#eceef1"
+       ],
+       "trim": "#8a949f",
+       "accent": "#3a6fb0"
+      }
+     },
+     "loadout": {
+      "c1": {
+       "weapon": 0,
+       "pod": 0
+      },
+      "c2": {
+       "weapon": 0,
+       "pod": 1
+      },
+      "c3": {
+       "weapon": 0,
+       "pod": 2
+      },
+      "c4": {
+       "weapon": 0,
+       "pod": 3
+      },
+      "c5": {
+       "weapon": 0,
+       "pod": 4
+      }
+     }
+    },
+    {
+     "id": "container-carrier",
+     "name": "Unique",
+     "unique": true,
+     "classes": [
+      "c4"
+     ],
+     "blurb": "A civil-service container ship: rows of shipping containers down a long spine, every one a different colour.",
+     "series": [
+      "",
+      "",
+      "",
+      "Container carrier",
+      ""
+     ],
+     "flight": {
+      "accel": 0.75,
+      "turn": 0.7,
+      "vmax": 0.85,
+      "hull": 0.9,
+      "shield": 0.6,
+      "cargo": 1.4
+     },
+     "style": {
+      "palette": {
+       "hull": [
+        "#c6ccd3",
+        "#dadfe4",
+        "#eceef1"
+       ],
+       "trim": "#8a949f",
+       "accent": "#3a6fb0"
+      }
+     },
+     "parts": [
+      {
+       "id": "cn.cargo.box",
+       "role": "cargo",
+       "w": [
+        0.022,
+        0.026
+       ],
+       "len": [
+        0.034,
+        0.04
+       ],
+       "across": 2,
+       "from": 0.12,
+       "to": 0.82,
+       "fill": 0.94,
+       "stack": 0.25,
+       "z": 0.1,
+       "H": 0.55
+      }
+     ],
+     "loadout": {
+      "c4": {
+       "cargo": 2,
+       "pod": 0,
+       "weapon": 0,
+       "hull": 1,
+       "nacelle": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "prism",
+   "name": "Prism",
+   "role": "AI corporation",
+   "design": "Sleek and seamless; white, glass and light; clean luxury, unsettling calm",
+   "style": {
+    "union": "hard",
+    "blend": 0,
+    "symmetry": 1.0,
+    "drift": 0,
+    "posJitter": 0,
+    "angJitter": 0,
+    "angleQuant": 0,
+    "bevel": "chamfer",
+    "bevelW": 0.22,
+    "heightScale": 1.0,
+    "detail": {
+     "panelSpacing": 9,
+     "panelAspect": 2.2,
+     "panelDepth": 0.35,
+     "panelDark": 0.2,
+     "panelTone": 0.06,
+     "rivets": 0,
+     "rust": 0,
+     "patches": 0,
+     "grime": 0.0,
+     "ribs": 0,
+     "ribSpacing": 0,
+     "veins": 0,
+     "spots": 0,
+     "stripes": 0,
+     "accentLines": 0.7,
+     "windows": 0.55,
+     "lamps": 0
+    },
+    "palette": {
+     "hull": [
+      "#1b1e24",
+      "#22262d",
+      "#16181d"
+     ],
+     "trim": "#2a2f37",
+     "accent": "#36e2ff",
+     "glass": "#0a1a22",
+     "engine": "#86ecff",
+     "window": "#d7f4ff",
+     "emissive": "#36e2ff",
+     "rust": "#000000"
+    },
+    "material": {
+     "spec": 0.95,
+     "gloss": 70,
+     "wrap": 0,
+     "irid": 0,
+     "rim": 0.45
+    },
+    "plume": {
+     "color": "#2fdcff",
+     "burn": "#b07bff",
+     "core": "#eaffff",
+     "len": 4.2,
+     "width": 0.75,
+     "turb": 0.12,
+     "diamonds": 0,
+     "sputter": 0,
+     "pulse": 0,
+     "spread": 0.15
+    },
+    "shield": {
+     "color": "#55e6ff",
+     "pattern": "hex",
+     "standoff": 0.03,
+     "strength": 1.0
+    },
+    "flight": {
+     "accel": 1.2,
+     "turn": 1.05,
+     "vmax": 1.15,
+     "hull": 0.9,
+     "shield": 1.0
+    }
+   },
+   "parts": [
+    {
+     "id": "hal.core.blade",
+     "role": "core",
+     "prim": "trap",
+     "len": [
+      0.9,
+      1.0
+     ],
+     "rear": [
+      0.085,
+      0.11
+     ],
+     "nose": [
+      0.004,
+      0.012
+     ],
+     "H": 0.05,
+     "prof": "ridge"
+    },
+    {
+     "id": "hal.core.spear",
+     "role": "core",
+     "prim": "ucap",
+     "len": [
+      0.88,
+      0.98
+     ],
+     "rear": [
+      0.075,
+      0.095
+     ],
+     "nose": [
+      0.018,
+      0.028
+     ],
+     "H": 0.055,
+     "prof": "round"
+    },
+    {
+     "id": "hal.hull.sweep",
+     "role": "hull",
+     "prim": "trap",
+     "len": [
+      0.36,
+      0.55
+     ],
+     "rear": [
+      0.05,
+      0.075
+     ],
+     "nose": [
+      0.003,
+      0.008
+     ],
+     "along": [
+      -0.3,
+      0.0
+     ],
+     "out": [
+      0.7,
+      1.05
+     ],
+     "ang": [
+      -6,
+      -2
+     ],
+     "z": -0.35,
+     "H": 0.55,
+     "prof": "ridge",
+     "w": 2
+    },
+    {
+     "id": "hal.hull.slab",
+     "role": "hull",
+     "prim": "rbox",
+     "len": [
+      0.16,
+      0.28
+     ],
+     "hw": [
+      0.016,
+      0.026
+     ],
+     "rad": 0.5,
+     "along": [
+      -0.3,
+      0.15
+     ],
+     "out": [
+      0.25,
+      0.5
+     ],
+     "ang": 0,
+     "z": 0.45,
+     "H": 0.35,
+     "accent": true
+    },
+    {
+     "id": "hal.wing.knife",
+     "role": "wing",
+     "span": [
+      0.2,
+      0.3
+     ],
+     "root": [
+      0.3,
+      0.42
+     ],
+     "tip": [
+      0.025,
+      0.05
+     ],
+     "sweep": [
+      1.1,
+      1.6
+     ],
+     "curve": 0.05,
+     "at": [
+      -0.25,
+      -0.08
+     ],
+     "z": -0.6,
+     "H": 0.3
+    },
+    {
+     "id": "hal.fin.blade",
+     "role": "fin",
+     "span": [
+      0.05,
+      0.09
+     ],
+     "root": [
+      0.1,
+      0.14
+     ],
+     "tip": [
+      0.008,
+      0.015
+     ],
+     "sweep": [
+      1.5,
+      2.2
+     ],
+     "curve": 0,
+     "at": "mixed",
+     "z": -0.55,
+     "H": 0.25,
+     "accent": true
+    },
+    {
+     "id": "hal.nac.pod",
+     "role": "nacelle",
+     "prim": "ucap",
+     "len": [
+      0.32,
+      0.42
+     ],
+     "r": [
+      0.024,
+      0.032
+     ],
+     "nose": [
+      0.45,
+      0.6
+     ],
+     "at": [
+      -0.35,
+      -0.18
+     ],
+     "gap": 0.4,
+     "z": -0.3,
+     "H": 0.75,
+     "accent": true
+    },
+    {
+     "id": "hal.eng.slot",
+     "role": "engine",
+     "len": [
+      0.035,
+      0.05
+     ],
+     "front": [
+      0.016,
+      0.02
+     ],
+     "rear": [
+      0.02,
+      0.026
+     ],
+     "z": -0.25,
+     "H": 0.55,
+     "glow": 0.6
+    },
+    {
+     "id": "hal.wpn.flush",
+     "role": "weapon",
+     "r": [
+      0.016,
+      0.022
+     ],
+     "barrels": 1,
+     "blen": [
+      0.03,
+      0.04
+     ],
+     "bw": 0.0035,
+     "style": "turret",
+     "z": 0.6,
+     "H": 0.3
+    },
+    {
+     "id": "hal.pod.cell",
+     "role": "pod",
+     "prim": "ucap",
+     "len": [
+      0.14,
+      0.2
+     ],
+     "r": [
+      0.018,
+      0.026
+     ],
+     "at": [
+      -0.25,
+      0.15
+     ],
+     "z": -0.2,
+     "H": 0.7
+    },
+    {
+     "id": "hal.bridge.visor",
+     "role": "bridge",
+     "prim": "ucap",
+     "len": [
+      0.09,
+      0.13
+     ],
+     "r": [
+      0.02,
+      0.028
+     ],
+     "at": [
+      0.05,
+      0.2
+     ],
+     "z": 0.5,
+     "H": 0.45,
+     "glass": true
+    }
+   ],
+   "core": {
+    "c1": [
+     "hal.core.blade"
+    ],
+    "c2": [
+     "hal.core.blade"
+    ],
+    "c3": [
+     "hal.core.blade",
+     "hal.core.spear"
+    ],
+    "c4": [
+     "hal.core.spear"
+    ],
+    "c5": [
+     "hal.core.blade",
+     "hal.core.spear"
+    ]
+   },
+   "loadout": {
+    "c1": {
+     "hull": 1,
+     "wing": 1,
+     "fin": [
+      0,
+      1
+     ],
+     "nacelle": 0,
+     "engine": [
+      1,
+      2
+     ],
+     "weapon": 2,
+     "pod": 0,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c2": {
+     "hull": [
+      1,
+      2
+     ],
+     "wing": [
+      0,
+      1
+     ],
+     "fin": 1,
+     "nacelle": [
+      0,
+      1
+     ],
+     "engine": 2,
+     "weapon": 2,
+     "pod": 0,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c3": {
+     "hull": [
+      2,
+      3
+     ],
+     "wing": 0,
+     "fin": 1,
+     "nacelle": 1,
+     "engine": [
+      2,
+      3
+     ],
+     "weapon": [
+      2,
+      4
+     ],
+     "pod": 0,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c4": {
+     "hull": [
+      3,
+      4
+     ],
+     "wing": 0,
+     "fin": 1,
+     "nacelle": 1,
+     "engine": 3,
+     "weapon": 4,
+     "pod": [
+      1,
+      2
+     ],
+     "ring": 0,
+     "bridge": 1
+    },
+    "c5": {
+     "hull": [
+      4,
+      6
+     ],
+     "wing": 0,
+     "fin": [
+      1,
+      2
+     ],
+     "nacelle": [
+      1,
+      2
+     ],
+     "engine": [
+      3,
+      5
+     ],
+     "weapon": 6,
+     "pod": [
+      2,
+      3
+     ],
+     "ring": 0,
+     "bridge": 1
+    }
+   },
+   "lines": [
+    {
+     "id": "military",
+     "name": "Military",
+     "blurb": "Gloss black, seamless; beams, ion and strong shields.",
+     "series": [
+      "Dusk",
+      "Evening",
+      "Night",
+      "Midnight",
+      "Eclipse"
+     ],
+     "flight": {
+      "cargo": 0.3
+     }
+    },
+    {
+     "id": "civilian",
+     "name": "Civilian",
+     "blurb": "White and glass, very sleek: long tapers, smooth skins, almost nothing sticking out.",
+     "series": [
+      "Dawn",
+      "Morning",
+      "Daylight",
+      "Noon",
+      "Zenith"
+     ],
+     "flight": {
+      "accel": 0.85,
+      "turn": 0.85,
+      "vmax": 0.9,
+      "hull": 0.9,
+      "shield": 0.6,
+      "cargo": 1.0
+     },
+     "style": {
+      "palette": {
+       "hull": [
+        "#d6dbe1",
+        "#c9d0d8",
+        "#e1e5ea"
+       ],
+       "trim": "#a9b3be",
+       "accent": "#a8e6ff",
+       "glass": "#2f4a5a",
+       "engine": "#e6f6ff",
+       "window": "#ffffff",
+       "emissive": "#9fe6ff"
+      },
+      "material": {
+       "spec": 0.55,
+       "gloss": 48,
+       "wrap": 0.06,
+       "irid": 0.05,
+       "rim": 0.22
+      },
+      "plume": {
+       "color": "#bfeeff",
+       "burn": "#ffffff",
+       "core": "#ffffff"
+      },
+      "shield": {
+       "color": "#e6f6ff"
+      },
+      "detail": {
+       "panelDark": 0.08,
+       "panelTone": 0.03,
+       "accentLines": 0.45,
+       "windows": 0.7
+      }
+     },
+     "loadout": {
+      "c1": {
+       "weapon": 0,
+       "pod": 0,
+       "nacelle": 0,
+       "fin": 0,
+       "hull": 0
+      },
+      "c2": {
+       "weapon": 0,
+       "pod": 0,
+       "nacelle": 0,
+       "fin": 0,
+       "hull": 1
+      },
+      "c3": {
+       "weapon": 0,
+       "pod": 0,
+       "nacelle": 0,
+       "fin": 0,
+       "hull": 1
+      },
+      "c4": {
+       "weapon": 0,
+       "pod": 0,
+       "nacelle": 0,
+       "fin": 1,
+       "hull": 2
+      },
+      "c5": {
+       "weapon": 0,
+       "pod": 0,
+       "nacelle": 0,
+       "fin": 1,
+       "hull": 2
+      }
+     }
+    },
+    {
+     "id": "container-liner",
+     "name": "Unique",
+     "unique": true,
+     "classes": [
+      "c4"
+     ],
+     "blurb": "Prism's premium freight: a white hull with neat rows of containers in Prism's light colours, flush and perfectly spaced.",
+     "series": [
+      "",
+      "",
+      "",
+      "Container liner",
+      ""
+     ],
+     "flight": {
+      "accel": 0.75,
+      "turn": 0.7,
+      "vmax": 0.85,
+      "hull": 0.9,
+      "shield": 0.6,
+      "cargo": 1.4
+     },
+     "style": {
+      "palette": {
+       "hull": [
+        "#d6dbe1",
+        "#c9d0d8",
+        "#e1e5ea"
+       ],
+       "trim": "#a9b3be",
+       "accent": "#a8e6ff",
+       "glass": "#2f4a5a",
+       "engine": "#e6f6ff",
+       "window": "#ffffff",
+       "emissive": "#9fe6ff",
+       "cargo": [
+        "#ffffff",
+        "#4fc3ee",
+        "#9a84ee",
+        "#f2a35a",
+        "#55d69a",
+        "#ee6fa2"
+       ]
+      },
+      "material": {
+       "spec": 0.55,
+       "gloss": 48,
+       "wrap": 0.06,
+       "irid": 0.05,
+       "rim": 0.22
+      },
+      "plume": {
+       "color": "#bfeeff",
+       "burn": "#ffffff",
+       "core": "#ffffff"
+      },
+      "shield": {
+       "color": "#e6f6ff"
+      },
+      "detail": {
+       "panelDark": 0.08,
+       "panelTone": 0.03,
+       "accentLines": 0.45,
+       "windows": 0.7
+      }
+     },
+     "parts": [
+      {
+       "id": "hal.cargo.box",
+       "role": "cargo",
+       "w": [
+        0.02,
+        0.022
+       ],
+       "len": [
+        0.03,
+        0.032
+       ],
+       "across": 2,
+       "from": 0.18,
+       "to": 0.78,
+       "fill": 1.0,
+       "stack": 0,
+       "z": 0.05,
+       "H": 0.5
+      }
+     ],
+     "loadout": {
+      "c4": {
+       "cargo": 2,
+       "pod": 0,
+       "weapon": 0,
+       "hull": 0,
+       "nacelle": 0,
+       "fin": 1,
+       "wing": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "ironhulls",
+   "name": "Ironhulls",
+   "role": "Miners",
+   "design": "Welded, modular, rusted and patched; sodium-lamp orange; hab rings bolted to rock",
+   "style": {
+    "union": "hard",
+    "blend": 0,
+    "symmetry": 0.45,
+    "drift": 0.0,
+    "posJitter": 0.012,
+    "angJitter": 7,
+    "angleQuant": 0,
+    "bevel": "bevel",
+    "bevelW": 0.35,
+    "heightScale": 1.1,
+    "detail": {
+     "panelSpacing": 3.2,
+     "panelAspect": 1.3,
+     "panelDepth": 0.6,
+     "panelDark": 0.6,
+     "panelTone": 0.25,
+     "rivets": 1.0,
+     "rust": 0.85,
+     "patches": 0.45,
+     "grime": 0.55,
+     "ribs": 0,
+     "ribSpacing": 0,
+     "veins": 0,
+     "spots": 0,
+     "stripes": 0.6,
+     "accentLines": 0,
+     "windows": 0.35,
+     "lamps": 0.15
+    },
+    "palette": {
+     "hull": [
+      "#8a7a5c",
+      "#6e7468",
+      "#9a6a3e",
+      "#7b8287",
+      "#a58f4a"
+     ],
+     "trim": "#4a4741",
+     "accent": "#e08a1e",
+     "glass": "#2b3a3a",
+     "engine": "#ffb36b",
+     "window": "#ffb347",
+     "emissive": "#ff9a3d",
+     "rust": "#6b3a1e"
+    },
+    "material": {
+     "spec": 0.18,
+     "gloss": 10,
+     "wrap": 0.05,
+     "irid": 0,
+     "rim": 0.12
+    },
+    "plume": {
+     "color": "#ff8a2e",
+     "burn": "#7fd6ff",
+     "core": "#fff0c8",
+     "len": 3.4,
+     "width": 1.1,
+     "turb": 0.85,
+     "diamonds": 0,
+     "sputter": 0.6,
+     "pulse": 0,
+     "spread": 0.6
+    },
+    "shield": {
+     "color": "#ffaa4d",
+     "pattern": "ragged",
+     "standoff": 0.03,
+     "strength": 0.8
+    },
+    "flight": {
+     "accel": 0.8,
+     "turn": 0.8,
+     "vmax": 0.85,
+     "hull": 1.4,
+     "shield": 0.6
+    }
+   },
+   "parts": [
+    {
+     "id": "rl.core.tug",
+     "role": "core",
+     "prim": "rbox",
+     "len": [
+      0.5,
+      0.62
+     ],
+     "hw": [
+      0.065,
+      0.085
+     ],
+     "rad": 0.25,
+     "H": 0.07
+    },
+    {
+     "id": "rl.core.truss",
+     "role": "core",
+     "prim": "spine",
+     "len": [
+      0.8,
+      0.95
+     ],
+     "segs": [
+      4,
+      7
+     ],
+     "hw": [
+      0.04,
+      0.055
+     ],
+     "gap": [
+      0.18,
+      0.35
+     ],
+     "taper": [
+      0.8,
+      1.25
+     ],
+     "rad": 0.1,
+     "H": 0.06
+    },
+    {
+     "id": "rl.hull.scrapplate",
+     "role": "hull",
+     "prim": "rbox",
+     "len": [
+      0.1,
+      0.24
+     ],
+     "hw": [
+      0.03,
+      0.075
+     ],
+     "rad": 0.04,
+     "along": [
+      -0.45,
+      0.4
+     ],
+     "out": [
+      0.0,
+      1.3
+     ],
+     "ang": [
+      -6,
+      6
+     ],
+     "z": [
+      -0.2,
+      0.55
+     ],
+     "H": 0.35,
+     "paint": "any",
+     "w": 3
+    },
+    {
+     "id": "rl.hull.tank",
+     "role": "hull",
+     "prim": "ucap",
+     "len": [
+      0.15,
+      0.28
+     ],
+     "rear": [
+      0.035,
+      0.06
+     ],
+     "nose": [
+      0.035,
+      0.06
+     ],
+     "along": [
+      -0.4,
+      0.2
+     ],
+     "out": [
+      0.8,
+      1.4
+     ],
+     "ang": [
+      -4,
+      4
+     ],
+     "z": -0.1,
+     "H": 0.9,
+     "prof": "round",
+     "paint": "any",
+     "w": 1.5
+    },
+    {
+     "id": "rl.fin.radiator",
+     "role": "fin",
+     "span": [
+      0.06,
+      0.11
+     ],
+     "root": [
+      0.07,
+      0.1
+     ],
+     "tip": [
+      0.06,
+      0.09
+     ],
+     "sweep": [
+      -0.15,
+      0.25
+     ],
+     "curve": 0,
+     "at": "rear",
+     "z": -0.4,
+     "H": 0.18,
+     "paint": "trim"
+    },
+    {
+     "id": "rl.nac.thruster",
+     "role": "nacelle",
+     "prim": "ucap",
+     "len": [
+      0.16,
+      0.26
+     ],
+     "r": [
+      0.03,
+      0.045
+     ],
+     "nose": [
+      0.85,
+      1.0
+     ],
+     "at": [
+      -0.4,
+      -0.1
+     ],
+     "gap": 0.35,
+     "z": -0.15,
+     "H": 0.85
+    },
+    {
+     "id": "rl.eng.rocket",
+     "role": "engine",
+     "len": [
+      0.05,
+      0.08
+     ],
+     "front": [
+      0.018,
+      0.026
+     ],
+     "rear": [
+      0.03,
+      0.045
+     ],
+     "z": -0.2,
+     "H": 0.6,
+     "glow": 0.5
+    },
+    {
+     "id": "rl.wpn.drill",
+     "role": "weapon",
+     "r": [
+      0.02,
+      0.03
+     ],
+     "barrels": 1,
+     "blen": [
+      0.06,
+      0.09
+     ],
+     "bw": 0.006,
+     "style": "drill",
+     "z": 0.45,
+     "H": 0.5
+    },
+    {
+     "id": "rl.pod.ore",
+     "role": "pod",
+     "prim": "ucap",
+     "len": [
+      0.13,
+      0.2
+     ],
+     "r": [
+      0.04,
+      0.06
+     ],
+     "at": [
+      -0.35,
+      0.3
+     ],
+     "z": -0.05,
+     "H": 0.95,
+     "paint": "any"
+    },
+    {
+     "id": "rl.bridge.cab",
+     "role": "bridge",
+     "prim": "rbox",
+     "len": [
+      0.09,
+      0.13
+     ],
+     "hw": [
+      0.04,
+      0.055
+     ],
+     "rad": 0.3,
+     "at": [
+      0.3,
+      0.42
+     ],
+     "z": 0.35,
+     "H": 0.6,
+     "glass": false
+    }
+   ],
+   "core": {
+    "c1": [
+     "rl.core.tug"
+    ],
+    "c2": [
+     "rl.core.tug",
+     "rl.core.truss"
+    ],
+    "c3": [
+     "rl.core.truss"
+    ],
+    "c4": [
+     "rl.core.truss"
+    ],
+    "c5": [
+     "rl.core.truss"
+    ]
+   },
+   "loadout": {
+    "c1": {
+     "hull": [
+      2,
+      3
+     ],
+     "wing": 0,
+     "fin": [
+      0,
+      1
+     ],
+     "nacelle": [
+      0,
+      1
+     ],
+     "engine": [
+      1,
+      2
+     ],
+     "weapon": 1,
+     "pod": [
+      0,
+      1
+     ],
+     "ring": 0,
+     "bridge": 1
+    },
+    "c2": {
+     "hull": [
+      3,
+      4
+     ],
+     "wing": 0,
+     "fin": [
+      0,
+      1
+     ],
+     "nacelle": 1,
+     "engine": 2,
+     "weapon": 1,
+     "pod": 1,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c3": {
+     "hull": [
+      4,
+      6
+     ],
+     "wing": 0,
+     "fin": 1,
+     "nacelle": 1,
+     "engine": [
+      2,
+      3
+     ],
+     "weapon": 2,
+     "pod": 2,
+     "ring": 0,
+     "bridge": 1
+    },
+    "c4": {
+     "hull": [
+      6,
+      8
+     ],
+     "wing": 0,
+     "fin": [
+      1,
+      2
+     ],
+     "nacelle": [
+      1,
+      2
+     ],
+     "engine": 3,
+     "weapon": 2,
+     "pod": [
+      3,
+      4
+     ],
+     "ring": 0,
+     "bridge": 1
+    },
+    "c5": {
+     "hull": [
+      8,
+      11
+     ],
+     "wing": 0,
+     "fin": 2,
+     "nacelle": 2,
+     "engine": [
+      4,
+      5
+     ],
+     "weapon": 3,
+     "pod": [
+      4,
+      6
+     ],
+     "ring": 0,
+     "bridge": 1
+    }
+   },
+   "lines": [
+    {
+     "id": "civilian",
+     "name": "Civilian",
+     "blurb": "Cargo and ore haulers: hoppers and containers welded to a frame, a cab, a lot of patches.",
+     "series": [
+      "Tinhaul",
+      "Copperhaul",
+      "Brasshaul",
+      "Ironhaul",
+      "Steelhaul"
+     ],
+     "flight": {
+      "accel": 0.85,
+      "turn": 0.85,
+      "vmax": 0.9,
+      "hull": 0.9,
+      "shield": 0.6,
+      "cargo": 1.0
+     },
+     "parts": [
+      {
+       "id": "rl.pod.crate",
+       "role": "pod",
+       "prim": "rbox",
+       "len": [
+        0.12,
+        0.18
+       ],
+       "hw": [
+        0.04,
+        0.06
+       ],
+       "rad": 0.1,
+       "at": [
+        -0.35,
+        0.3
+       ],
+       "z": -0.05,
+       "H": 0.9,
+       "paint": "any",
+       "w": 1
+      }
+     ],
+     "loadout": {
+      "c1": {
+       "weapon": 0,
+       "pod": 1
+      },
+      "c2": {
+       "weapon": 0,
+       "pod": [
+        1,
+        2
+       ]
+      },
+      "c3": {
+       "weapon": 0,
+       "pod": [
+        2,
+        3
+       ]
+      },
+      "c4": {
+       "weapon": 0,
+       "pod": [
+        4,
+        5
+       ]
+      },
+      "c5": {
+       "weapon": 0,
+       "pod": [
+        6,
+        7
+       ]
+      }
+     }
+    },
+    {
+     "id": "military",
+     "name": "Military",
+     "blurb": "The same haulers refitted for war: mass drivers and drills welded on where the hoppers were.",
+     "series": [
+      "Tinclad",
+      "Copperclad",
+      "Brassclad",
+      "Ironclad",
+      "Steelclad"
+     ],
+     "flight": {
+      "cargo": 0.3,
+      "hull": 1.15
+     },
+     "hullFrom": "civilian",
+     "parts": [
+      {
+       "id": "rl.wpn.massdriver",
+       "role": "weapon",
+       "r": [
+        0.022,
+        0.032
+       ],
+       "barrels": 2,
+       "blen": [
+        0.07,
+        0.1
+       ],
+       "bw": 0.007,
+       "z": 0.45,
+       "H": 0.55,
+       "w": 2
+      }
+     ],
+     "loadout": {
+      "c1": {
+       "weapon": 2,
+       "pod": 0
+      },
+      "c2": {
+       "weapon": 2,
+       "pod": 0
+      },
+      "c3": {
+       "weapon": 3,
+       "pod": 1
+      },
+      "c4": {
+       "weapon": 4,
+       "pod": 2
+      },
+      "c5": {
+       "weapon": 6,
+       "pod": 3
+      }
+     },
+     "style": {
+      "palette": {
+       "hull": [
+        "#2a2723",
+        "#232520",
+        "#2e231d",
+        "#26292c",
+        "#322c1e"
+       ],
+       "trim": "#141312",
+       "accent": "#c8641e",
+       "rust": "#3a1f10"
+      },
+      "detail": {
+       "grime": 0.9,
+       "panelDark": 0.8
+      }
+     }
+    },
+    {
+     "id": "container-hauler",
+     "name": "Unique",
+     "unique": true,
+     "classes": [
+      "c5"
+     ],
+     "blurb": "A truss loaded with every container the Ironhulls could find: stacked two high, gaps where some fell off, a cab at the front.",
+     "series": [
+      "",
+      "",
+      "",
+      "",
+      "Container hauler"
+     ],
+     "flight": {
+      "accel": 0.75,
+      "turn": 0.7,
+      "vmax": 0.85,
+      "hull": 0.9,
+      "shield": 0.6,
+      "cargo": 1.4
+     },
+     "parts": [
+      {
+       "id": "rl.cargo.box",
+       "role": "cargo",
+       "w": [
+        0.018,
+        0.022
+       ],
+       "len": [
+        0.03,
+        0.036
+       ],
+       "across": 3,
+       "from": 0.08,
+       "to": 0.86,
+       "fill": 0.82,
+       "stack": 0.4,
+       "z": 0.0,
+       "H": 0.6
+      }
+     ],
+     "core": {
+      "c5": [
+       "rl.core.truss"
+      ]
+     },
+     "loadout": {
+      "c5": {
+       "cargo": 3,
+       "pod": 0,
+       "weapon": 0,
+       "hull": [
+        3,
+        4
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "bloom",
+   "name": "The Bloom",
+   "role": "Hive",
+   "design": "Grown and chitinous, bioluminescent, membranes",
    "style": {
     "union": "smooth",
     "blend": 0.035,
@@ -475,24 +2390,6 @@ button { font: inherit; color: inherit; }
      "hull": 0.85,
      "shield": 1.25
     }
-   },
-   "core": {
-    "fighter": [
-     "vb.core.seed"
-    ],
-    "corvette": [
-     "vb.core.seed"
-    ],
-    "frigate": [
-     "vb.core.seed",
-     "vb.core.vertebra"
-    ],
-    "cruiser": [
-     "vb.core.vertebra"
-    ],
-    "capital": [
-     "vb.core.vertebra"
-    ]
    },
    "parts": [
     {
@@ -766,8 +2663,26 @@ button { font: inherit; color: inherit; }
      "eye": true
     }
    ],
+   "core": {
+    "c1": [
+     "vb.core.seed"
+    ],
+    "c2": [
+     "vb.core.seed"
+    ],
+    "c3": [
+     "vb.core.seed",
+     "vb.core.vertebra"
+    ],
+    "c4": [
+     "vb.core.vertebra"
+    ],
+    "c5": [
+     "vb.core.vertebra"
+    ]
+   },
    "loadout": {
-    "fighter": {
+    "c1": {
      "hull": [
       0,
       1
@@ -784,7 +2699,7 @@ button { font: inherit; color: inherit; }
      "ring": 0,
      "bridge": 1
     },
-    "corvette": {
+    "c2": {
      "hull": 1,
      "wing": 1,
      "fin": 1,
@@ -804,7 +2719,7 @@ button { font: inherit; color: inherit; }
      ],
      "bridge": 1
     },
-    "frigate": {
+    "c3": {
      "hull": [
       1,
       2
@@ -821,7 +2736,7 @@ button { font: inherit; color: inherit; }
      "ring": 1,
      "bridge": 1
     },
-    "cruiser": {
+    "c4": {
      "hull": 2,
      "wing": 0,
      "fin": [
@@ -838,7 +2753,7 @@ button { font: inherit; color: inherit; }
      ],
      "bridge": 1
     },
-    "capital": {
+    "c5": {
      "hull": [
       3,
       4
@@ -858,1323 +2773,83 @@ button { font: inherit; color: inherit; }
      "ring": 2,
      "bridge": 1
     }
-   }
-  },
-  {
-   "id": "rustline",
-   "name": "Rustline Collective",
-   "kind": "Mining guild",
-   "blurb": "Ore haulers and prospectors patched from whatever the last ship left behind.",
-   "style": {
-    "union": "hard",
-    "blend": 0,
-    "symmetry": 0.45,
-    "drift": 0.0,
-    "posJitter": 0.012,
-    "angJitter": 7,
-    "angleQuant": 0,
-    "bevel": "bevel",
-    "bevelW": 0.35,
-    "heightScale": 1.1,
-    "detail": {
-     "panelSpacing": 3.2,
-     "panelAspect": 1.3,
-     "panelDepth": 0.6,
-     "panelDark": 0.6,
-     "panelTone": 0.25,
-     "rivets": 1.0,
-     "rust": 0.75,
-     "patches": 0.35,
-     "grime": 0.55,
-     "ribs": 0,
-     "ribSpacing": 0,
-     "veins": 0,
-     "spots": 0,
-     "stripes": 0.6,
-     "accentLines": 0,
-     "windows": 0.35,
-     "lamps": 0.05
-    },
-    "palette": {
-     "hull": [
-      "#8a7a5c",
-      "#6e7468",
-      "#9a6a3e",
-      "#7b8287",
-      "#a58f4a"
-     ],
-     "trim": "#4a4741",
-     "accent": "#d9a52b",
-     "glass": "#2b3a3a",
-     "engine": "#ffb36b",
-     "window": "#ffd28a",
-     "emissive": "#ff9a3d",
-     "rust": "#6b3a1e"
-    },
-    "material": {
-     "spec": 0.18,
-     "gloss": 10,
-     "wrap": 0.05,
-     "irid": 0,
-     "rim": 0.12
-    },
-    "plume": {
-     "color": "#ff8a2e",
-     "burn": "#7fd6ff",
-     "core": "#fff0c8",
-     "len": 3.4,
-     "width": 1.1,
-     "turb": 0.85,
-     "diamonds": 0,
-     "sputter": 0.6,
-     "pulse": 0,
-     "spread": 0.6
-    },
-    "shield": {
-     "color": "#ffaa4d",
-     "pattern": "ragged",
-     "standoff": 0.03,
-     "strength": 0.8
-    },
-    "flight": {
-     "accel": 0.8,
-     "turn": 0.8,
-     "vmax": 0.85,
-     "hull": 1.4,
-     "shield": 0.6
-    }
    },
-   "core": {
-    "fighter": [
-     "rl.core.tug"
-    ],
-    "corvette": [
-     "rl.core.tug",
-     "rl.core.truss"
-    ],
-    "frigate": [
-     "rl.core.truss"
-    ],
-    "cruiser": [
-     "rl.core.truss"
-    ],
-    "capital": [
-     "rl.core.truss"
-    ]
-   },
-   "parts": [
+   "lines": [
     {
-     "id": "rl.core.tug",
-     "role": "core",
-     "prim": "rbox",
-     "len": [
-      0.5,
-      0.62
+     "id": "military",
+     "name": "Warforms",
+     "blurb": "Grown warforms: one fused skin, ribbed and veined, lit from within.",
+     "series": [
+      "Gust",
+      "Squall",
+      "Gale",
+      "Tempest",
+      "Maelstrom"
      ],
-     "hw": [
-      0.065,
-      0.085
-     ],
-     "rad": 0.25,
-     "H": 0.07
+     "flight": {
+      "cargo": 0.3
+     }
     },
     {
-     "id": "rl.core.truss",
-     "role": "core",
-     "prim": "spine",
-     "len": [
-      0.8,
-      0.95
+     "id": "civilian",
+     "name": "Workers",
+     "blurb": "Seeders, harvesters and storage-forms (to be designed): the warform grammar without weapons.",
+     "series": [
+      "Rain",
+      "Stream",
+      "River",
+      "Lake",
+      "Ocean"
      ],
-     "segs": [
-      4,
-      7
-     ],
-     "hw": [
-      0.04,
-      0.055
-     ],
-     "gap": [
-      0.18,
-      0.35
-     ],
-     "taper": [
-      0.8,
-      1.25
-     ],
-     "rad": 0.1,
-     "H": 0.06
-    },
-    {
-     "id": "rl.hull.scrapplate",
-     "role": "hull",
-     "prim": "rbox",
-     "len": [
-      0.1,
-      0.24
-     ],
-     "hw": [
-      0.03,
-      0.075
-     ],
-     "rad": 0.04,
-     "along": [
-      -0.45,
-      0.4
-     ],
-     "out": [
-      0.0,
-      1.3
-     ],
-     "ang": [
-      -6,
-      6
-     ],
-     "z": [
-      -0.2,
-      0.55
-     ],
-     "H": 0.35,
-     "paint": "any",
-     "w": 3
-    },
-    {
-     "id": "rl.hull.tank",
-     "role": "hull",
-     "prim": "ucap",
-     "len": [
-      0.15,
-      0.28
-     ],
-     "rear": [
-      0.035,
-      0.06
-     ],
-     "nose": [
-      0.035,
-      0.06
-     ],
-     "along": [
-      -0.4,
-      0.2
-     ],
-     "out": [
-      0.8,
-      1.4
-     ],
-     "ang": [
-      -4,
-      4
-     ],
-     "z": -0.1,
-     "H": 0.9,
-     "prof": "round",
-     "paint": "any",
-     "w": 1.5
-    },
-    {
-     "id": "rl.fin.radiator",
-     "role": "fin",
-     "span": [
-      0.06,
-      0.11
-     ],
-     "root": [
-      0.07,
-      0.1
-     ],
-     "tip": [
-      0.06,
-      0.09
-     ],
-     "sweep": [
-      -0.15,
-      0.25
-     ],
-     "curve": 0,
-     "at": "rear",
-     "z": -0.4,
-     "H": 0.18,
-     "paint": "trim"
-    },
-    {
-     "id": "rl.nac.thruster",
-     "role": "nacelle",
-     "prim": "ucap",
-     "len": [
-      0.16,
-      0.26
-     ],
-     "r": [
-      0.03,
-      0.045
-     ],
-     "nose": [
-      0.85,
-      1.0
-     ],
-     "at": [
-      -0.4,
-      -0.1
-     ],
-     "gap": 0.35,
-     "z": -0.15,
-     "H": 0.85
-    },
-    {
-     "id": "rl.eng.rocket",
-     "role": "engine",
-     "len": [
-      0.05,
-      0.08
-     ],
-     "front": [
-      0.018,
-      0.026
-     ],
-     "rear": [
-      0.03,
-      0.045
-     ],
-     "z": -0.2,
-     "H": 0.6,
-     "glow": 0.5
-    },
-    {
-     "id": "rl.wpn.drill",
-     "role": "weapon",
-     "r": [
-      0.02,
-      0.03
-     ],
-     "barrels": 1,
-     "blen": [
-      0.06,
-      0.09
-     ],
-     "bw": 0.006,
-     "style": "drill",
-     "z": 0.45,
-     "H": 0.5
-    },
-    {
-     "id": "rl.pod.ore",
-     "role": "pod",
-     "prim": "ucap",
-     "len": [
-      0.13,
-      0.2
-     ],
-     "r": [
-      0.04,
-      0.06
-     ],
-     "at": [
-      -0.35,
-      0.3
-     ],
-     "z": -0.05,
-     "H": 0.95,
-     "paint": "any"
-    },
-    {
-     "id": "rl.bridge.cab",
-     "role": "bridge",
-     "prim": "rbox",
-     "len": [
-      0.09,
-      0.13
-     ],
-     "hw": [
-      0.04,
-      0.055
-     ],
-     "rad": 0.3,
-     "at": [
-      0.3,
-      0.42
-     ],
-     "z": 0.35,
-     "H": 0.6,
-     "glass": false
+     "flight": {
+      "accel": 0.85,
+      "turn": 0.85,
+      "vmax": 0.9,
+      "hull": 0.9,
+      "shield": 0.6,
+      "cargo": 1.0
+     },
+     "style": {
+      "palette": {
+       "hull": [
+        "#5f7a5a",
+        "#6f7f5c",
+        "#56705f"
+       ],
+       "emissive": "#b8f56a",
+       "accent": "#c8ff8a"
+      },
+      "plume": {
+       "color": "#a8f56a"
+      },
+      "shield": {
+       "color": "#9ff07a"
+      }
+     },
+     "loadout": {
+      "c1": {
+       "weapon": 0,
+       "pod": 1
+      },
+      "c2": {
+       "weapon": 0,
+       "pod": 1
+      },
+      "c3": {
+       "weapon": 0,
+       "pod": 2
+      },
+      "c4": {
+       "weapon": 0,
+       "pod": 3
+      },
+      "c5": {
+       "weapon": 0,
+       "pod": 4
+      }
+     }
     }
-   ],
-   "loadout": {
-    "fighter": {
-     "hull": [
-      2,
-      3
-     ],
-     "wing": 0,
-     "fin": [
-      0,
-      1
-     ],
-     "nacelle": [
-      0,
-      1
-     ],
-     "engine": [
-      1,
-      2
-     ],
-     "weapon": 1,
-     "pod": [
-      0,
-      1
-     ],
-     "ring": 0,
-     "bridge": 1
-    },
-    "corvette": {
-     "hull": [
-      3,
-      4
-     ],
-     "wing": 0,
-     "fin": [
-      0,
-      1
-     ],
-     "nacelle": 1,
-     "engine": 2,
-     "weapon": 1,
-     "pod": 1,
-     "ring": 0,
-     "bridge": 1
-    },
-    "frigate": {
-     "hull": [
-      4,
-      6
-     ],
-     "wing": 0,
-     "fin": 1,
-     "nacelle": 1,
-     "engine": [
-      2,
-      3
-     ],
-     "weapon": 2,
-     "pod": 2,
-     "ring": 0,
-     "bridge": 1
-    },
-    "cruiser": {
-     "hull": [
-      6,
-      8
-     ],
-     "wing": 0,
-     "fin": [
-      1,
-      2
-     ],
-     "nacelle": [
-      1,
-      2
-     ],
-     "engine": 3,
-     "weapon": 2,
-     "pod": [
-      3,
-      4
-     ],
-     "ring": 0,
-     "bridge": 1
-    },
-    "capital": {
-     "hull": [
-      8,
-      11
-     ],
-     "wing": 0,
-     "fin": 2,
-     "nacelle": 2,
-     "engine": [
-      4,
-      5
-     ],
-     "weapon": 3,
-     "pod": [
-      4,
-      6
-     ],
-     "ring": 0,
-     "bridge": 1
-    }
-   }
-  },
-  {
-   "id": "halcyon",
-   "name": "Halcyon Dynamics",
-   "kind": "Corporate",
-   "blurb": "Executive transports and security craft. Gloss black, long tapers, cyan trim.",
-   "style": {
-    "union": "hard",
-    "blend": 0,
-    "symmetry": 1.0,
-    "drift": 0,
-    "posJitter": 0,
-    "angJitter": 0,
-    "angleQuant": 0,
-    "bevel": "chamfer",
-    "bevelW": 0.22,
-    "heightScale": 1.0,
-    "detail": {
-     "panelSpacing": 9,
-     "panelAspect": 2.2,
-     "panelDepth": 0.35,
-     "panelDark": 0.2,
-     "panelTone": 0.06,
-     "rivets": 0,
-     "rust": 0,
-     "patches": 0,
-     "grime": 0.0,
-     "ribs": 0,
-     "ribSpacing": 0,
-     "veins": 0,
-     "spots": 0,
-     "stripes": 0,
-     "accentLines": 0.7,
-     "windows": 0.55,
-     "lamps": 0
-    },
-    "palette": {
-     "hull": [
-      "#1b1e24",
-      "#22262d",
-      "#16181d"
-     ],
-     "trim": "#2a2f37",
-     "accent": "#36e2ff",
-     "glass": "#0a1a22",
-     "engine": "#86ecff",
-     "window": "#d7f4ff",
-     "emissive": "#36e2ff",
-     "rust": "#000000"
-    },
-    "material": {
-     "spec": 0.95,
-     "gloss": 70,
-     "wrap": 0,
-     "irid": 0,
-     "rim": 0.45
-    },
-    "plume": {
-     "color": "#2fdcff",
-     "burn": "#b07bff",
-     "core": "#eaffff",
-     "len": 4.2,
-     "width": 0.75,
-     "turb": 0.12,
-     "diamonds": 0,
-     "sputter": 0,
-     "pulse": 0,
-     "spread": 0.15
-    },
-    "shield": {
-     "color": "#55e6ff",
-     "pattern": "hex",
-     "standoff": 0.03,
-     "strength": 1.0
-    },
-    "flight": {
-     "accel": 1.2,
-     "turn": 1.05,
-     "vmax": 1.15,
-     "hull": 0.9,
-     "shield": 1.0
-    }
-   },
-   "core": {
-    "fighter": [
-     "hal.core.blade"
-    ],
-    "corvette": [
-     "hal.core.blade"
-    ],
-    "frigate": [
-     "hal.core.blade",
-     "hal.core.spear"
-    ],
-    "cruiser": [
-     "hal.core.spear"
-    ],
-    "capital": [
-     "hal.core.blade",
-     "hal.core.spear"
-    ]
-   },
-   "parts": [
-    {
-     "id": "hal.core.blade",
-     "role": "core",
-     "prim": "trap",
-     "len": [
-      0.9,
-      1.0
-     ],
-     "rear": [
-      0.085,
-      0.11
-     ],
-     "nose": [
-      0.004,
-      0.012
-     ],
-     "H": 0.05,
-     "prof": "ridge"
-    },
-    {
-     "id": "hal.core.spear",
-     "role": "core",
-     "prim": "ucap",
-     "len": [
-      0.88,
-      0.98
-     ],
-     "rear": [
-      0.075,
-      0.095
-     ],
-     "nose": [
-      0.018,
-      0.028
-     ],
-     "H": 0.055,
-     "prof": "round"
-    },
-    {
-     "id": "hal.hull.sweep",
-     "role": "hull",
-     "prim": "trap",
-     "len": [
-      0.36,
-      0.55
-     ],
-     "rear": [
-      0.05,
-      0.075
-     ],
-     "nose": [
-      0.003,
-      0.008
-     ],
-     "along": [
-      -0.3,
-      0.0
-     ],
-     "out": [
-      0.7,
-      1.05
-     ],
-     "ang": [
-      -6,
-      -2
-     ],
-     "z": -0.35,
-     "H": 0.55,
-     "prof": "ridge",
-     "w": 2
-    },
-    {
-     "id": "hal.hull.slab",
-     "role": "hull",
-     "prim": "rbox",
-     "len": [
-      0.16,
-      0.28
-     ],
-     "hw": [
-      0.016,
-      0.026
-     ],
-     "rad": 0.5,
-     "along": [
-      -0.3,
-      0.15
-     ],
-     "out": [
-      0.25,
-      0.5
-     ],
-     "ang": 0,
-     "z": 0.45,
-     "H": 0.35,
-     "accent": true
-    },
-    {
-     "id": "hal.wing.knife",
-     "role": "wing",
-     "span": [
-      0.2,
-      0.3
-     ],
-     "root": [
-      0.3,
-      0.42
-     ],
-     "tip": [
-      0.025,
-      0.05
-     ],
-     "sweep": [
-      1.1,
-      1.6
-     ],
-     "curve": 0.05,
-     "at": [
-      -0.25,
-      -0.08
-     ],
-     "z": -0.6,
-     "H": 0.3
-    },
-    {
-     "id": "hal.fin.blade",
-     "role": "fin",
-     "span": [
-      0.05,
-      0.09
-     ],
-     "root": [
-      0.1,
-      0.14
-     ],
-     "tip": [
-      0.008,
-      0.015
-     ],
-     "sweep": [
-      1.5,
-      2.2
-     ],
-     "curve": 0,
-     "at": "mixed",
-     "z": -0.55,
-     "H": 0.25,
-     "accent": true
-    },
-    {
-     "id": "hal.nac.pod",
-     "role": "nacelle",
-     "prim": "ucap",
-     "len": [
-      0.32,
-      0.42
-     ],
-     "r": [
-      0.024,
-      0.032
-     ],
-     "nose": [
-      0.45,
-      0.6
-     ],
-     "at": [
-      -0.35,
-      -0.18
-     ],
-     "gap": 0.4,
-     "z": -0.3,
-     "H": 0.75,
-     "accent": true
-    },
-    {
-     "id": "hal.eng.slot",
-     "role": "engine",
-     "len": [
-      0.035,
-      0.05
-     ],
-     "front": [
-      0.016,
-      0.02
-     ],
-     "rear": [
-      0.02,
-      0.026
-     ],
-     "z": -0.25,
-     "H": 0.55,
-     "glow": 0.6
-    },
-    {
-     "id": "hal.wpn.flush",
-     "role": "weapon",
-     "r": [
-      0.016,
-      0.022
-     ],
-     "barrels": 1,
-     "blen": [
-      0.03,
-      0.04
-     ],
-     "bw": 0.0035,
-     "style": "turret",
-     "z": 0.6,
-     "H": 0.3
-    },
-    {
-     "id": "hal.pod.cell",
-     "role": "pod",
-     "prim": "ucap",
-     "len": [
-      0.14,
-      0.2
-     ],
-     "r": [
-      0.018,
-      0.026
-     ],
-     "at": [
-      -0.25,
-      0.15
-     ],
-     "z": -0.2,
-     "H": 0.7
-    },
-    {
-     "id": "hal.bridge.visor",
-     "role": "bridge",
-     "prim": "ucap",
-     "len": [
-      0.09,
-      0.13
-     ],
-     "r": [
-      0.02,
-      0.028
-     ],
-     "at": [
-      0.05,
-      0.2
-     ],
-     "z": 0.5,
-     "H": 0.45,
-     "glass": true
-    }
-   ],
-   "loadout": {
-    "fighter": {
-     "hull": 1,
-     "wing": 1,
-     "fin": [
-      0,
-      1
-     ],
-     "nacelle": 0,
-     "engine": [
-      1,
-      2
-     ],
-     "weapon": 2,
-     "pod": 0,
-     "ring": 0,
-     "bridge": 1
-    },
-    "corvette": {
-     "hull": [
-      1,
-      2
-     ],
-     "wing": [
-      0,
-      1
-     ],
-     "fin": 1,
-     "nacelle": [
-      0,
-      1
-     ],
-     "engine": 2,
-     "weapon": 2,
-     "pod": 0,
-     "ring": 0,
-     "bridge": 1
-    },
-    "frigate": {
-     "hull": [
-      2,
-      3
-     ],
-     "wing": 0,
-     "fin": 1,
-     "nacelle": 1,
-     "engine": [
-      2,
-      3
-     ],
-     "weapon": [
-      2,
-      4
-     ],
-     "pod": 0,
-     "ring": 0,
-     "bridge": 1
-    },
-    "cruiser": {
-     "hull": [
-      3,
-      4
-     ],
-     "wing": 0,
-     "fin": 1,
-     "nacelle": 1,
-     "engine": 3,
-     "weapon": 4,
-     "pod": [
-      1,
-      2
-     ],
-     "ring": 0,
-     "bridge": 1
-    },
-    "capital": {
-     "hull": [
-      4,
-      6
-     ],
-     "wing": 0,
-     "fin": [
-      1,
-      2
-     ],
-     "nacelle": [
-      1,
-      2
-     ],
-     "engine": [
-      3,
-      5
-     ],
-     "weapon": 6,
-     "pod": [
-      2,
-      3
-     ],
-     "ring": 0,
-     "bridge": 1
-    }
-   }
-  },
-  {
-   "id": "concord",
-   "name": "Concord Navy",
-   "kind": "Military",
-   "blurb": "Line warships of the Concord. Faceted armor, 15-degree geometry, dense paneling.",
-   "style": {
-    "union": "hard",
-    "blend": 0,
-    "symmetry": 1.0,
-    "drift": 0,
-    "posJitter": 0,
-    "angJitter": 0,
-    "angleQuant": 15,
-    "bevel": "chamfer",
-    "bevelW": 0.3,
-    "heightScale": 1.1,
-    "detail": {
-     "panelSpacing": 2.6,
-     "panelAspect": 1.6,
-     "panelDepth": 0.55,
-     "panelDark": 0.45,
-     "panelTone": 0.12,
-     "rivets": 0,
-     "rust": 0,
-     "patches": 0,
-     "grime": 0.12,
-     "ribs": 0,
-     "ribSpacing": 0,
-     "veins": 0,
-     "spots": 0,
-     "stripes": 1.0,
-     "accentLines": 0,
-     "windows": 0.5,
-     "lamps": 0.02
-    },
-    "palette": {
-     "hull": [
-      "#56677d",
-      "#4b5b70",
-      "#62738a"
-     ],
-     "trim": "#36404d",
-     "accent": "#e8edf2",
-     "glass": "#15243a",
-     "engine": "#7fb2ff",
-     "window": "#eaf2ff",
-     "emissive": "#ffffff",
-     "rust": "#000000"
-    },
-    "material": {
-     "spec": 0.4,
-     "gloss": 24,
-     "wrap": 0.05,
-     "irid": 0,
-     "rim": 0.25
-    },
-    "plume": {
-     "color": "#5f97ff",
-     "burn": "#ffe08a",
-     "core": "#f2f6ff",
-     "len": 5.5,
-     "width": 0.85,
-     "turb": 0.2,
-     "diamonds": 1,
-     "sputter": 0,
-     "pulse": 0,
-     "spread": 0.25
-    },
-    "shield": {
-     "color": "#86b0ff",
-     "pattern": "grid",
-     "standoff": 0.035,
-     "strength": 1.1
-    },
-    "flight": {
-     "accel": 1.0,
-     "turn": 1.0,
-     "vmax": 1.0,
-     "hull": 1.2,
-     "shield": 1.1
-    }
-   },
-   "core": {
-    "fighter": [
-     "cn.core.hull"
-    ],
-    "corvette": [
-     "cn.core.hull"
-    ],
-    "frigate": [
-     "cn.core.hull"
-    ],
-    "cruiser": [
-     "cn.core.hull",
-     "cn.core.block"
-    ],
-    "capital": [
-     "cn.core.block",
-     "cn.core.hull"
-    ]
-   },
-   "parts": [
-    {
-     "id": "cn.core.hull",
-     "role": "core",
-     "prim": "trap",
-     "len": [
-      0.84,
-      0.94
-     ],
-     "rear": [
-      0.1,
-      0.13
-     ],
-     "nose": [
-      0.025,
-      0.045
-     ],
-     "H": 0.06
-    },
-    {
-     "id": "cn.core.block",
-     "role": "core",
-     "prim": "rbox",
-     "len": [
-      0.82,
-      0.92
-     ],
-     "hw": [
-      0.085,
-      0.105
-     ],
-     "rad": 0.08,
-     "H": 0.06
-    },
-    {
-     "id": "cn.hull.armor",
-     "role": "hull",
-     "prim": "rbox",
-     "len": [
-      0.14,
-      0.28
-     ],
-     "hw": [
-      0.025,
-      0.05
-     ],
-     "rad": 0.06,
-     "along": [
-      -0.38,
-      0.25
-     ],
-     "out": [
-      0.35,
-      0.75
-     ],
-     "ang": 0,
-     "z": 0.4,
-     "H": 0.4,
-     "w": 2
-    },
-    {
-     "id": "cn.hull.sponson",
-     "role": "hull",
-     "prim": "trap",
-     "len": [
-      0.24,
-      0.38
-     ],
-     "rear": [
-      0.045,
-      0.065
-     ],
-     "nose": [
-      0.015,
-      0.03
-     ],
-     "along": [
-      -0.35,
-      0.05
-     ],
-     "out": [
-      0.85,
-      1.2
-     ],
-     "ang": [
-      -15,
-      0
-     ],
-     "z": -0.3,
-     "H": 0.7,
-     "w": 1.5
-    },
-    {
-     "id": "cn.wing.delta",
-     "role": "wing",
-     "span": [
-      0.17,
-      0.25
-     ],
-     "root": [
-      0.34,
-      0.44
-     ],
-     "tip": [
-      0.05,
-      0.09
-     ],
-     "sweep": [
-      0.55,
-      1.0
-     ],
-     "curve": 0,
-     "at": [
-      -0.3,
-      -0.1
-     ],
-     "z": -0.6,
-     "H": 0.35
-    },
-    {
-     "id": "cn.fin.stab",
-     "role": "fin",
-     "span": [
-      0.06,
-      0.09
-     ],
-     "root": [
-      0.08,
-      0.12
-     ],
-     "tip": [
-      0.03,
-      0.05
-     ],
-     "sweep": [
-      0.4,
-      0.75
-     ],
-     "curve": 0,
-     "at": "mixed",
-     "z": -0.55,
-     "H": 0.3
-    },
-    {
-     "id": "cn.nac.block",
-     "role": "nacelle",
-     "prim": "ucap",
-     "len": [
-      0.3,
-      0.4
-     ],
-     "r": [
-      0.032,
-      0.042
-     ],
-     "nose": [
-      0.8,
-      0.95
-     ],
-     "at": [
-      -0.35,
-      -0.15
-     ],
-     "gap": 0.3,
-     "z": -0.2,
-     "H": 0.8
-    },
-    {
-     "id": "cn.eng.nozzle",
-     "role": "engine",
-     "len": [
-      0.05,
-      0.07
-     ],
-     "front": [
-      0.02,
-      0.025
-     ],
-     "rear": [
-      0.025,
-      0.034
-     ],
-     "z": -0.2,
-     "H": 0.6,
-     "glow": 0.55
-    },
-    {
-     "id": "cn.wpn.turret",
-     "role": "weapon",
-     "r": [
-      0.02,
-      0.028
-     ],
-     "barrels": 2,
-     "blen": [
-      0.035,
-      0.05
-     ],
-     "bw": 0.0035,
-     "style": "turret",
-     "z": 0.75,
-     "H": 0.35
-    },
-    {
-     "id": "cn.pod.bay",
-     "role": "pod",
-     "prim": "rbox",
-     "len": [
-      0.12,
-      0.17
-     ],
-     "hw": [
-      0.022,
-      0.03
-     ],
-     "rad": 0.1,
-     "at": [
-      -0.25,
-      0.2
-     ],
-     "z": -0.1,
-     "H": 0.7
-    },
-    {
-     "id": "cn.bridge.tower",
-     "role": "bridge",
-     "prim": "rbox",
-     "len": [
-      0.07,
-      0.1
-     ],
-     "hw": [
-      0.03,
-      0.04
-     ],
-     "rad": 0.15,
-     "at": [
-      -0.22,
-      -0.08
-     ],
-     "z": 0.6,
-     "H": 0.6,
-     "glass": false
-    }
-   ],
-   "loadout": {
-    "fighter": {
-     "hull": 1,
-     "wing": 1,
-     "fin": 1,
-     "nacelle": 0,
-     "engine": [
-      1,
-      2
-     ],
-     "weapon": 2,
-     "pod": 0,
-     "ring": 0,
-     "bridge": 1
-    },
-    "corvette": {
-     "hull": 2,
-     "wing": [
-      0,
-      1
-     ],
-     "fin": 1,
-     "nacelle": 0,
-     "engine": 2,
-     "weapon": [
-      2,
-      3
-     ],
-     "pod": 0,
-     "ring": 0,
-     "bridge": 1
-    },
-    "frigate": {
-     "hull": 3,
-     "wing": 0,
-     "fin": 1,
-     "nacelle": [
-      0,
-      1
-     ],
-     "engine": 3,
-     "weapon": 4,
-     "pod": 0,
-     "ring": 0,
-     "bridge": 1
-    },
-    "cruiser": {
-     "hull": 4,
-     "wing": 0,
-     "fin": 1,
-     "nacelle": 1,
-     "engine": 4,
-     "weapon": 6,
-     "pod": 1,
-     "ring": 0,
-     "bridge": 1
-    },
-    "capital": {
-     "hull": 6,
-     "wing": 0,
-     "fin": 1,
-     "nacelle": 1,
-     "engine": 5,
-     "weapon": 9,
-     "pod": 2,
-     "ring": 0,
-     "bridge": 1
-    }
-   }
+   ]
   }
  ],
  "stations": [
@@ -2326,10 +3001,10 @@ button { font: inherit; color: inherit; }
   }
  ]
 }</script>
-<script id="system" type="application/json">{"id": "brannock", "name": "Brannock", "owner": "ironhulls", "ring": "middle", "description": "An Ironhull system of the middle ring: an orange star, a scorched mining world, a cloudy habitat world where most of its people live, a gas giant whose moon refines what the mines dig up, and a shipyard station where the Ironhulls weld their hulls.", "star": {"name": "Brannock", "class": "orange", "radius": 2400, "gravity": 55}, "start": "halde", "bodies": [{"id": "cinder", "name": "Cinder", "kind": "planet", "orbit": {"radius": 11000, "angle": 35}, "radius": 900, "gravity": 25, "look": {"surface": "rock", "palette": ["#4a3a33", "#7a5a46", "#c08a5a"], "atmosphere": "#d08a58", "seed": 3.3}, "port": {"name": "Cinder Deep", "role": "mining", "population": "outpost", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "Shafts sunk into a world too close to its star. The day side cooks; the crews live and work on the night side, in tunnels that follow the ore. Ore goes up the lift to waiting tugs; food, water and spare parts come down."}}, {"id": "halde", "name": "Halde", "kind": "planet", "orbit": {"radius": 19000, "angle": 200}, "radius": 1500, "gravity": 40, "look": {"surface": "terran", "palette": ["#1d4f7a", "#5d7a3c", "#d8cba8"], "atmosphere": "#6fb3ff", "seed": 1.3, "cityLights": 1}, "port": {"name": "Halde Landing", "role": "habitat", "population": "town", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "The system's only real town: terraces of habitat blocks along a cold coast, a landing field cut into the cliffs above them. Most of Brannock's people live here, and most of its money changes hands in the market halls by the field."}}, {"id": "vast", "name": "Vast", "kind": "planet", "orbit": {"radius": 32000, "angle": 110}, "radius": 3000, "gravity": 45, "look": {"surface": "giant", "palette": ["#c9925c", "#7d4e33", "#ecd9b0"], "atmosphere": "#ffc98a", "seed": 4.1}}, {"id": "tallow", "name": "Tallow", "kind": "moon", "parent": "vast", "orbit": {"radius": 6500, "angle": 250}, "radius": 600, "gravity": 15, "look": {"surface": "rock", "palette": ["#5e5953", "#8a8178", "#c9c0b4"], "atmosphere": "#b0a8a0", "seed": 7.7}, "port": {"name": "Tallow Works", "role": "refinery", "population": "colony", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "Refinery towers on a grey moon, lit orange by their own flares and by Vast hanging overhead. Ore from Cinder comes in raw and leaves as metal; the air in the dome tastes of it."}}, {"id": "kettle", "name": "Kettle Yard", "kind": "station", "orbit": {"radius": 15000, "angle": 300}, "radius": 450, "gravity": 4, "station": {"archetype": "shipyard", "brand": "rustline", "seed": "kettle-yard"}, "port": {"name": "Kettle Yard", "role": "shipyard", "population": "colony", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "A cradle of girders where the Ironhulls build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."}}]}</script>
-<script id="system-schema" type="application/json">{"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://driftward.game/schema/system.schema.json", "title": "Driftward star system", "description": "One star system: its star, bodies and ports. The contract an LLM authors against and the validator that clamps what it writes (src/schema.js). Distances are metres; the star sits at the origin; angles are degrees counter-clockwise from +x. Bodies hold still in M1.", "type": "object", "required": ["id", "name", "owner", "ring", "star", "bodies"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "owner": {"description": "The faction that holds the system (the Book's appendix, by role).", "enum": ["federation", "prism", "ironhulls", "blackhulls", "freeflag", "bloom", "glass", "shadow", "none"]}, "ring": {"description": "Inner rings are prosperous, the outer ring poor and lawless.", "enum": ["inner", "middle", "outer"]}, "description": {"type": "string", "maxLength": 800, "default": ""}, "star": {"type": "object", "required": ["name", "class"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "class": {"enum": ["red-dwarf", "orange", "yellow", "white", "blue-giant"], "default": "yellow"}, "radius": {"type": "number", "minimum": 800, "maximum": 6000, "default": 2400}, "gravity": {"description": "Well strength at the surface; 40 is a full-strength well.", "type": "number", "minimum": 0, "maximum": 80, "default": 55}}}, "start": {"description": "The id of the port body a new game starts landed at.", "type": "string", "default": ""}, "bodies": {"type": "array", "minItems": 1, "maxItems": 15, "items": {"type": "object", "required": ["id", "name", "kind", "orbit", "radius"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "kind": {"enum": ["planet", "moon", "station"]}, "parent": {"description": "Id of the body a moon or station orbits; omit to orbit the star.", "type": "string", "default": ""}, "orbit": {"type": "object", "required": ["radius", "angle"], "properties": {"radius": {"type": "number", "minimum": 1500, "maximum": 60000}, "angle": {"type": "number", "minimum": 0, "maximum": 360}}}, "radius": {"description": "Planets and moons: the body. Stations: the docking zone's reach.", "type": "number", "minimum": 150, "maximum": 4000}, "gravity": {"type": "number", "minimum": 0, "maximum": 60, "default": 30}, "look": {"description": "How a planet or moon is drawn.", "type": "object", "properties": {"surface": {"enum": ["terran", "giant", "rock"], "default": "rock"}, "palette": {"type": "array", "items": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "minItems": 3, "maxItems": 3, "default": ["#5e5953", "#8a8178", "#c9c0b4"]}, "atmosphere": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#9fb4c8"}, "seed": {"type": "number", "minimum": 0, "maximum": 100, "default": 1}, "cityLights": {"type": "number", "minimum": 0, "maximum": 1, "default": 0}}}, "station": {"description": "How a station is built: a catalog archetype in an owning brand's style.", "type": "object", "properties": {"archetype": {"enum": ["ring", "port", "forge", "refinery", "shipyard", "relay"], "default": "port"}, "brand": {"enum": ["vaelith", "rustline", "halcyon", "concord"], "default": "rustline"}, "seed": {"type": "string", "maxLength": 40, "default": "station-1"}}}, "port": {"description": "Present if the body has a port the player can land at.", "type": "object", "required": ["name", "role"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "role": {"description": "The facility's economic role (the Book's Facilities table).", "enum": ["mining", "ice", "gas", "refinery", "forge", "agri", "habitat", "container-port", "shipyard", "relay", "military", "research", "haven"]}, "population": {"enum": ["outpost", "colony", "town", "world"], "default": "colony"}, "description": {"type": "string", "maxLength": 1200, "default": ""}, "services": {"type": "array", "items": {"enum": ["market", "missions", "bar", "refuel", "repair", "outfitter", "shipyard"]}, "default": ["market", "missions", "bar", "refuel", "repair"]}}}}}}}}</script>
+<script id="system" type="application/json">{"id": "brannock", "name": "Brannock", "owner": "ironhulls", "ring": "middle", "description": "An Ironhull system of the middle ring: an orange star, a scorched mining world, a cloudy habitat world where most of its people live, a gas giant whose moon refines what the mines dig up, and a shipyard station where the Ironhulls weld their hulls.", "star": {"name": "Brannock", "class": "orange", "radius": 2400, "gravity": 55}, "start": "halde", "bodies": [{"id": "cinder", "name": "Cinder", "kind": "planet", "orbit": {"radius": 11000, "angle": 35}, "radius": 900, "gravity": 25, "look": {"surface": "rock", "palette": ["#4a3a33", "#7a5a46", "#c08a5a"], "atmosphere": "#d08a58", "seed": 3.3}, "port": {"name": "Cinder Deep", "role": "mining", "population": "outpost", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "Shafts sunk into a world too close to its star. The day side cooks; the crews live and work on the night side, in tunnels that follow the ore. Ore goes up the lift to waiting tugs; food, water and spare parts come down."}}, {"id": "halde", "name": "Halde", "kind": "planet", "orbit": {"radius": 19000, "angle": 200}, "radius": 1500, "gravity": 40, "look": {"surface": "terran", "palette": ["#1d4f7a", "#5d7a3c", "#d8cba8"], "atmosphere": "#6fb3ff", "seed": 1.3, "cityLights": 1}, "port": {"name": "Halde Landing", "role": "habitat", "population": "town", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "The system's only real town: terraces of habitat blocks along a cold coast, a landing field cut into the cliffs above them. Most of Brannock's people live here, and most of its money changes hands in the market halls by the field."}}, {"id": "vast", "name": "Vast", "kind": "planet", "orbit": {"radius": 32000, "angle": 110}, "radius": 3000, "gravity": 45, "look": {"surface": "giant", "palette": ["#c9925c", "#7d4e33", "#ecd9b0"], "atmosphere": "#ffc98a", "seed": 4.1}}, {"id": "tallow", "name": "Tallow", "kind": "moon", "parent": "vast", "orbit": {"radius": 6500, "angle": 250}, "radius": 600, "gravity": 15, "look": {"surface": "rock", "palette": ["#5e5953", "#8a8178", "#c9c0b4"], "atmosphere": "#b0a8a0", "seed": 7.7}, "port": {"name": "Tallow Works", "role": "refinery", "population": "colony", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "Refinery towers on a grey moon, lit orange by their own flares and by Vast hanging overhead. Ore from Cinder comes in raw and leaves as metal; the air in the dome tastes of it."}}, {"id": "kettle", "name": "Kettle Yard", "kind": "station", "orbit": {"radius": 15000, "angle": 300}, "radius": 450, "gravity": 4, "station": {"archetype": "shipyard", "brand": "ironhulls", "seed": "kettle-yard"}, "port": {"name": "Kettle Yard", "role": "shipyard", "population": "colony", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "A cradle of girders where the Ironhulls build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."}}]}</script>
+<script id="system-schema" type="application/json">{"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://driftward.game/schema/system.schema.json", "title": "Driftward star system", "description": "One star system: its star, bodies and ports. The contract an LLM authors against and the validator that clamps what it writes (src/schema.js). Distances are metres; the star sits at the origin; angles are degrees counter-clockwise from +x. Bodies hold still in M1.", "type": "object", "required": ["id", "name", "owner", "ring", "star", "bodies"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "owner": {"description": "The faction that holds the system (the Book's appendix, by role).", "enum": ["federation", "prism", "ironhulls", "blackhulls", "freeflag", "bloom", "glass", "shadow", "none"]}, "ring": {"description": "Inner rings are prosperous, the outer ring poor and lawless.", "enum": ["inner", "middle", "outer"]}, "description": {"type": "string", "maxLength": 800, "default": ""}, "star": {"type": "object", "required": ["name", "class"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "class": {"enum": ["red-dwarf", "orange", "yellow", "white", "blue-giant"], "default": "yellow"}, "radius": {"type": "number", "minimum": 800, "maximum": 6000, "default": 2400}, "gravity": {"description": "Well strength at the surface; 40 is a full-strength well.", "type": "number", "minimum": 0, "maximum": 80, "default": 55}}}, "start": {"description": "The id of the port body a new game starts landed at.", "type": "string", "default": ""}, "bodies": {"type": "array", "minItems": 1, "maxItems": 15, "items": {"type": "object", "required": ["id", "name", "kind", "orbit", "radius"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "kind": {"enum": ["planet", "moon", "station"]}, "parent": {"description": "Id of the body a moon or station orbits; omit to orbit the star.", "type": "string", "default": ""}, "orbit": {"type": "object", "required": ["radius", "angle"], "properties": {"radius": {"type": "number", "minimum": 1500, "maximum": 60000}, "angle": {"type": "number", "minimum": 0, "maximum": 360}}}, "radius": {"description": "Planets and moons: the body. Stations: the docking zone's reach.", "type": "number", "minimum": 150, "maximum": 4000}, "gravity": {"type": "number", "minimum": 0, "maximum": 60, "default": 30}, "look": {"description": "How a planet or moon is drawn.", "type": "object", "properties": {"surface": {"enum": ["terran", "giant", "rock"], "default": "rock"}, "palette": {"type": "array", "items": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "minItems": 3, "maxItems": 3, "default": ["#5e5953", "#8a8178", "#c9c0b4"]}, "atmosphere": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#9fb4c8"}, "seed": {"type": "number", "minimum": 0, "maximum": 100, "default": 1}, "cityLights": {"type": "number", "minimum": 0, "maximum": 1, "default": 0}}}, "station": {"description": "How a station is built: a catalog archetype in an owning brand's style.", "type": "object", "properties": {"archetype": {"enum": ["ring", "port", "forge", "refinery", "shipyard", "relay"], "default": "port"}, "brand": {"description": "The faction whose style the station is built in (catalog factions; the Book's appendix).", "enum": ["federation", "prism", "ironhulls", "bloom"], "default": "ironhulls"}, "seed": {"type": "string", "maxLength": 40, "default": "station-1"}}}, "port": {"description": "Present if the body has a port the player can land at.", "type": "object", "required": ["name", "role"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "role": {"description": "The facility's economic role (the Book's Facilities table).", "enum": ["mining", "ice", "gas", "refinery", "forge", "agri", "habitat", "container-port", "shipyard", "relay", "military", "research", "haven"]}, "population": {"enum": ["outpost", "colony", "town", "world"], "default": "colony"}, "description": {"type": "string", "maxLength": 1200, "default": ""}, "services": {"type": "array", "items": {"enum": ["market", "missions", "bar", "refuel", "repair", "outfitter", "shipyard"]}, "default": ["market", "missions", "bar", "refuel", "repair"]}}}}}}}}</script>
 <script id="economy" type="application/json">{"description": "M1's economy: fixed prices by port role (the Book: 'fixed prices that vary with the port's role'). A port trades the commodities its role lists, at the commodity's base price times its tier: low where the role makes it, high where the role needs it. Commodities are core rows in this order (at most 16). The player starts with credits and a debt to a lender.", "start": {"credits": 1500, "debt": 12000}, "tiers": {"low": 0.7, "medium": 1.0, "high": 1.4}, "commodities": [{"id": "food", "name": "Food", "base": 25}, {"id": "water", "name": "Water", "base": 12}, {"id": "ore", "name": "Ore", "base": 35}, {"id": "metals", "name": "Metals", "base": 80}, {"id": "fuel", "name": "Fuel", "base": 45}, {"id": "chemicals", "name": "Chemicals", "base": 65}, {"id": "alloys", "name": "Alloys", "base": 130}, {"id": "components", "name": "Components", "base": 170}, {"id": "goods", "name": "Consumer goods", "base": 110}, {"id": "medicine", "name": "Medicine", "base": 220}], "roles": {"mining": {"ore": "low", "fuel": "medium", "food": "high", "water": "high", "components": "high", "goods": "high", "medicine": "high"}, "ice": {"water": "low", "chemicals": "medium", "fuel": "medium", "food": "high", "components": "high", "goods": "high"}, "gas": {"fuel": "low", "chemicals": "low", "water": "medium", "food": "high", "components": "high", "goods": "medium"}, "refinery": {"metals": "low", "chemicals": "low", "fuel": "medium", "ore": "high", "water": "high", "food": "high", "components": "medium"}, "forge": {"alloys": "low", "components": "low", "fuel": "medium", "metals": "high", "chemicals": "high", "food": "high"}, "agri": {"food": "low", "water": "medium", "chemicals": "high", "components": "high", "goods": "high", "medicine": "medium"}, "habitat": {"goods": "low", "medicine": "medium", "food": "high", "water": "medium", "fuel": "medium", "metals": "medium", "components": "medium"}, "container-port": {"food": "medium", "water": "medium", "ore": "medium", "metals": "medium", "fuel": "medium", "chemicals": "medium", "alloys": "medium", "components": "medium", "goods": "medium", "medicine": "medium"}, "shipyard": {"fuel": "medium", "chemicals": "medium", "metals": "high", "alloys": "high", "components": "high", "goods": "medium", "food": "medium"}, "relay": {"food": "medium", "goods": "medium", "fuel": "medium", "medicine": "medium", "components": "high"}, "military": {"fuel": "medium", "alloys": "medium", "components": "medium", "food": "high", "medicine": "high"}, "research": {"medicine": "low", "chemicals": "high", "components": "high", "goods": "medium", "food": "medium"}, "haven": {"fuel": "medium", "food": "medium", "goods": "high", "medicine": "high", "alloys": "medium"}}}</script>
-<script id="traffic" type="application/json">{"description": "M1's ambient traffic: which hulls each culture flies in each traffic role (a catalog brand and size class), and each population tier's weight in the gravity model that sets the flows between ports. The Ironhulls (miners) fly Rustline hulls, the catalog's mining guild. Rates, shares and speeds are core params (core/src/world.rs).", "cultures": {"ironhulls": {"brand": "rustline", "roles": {"shuttle": "fighter", "hauler": "frigate", "liner": "cruiser"}}}, "population": {"outpost": 1, "colony": 3, "town": 10, "world": 30}}</script>
+<script id="traffic" type="application/json">{"description": "M1's ambient traffic: which hulls each culture flies in each traffic role (a catalog faction line and size class), and each population tier's weight in the gravity model that sets the flows between ports. The Ironhulls (miners) fly their civilian line: Tinhauls, Brasshauls and Ironhauls (classes I, III and IV). Rates, shares and speeds are core params (core/src/world.rs).", "cultures": {"ironhulls": {"brand": "ironhulls.civilian", "roles": {"shuttle": "c1", "hauler": "c3", "liner": "c4"}}}, "population": {"outpost": 1, "colony": 3, "town": 10, "world": 30}}</script>
 <script id="lore" type="application/json">{"system": "brannock", "history": ["Brannock was settled by miners who came for Cinder and stayed because the ore never ran out. The first crews lived in the hulls of the ships that brought them. When the hulls wore out, the crews bolted them to rock and called the result a habitat. Most of the hab rings in the system are still those first hulls, patched so often that nobody can say what is original.", "The rest followed the ore. Tugs hauled it out to Tallow, a grey moon of the gas giant Vast, and a refinery grew there. A yard went up in the girders of Kettle to turn the metal into ships. Halde, with its cold coast and its clouds, became the place where people raised children and spent their wages. It was the only world in the system where a person could walk outside without a suit or a sunscreen.", "The Ironhulls keep Brannock as a working system and have never made it much more. The Federation's navy passes through and takes its cut in inspections. Blackhulls drink in the docks and are not asked about their cargo. Prism's agents come for contracts and leave without friends. Nobody here calls this a golden age, but the lifts still run."], "culture": "People in Brannock measure each other by what they can fix. A good welder gets a drink bought for her, and a clean-handed visitor gets a look. They speak shortly, swear mildly, and tease newcomers with the old names, rusters and rockheads, until the newcomer answers in kind. Then the teasing stops. Outsiders are tolerated if they pay, and trusted if they turn up with the right part at the right time. Nothing is thrown away. A broken thing is a future patch, and a dead ship is a shopping list.", "artBible": {"palette": ["#c8661e", "#4a3a33", "#7a5a46", "#5e5953", "#1d4f7a", "#d8cba8"], "lighting": "Low orange starlight from a dim sun, and sodium lamps that turn every shadow brown. Welding arcs flash blue-white in the gloom. Refinery flares throw moving orange light across grey surfaces.", "architecture": "Modular boxes and drums welded to girders or bolted to bare rock. Hab rings are clamped onto cliffs and asteroids. Walkways are added wherever someone needed one, and ladders and cable runs cross every wall.", "materials": "Rust-streaked plate, weld seams left visible, riveted patches in mismatched greys and browns. Cable, chain, scored steel, stained concrete, and cracked sealant gone yellow.", "mood": "Tired, practical, and warm at the edges. It is a place where hard work is done and nobody is impressed by it.", "design": "Ironhull design is welded, modular, rusted and patched. Every structure has been repaired many times, and the repairs are never hidden. Sodium-lamp orange marks everything that is lit, and hab rings are bolted straight onto rock."}, "ports": [{"body": "cinder", "description": ["Cinder Deep is a mine and nothing else. The planet sits too close to its star, so the day side cooks, and the crews live and work on the night side. The shafts follow the ore into the rock, and the tunnels bend with the seams. They were never drawn up, only dug. The hab modules sit in the tunnel mouths like barnacles, their plating scorched at one end and frosted at the other.", "The ore goes up the lift to waiting tugs, and the tugs bring back what the crews cannot make. Food, water and spare parts come down, and so do consumer goods and medicine. Anyone who arrives with a hold full of those is welcome. Anyone who wants ore will find it cheap here, with no one making a fuss about it.", "The air smells of hot dust and machine oil. Nobody here is sentimental about the place, but they do not leave it either."], "places": [{"name": "The Lift Head", "text": "A gantry of black girders where the ore cars unload onto the tugs. It is the loudest place on the planet and the best place to find a hauler who needs a hand."}, {"name": "Shaft Nine Canteen", "text": "A long low room cut into the rock, with a cooling duct that rattles overhead. The coffee is bad, the water is rationed, and there is always someone asleep at a table."}, {"name": "Spares Cage", "text": "A wire-fronted store of salvaged parts, run by crews who will happily take your old pump in exchange for a worse one."}], "people": [{"id": "marit-vosk", "name": "Marit Vosk", "role": "shift boss, Shaft Four", "text": "She has worked the night-side seams since she was a girl and treats the dark as her own. She remembers every crew that left and every one that did not come back.", "line": "If you've brought water, sit down and I'll buy. If you haven't, sit down anyway, and you can explain yourself.", "look": "A woman in her fifties, broad and weathered, with a grey crop and soot worked into her knuckles. She wears a patched orange coverall with a heat-scorched collar and a lamp strapped to her forehead. A welded steel tag hangs from a bootlace around her neck."}, {"id": "dennick-ashe", "name": "Dennick Ashe", "role": "tug pilot", "text": "He flies ore from the lift head to the refinery and back. He knows the routes better than the charts do, and trusts neither.", "line": "Cinder's ore is the cheapest thing in the system. The food I bring down is the dearest, and nobody's complained yet.", "look": "A lean man in his thirties with a sunburned neck and sharp eyes, in a flight jacket with the sleeves cut off. A long burn scar runs up his left forearm. He keeps a cold pipe in his teeth."}, {"id": "oyelaran-pike", "name": "Oyelaran Pike", "role": "clinic orderly", "text": "He runs the only clinic on the night side, with a cabinet of medicine that is never quite full. He asks every pilot who comes in what they are carrying.", "line": "Medicine, if you've got it. Or water. Or a kind word, but I'd rather have the medicine.", "look": "A tall, stooped man in his sixties with dark skin, grey stubble and tired kind eyes. He wears a stained white apron over an orange coverall and has reading glasses pushed up into his hair."}], "rumors": ["They say the Blackhulls drop cargo at the far shafts when the Federation patrols come near, and nobody asks who collects it.", "A survey crew went down a dead shaft last year and came up quiet. Now the shaft is welded shut and nobody will say why.", "Prism sent a clean-suited man to look at the ore seams. He left in a hurry, and the crews are still arguing about why."], "vista": "A night-side field of black rock under a thin amber haze. Welded orange-lit hab modules cling to the tunnel mouths in the foreground, scorched at one end and frosted at the other. Ore cars run on rails toward a tall girder lift that rises into a dark sky. A faint orange glow along the horizon marks the day side and the unseen star."}, {"body": "halde", "description": ["Halde Landing is the only real town in Brannock. Terraces of habitat blocks step down a cold coast, each one welded to the last and painted whatever colour was left over. The landing field is cut into the cliffs above them. Under low cloud and a pale orange sun, the sea below is a hard blue, and the beaches are grey and cold.", "Most of the system's people live here, and most of its money changes hands in the market halls beside the field. Consumer goods are cheap in them and food is dear. The halls sell everything the mines and the yards cannot make: cloth, crockery, music, toys. The stall holders will tell you with a straight face that all of it was made locally.", "Evenings on the terraces are loud. Shift crews come in from the other worlds, the bars fill, and the lamps come on in sodium orange, one block after another down the cliff."], "places": [{"name": "The Market Halls", "text": "Long welded sheds beside the field, stacked with goods and crowded with bargaining. The roof leaks in three places and everyone knows which."}, {"name": "Cliff Stairs", "text": "A zigzag of steel steps between the landing field and the lowest terrace. Locals climb them without noticing. Visitors stop halfway."}, {"name": "The Cold Coast Bar", "text": "A long room bolted to the cliff edge, with a window that looks out over the grey sea. It is full from the end of the day shift until very late."}], "people": [{"id": "ines-calloway", "name": "Ines Calloway", "role": "market hall factor", "text": "She buys and sells for half the stalls in the halls. She says she is retired, and nobody believes her.", "line": "Food's dear this season and goods are cheap. Funny how it's always the other way round for the people who buy.", "look": "A woman in her forties, short and round, with bright eyes, dark curls tied in a scarf, and rings on every finger. She wears a quilted orange jacket patched at the elbows. A pencil is always behind her ear."}, {"id": "tobiah-rune", "name": "Tobiah Rune", "role": "dock inspector", "text": "He checks cargo on the field for the town council. He is honest, which makes him rare, and tired, which makes him polite.", "line": "I don't care what you carry, as long as it's what the manifest says it is. That's the whole job.", "look": "A man in his late fifties, thin and stooped, with a grey moustache and a weathered, careful face. He wears a council-issue coat in faded rust with a clipboard strapped to the forearm."}, {"id": "wren-adeyemi", "name": "Wren Adeyemi", "role": "ex-Freeflag deckhand", "text": "She left a rebel ship under circumstances she describes only as 'a disagreement about the food.' She now drinks quietly and listens a lot.", "line": "I've seen what the Federation does to a quiet system. Brannock's quiet. Enjoy it.", "look": "A woman in her late twenties, wiry, with close-cropped hair dyed a faded green and a sharp, watchful face. She wears a salvaged flight vest over a plain shirt. A torn strip of dark cloth is knotted around her wrist."}], "rumors": ["The Federation navy wants a permanent post on Halde. The council keeps losing the paperwork.", "A trader swears he saw a Glass relay beacon blinking out past the gas giant. Nobody else has.", "Someone in the market halls is selling goods with no stamp on them. The council pretends not to see it."], "vista": "A landing field cut into pale cliffs, its pad lights glowing orange against a cloudy sky of blue-grey and low gold. Terraces of welded habitat blocks step down toward a cold dark-blue sea, their lamps just coming on. The market halls are long rusted sheds at the field's edge. A slow orange sun sits low behind the cloud."}, {"body": "tallow", "description": ["Tallow is a small grey moon of Vast, and almost everything on it is a refinery. Tall towers burn off their waste in orange flares, and Vast hangs overhead, huge and banded, adding its own warm light. The domes are patched and re-patched, and the streets between them run with condensation. The light never quite gets to grey.", "Ore from Cinder comes in raw and leaves as metal, and the air in the dome tastes of it. Metals and chemicals are cheap here, and everything the refiners need to keep working is dear: ore, water, food. The crews have a habit of tallying what each pilot brings in without saying it aloud.", "It is a small colony, close-knit and short-tempered. The work is hot, loud and dull, and the people accept that. Visitors are fine so long as they do not stand in the way of a ladle."], "places": [{"name": "The Casting Floor", "text": "A vast shed where molten metal is poured into moulds. It is hot and deafening, and the whole colony gathers to watch when the big pours begin."}, {"name": "Flare Street", "text": "The main way through the dome, lit all night by the orange of the burn-offs. Stalls selling hot food and bad coffee line both sides."}, {"name": "Vast Watch", "text": "A patched observation blister on the dome's top, where off-shift workers sit and look at the gas giant. Someone has painted a small arrow on the floor: 'You are here.'"}], "people": [{"id": "hollis-brandt", "name": "Hollis Brandt", "role": "refinery foreman", "text": "He has run the main stack for longer than most of the crew has been alive. He says he will retire when the refinery does.", "line": "Bring ore and water and I'll talk all day. Bring neither and I've got a stack to mind.", "look": "A heavy man in his sixties with a bald head, a grey beard stained at the edges, and deep lines around his eyes. He wears a heat-blackened apron over a patched orange coverall, and his left glove is welded at the cuff."}, {"id": "sadie-quill", "name": "Sadie Quill", "role": "chemical assayer", "text": "She tests every batch that leaves the moon and refuses to sign off on a bad one. Her stamp is respected from Cinder to Kettle.", "line": "Don't ask me whether it's good. Ask me whether it's good enough, and I'll tell you honestly.", "look": "A narrow woman in her thirties with sharp features, dark hair under a respirator hood, and ink-stained fingers. She wears a stained white lab coat over orange work trousers and keeps a row of vials clipped to her belt."}], "rumors": ["The Bloom has been seen, they say, far out past Vast. No one on Tallow will say it aloud, but the night crews keep a lamp lit.", "Prism offered the refinery a new process and the foreman threw the offer into a smelter.", "A Blackhull ship came in with a hold of nothing and left with a hold of metal. The tally sheet disagrees with itself."], "vista": "A grey cratered moonscape under a huge banded sky of cream and brown, where Vast fills a third of the heavens. Refinery towers rise from the dome complex, their flares throwing orange light on rust-streaked plating and wet grey rock. The landing field is a flat of scorched concrete with welded pipe-racks and cable runs across it."}, {"body": "kettle", "description": ["Kettle Yard is a cradle of girders, and the Ironhulls build and patch their hulls inside it. The station is welded together from whatever the last yards left behind: old gantries, scrapped ring sections, a crane arm from some forgotten dock. It has never been finished, and nobody expects it to be.", "Metal comes in from Tallow, and ships go out. The yard pays well for metals, alloys and components, since a hull is only as good as its stock. It has little to say about water or medicine, which it does not trade. Everything else passes through, one way or another.", "Arcs flash all through the cradle, and the sound of hammering carries even through the corridors. It is an honest place. A ship built here may be ugly, but it will hold."], "places": [{"name": "The Cradle", "text": "The great open frame where hulls are built. Half-finished ships hang in it like ribs, with welders crawling over them on tethers."}, {"name": "Scrap Hall", "text": "A long gallery of salvaged plate, tubing and frame, sorted by weight and rust. The yard hands buy from it by eye."}, {"name": "The Tether", "text": "A bar on the cradle's rim, named for the safety line the welders clip on before they come in. Nobody has ever stopped doing it."}], "people": [{"id": "gideon-marsh", "name": "Gideon Marsh", "role": "master welder", "text": "He has laid seams on half the hulls that fly out of Brannock. He can tell a Kettle weld from across a dock.", "line": "Pretty doesn't hold, friend. Ugly holds. Look at the seam, not the paint.", "look": "A stocky man in his fifties with a shaved head, a broken nose, and forearms scarred by sparks. He wears a leather-patched orange apron and a flip-up welder's visor pushed back on his head."}, {"id": "petra-lindqvist", "name": "Petra Lindqvist", "role": "yard purser", "text": "She tracks every plate and bolt that enters the cradle. She is small and brisk, and she is never wrong about the stock.", "line": "You want a refit? Tell me what you've got first. Then we'll discuss what you want.", "look": "A slight woman in her forties with straight black hair in a tight knot, tired eyes, and quick hands. She wears a patched coverall in faded orange with a tablet strapped to her wrist and a pencil through her hair."}, {"id": "joss-harker", "name": "Joss Harker", "role": "Blackhull go-between", "text": "He sits in the corner of The Tether and arranges things. He is polite, and nobody has ever seen him pay for a drink.", "line": "Plenty of work out there for a pilot who doesn't ask the wrong questions. I can point you at some.", "look": "A lean man in his thirties with a narrow smile, slicked dark hair, and a coat too clean for the station. A thin black band is stitched into his sleeve, and he turns a steel washer over and over in his fingers."}], "rumors": ["They say a new hull is under way in the deepest part of the cradle, and the yard hands who work on it do not talk at the bar.", "The Federation wanted to inspect the yard's books. Petra Lindqvist gave them very thorough books indeed.", "A Freeflag cutter limped in last month with its hull cut open, and left again before anyone had finished the welding."], "vista": "A great open cradle of rusted girders, with half-built hulls hanging in the frame and welding arcs flashing blue-white across them. Sodium lamps wash the plating orange. Beyond the open dock, a dim orange star burns low and the scorched curve of Cinder hangs in the dark. Docking arms and patched gantries cross the foreground."}]}</script>
 <script id="lore-schema" type="application/json">{"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://driftward.game/schema/lore.schema.json", "title": "Driftward system lore", "description": "The words and the art direction for one star system, written by an LLM from the system's sim facts (tools/gen-content.js) and clamped by src/schema.js before use. Lore holds no numbers the sim uses: it narrates, and the system file, the economy and the core decide. Each port entry names its body by the system file's body id.", "type": "object", "required": ["system", "history", "culture", "artBible", "ports"], "properties": {"system": {"description": "The system file's id.", "type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "history": {"description": "How the system was settled and what has happened here since: one to three paragraphs.", "type": "array", "minItems": 1, "maxItems": 3, "items": {"type": "string", "minLength": 1, "maxLength": 900}}, "culture": {"description": "How people here live, talk and see outsiders: one paragraph.", "type": "string", "minLength": 1, "maxLength": 900}, "artBible": {"description": "The system's look, included in every image prompt so its vistas and portraits agree (the Book's Art chapter).", "type": "object", "required": ["palette", "lighting", "architecture", "materials", "mood", "design"], "properties": {"palette": {"description": "Three to six key colours, lowercase hex.", "type": "array", "minItems": 3, "maxItems": 6, "items": {"type": "string", "pattern": "^#[0-9a-f]{6}$"}}, "lighting": {"type": "string", "minLength": 1, "maxLength": 400}, "architecture": {"type": "string", "minLength": 1, "maxLength": 400}, "materials": {"type": "string", "minLength": 1, "maxLength": 400}, "mood": {"type": "string", "minLength": 1, "maxLength": 400}, "design": {"description": "The owning faction's design language, as it shows here.", "type": "string", "minLength": 1, "maxLength": 400}}}, "ports": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "object", "required": ["body", "description", "places", "people", "rumors", "vista"], "properties": {"body": {"description": "The system file's id of the body the port is on.", "type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "description": {"description": "Two or three paragraphs shown on the port screen.", "type": "array", "minItems": 2, "maxItems": 3, "items": {"type": "string", "minLength": 1, "maxLength": 900}}, "places": {"description": "Notable places at the port.", "type": "array", "minItems": 2, "maxItems": 4, "items": {"type": "object", "required": ["name", "text"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "text": {"type": "string", "minLength": 1, "maxLength": 300}}}}, "people": {"description": "Named people you can meet in the port's bar; each gets a portrait.", "type": "array", "minItems": 2, "maxItems": 4, "items": {"type": "object", "required": ["id", "name", "role", "text", "line", "look"], "properties": {"id": {"description": "Unique within the system; names the portrait file.", "type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "role": {"description": "What they do, in a few words.", "type": "string", "minLength": 1, "maxLength": 60}, "text": {"description": "Who they are.", "type": "string", "minLength": 1, "maxLength": 400}, "line": {"description": "What they say to a pilot who sits down near them.", "type": "string", "minLength": 1, "maxLength": 240}, "look": {"description": "Their appearance, for the portrait prompt: face, age, build, clothes, one telling detail.", "type": "string", "minLength": 1, "maxLength": 400}}}}, "rumors": {"description": "What pilots say in the bar. Colour only: a rumor promises no mechanic.", "type": "array", "minItems": 2, "maxItems": 4, "items": {"type": "string", "minLength": 1, "maxLength": 300}}, "vista": {"description": "The painted view of the port for the image prompt: what stands where, seen from the landing field or dock, with the sky.", "type": "string", "minLength": 1, "maxLength": 700}}}}}}</script>
 <script id="art" type="application/json">{"vistas": {"cinder": "art/brannock/vista-cinder.webp", "halde": "art/brannock/vista-halde.webp", "kettle": "art/brannock/vista-kettle.webp", "tallow": "art/brannock/vista-tallow.webp"}, "portraits": {"dennick-ashe": "art/brannock/portrait-dennick-ashe.webp", "gideon-marsh": "art/brannock/portrait-gideon-marsh.webp", "hollis-brandt": "art/brannock/portrait-hollis-brandt.webp", "ines-calloway": "art/brannock/portrait-ines-calloway.webp", "joss-harker": "art/brannock/portrait-joss-harker.webp", "marit-vosk": "art/brannock/portrait-marit-vosk.webp", "oyelaran-pike": "art/brannock/portrait-oyelaran-pike.webp", "petra-lindqvist": "art/brannock/portrait-petra-lindqvist.webp", "sadie-quill": "art/brannock/portrait-sadie-quill.webp", "tobiah-rune": "art/brannock/portrait-tobiah-rune.webp", "wren-adeyemi": "art/brannock/portrait-wren-adeyemi.webp"}}</script>
@@ -2445,14 +3120,23 @@ function finOutline(span, root, tip, sweep, curve, rootIn) {
 }
 
 // ---------- assembly ----------
+// Two random streams: the hull (core, plates, wings, fins, nacelles, engines, rings, bridge) is drawn from one seeded
+// by the line's hull key, the outfit (pods, weapons) from one seeded by the line itself. Lines that share hulls
+// (catalog: hullFrom) share the hull key and the hull loadout, so the same seed gives the same vessel in each,
+// outfitted differently. Outfit parts are numbered apart from hull parts, so hull detail noise matches too.
+const OUTFIT_ROLES = new Set(['pod', 'weapon', 'barrel', 'cargo']);
 function assemble(brand, size, seed, sizeIdx) {
-  const r = rng32(hashStr(brand.id + '|' + size.id + '|' + seed));
+  const hullKey = brand.hullKey || brand.id;
+  const rh = rng32(hashStr(hullKey + '|' + size.id + '|' + seed)), ro = rng32(hashStr(brand.id + '|outfit|' + size.id + '|' + seed));
+  let r = rh, outfit = false;
+  const stream = o => { outfit = o; r = o ? ro : rh; };
   const st = brand.style, L = size.length;
   const q = st.angleQuant || 0;
   const quant = a => (q ? Math.round(a / q) * q : a);
   const load = brand.loadout[size.id] || {};
   const parts = [];
-  let uid = 0;
+  let uid = 0, ouid = 10000;
+  const nextId = () => outfit ? ouid++ : uid++;
 
   function pick(role, ids) {
     const list = brand.parts.filter(p => p.role === role && (!ids || ids.includes(p.id)));
@@ -2462,9 +3146,9 @@ function assemble(brand, size, seed, sizeIdx) {
     return list[list.length - 1];
   }
   function mk(tmpl, prim, a, x, y, ang, z, H, extra) {
-    return Object.assign({ id: uid++, tmpl: tmpl ? tmpl.id : null, prim, a, x, y, ang, z, H, prof: (tmpl && tmpl.prof) || st.bevel, role: tmpl ? tmpl.role : 'core', flip: false, paint: 0, det: {}, em: null }, extra || {});
+    return Object.assign({ id: nextId(), tmpl: tmpl ? tmpl.id : null, prim, a, x, y, ang, z, H, prof: (tmpl && tmpl.prof) || st.bevel, role: tmpl ? tmpl.role : 'core', flip: false, paint: 0, det: {}, em: null }, extra || {});
   }
-  function mirror(p) { return Object.assign({}, p, { id: uid++, x: -p.x, ang: -p.ang, flip: !p.flip, a: Object.assign({}, p.a), det: Object.assign({}, p.det) }); }
+  function mirror(p) { return Object.assign({}, p, { id: nextId(), x: -p.x, ang: -p.ang, flip: !p.flip, a: Object.assign({}, p.a), det: Object.assign({}, p.det) }); }
   function driftCopy(p) {
     const d = st.drift || 0; if (!d) return p;
     const a = Object.assign({}, p.a);
@@ -2618,7 +3302,8 @@ function assemble(brand, size, seed, sizeIdx) {
     }
   }
 
-  // --- pods ---
+  // --- pods (outfit) ---
+  stream(true);
   const nPod = count(load.pod, r);
   const podT = pick('pod');
   if (podT && nPod > 0) {
@@ -2634,7 +3319,27 @@ function assemble(brand, size, seed, sizeIdx) {
     }
   }
 
+  // --- cargo (outfit): rows of shipping containers down both sides of the spine, each its own colour (container
+  // ships). A cargo template: w and len (container half-size, fractions of L), across (columns a side), from/to
+  // (the run along the core, 0 aft to 1 fore), fill (chance a slot is taken), stack (chance of a second tier),
+  // z and H (core heights); colours from the style's palette.cargo, else the shipping-line set.
+  const nAcross = count(load.cargo, r), cgT = pick('cargo');
+  if (cgT && nAcross > 0) {
+    const cols = st.palette.cargo || CONTAINER_COLS, cw = sample(cgT.w, r) * L, cl = sample(cgT.len, r) * L;
+    const z = (cgT.z || 0) * coreH, H = (cgT.H || 0.6) * coreH, ya = core.y0 + core.len * (cgT.from == null ? 0.12 : cgT.from), yb = core.y0 + core.len * (cgT.to == null ? 0.8 : cgT.to);
+    for (let y = ya + cl; y <= yb - cl; y += cl * 2.15) {
+      const x0 = core.hwAt(y);
+      for (const side of [-1, 1]) for (let i = 0; i < nAcross; i++) {
+        if (r() > (cgT.fill == null ? 0.92 : cgT.fill)) continue;
+        const tiers = r() < (cgT.stack || 0) ? 2 : 1;
+        for (let k = 0; k < tiers; k++) parts.push(mk(cgT, 'rbox', { hw: cw, hl: cl, rad: cw * 0.08 }, side * (x0 + cw * (1.08 + i * 2.2)), y, 0, z + k * H * 0.85, H,
+          { paint: -1, colOverride: cols[Math.floor(r() * cols.length)], det: { container: true }, prof: 'chamfer' }));
+      }
+    }
+  }
+
   // --- rings ---
+  stream(false);
   const nRing = count(load.ring, r);
   for (let i = 0; i < nRing; i++) {
     const t = pick('ring'); if (!t) break;
@@ -2643,7 +3348,8 @@ function assemble(brand, size, seed, sizeIdx) {
     parts.push(mk(t, 'ring', { R, t: sample(t.t, r) * L, gap: sample(t.gap, r) }, 0, y, r() < 0.5 ? 0 : 180, t.z * coreH, t.H * coreH, { paint: paintOf(t, 'ring') }));
   }
 
-  // --- weapons ---
+  // --- weapons (outfit) ---
+  stream(true);
   const nW = count(load.weapon, r);
   const wt = pick('weapon');
   function weapon(x, y) {
@@ -2676,6 +3382,7 @@ function assemble(brand, size, seed, sizeIdx) {
   }
 
   // --- bridge / cockpit ---
+  stream(false);
   if (count(load.bridge, r) > 0) {
     const t = pick('bridge');
     if (t) {
@@ -2695,6 +3402,7 @@ function assemble(brand, size, seed, sizeIdx) {
   const pj = (st.posJitter || 0) * L, aj = st.angJitter || 0;
   const D = st.detail || {};
   for (const p of parts) {
+    stream(OUTFIT_ROLES.has(p.role));
     if (p.role !== 'core') { p.x += (r() * 2 - 1) * pj; p.y += (r() * 2 - 1) * pj; p.ang += (r() * 2 - 1) * aj; }
     const structural = ['core', 'hull', 'wing', 'pod', 'nacelle', 'fin', 'ring', 'strut', 'bridge'].includes(p.role);
     if (structural && p.paint !== -2) p.det.panel = true;
@@ -2705,14 +3413,16 @@ function assemble(brand, size, seed, sizeIdx) {
     if ((D.rivets || 0) > 0 && structural) p.det.rivets = true;
     if ((D.stripes || 0) > 0 && brand.style.symmetry < 1 && ['pod', 'bridge', 'hull'].includes(p.role) && r() < D.stripes * 0.5) p.det.hazard = true;
     if ((D.veins || 0) > 0 && ['core', 'hull', 'pod', 'nacelle'].includes(p.role)) p.det.veins = true;
-    p.seedI = hashStr(brand.id + seed + ':' + p.id) & 0xffff;
+    p.seedI = hashStr(hullKey + seed + ':' + p.id) & 0xffff;
   }
+  stream(false);
 
-  // --- metrics, recenter ---
+  // --- metrics, recenter (on the hull alone, so a shared hull sits the same in every line) ---
   let bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9;
   for (const p of parts) {
     const m = partMetrics(p); p.inR = Math.max(m.inR, 1e-3); p.hl = m.hl; p.rad = m.rad;
     const bw = (st.bevelW || 0.3) * p.inR; p.bw = Math.max(bw, 0.02);
+    if (OUTFIT_ROLES.has(p.role)) continue;
     bx0 = Math.min(bx0, p.x - p.rad); bx1 = Math.max(bx1, p.x + p.rad);
     by0 = Math.min(by0, p.y - p.rad); by1 = Math.max(by1, p.y + p.rad);
   }
@@ -3389,15 +4099,65 @@ function assembleStation(arch, brand, seed) {
   return { brand: brand.id, size: 'station', seed, L, coreH: H0, coreTemplate: arch.id, parts, detailScale: arch.detailScale || 5, noShield: true };
 }
 
+// ---------- catalog: factions and lines ----------
+// The catalog lists factions (the Book's Ships chapter): each has a style (palette, materials, plume, shield, detail,
+// flight), part templates, a core and loadout per size class, and lines. A line names its classes (series) and
+// overrides what differs: a style patch, extra parts, loadout entries, flight multipliers (cargo among them), and
+// optionally hullFrom, another line whose hulls it shares. A unique line is one special hull (a container ship),
+// built only in the classes it lists. resolveCatalog turns each line into a brand: the
+// self-contained grammar everything downstream (assemble, bake, the pages) works from, id "faction.line".
+function deepMerge(a, b) {
+  if (b === undefined) return a;
+  if (typeof a !== 'object' || a === null || Array.isArray(a) || typeof b !== 'object' || b === null || Array.isArray(b)) return b;
+  const out = Object.assign({}, a);
+  for (const k of Object.keys(b)) out[k] = deepMerge(a[k], b[k]);
+  return out;
+}
+function resolveCatalog(raw) {
+  if (!raw.factions) return raw; // already resolved (a worker gets the resolved catalog)
+  const brands = [];
+  for (const f of raw.factions) {
+    const lines = f.lines || [];
+    const loadOf = l => {
+      const out = {};
+      for (const z of raw.sizes) out[z.id] = Object.assign({}, (f.loadout || {})[z.id], ((l && l.loadout) || {})[z.id]);
+      return out;
+    };
+    for (const l of lines) {
+      const style = deepMerge(JSON.parse(JSON.stringify(f.style)), l.style);
+      const flight = Object.assign({}, f.style.flight || {});
+      for (const [k, v] of Object.entries(l.flight || {})) flight[k] = (flight[k] == null ? 1 : flight[k]) * v;
+      style.flight = flight;
+      const drop = new Set(l.drop || []);
+      const parts = f.parts.filter(p => !drop.has(p.id)).concat(l.parts || []);
+      let loadout = loadOf(l);
+      const base = l.hullFrom && lines.find(x => x.id === l.hullFrom);
+      if (base) { // a shared hull: the hull roles' counts are the base line's; only the outfit roles are this line's
+        const bl = loadOf(base);
+        for (const z of raw.sizes) for (const role of Object.keys(bl[z.id])) if (!OUTFIT_ROLES.has(role)) loadout[z.id][role] = bl[z.id][role];
+      }
+      brands.push({
+        id: f.id + '.' + l.id, faction: f.id, factionName: f.name, line: l.id, lineName: l.name,
+        name: f.name.replace(/^The /, '') + ' ' + l.name.toLowerCase(), kind: f.role, blurb: l.blurb || '', design: f.design,
+        series: l.series || raw.sizes.map(z => z.name), seeds: l.seeds || null, classes: l.classes || null, unique: !!l.unique, hullKey: f.id + '.' + (base ? base.id : l.id),
+        style, parts, core: Object.assign({}, f.core, base && base.core, l.core), loadout
+      });
+    }
+  }
+  return Object.assign({}, raw, { brands, factions: undefined });
+}
+// a brand by id, or a faction id (its first line: what stations and other faction-owned assets are built in)
+function brandOf(catalog, id) { return catalog.brands.find(b => b.id === id) || catalog.brands.find(b => b.faction === id); }
+
 function generateStation(catalog, archId, brandId, seed) {
-  const arch = [...catalog.stations, ...(catalog.heavies || [])].find(a => a.id === archId), brand = catalog.brands.find(b => b.id === brandId);
+  const arch = [...catalog.stations, ...(catalog.heavies || [])].find(a => a.id === archId), brand = brandOf(catalog, brandId);
   const ship = assembleStation(arch, brand, seed);
   const maps = bake(ship, brand, { res: arch.res || 768, length: ship.L });
   return { ship, maps };
 }
 
 function generate(catalog, brandId, sizeId, seed) {
-  const brand = catalog.brands.find(b => b.id === brandId);
+  const brand = brandOf(catalog, brandId);
   const sizeIdx = catalog.sizes.findIndex(s => s.id === sizeId);
   const size = catalog.sizes[sizeIdx];
   const ship = assemble(brand, size, seed, sizeIdx);
@@ -3418,7 +4178,7 @@ function describe(ship) {
   };
 }
 
-const api = { generate, generateStation, assemble, assembleStation, bake, describe, hexRGB };
+const api = { generate, generateStation, assemble, assembleStation, bake, describe, hexRGB, resolveCatalog, brandOf };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ShipGen = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -3757,7 +4517,7 @@ void main(){ vQ=aPos; float c=cos(iA.z), s=sin(iA.z);
 const FLY_PLUME_VS = `#version 300 es
 in vec2 aPos; in vec4 iN; in vec4 iP; in vec2 iB;
 ${WORLD_POS}
-uniform vec3 uPlCol[5]; uniform vec3 uPlCore[5]; uniform vec4 uPlP[5]; uniform float uPlSpread[5]; uniform vec3 uPlBurn[5]; // 4 brands + thruster gas
+uniform vec3 uPlCol[17]; uniform vec3 uPlCore[17]; uniform vec4 uPlP[17]; uniform float uPlSpread[17]; uniform vec3 uPlBurn[17]; // up to 16 brands (faction lines) + thruster gas
 out vec2 vST; flat out vec3 vCol; flat out vec3 vCore; flat out vec4 vP; flat out float vSeed; flat out float vPow;
 void main(){
   int b = int(iB.x+.5);
@@ -4439,6 +5199,8 @@ if (typeof module !== 'undefined') module.exports = { clampToSchema, loadSystem,
 //            out, the art bible and the parts every image prompt shares); one card per port with its body, its
 //            lore and its art, each image showing only its own part of the prompt; then the raw files.
 //   Player   the live state: ship and its stats, flight, money, the hold priced at every port, missions.
+//   Ships    every faction line's hulls in every class, drawn behind the tab by the shipyard (src/play/shipyard.js)
+//            with plumes and shields: click a hull for a new seed, shift-click for the one before.
 // tools/gen-content.js records how content was made; the build inlines the records. Everything here is read-only.
 function makeDebug(ctx) {
   const { el, raw, loaded, econ, lore, art, log } = ctx;
@@ -4567,7 +5329,55 @@ function makeDebug(ctx) {
     return sections(S);
   }
 
-  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }];
+  // ---------- Ships: a grid of cells the shipyard draws hulls behind; the pane is see-through ----------
+  let yard = null;
+  const yardOpts = { throttle: 0.7, shields: true, trueScale: false, hover: null };
+  const cargoOf = (B, z) => Math.round(((z.flight || {}).cargo || 0) * (B.style.flight.cargo == null ? 1 : B.style.flight.cargo));
+  const shipLabel = (B, z, i) => `<b>${e(B.series[i])}</b><small>${e(z.name)} · ${z.length} m · ${cargoOf(B, z)} t</small><small class="seed">seed ${e(yard.seedOf(B.id, z.id))}${yard.picked(B.id, z.id) ? ' · picked' : ''}<span class="st"></span></small>`;
+  function ships() {
+    if (!yard) return '<p class="dbg-note">The shipyard starts with the game.</p>';
+    const C = yard.catalog;
+    return `<div class="dbg-yard"><div class="dbg-yard-bar">`
+      + `<label>Throttle <input type="range" id="yd-thr" min="0" max="1" step="0.05" value="${yardOpts.throttle}"></label>`
+      + `<label><input type="checkbox" id="yd-sh"${yardOpts.shields ? ' checked' : ''}> Shields</label>`
+      + `<label><input type="checkbox" id="yd-ts"${yardOpts.trueScale ? ' checked' : ''}> True scale</label>`
+      + `<button type="button" id="yd-copy">Copy picks</button><button type="button" id="yd-reset">Reset picks</button>`
+      + `<span class="hint">Click a hull for a new seed · shift-click for the one before · picks are kept in this browser and used by the game's ships</span></div>`
+      + `<div class="dbg-yard-grid" style="grid-template-columns: 220px repeat(${C.sizes.length}, minmax(0, 1fr))"><div></div>`
+      + C.sizes.map(z => `<div class="dbg-yard-col"><b>${e(z.name)}</b><small>${z.length} m</small></div>`).join('')
+      + C.brands.map(B => `<div class="dbg-yard-row"><b>${e(B.factionName)}</b><span>${e(B.lineName)}${B.unique ? ' · unnamed' : ''}</span><small>${e(B.blurb)}</small></div>`
+        + C.sizes.map((z, i) => B.classes && !B.classes.includes(z.id) ? '<div></div>' : `<div class="dbg-ship" data-b="${e(B.id)}" data-z="${e(z.id)}" title="${e(B.series[i])}: click for a new seed, shift-click for the one before"><div class="lbl">${shipLabel(B, z, i)}</div></div>`).join('')).join('')
+      + `</div></div>`;
+  }
+  function mountShips(pane) {
+    if (!yard) return;
+    yard.bakeAll();
+    const relabel = el => { const B = yard.catalog.brands.find(x => x.id === el.dataset.b), i = yard.catalog.sizes.findIndex(z => z.id === el.dataset.z); el.querySelector('.lbl').innerHTML = shipLabel(B, yard.catalog.sizes[i], i); };
+    pane.querySelectorAll('.dbg-ship').forEach(el => {
+      el.onclick = ev => { if (ev.shiftKey) yard.back(el.dataset.b, el.dataset.z); else yard.reroll(el.dataset.b, el.dataset.z); pane.querySelectorAll('.dbg-ship').forEach(relabel); }; // a shared hull's other line changes too
+      el.onmouseenter = () => { yardOpts.hover = el; }; el.onmouseleave = () => { if (yardOpts.hover === el) yardOpts.hover = null; };
+    });
+    pane.querySelector('#yd-thr').oninput = ev => { yardOpts.throttle = +ev.target.value; };
+    pane.querySelector('#yd-sh').onchange = ev => { yardOpts.shields = ev.target.checked; };
+    pane.querySelector('#yd-ts').onchange = ev => { yardOpts.trueScale = ev.target.checked; };
+    pane.querySelector('#yd-copy').onclick = ev => {
+      const txt = JSON.stringify(yard.exportPicks(), null, 1);
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { ev.target.textContent = 'Copied'; }, () => { window.prompt('Picks (a line\'s seeds, for the catalog):', txt); });
+      setTimeout(() => { ev.target.textContent = 'Copy picks'; }, 1500);
+    };
+    pane.querySelector('#yd-reset').onclick = () => { if (confirm('Forget every picked seed in this browser?')) { yard.reset(); pane.querySelectorAll('.dbg-ship').forEach(relabel); } };
+  }
+  // the cells on show and their options, for the game's frame to draw (null unless the Ships tab is up)
+  function yardView() {
+    if (el.hidden || tab !== 'ships' || !yard) return null;
+    const cells = [...el.querySelectorAll('.dbg-ship')].map(c => ({ el: c, b: c.dataset.b, z: c.dataset.z }));
+    for (const c of cells) { const st = c.el.querySelector('.st'), s = yard.status(c.b, c.z); if (st) st.textContent = s === 'ready' ? '' : ' · ' + s; }
+    const bar = el.querySelector('.dbg-yard-bar');
+    yardOpts.clipTop = bar ? bar.getBoundingClientRect().bottom : 0;
+    return { cells, opts: yardOpts };
+  }
+
+  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }];
   let tab = TABS[0].id;
   const cache = new Map();
   function show(id) {
@@ -4576,6 +5386,8 @@ function makeDebug(ctx) {
     const T = TABS.find(t => t.id === id), pane = el.querySelector('.dbg-pane');
     if (!T.fixed || !cache.has(id)) cache.set(id, T.render()); // content is static: rendered once; live tabs every time
     pane.innerHTML = cache.get(id);
+    document.body.classList.toggle('dbg-clear', !!T.clear); // see-through: the game's canvas draws behind this tab, the rest of the page hides
+    if (T.mount) T.mount(pane);
     // section links scroll the pane, not the page's hash
     pane.querySelectorAll('.dbg-nav a').forEach(a => { a.onclick = ev => { ev.preventDefault(); pane.querySelector(a.getAttribute('href')).scrollIntoView({ block: 'start' }); }; });
   }
@@ -4583,9 +5395,140 @@ function makeDebug(ctx) {
   return {
     isOpen: () => !el.hidden,
     open() { show(tab); el.hidden = false; },
-    close() { el.hidden = true; },
-    setLive(fn) { live = fn; } // the Player tab's source, bound once the core has loaded
+    close() { el.hidden = true; document.body.classList.remove('dbg-clear'); },
+    setLive(fn) { live = fn; }, // the Player tab's source, bound once the core has loaded
+    setYard(y) { yard = y; },
+    yardView
   };
+}
+
+// ======================= SHIPYARD =======================
+// Every faction line's hulls in every size class, for the debug screen's Ships tab: drawn into the game's GL canvas
+// behind the tab's grid of cells, with plumes and shields, lit by a fixed sun (the lab's Yard, ported). Each hull's
+// seed is picked here: a click rerolls one, shift-click steps back through the ones it had. Picks are kept in this
+// browser and used by the game's own ships too; "Copy picks" exports them for the catalog (a line's `seeds`).
+function makeShipyard(o) {
+  const { gl, P, draw, baker, catalog } = o;
+  const STORE = 'driftward.shipSeeds', BASE_SEED = 'play-1';
+  const picks = (() => { try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { return {}; } })();
+  const history = new Map(); // hull|size -> earlier seeds, newest last
+  // picks belong to the hull: lines that share hulls (the Ironhulls' refits) share their picks, so a pair stays one vessel
+  const hullOf = b => { const B = catalog.brands.find(x => x.id === b); return (B && B.hullKey) || b; };
+  const k = (b, z) => hullOf(b) + '|' + z;
+  const zi = z => catalog.sizes.findIndex(s => s.id === z);
+  // a hull's seed: this browser's pick, else the catalog's (a line's seeds, one per class), else the base seed
+  function catalogSeed(b, z) { const B = catalog.brands.find(x => x.id === b); return (B && B.seeds && B.seeds[zi(z)]) || BASE_SEED; }
+  const seedOf = (b, z) => picks[k(b, z)] || catalogSeed(b, z);
+  const save = () => localStorage.setItem(STORE, JSON.stringify(picks));
+  const keyOf = (b, z) => 'yard|' + b + '|' + z;
+  function bake1(b, z, front) { const seed = seedOf(b, z); baker.enqueue(keyOf(b, z), front, { brand: b, size: z, seed }); baker.ships.get(keyOf(b, z)).seed = seed; }
+  // rebake a hull in every line that shares it
+  function bake(b, z, front) { for (const B of catalog.brands) if (hullOf(B.id) === hullOf(b) && builds(B, z)) bake1(B.id, z, front); baker.pump(); }
+  function setSeed(b, z, seed, remember) {
+    if (remember) { const h = history.get(k(b, z)) || []; h.push(seedOf(b, z)); history.set(k(b, z), h.slice(-20)); }
+    if (seed === catalogSeed(b, z)) delete picks[k(b, z)]; else picks[k(b, z)] = seed;
+    save(); bake(b, z, true);
+  }
+  const reroll = (b, z) => setSeed(b, z, Math.random().toString(36).slice(2, 8), true);
+  function back(b, z) { const h = history.get(k(b, z)); if (h && h.length) setSeed(b, z, h.pop(), false); }
+  const reset = () => { for (const key of Object.keys(picks)) delete picks[key]; save(); history.clear(); bakeAll(); };
+  const builds = (B, z) => !B.classes || B.classes.includes(z); // a unique line builds only its own classes
+  function bakeAll() { for (const B of catalog.brands) for (const z of catalog.sizes) { if (!builds(B, z.id)) continue; const s = baker.ships.get(keyOf(B.id, z.id)); if (!s || s.seed !== seedOf(B.id, z.id)) bake1(B.id, z.id, false); } baker.pump(); }
+  // the picks as catalog entries: for each line with a pick, its five seeds
+  function exportPicks() {
+    const out = {};
+    for (const B of catalog.brands) if (catalog.sizes.some(z => picks[k(B.id, z.id)])) out[B.id] = catalog.sizes.map(z => builds(B, z.id) ? seedOf(B.id, z.id) : null);
+    return out;
+  }
+  const status = (b, z) => { const s = baker.ships.get(keyOf(b, z)); return !s ? 'queued' : s.error ? 'failed: ' + s.error : s.pending ? 'baking' : 'ready'; };
+
+  // ---------- drawing: each visible cell's hull, at the cell's place on screen (device px, y up) ----------
+  const rot = (a, x, y) => [Math.cos(a) * x - Math.sin(a) * y, Math.sin(a) * x + Math.cos(a) * y];
+  const sun = (() => { const az = 135 * Math.PI / 180, el = 35 * Math.PI / 180; return [Math.cos(az) * Math.cos(el), Math.sin(az) * Math.cos(el), Math.sin(el)]; })();
+  const STAR = STARS.sol, sunCol = lin(STAR.col);
+  const HU = new Float32Array(32).map((v, i) => i % 4 === 2 ? -1 : 0), NOL = new Float32Array(64);
+  // cells: [{ el, b, z }]; opts: { throttle, shields, trueScale, hover }
+  function render(t, cells, opts) {
+    const canvas = gl.canvas, RW = canvas.width, RH = canvas.height, dpr = RW / canvas.clientWidth;
+    const vis = [];
+    let maxExt = 1;
+    for (const c of cells) {
+      const s = baker.ships.get(keyOf(c.b, c.z));
+      if (s && s.ready) maxExt = Math.max(maxExt, s.maps.extent);
+    }
+    for (const c of cells) {
+      const s = baker.ships.get(keyOf(c.b, c.z)); if (!s || !s.ready || !s.tex) continue;
+      const r = c.el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > canvas.clientHeight || r.width < 4) continue;
+      // the hull in the cell above its label, leaving room aft for the plume
+      const B = catalog.brands.find(x => x.id === c.b), box = Math.min(r.width, r.height - 40);
+      const half = (opts.trueScale ? s.maps.extent / maxExt : 1) * box * 0.36;
+      vis.push({ c, s, B, br: brandRender(B), hd: half * dpr, cx: (r.left + r.width / 2) * dpr, cy: (canvas.clientHeight - (r.top + box * 0.42)) * dpr, ang: 0 });
+    }
+    gl.bindVertexArray(null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, o.target().f); gl.viewport(0, 0, RW, RH);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.SCISSOR_TEST);
+    gl.useProgram(P.bg.p);
+    gl.uniform2f(P.bg.u.uRes, RW, RH); gl.uniform1f(P.bg.u.uTime, t);
+    gl.uniform3fv(P.bg.u.uStar, STAR.col); gl.uniform3fv(P.bg.u.uNeb, STAR.neb);
+    gl.uniform2f(P.bg.u.uSunDir, Math.SQRT1_2 * -1, Math.SQRT1_2); gl.uniform2f(P.bg.u.uOff, 0, 0);
+    draw();
+    gl.enable(gl.BLEND);
+    // hulls only below opts.clipTop (CSS px from the top: the tab's toolbar), so none show through it
+    if (opts.clipTop) { gl.enable(gl.SCISSOR_TEST); gl.scissor(0, 0, RW, Math.max(0, RH - Math.round(opts.clipTop * dpr))); }
+    // plumes (additive, under the hulls)
+    gl.blendFunc(gl.ONE, gl.ONE);
+    { const u = P.plume.u; gl.useProgram(P.plume.p);
+      gl.uniform2f(u.uRes, RW, RH); gl.uniform1f(u.uTime, t);
+      vis.forEach((v, i) => {
+        const th = Math.min(1, opts.throttle * (0.93 + 0.07 * Math.sin(t * 0.7 + i * 1.9))), br = v.br, pw = plumePower(th), boost = th > 0.85 ? 1 + (th - 0.85) * 3 : 1;
+        gl.uniform3fv(u.uCol, br.plCol); gl.uniform3fv(u.uCore, br.plCore.map(c => c + (1 - c) * (boost - 1) * 0.8));
+        gl.uniform1f(u.uTurb, br.plTurb); gl.uniform1f(u.uDiamonds, br.plDia); gl.uniform1f(u.uSputter, br.plSput); gl.uniform1f(u.uPulse, br.plPulse); gl.uniform1f(u.uSpread, br.plSpread);
+        gl.uniform1f(u.uPower, pw);
+        v.s.maps.engines.forEach((e, n) => {
+          const q = rot(v.ang, (e.u - 0.5) * 2 * v.hd, (0.5 - e.v) * 2 * v.hd), d = rot(v.ang, e.dx, e.dy), wid = Math.max(e.w * 2 * v.hd, 1.5 * dpr);
+          gl.uniform2f(u.uNoz, v.cx + q[0], v.cy + q[1]); gl.uniform2f(u.uDir, d[0], d[1]);
+          gl.uniform1f(u.uWid, wid * br.plWid * 1.1); gl.uniform1f(u.uLen, wid * br.plLen * (0.3 + 1.7 * th) * boost);
+          gl.uniform1f(u.uSeed, i * 7.3 + n * 1.37);
+          draw();
+        });
+      }); }
+    // hulls (premultiplied over)
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    { const u = P.ship.u; gl.useProgram(P.ship.p);
+      gl.uniform2f(u.uRes, RW, RH); gl.uniform3fv(u.uSun, sun); gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, STAR.amb);
+      gl.uniform1f(u.uTime, t); gl.uniform1i(u.uMode, 0); gl.uniform1f(u.uShadow, 1);
+      gl.uniform1i(u.uA, 0); gl.uniform1i(u.uN, 1); gl.uniform1i(u.uE, 2); gl.uniform1i(u.uX, 3);
+      gl.uniform4fv(u.uLP, NOL); gl.uniform4fv(u.uLC, NOL); gl.uniform1i(u.uLN, 0);
+      for (const v of vis) {
+        const m = v.B.style.material, mp = v.s.maps;
+        gl.uniform2f(u.uCenter, v.cx, v.cy); gl.uniform1f(u.uHalf, v.hd); gl.uniform1f(u.uAngle, v.ang);
+        gl.uniform1f(u.uExtent, mp.extent); gl.uniform1f(u.uHRange, mp.hRange); gl.uniform1f(u.uPxPerM, 2 * v.hd / mp.extent);
+        gl.uniform1f(u.uDmax, mp.Dmax); gl.uniform1f(u.uS, mp.shieldS);
+        gl.uniform1f(u.uGloss, m.gloss); gl.uniform1f(u.uSpecK, 0.6 + m.spec * 1.4); gl.uniform1f(u.uWrap, m.wrap); gl.uniform1f(u.uIrid, m.irid); gl.uniform1f(u.uRim, m.rim);
+        gl.uniform1f(u.uThrottle, opts.throttle); gl.uniform1f(u.uHover, opts.hover === v.c.el ? 1 : 0);
+        for (let q = 0; q < 4; q++) { gl.activeTexture(gl.TEXTURE0 + q); gl.bindTexture(gl.TEXTURE_2D, v.s.tex[q]); }
+        draw();
+      } }
+    // shields (additive), idling so their shell and pattern show
+    if (opts.shields) {
+      gl.blendFunc(gl.ONE, gl.ONE);
+      const u = P.shield.u; gl.useProgram(P.shield.p);
+      gl.uniform2f(u.uRes, RW, RH); gl.uniform1f(u.uTime, t); gl.uniform1i(u.uX, 0); gl.uniform4fv(u.uHits, HU);
+      vis.forEach((v, i) => {
+        const mp = v.s.maps;
+        gl.uniform2f(u.uCenter, v.cx, v.cy); gl.uniform1f(u.uHalf, v.hd); gl.uniform1f(u.uAngle, v.ang);
+        gl.uniform1f(u.uExtent, mp.extent); gl.uniform1f(u.uS, mp.shieldS); gl.uniform1f(u.uDmax, mp.Dmax);
+        gl.uniform1f(u.uIdle, 0.45); gl.uniform1f(u.uStrength, v.br.shStr); gl.uniform1f(u.uSeed, i * 3.7);
+        gl.uniform3fv(u.uCol, v.br.shCol); gl.uniform1i(u.uPat, v.br.shPat);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, v.s.tex[3]);
+        draw();
+      });
+    }
+    gl.disable(gl.BLEND); gl.disable(gl.SCISSOR_TEST);
+  }
+  return { catalog, seedOf, catalogSeed, reroll, back, reset, bakeAll, exportPicks, status, render, picked: (b, z) => !!picks[k(b, z)] };
 }
 
 // ======================= PLAY =======================
@@ -4595,7 +5538,7 @@ function makeDebug(ctx) {
 // full assist holds a set speed along the nose (and cancels drift and gravity); drift off is raw Newtonian thrust
 // with strafe; full off adds torque rotation, where a spin keeps going until countered.
 const $ = id => document.getElementById(id);
-const catalog = JSON.parse($('catalog').textContent);
+const catalog = ShipGen.resolveCatalog(JSON.parse($('catalog').textContent)); // factions' lines as brands (src/gen.js)
 const canvas = $('view'), hud = $('hud'), hx = hud.getContext('2d');
 const G = makeGfx(canvas);
 if (!G) { $('glerr').hidden = false; return; }
@@ -4638,15 +5581,19 @@ const baker = makeBaker({
   gl, tex, genText: $('gen').textContent, catalog: () => catalog, defaultSeed: () => 'play-1',
   onError: (key, msg) => console.error('bake failed', key, msg)
 });
+// the shipyard: every line's hulls for the debug screen's Ships tab, and the seed each hull class is built from
+// (picked there; the game's ships use the same seeds)
+const yard = makeShipyard({ gl, P: G.P, draw: G.draw, baker, catalog, target: () => G.targets.scene });
+debug.setYard(yard);
 const nSizes = catalog.sizes.length;
 const types = [];
 catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
   const fz = z.flight || {}, fb = b.style.flight || {};
   types.push({
-    bi, zi, brand: b, L: z.length, name: b.name + ' ' + z.name, key: baker.keyOf(b.id, z.id), br: brandRender(b),
+    bi, zi, brand: b, L: z.length, name: b.series[zi], key: baker.keyOf(b.id, z.id), br: brandRender(b),
     accel: (fz.accel || 60) * (fb.accel || 1), turn: (fz.turn || 1) * (fb.turn || 1), vmax: (fz.vmax || 200) * (fb.vmax || 1),
     well: fz.well == null ? 0.5 : fz.well, // how much gravity wells pull this hull and bend its top speed
-    cargo: fz.cargo || 0, // hold, tons
+    cargo: Math.round((fz.cargo || 0) * (fb.cargo == null ? 1 : fb.cargo)), // hold, tons: the class's, times the line's
     s: null, half: z.length / 2
   });
 }));
@@ -4656,7 +5603,7 @@ catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
 function typeReady(T) {
   if (T.s) return true;
   const s = baker.ships.get(T.key);
-  if (!s) { baker.enqueue(T.key, true); baker.pump(); return false; }
+  if (!s) { baker.enqueue(T.key, true, { brand: T.brand.id, size: catalog.sizes[T.zi].id, seed: yard.seedOf(T.brand.id, catalog.sizes[T.zi].id) }); baker.pump(); return false; }
   if (!s.ready || !s.tex) return false;
   const m = s.maps;
   T.s = s; T.half = m.extent / 2; T.extent = m.extent; T.S = m.shieldS; T.Dmax = m.Dmax;
@@ -4683,7 +5630,7 @@ function hullAnchors(s, m) {
 // stations, baked from their catalog archetype in an owning brand's style; drawn like ships, slowly spinning
 const STATIONS = BODIES.filter(b => b.kind === 'station').map(b => {
   const st = b.station || {}, arch = catalog.stations.find(a => a.id === st.archetype) || catalog.stations[0];
-  const brand = catalog.brands.find(x => x.id === st.brand) || catalog.brands[0];
+  const brand = ShipGen.brandOf(catalog, st.brand) || catalog.brands[0];
   return Object.assign({}, b, { key: 'stn|' + b.id, req: { station: arch.id, brand: brand.id, seed: st.seed || b.id }, brand, spin: arch.spin || 0.01, s: null });
 });
 STATIONS.forEach(S => baker.enqueue(S.key, false, S.req));
@@ -4694,8 +5641,8 @@ function stationReady(S) {
   if (!s || !s.ready || !s.tex) return false;
   S.s = s; S.half = s.maps.extent / 2; return true;
 }
-function playerTypeIndex() {
-  const q = new URLSearchParams(location.search).get('ship') || 'halcyon:fighter';
+function playerTypeIndex(ship) {
+  const q = ship || new URLSearchParams(location.search).get('ship') || 'ironhulls.civilian:c2'; // a used Copperhaul
   const [b, z] = q.split(':');
   const bi = Math.max(0, catalog.brands.findIndex(x => x.id === b)), zi = Math.max(0, catalog.sizes.findIndex(x => x.id === z));
   return bi * nSizes + zi;
@@ -4878,12 +5825,12 @@ CORE_READY.then(CORE => {
     sim.clear(); sim.reseed(seedNow);
     writePrices();
     sim.setCount(1);
-    SH.kind[0] = playerTypeIndex(); SH.alive[0] = 1; SH.ang[0] = 0;
+    SH.kind[0] = playerTypeIndex(opts && opts.ship); SH.alive[0] = 1; SH.ang[0] = 0; // opts.ship: 'faction.line:class' (dev and tests)
     sim.setPlayer(0);
     if (opts && opts.space) { SH.x[0] = opts.space[0]; SH.y[0] = opts.space[1]; sim.slotReset(0, true); }
     else { sim.slotReset(0, true); sim.placeLanded(startBody); }
     sim.game.day[0] = 1; // day one
-    sim.game.credits[0] = ECON.start.credits; sim.game.debt[0] = ECON.start.debt; // a used fighter and a debt to a lender
+    sim.game.credits[0] = ECON.start.credits; sim.game.debt[0] = ECON.start.debt; // a used ship and a debt to a lender
     sim.postBoards();
     sim.startTraffic(); // ambient traffic, already mid-flow
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
@@ -5035,6 +5982,8 @@ CORE_READY.then(CORE => {
     if (mode === MODE.landed) { const B = BODIES[sim.game.at[0]]; camX += (B.x - camX) * k; camY += (B.y - camY) * k; }
     else if (mode === MODE.flying) { const lead = 0.35; camX += (SH.rx[0] + SH.vx[0] * lead - camX) * k; camY += (SH.ry[0] + SH.vy[0] * lead - camY) * k; }
     else { const q = playerSeq().pose, lead = 0.35; camX += (q.x + q.vx * lead - camX) * k; camY += (q.y + q.vy * lead - camY) * k; } // following the curl, leading as in flight
+    const yv = debug.yardView(); // the debug screen's Ships tab draws the shipyard instead of the game
+    if (yv) { yard.render((now - t0) / 1000, yv.cells, yv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     render((now - t0) / 1000, camX, camY);
     drawHUD();
     drawMap();
@@ -5224,9 +6173,9 @@ CORE_READY.then(CORE => {
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
   const typeCount = new Int32Array(types.length), typeStart = new Int32Array(types.length), typeFill = new Int32Array(types.length);
   const LP = new Float32Array(64), LC = new Float32Array(64);
-  const plCol = new Float32Array(15), plCore = new Float32Array(15), plP = new Float32Array(20), plSpread = new Float32Array(5), plBurn = new Float32Array(15);
-  catalog.brands.slice(0, 4).forEach((b, k) => { const br = brandRender(b); plCol.set(br.plCol, k * 3); plCore.set(br.plCore, k * 3); plP.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); plSpread[k] = br.plSpread; plBurn.set(br.plBurn, k * 3); });
-  const RCS = 4; // the fifth look: cold thruster gas for the side, reverse and turning jets
+  const plCol = new Float32Array(51), plCore = new Float32Array(51), plP = new Float32Array(68), plSpread = new Float32Array(17), plBurn = new Float32Array(51);
+  catalog.brands.slice(0, 16).forEach((b, k) => { const br = brandRender(b); plCol.set(br.plCol, k * 3); plCore.set(br.plCore, k * 3); plP.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); plSpread[k] = br.plSpread; plBurn.set(br.plBurn, k * 3); });
+  const RCS = 16; // the last look: cold thruster gas for the side, reverse and turning jets
   const spinVis = new Float32Array(MAXS); // per-slot turning-jet pulse, decaying (visual only)
   const turnSlew = sim.param('turn_slew');
   plCol.set(lin([0.72, 0.78, 0.88]), RCS * 3); plCore.set([1, 1, 1], RCS * 3); plP.set([0.5, 0, 0.25, 0], RCS * 4); plSpread[RCS] = 0.9; plBurn.set(plCol.subarray(RCS * 3, RCS * 3 + 3), RCS * 3);

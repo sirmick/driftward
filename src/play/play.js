@@ -5,7 +5,7 @@
 // full assist holds a set speed along the nose (and cancels drift and gravity); drift off is raw Newtonian thrust
 // with strafe; full off adds torque rotation, where a spin keeps going until countered.
 const $ = id => document.getElementById(id);
-const catalog = JSON.parse($('catalog').textContent);
+const catalog = ShipGen.resolveCatalog(JSON.parse($('catalog').textContent)); // factions' lines as brands (src/gen.js)
 const canvas = $('view'), hud = $('hud'), hx = hud.getContext('2d');
 const G = makeGfx(canvas);
 if (!G) { $('glerr').hidden = false; return; }
@@ -48,15 +48,19 @@ const baker = makeBaker({
   gl, tex, genText: $('gen').textContent, catalog: () => catalog, defaultSeed: () => 'play-1',
   onError: (key, msg) => console.error('bake failed', key, msg)
 });
+// the shipyard: every line's hulls for the debug screen's Ships tab, and the seed each hull class is built from
+// (picked there; the game's ships use the same seeds)
+const yard = makeShipyard({ gl, P: G.P, draw: G.draw, baker, catalog, target: () => G.targets.scene });
+debug.setYard(yard);
 const nSizes = catalog.sizes.length;
 const types = [];
 catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
   const fz = z.flight || {}, fb = b.style.flight || {};
   types.push({
-    bi, zi, brand: b, L: z.length, name: b.name + ' ' + z.name, key: baker.keyOf(b.id, z.id), br: brandRender(b),
+    bi, zi, brand: b, L: z.length, name: b.series[zi], key: baker.keyOf(b.id, z.id), br: brandRender(b),
     accel: (fz.accel || 60) * (fb.accel || 1), turn: (fz.turn || 1) * (fb.turn || 1), vmax: (fz.vmax || 200) * (fb.vmax || 1),
     well: fz.well == null ? 0.5 : fz.well, // how much gravity wells pull this hull and bend its top speed
-    cargo: fz.cargo || 0, // hold, tons
+    cargo: Math.round((fz.cargo || 0) * (fb.cargo == null ? 1 : fb.cargo)), // hold, tons: the class's, times the line's
     s: null, half: z.length / 2
   });
 }));
@@ -66,7 +70,7 @@ catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
 function typeReady(T) {
   if (T.s) return true;
   const s = baker.ships.get(T.key);
-  if (!s) { baker.enqueue(T.key, true); baker.pump(); return false; }
+  if (!s) { baker.enqueue(T.key, true, { brand: T.brand.id, size: catalog.sizes[T.zi].id, seed: yard.seedOf(T.brand.id, catalog.sizes[T.zi].id) }); baker.pump(); return false; }
   if (!s.ready || !s.tex) return false;
   const m = s.maps;
   T.s = s; T.half = m.extent / 2; T.extent = m.extent; T.S = m.shieldS; T.Dmax = m.Dmax;
@@ -93,7 +97,7 @@ function hullAnchors(s, m) {
 // stations, baked from their catalog archetype in an owning brand's style; drawn like ships, slowly spinning
 const STATIONS = BODIES.filter(b => b.kind === 'station').map(b => {
   const st = b.station || {}, arch = catalog.stations.find(a => a.id === st.archetype) || catalog.stations[0];
-  const brand = catalog.brands.find(x => x.id === st.brand) || catalog.brands[0];
+  const brand = ShipGen.brandOf(catalog, st.brand) || catalog.brands[0];
   return Object.assign({}, b, { key: 'stn|' + b.id, req: { station: arch.id, brand: brand.id, seed: st.seed || b.id }, brand, spin: arch.spin || 0.01, s: null });
 });
 STATIONS.forEach(S => baker.enqueue(S.key, false, S.req));
@@ -104,8 +108,8 @@ function stationReady(S) {
   if (!s || !s.ready || !s.tex) return false;
   S.s = s; S.half = s.maps.extent / 2; return true;
 }
-function playerTypeIndex() {
-  const q = new URLSearchParams(location.search).get('ship') || 'halcyon:fighter';
+function playerTypeIndex(ship) {
+  const q = ship || new URLSearchParams(location.search).get('ship') || 'ironhulls.civilian:c2'; // a used Copperhaul
   const [b, z] = q.split(':');
   const bi = Math.max(0, catalog.brands.findIndex(x => x.id === b)), zi = Math.max(0, catalog.sizes.findIndex(x => x.id === z));
   return bi * nSizes + zi;
@@ -288,12 +292,12 @@ CORE_READY.then(CORE => {
     sim.clear(); sim.reseed(seedNow);
     writePrices();
     sim.setCount(1);
-    SH.kind[0] = playerTypeIndex(); SH.alive[0] = 1; SH.ang[0] = 0;
+    SH.kind[0] = playerTypeIndex(opts && opts.ship); SH.alive[0] = 1; SH.ang[0] = 0; // opts.ship: 'faction.line:class' (dev and tests)
     sim.setPlayer(0);
     if (opts && opts.space) { SH.x[0] = opts.space[0]; SH.y[0] = opts.space[1]; sim.slotReset(0, true); }
     else { sim.slotReset(0, true); sim.placeLanded(startBody); }
     sim.game.day[0] = 1; // day one
-    sim.game.credits[0] = ECON.start.credits; sim.game.debt[0] = ECON.start.debt; // a used fighter and a debt to a lender
+    sim.game.credits[0] = ECON.start.credits; sim.game.debt[0] = ECON.start.debt; // a used ship and a debt to a lender
     sim.postBoards();
     sim.startTraffic(); // ambient traffic, already mid-flow
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
@@ -445,6 +449,8 @@ CORE_READY.then(CORE => {
     if (mode === MODE.landed) { const B = BODIES[sim.game.at[0]]; camX += (B.x - camX) * k; camY += (B.y - camY) * k; }
     else if (mode === MODE.flying) { const lead = 0.35; camX += (SH.rx[0] + SH.vx[0] * lead - camX) * k; camY += (SH.ry[0] + SH.vy[0] * lead - camY) * k; }
     else { const q = playerSeq().pose, lead = 0.35; camX += (q.x + q.vx * lead - camX) * k; camY += (q.y + q.vy * lead - camY) * k; } // following the curl, leading as in flight
+    const yv = debug.yardView(); // the debug screen's Ships tab draws the shipyard instead of the game
+    if (yv) { yard.render((now - t0) / 1000, yv.cells, yv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     render((now - t0) / 1000, camX, camY);
     drawHUD();
     drawMap();
@@ -634,9 +640,9 @@ CORE_READY.then(CORE => {
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
   const typeCount = new Int32Array(types.length), typeStart = new Int32Array(types.length), typeFill = new Int32Array(types.length);
   const LP = new Float32Array(64), LC = new Float32Array(64);
-  const plCol = new Float32Array(15), plCore = new Float32Array(15), plP = new Float32Array(20), plSpread = new Float32Array(5), plBurn = new Float32Array(15);
-  catalog.brands.slice(0, 4).forEach((b, k) => { const br = brandRender(b); plCol.set(br.plCol, k * 3); plCore.set(br.plCore, k * 3); plP.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); plSpread[k] = br.plSpread; plBurn.set(br.plBurn, k * 3); });
-  const RCS = 4; // the fifth look: cold thruster gas for the side, reverse and turning jets
+  const plCol = new Float32Array(51), plCore = new Float32Array(51), plP = new Float32Array(68), plSpread = new Float32Array(17), plBurn = new Float32Array(51);
+  catalog.brands.slice(0, 16).forEach((b, k) => { const br = brandRender(b); plCol.set(br.plCol, k * 3); plCore.set(br.plCore, k * 3); plP.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); plSpread[k] = br.plSpread; plBurn.set(br.plBurn, k * 3); });
+  const RCS = 16; // the last look: cold thruster gas for the side, reverse and turning jets
   const spinVis = new Float32Array(MAXS); // per-slot turning-jet pulse, decaying (visual only)
   const turnSlew = sim.param('turn_slew');
   plCol.set(lin([0.72, 0.78, 0.88]), RCS * 3); plCore.set([1, 1, 1], RCS * 3); plP.set([0.5, 0, 0.25, 0], RCS * 4); plSpread[RCS] = 0.9; plBurn.set(plCol.subarray(RCS * 3, RCS * 3 + 3), RCS * 3);

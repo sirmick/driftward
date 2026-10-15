@@ -34,7 +34,7 @@ else console.log(`economy.json: valid; ${ids.length} commodities, ${roles.length
 
 // traffic: every culture's roles name a catalog brand and size; every population tier has a weight
 const traffic = JSON.parse(fs.readFileSync(path.join(root, 'src', 'traffic.json'), 'utf8'));
-const catalog = JSON.parse(fs.readFileSync(path.join(root, 'src', 'catalog.json'), 'utf8'));
+const catalog = require('../src/gen.js').resolveCatalog(JSON.parse(fs.readFileSync(path.join(root, 'src', 'catalog.json'), 'utf8')));
 const tBad = [];
 for (const [id, c] of Object.entries(traffic.cultures)) {
   if (!catalog.brands.some(b => b.id === c.brand)) tBad.push(`${id}: unknown brand ${c.brand}`);

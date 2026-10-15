@@ -149,7 +149,7 @@
       "gravity": 4,
       "station": {
         "archetype": "shipyard",
-        "brand": "rustline",
+        "brand": "ironhulls",
         "seed": "kettle-yard"
       },
       "port": {

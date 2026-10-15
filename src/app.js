@@ -1,7 +1,7 @@
 (function () {
 'use strict';
 const $ = id => document.getElementById(id);
-const CATALOG0 = JSON.parse($('catalog').textContent);
+const CATALOG0 = ShipGen.resolveCatalog(JSON.parse($('catalog').textContent)); // factions' lines as brands
 let catalog = JSON.parse(JSON.stringify(CATALOG0));
 const GEN_TEXT = $('gen').textContent;
 /*LOOK*/
@@ -12,7 +12,7 @@ const state = {
   map: 0, spin: true, trueScale: false, shadow: true, pl: true,
   sunAz: 135, sunEl: 35, star: 'sol', seed: 'kestrel-7',
   planetSeed: 'set-1', planetFocus: -1, sunSeed: 's1', sunFocus: -1, stSeed: 'stations-1', stFocus: -1, hvSeed: 'heavies-1', hvFocus: -1, astSeed: 'rocks-1', astFocus: -1, hoverItem: -1, sunOff: [-0.17, 0.12], flares: true,
-  flyBrand: 'halcyon', flySize: 'fighter', traffic: 60, zoom: 1, flightModel: 'assist', pirates: false, env: 'mixed', solarFlares: true,
+  flyBrand: 'prism.military', flySize: 'c1', traffic: 60, zoom: 1, flightModel: 'assist', pirates: false, env: 'mixed', solarFlares: true,
   throttle: 0.6, bloom: 0.9, lightsN: 4, shields: true, shieldIdle: 0.3, barrage: false, click: 'inspect',
   mouse: null, hoverKey: null, editBrand: catalog.brands[0].id
 };

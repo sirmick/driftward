@@ -298,7 +298,7 @@ void main(){ vQ=aPos; float c=cos(iA.z), s=sin(iA.z);
 const FLY_PLUME_VS = `#version 300 es
 in vec2 aPos; in vec4 iN; in vec4 iP; in vec2 iB;
 ${WORLD_POS}
-uniform vec3 uPlCol[5]; uniform vec3 uPlCore[5]; uniform vec4 uPlP[5]; uniform float uPlSpread[5]; uniform vec3 uPlBurn[5]; // 4 brands + thruster gas
+uniform vec3 uPlCol[17]; uniform vec3 uPlCore[17]; uniform vec4 uPlP[17]; uniform float uPlSpread[17]; uniform vec3 uPlBurn[17]; // up to 16 brands (faction lines) + thruster gas
 out vec2 vST; flat out vec3 vCol; flat out vec3 vCore; flat out vec4 vP; flat out float vSeed; flat out float vPow;
 void main(){
   int b = int(iB.x+.5);

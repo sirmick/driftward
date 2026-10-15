@@ -189,6 +189,29 @@ button { font: inherit; color: inherit; }
 .dbg-person p { margin: 4px 0 !important; font-size: 12.5px; }
 .dbg-grid th.here, .dbg-grid td.here { background: rgba(226,184,102,.08); }
 .dbg-grid td.best { outline: 1px solid var(--amber); outline-offset: -2px; }
+/* the Ships tab: see-through, so the hulls the game's canvas draws behind it show; the rest of the page hides */
+body.dbg-clear > :not(#debug):not(#view) { visibility: hidden; }
+body.dbg-clear #debug { background: rgba(7,9,12,0); }
+body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
+.dbg-yard { grid-column: 1 / -1; overflow-y: auto; min-height: 0; padding: 0 16px 30px; }
+.dbg-yard-bar { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 0; background: rgba(7,9,12,.94); border-bottom: 1px solid var(--line); font: 500 12px var(--f-mono); color: var(--muted); }
+.dbg-yard-bar label { display: flex; align-items: center; gap: 6px; color: var(--fg); }
+.dbg-yard-bar button { background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; font: 600 12px var(--f-display); letter-spacing: .05em; text-transform: uppercase; color: var(--fg); }
+.dbg-yard-bar button:hover { border-color: var(--amber); }
+.dbg-yard-bar .hint { margin-left: auto; }
+.dbg-yard-grid { display: grid; gap: 8px; padding-top: 8px; }
+.dbg-yard-col { align-self: end; padding: 4px 0; text-align: center; font: 500 11px var(--f-mono); color: var(--muted); }
+.dbg-yard-col b { display: block; color: var(--fg); font: 700 13px var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+.dbg-yard-row { display: grid; align-content: center; gap: 2px; padding: 10px 12px; background: rgba(12,16,21,.82); border: 1px solid var(--line); border-radius: 8px; }
+.dbg-yard-row b { font: 700 15px var(--f-display); letter-spacing: .04em; }
+.dbg-yard-row span { color: var(--amber); font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; }
+.dbg-yard-row small { color: var(--muted); font: 400 11px/1.4 var(--f-body); }
+.dbg-ship { position: relative; aspect-ratio: 1 / 1.16; border: 1px solid rgba(30,38,48,.7); border-radius: 8px; cursor: pointer; }
+.dbg-ship:hover { border-color: var(--amber); }
+.dbg-ship .lbl { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 1px; padding: 4px 6px 5px; text-align: center; background: linear-gradient(transparent, rgba(7,9,12,.85) 40%); border-radius: 0 0 8px 8px; pointer-events: none; }
+.dbg-ship .lbl b { font: 700 13.5px var(--f-display); letter-spacing: .04em; }
+.dbg-ship .lbl small { color: var(--muted); font: 500 10.5px var(--f-mono); }
+.dbg-ship .lbl .seed { color: #6f7b8a; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -258,7 +281,7 @@ button { font: inherit; color: inherit; }
     <h2>Driftward</h2>
     <p class="sub" id="title-sub"></p>
     <button type="button" class="item primary" id="t-continue">Continue<span id="t-continue-sub"></span></button>
-    <button type="button" class="item" id="t-new">New game<span>a used fighter and a debt</span></button>
+    <button type="button" class="item" id="t-new">New game<span>a used Copperhaul and a debt</span></button>
     <label class="seed">Seed <input type="text" id="t-seed" placeholder="blank: random" maxlength="24" spellcheck="false"></label>
     <button type="button" class="item" id="t-settings">Settings</button>
     <p class="foot">An Escape Velocity-style game in progress: milestone M1, one system. Trade, haul, and pay off the lender.</p>
@@ -324,6 +347,7 @@ button { font: inherit; color: inherit; }
 /*CORE*/
 /*SCHEMA*/
 /*DEBUG*/
+/*SHIPYARD*/
 /*PLAY*/
 })();
 </script>

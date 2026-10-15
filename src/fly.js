@@ -239,7 +239,7 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
   }
   function ping() { if (pl.pingCd > 0 || !sAlive[0]) return; pl.ping = 1; pl.pingCd = 6; pl.pingR = 0; }
   function flareNow() { if (flare.t < 0 && flare.warn <= 0) flare.warn = 5; }
-  function applyPirates() { const ri = catalog.brands.findIndex(b => b.id === 'rustline'); if (ri >= 0 && state.pirates) hostile[ri] = 1; }
+  function applyPirates() { const ri = catalog.brands.findIndex(b => b.id === 'ironhulls.military'); if (ri >= 0 && state.pirates) hostile[ri] = 1; }
   function respawnNPC(i) {
     const a = rnd() * 6.283, r = 4000 + rnd() * 5000;
     spawn(i, randomType(), sx[0] + Math.cos(a) * r, sy[0] + Math.sin(a) * r, rnd() < 0.55 ? 0 : 1);
@@ -603,8 +603,8 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
       gl.blendFunc(gl.ONE, gl.ONE);
       setView(FP.plume, RW, RH);
       const u = FP.plume.u; gl.uniform1f(u.uTime, t);
-      const col = new Float32Array(12), core = new Float32Array(12), pp = new Float32Array(16), spr = new Float32Array(4), bcol = new Float32Array(12);
-      catalog.brands.slice(0, 4).forEach((b, k) => { const br = brandRender(b); col.set(br.plCol, k * 3); core.set(br.plCore, k * 3); pp.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); spr[k] = br.plSpread; bcol.set(br.plBurn, k * 3); });
+      const col = new Float32Array(48), core = new Float32Array(48), pp = new Float32Array(64), spr = new Float32Array(16), bcol = new Float32Array(48);
+      catalog.brands.slice(0, 16).forEach((b, k) => { const br = brandRender(b); col.set(br.plCol, k * 3); core.set(br.plCore, k * 3); pp.set([br.plTurb, br.plDia, br.plSput, br.plPulse], k * 4); spr[k] = br.plSpread; bcol.set(br.plBurn, k * 3); });
       gl.uniform3fv(u.uPlCol, col); gl.uniform3fv(u.uPlCore, core); gl.uniform4fv(u.uPlP, pp); gl.uniform1fv(u.uPlSpread, spr); gl.uniform3fv(u.uPlBurn, bcol);
       gl.bindVertexArray(VS.plume.vao); upload(VS.plume, plumeInst, nPl);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nPl);
