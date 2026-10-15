@@ -102,6 +102,9 @@ dl.keys dd { margin: 0; color: var(--muted); }
 .pl-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .pl-name { margin: 0; font: 700 22px/1.1 var(--f-display); letter-spacing: .02em; }
 .pl-stack { display: grid; gap: 10px; }
+.pl-colours { display: flex; align-items: center; gap: 6px; font: 400 12px var(--f-mono); color: var(--muted); }
+.pl-colours input[type=color] { width: 30px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; }
+.pl-colours span + input { margin-left: 2px; }
 pre.specpre { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font: 400 11px/1.45 var(--f-mono); color: #c9d2dc; }
 dl.statlist { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 12.5px; }
 dl.statlist dt { color: var(--muted); }
@@ -261,22 +264,23 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
       <div class="sec" id="planet-panel" hidden>
         <h2>Planet</h2>
         <div id="pl-gridnote">
-          <p class="note">Twelve systems generated from one seed. Click a planet to open it in the builder.</p>
+          <p class="note">Twelve worlds generated from one seed, drawn by the game's planet shader from the same <code>look</code> a system file gives a planet or moon. Click one to open it in the builder.</p>
           <div class="json-actions" style="margin-top:10px"><button class="btn primary" type="button" id="pl-newset">New set</button></div>
         </div>
         <div id="pl-editor" hidden>
           <div class="pl-head"><div><p id="pl-name" class="pl-name"></p><p id="pl-kind" class="note"></p></div><button class="btn" type="button" id="pl-back">← All planets</button></div>
-          <div class="flypick"><label for="pl-palette">Palette</label><select id="pl-palette" style="grid-column: span 2"></select></div>
+          <div class="flypick"><label for="pl-preset">Preset</label><select id="pl-preset" style="grid-column: span 2"></select></div>
+          <div class="flypick"><label for="pl-surface">Surface</label><select id="pl-surface" style="grid-column: span 2"></select></div>
+          <div class="pl-colours"><span id="pl-pal-label">Palette</span><input type="color" id="pl-c0"><input type="color" id="pl-c1"><input type="color" id="pl-c2"><span>Air</span><input type="color" id="pl-atm"></div>
           <div id="pl-sliders" class="pl-stack"></div>
           <div class="checks"><label><input type="checkbox" id="pl-rings"><span>Rings</span></label></div>
           <div id="pl-ring-body" class="pl-stack">
-            <div class="flypick"><label for="pl-ringstyle">Ring style</label><select id="pl-ringstyle" style="grid-column: span 2"></select></div>
+            <div class="flypick"><label for="pl-ringstyle">Ring colours</label><select id="pl-ringstyle" style="grid-column: span 2"></select></div>
+            <div class="pl-colours"><span>Inner to outer</span><input type="color" id="pl-r0"><input type="color" id="pl-r1"></div>
             <div id="pl-ring-sliders" class="pl-stack"></div>
           </div>
-          <label class="slider" for="pl-moons">Moons <input id="pl-moons" type="range" min="0" max="4" step="1"><output id="pl-moons-v"></output></label>
-          <div class="checks"><label><input type="checkbox" id="pl-orbits"><span>Show orbits</span></label></div>
           <div class="json-actions"><button class="btn" type="button" id="pl-random">Randomize planet</button></div>
-          <details><summary>Planet JSON</summary><pre id="pl-json" class="specpre"></pre></details>
+          <details open><summary>Look JSON (a body's <code>look</code> in system.schema.json)</summary><pre id="pl-json" class="specpre"></pre></details>
         </div>
       </div>
 
@@ -389,4 +393,5 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
 <script id="core-wasm" type="application/octet-stream">/*COREWASM*/</script>
 <script id="catalog" type="application/json">/*CATALOG*/</script>
 <script id="gen">/*GEN*/</script>
+<script id="system-schema" type="application/json">/*SYSTEMSCHEMA*/</script>
 <script>/*APP*/</script>

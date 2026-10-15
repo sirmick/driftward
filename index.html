@@ -102,6 +102,9 @@ dl.keys dd { margin: 0; color: var(--muted); }
 .pl-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .pl-name { margin: 0; font: 700 22px/1.1 var(--f-display); letter-spacing: .02em; }
 .pl-stack { display: grid; gap: 10px; }
+.pl-colours { display: flex; align-items: center; gap: 6px; font: 400 12px var(--f-mono); color: var(--muted); }
+.pl-colours input[type=color] { width: 30px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; }
+.pl-colours span + input { margin-left: 2px; }
 pre.specpre { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font: 400 11px/1.45 var(--f-mono); color: #c9d2dc; }
 dl.statlist { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 12.5px; }
 dl.statlist dt { color: var(--muted); }
@@ -261,22 +264,23 @@ pre#d-spec { margin: 8px 0 0; max-height: 260px; overflow: auto; background: var
       <div class="sec" id="planet-panel" hidden>
         <h2>Planet</h2>
         <div id="pl-gridnote">
-          <p class="note">Twelve systems generated from one seed. Click a planet to open it in the builder.</p>
+          <p class="note">Twelve worlds generated from one seed, drawn by the game's planet shader from the same <code>look</code> a system file gives a planet or moon. Click one to open it in the builder.</p>
           <div class="json-actions" style="margin-top:10px"><button class="btn primary" type="button" id="pl-newset">New set</button></div>
         </div>
         <div id="pl-editor" hidden>
           <div class="pl-head"><div><p id="pl-name" class="pl-name"></p><p id="pl-kind" class="note"></p></div><button class="btn" type="button" id="pl-back">← All planets</button></div>
-          <div class="flypick"><label for="pl-palette">Palette</label><select id="pl-palette" style="grid-column: span 2"></select></div>
+          <div class="flypick"><label for="pl-preset">Preset</label><select id="pl-preset" style="grid-column: span 2"></select></div>
+          <div class="flypick"><label for="pl-surface">Surface</label><select id="pl-surface" style="grid-column: span 2"></select></div>
+          <div class="pl-colours"><span id="pl-pal-label">Palette</span><input type="color" id="pl-c0"><input type="color" id="pl-c1"><input type="color" id="pl-c2"><span>Air</span><input type="color" id="pl-atm"></div>
           <div id="pl-sliders" class="pl-stack"></div>
           <div class="checks"><label><input type="checkbox" id="pl-rings"><span>Rings</span></label></div>
           <div id="pl-ring-body" class="pl-stack">
-            <div class="flypick"><label for="pl-ringstyle">Ring style</label><select id="pl-ringstyle" style="grid-column: span 2"></select></div>
+            <div class="flypick"><label for="pl-ringstyle">Ring colours</label><select id="pl-ringstyle" style="grid-column: span 2"></select></div>
+            <div class="pl-colours"><span>Inner to outer</span><input type="color" id="pl-r0"><input type="color" id="pl-r1"></div>
             <div id="pl-ring-sliders" class="pl-stack"></div>
           </div>
-          <label class="slider" for="pl-moons">Moons <input id="pl-moons" type="range" min="0" max="4" step="1"><output id="pl-moons-v"></output></label>
-          <div class="checks"><label><input type="checkbox" id="pl-orbits"><span>Show orbits</span></label></div>
           <div class="json-actions"><button class="btn" type="button" id="pl-random">Randomize planet</button></div>
-          <details><summary>Planet JSON</summary><pre id="pl-json" class="specpre"></pre></details>
+          <details open><summary>Look JSON (a body's <code>look</code> in system.schema.json)</summary><pre id="pl-json" class="specpre"></pre></details>
         </div>
       </div>
 
@@ -4234,6 +4238,7 @@ const api = { generate, generateStation, assemble, assembleStation, bake, descri
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ShipGen = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
+<script id="system-schema" type="application/json">{"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://driftward.game/schema/system.schema.json", "title": "Driftward star system", "description": "One star system: its star, bodies and ports. The contract an LLM authors against and the validator that clamps what it writes (src/schema.js). Distances are metres; the star sits at the origin; angles are degrees counter-clockwise from +x. Bodies hold still in M1.", "type": "object", "required": ["id", "name", "owner", "ring", "star", "bodies"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "owner": {"description": "The faction that holds the system (the Book's appendix, by role).", "enum": ["federation", "prism", "ironhulls", "blackhulls", "freeflag", "bloom", "glass", "shadow", "none"]}, "ring": {"description": "Inner rings are prosperous, the outer ring poor and lawless.", "enum": ["inner", "middle", "outer"]}, "description": {"type": "string", "maxLength": 800, "default": ""}, "star": {"type": "object", "required": ["name", "class"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "class": {"enum": ["red-dwarf", "orange", "yellow", "white", "blue-giant"], "default": "yellow"}, "radius": {"type": "number", "minimum": 800, "maximum": 6000, "default": 2400}, "gravity": {"description": "Well strength at the surface; 40 is a full-strength well.", "type": "number", "minimum": 0, "maximum": 80, "default": 55}}}, "start": {"description": "The id of the port body a new game starts landed at.", "type": "string", "default": ""}, "bodies": {"type": "array", "description": "Planets, moons and stations; the star is not one of them. At most 7: the game's core holds 8 bodies with the star.", "minItems": 1, "maxItems": 7, "items": {"type": "object", "required": ["id", "name", "kind", "orbit", "radius"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "kind": {"enum": ["planet", "moon", "station"]}, "parent": {"description": "Id of the body a moon or station orbits; omit to orbit the star.", "type": "string", "default": ""}, "orbit": {"type": "object", "required": ["radius", "angle"], "properties": {"radius": {"type": "number", "minimum": 1500, "maximum": 60000}, "angle": {"type": "number", "minimum": 0, "maximum": 360}}}, "radius": {"description": "Planets and moons: the body. Stations: the docking zone's reach.", "type": "number", "minimum": 150, "maximum": 4000}, "gravity": {"type": "number", "minimum": 0, "maximum": 60, "default": 30}, "look": {"description": "How a planet or moon is drawn (the flight planet shader, src/shaders.js PLANET_FS) and what orbits it (core/src/orbit.rs). Every field has a default, so an omitted look is a plain grey rock.", "type": "object", "default": {}, "properties": {"surface": {"enum": ["terran", "giant", "rock"], "default": "rock", "description": "terran: seas, land in biomes, clouds; giant: banded gas, storms; rock: craters, no water."}, "palette": {"type": "array", "items": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "minItems": 3, "maxItems": 3, "default": ["#5e5953", "#8a8178", "#c9c0b4"], "description": "Three colours, used by surface. terran: seas, lowlands (the green of its vegetation), highlands (dry ground and deserts). giant: two band colours, then the pale zones and storms. rock: crater floors and plains, ground, rims and ridges."}, "atmosphere": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#9fb4c8", "description": "The colour the air scatters: the limb and the day-side haze take it, and the light that gets through (dusk on the terminator) takes its complement, as a blue sky gives an orange dusk. How much air there is is `air`."}, "air": {"description": "How much atmosphere: 0 airless, 1 Earth-like, up to 2 thick haze. Scatters the atmosphere colour, so the light that gets through (sunsets, the terminator) takes its complement.", "type": "number", "minimum": 0, "maximum": 2, "default": 0.6}, "lightning": {"description": "How stormy: 0 none, 1 a world full of lightning (in its clouds, or a giant's belts).", "type": "number", "minimum": 0, "maximum": 1, "default": 0}, "debris": {"description": "Scales the orbiting debris the world wears (rocky worlds wear the most).", "type": "number", "minimum": 0, "maximum": 3, "default": 1}, "cityLights": {"type": "number", "minimum": 0, "maximum": 1, "default": 0, "description": "Settlement lights on the night side of temperate coasts and lowlands (terran only): 0 none, 1 a busy world."}, "seed": {"type": "number", "minimum": 0, "maximum": 100, "default": 1, "description": "Picks the world's continents, craters, bands and storms; the same seed draws the same world."}, "rings": {"description": "A ring system in the world's equator; the world spins about the same pole. Density 0 (the default) is no rings. Radii are in the world's radii, measured from its centre; outer must be at least 0.1 beyond inner.", "type": "object", "default": {}, "properties": {"density": {"description": "How opaque the rings are: 0 none, 1 nearly solid.", "type": "number", "minimum": 0, "maximum": 1, "default": 0}, "inner": {"description": "Inner edge, in world radii.", "type": "number", "minimum": 1.1, "maximum": 2.6, "default": 1.4}, "outer": {"description": "Outer edge, in world radii.", "type": "number", "minimum": 1.3, "maximum": 3.6, "default": 2.2}, "colours": {"description": "The rings' colour at the inner edge, then the outer; ringlets mix between them.", "type": "array", "items": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "minItems": 2, "maxItems": 2, "default": ["#dfe9f2", "#94a8bc"]}, "tilt": {"description": "How open the rings are to the view, in degrees between the pole and the line of sight: 0 face-on (round), 90 edge-on (a line). 50 to 80 reads best.", "type": "number", "minimum": 0, "maximum": 88, "default": 65}, "angle": {"description": "Which way the pole leans on screen, in degrees: 0 up, 90 left, -90 right.", "type": "number", "minimum": -180, "maximum": 180, "default": 0}}}}}, "station": {"description": "How a station is built: a catalog archetype in an owning brand's style. Used only on a station body, which gets the defaults if it has none.", "type": "object", "properties": {"archetype": {"enum": ["ring", "port", "forge", "refinery", "shipyard", "relay"], "default": "port"}, "brand": {"description": "The faction whose style the station is built in (catalog factions; the Book's appendix).", "enum": ["federation", "prism", "ironhulls", "bloom"], "default": "ironhulls"}, "seed": {"type": "string", "maxLength": 40, "default": "", "description": "Picks the station's layout within its archetype; empty uses the body's id, so no two stations share one."}}}, "port": {"description": "Present if the body has a port the player can land at.", "type": "object", "required": ["name", "role"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "role": {"description": "The facility's economic role (the Book's Facilities table).", "enum": ["mining", "ice", "gas", "refinery", "forge", "agri", "habitat", "container-port", "shipyard", "relay", "military", "research", "haven"]}, "population": {"enum": ["outpost", "colony", "town", "world"], "default": "colony"}, "description": {"type": "string", "maxLength": 1200, "default": ""}, "services": {"type": "array", "items": {"enum": ["market", "missions", "bar", "refuel", "repair", "outfitter", "shipyard"]}, "default": ["market", "missions", "bar", "refuel", "repair"]}}}}}}, "traffic": {"description": "Ambient traffic (the Book's Traffic chapter): local ships between the ports, through traffic in from and out to the jump zones, and ships loitering round their ports. Which hulls fly is the mix; the core decides when and where.", "type": "object", "default": {}, "properties": {"ships": {"description": "Local and through ships in flight at steady state.", "type": "number", "minimum": 0, "maximum": 50, "default": 30}, "throughShare": {"description": "Through traffic's share of the ships.", "type": "number", "minimum": 0, "maximum": 1, "default": 0.45}, "jumpRadius": {"description": "Distance of the four jump zones (north, east, south, west) from the star, metres.", "type": "number", "minimum": 10000, "maximum": 200000, "default": 45000}, "local": {"description": "Who flies between the ports.", "type": "array", "maxItems": 12, "default": [], "items": {"type": "object", "required": ["line", "share", "classes"], "properties": {"line": {"description": "A catalog faction line, faction.line.", "type": "string", "pattern": "^[a-z0-9-]+\\.[a-z0-9-]+$", "maxLength": 60}, "share": {"description": "The entry's share of its stream (shares are normalised).", "type": "number", "minimum": 0, "maximum": 1}, "classes": {"description": "Weights by size class (catalog sizes): which classes the entry flies, and how often. Leave a class out to never fly it.", "type": "object", "default": {}, "properties": {"c1": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c2": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c3": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c4": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c5": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}}}}}}, "through": {"description": "Who arrives and leaves by the jump zones.", "type": "array", "maxItems": 12, "default": [], "items": {"type": "object", "required": ["line", "share", "classes"], "properties": {"line": {"description": "A catalog faction line, faction.line.", "type": "string", "pattern": "^[a-z0-9-]+\\.[a-z0-9-]+$", "maxLength": 60}, "share": {"description": "The entry's share of its stream (shares are normalised).", "type": "number", "minimum": 0, "maximum": 1}, "classes": {"description": "Weights by size class (catalog sizes): which classes the entry flies, and how often. Leave a class out to never fly it.", "type": "object", "default": {}, "properties": {"c1": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c2": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c3": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c4": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c5": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}}}}}}, "loiter": {"description": "Ships that launch, circle their port and land there again.", "type": "array", "maxItems": 12, "default": [], "items": {"type": "object", "required": ["port", "line", "count", "classes"], "properties": {"port": {"description": "The body id of the port they loiter round.", "type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "line": {"description": "A catalog faction line, faction.line.", "type": "string", "pattern": "^[a-z0-9-]+\\.[a-z0-9-]+$", "maxLength": 60}, "count": {"description": "Ships kept loitering at a time, on average.", "type": "number", "minimum": 0, "maximum": 8}, "classes": {"description": "Weights by size class (catalog sizes): which classes the entry flies, and how often. Leave a class out to never fly it.", "type": "object", "default": {}, "properties": {"c1": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c2": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c3": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c4": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}, "c5": {"type": "number", "minimum": 0, "maximum": 100, "default": 0}}}}}}}}}}</script>
 <script>(function () {
 'use strict';
 const $ = id => document.getElementById(id);
@@ -4241,8 +4246,8 @@ const CATALOG0 = ShipGen.resolveCatalog(JSON.parse($('catalog').textContent)); /
 let catalog = JSON.parse(JSON.stringify(CATALOG0));
 const GEN_TEXT = $('gen').textContent;
 // ======================= LOOK =======================
-// Small visual helpers shared by the lab and the game: colour conversion, star light presets, and each brand's
-// render settings (plume and shield looks) derived from its catalog style.
+// Small visual helpers shared by the lab and the game: colour conversion, star light presets, a planet look's shader
+// uniforms, and each brand's render settings (plume and shield looks) derived from its catalog style.
 const hexRGB = h => { h = String(h).replace('#', ''); return [parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255, parseInt(h.slice(4, 6), 16) / 255]; };
 const lin = c => c.map(v => Math.pow(v, 2.2)); // sRGB-ish to linear
 
@@ -4253,6 +4258,28 @@ const STARS = {
   orange: { name: 'Orange', col: [1.0, 0.76, 0.52], amb: [0.036, 0.030, 0.034], neb: [0.16, 0.10, 0.08] },
   white: { name: 'White', col: [0.9, 0.93, 1.0], amb: [0.028, 0.032, 0.044], neb: [0.08, 0.11, 0.18] }
 };
+// A planet or moon's look (system.schema.json, every field filled by the clamp) as the planet shader's uniforms
+// (PLANET_FS), worked out once; bindPlanet sets them. One reading of a look for the game, the lab and the tools.
+const PLANET_KIND = { terran: 0, giant: 1, rock: 2 };
+function planetUniforms(L) {
+  const R = L.rings || {}, on = R.density > 0;
+  const t = (R.tilt ?? 65) * Math.PI / 180, a = ((R.angle ?? 0) + 90) * Math.PI / 180, outer = Math.max(R.outer ?? 2.2, (R.inner ?? 1.4) + 0.1);
+  const [ra, rb] = R.colours || ['#dfe9f2', '#94a8bc'];
+  return {
+    c1: hexRGB(L.palette[0]), c2: hexRGB(L.palette[1]), c3: hexRGB(L.palette[2]), atm: lin(hexRGB(L.atmosphere)),
+    seed: L.seed, kind: PLANET_KIND[L.surface], city: L.cityLights, air: L.air, storm: L.lightning,
+    // ringless worlds leave the pole unset (the screen's up, exactly as before rings existed)
+    axis: on ? [Math.sin(t) * Math.cos(a), Math.sin(t) * Math.sin(a), Math.cos(t)] : [0, 0, 0],
+    ring: on ? [R.density, R.inner, outer] : [0, 0, 0], ringA: hexRGB(ra), ringB: hexRGB(rb),
+    ext: on ? Math.max(1.3, outer * 1.03) : 1.3
+  };
+}
+function bindPlanet(gl, u, pu) {
+  gl.uniform3fv(u.uC1, pu.c1); gl.uniform3fv(u.uC2, pu.c2); gl.uniform3fv(u.uC3, pu.c3); gl.uniform3fv(u.uAtm, pu.atm);
+  gl.uniform1f(u.uSeed, pu.seed); gl.uniform1i(u.uKind, pu.kind); gl.uniform1f(u.uCity, pu.city); gl.uniform1f(u.uAir, pu.air); gl.uniform1f(u.uStorm, pu.storm);
+  gl.uniform3fv(u.uAxis, pu.axis); gl.uniform3fv(u.uRing, pu.ring); gl.uniform3fv(u.uRingA, pu.ringA); gl.uniform3fv(u.uRingB, pu.ringB); gl.uniform1f(u.uExt, pu.ext);
+}
+
 const PATTERNS = { hex: 0, grid: 1, flow: 2, ragged: 3 };
 const brandCache = new Map();
 function brandRender(b) {
@@ -4631,9 +4658,9 @@ void main(){ float r=length(vQ); float g=(exp(-r*r*7.)*1.4 + exp(-r*3.)*.25)*(1.
 const PLANET_VS = `#version 300 es
 in vec2 aPos;
 ${WORLD_POS}
-uniform vec2 uC; uniform float uR;
+uniform vec2 uC; uniform float uR, uExt;
 out vec2 vQ;
-void main(){ vQ=aPos*1.3; gl_Position=clipOf(uC + aPos*uR*1.3); }`;
+void main(){ float e = max(uExt, 1.3); vQ=aPos*e; gl_Position=clipOf(uC + aPos*uR*e); }`;
 // Planets, drawn analytically on a quad 1.3 radii wide. Detail follows the zoom: noise layers are added until the
 // finest is about two pixels across (uPx is one pixel in planet radii), up to 12, the last fading in, so there is
 // no popping and no shimmer; 12 is about what the closest view needs (a fighter at full zoom, 175 m across).
@@ -4651,9 +4678,15 @@ void main(){ vQ=aPos*1.3; gl_Position=clipOf(uC + aPos*uR*1.3); }`;
 // you close in, when uCity > 0; lightning in the clouds, uStorm of it), 1 banded giant (irregular belts, shear
 // eddies, a great storm and white ovals, lightning in the belts),
 // 2 cratered rock (craters at five scales as the zoom allows, maria). uC1..3 are the palette.
+// Rings (uRing: density, inner and outer radius in planet radii, 0 for none; colours uRingA to uRingB across them)
+// lie in the equator, whose pole is uAxis (view space; unset, the screen's up, edge-on, so no ring shows): the
+// planet spins about it, the ring casts its shadow on the planet and takes the planet's, and shows in front of the
+// disc or is hidden behind it. The quad grows to uExt radii to hold them (1.3 at least). Unset ring and axis
+// uniforms draw exactly the ringless planet, so a caller that knows nothing of rings needn't set them.
 const PLANET_FS = `#version 300 es
 precision highp float; in vec2 vQ; out vec4 o;
 uniform vec3 uSun, uSunCol, uAmb, uC1, uC2, uC3, uAtm; uniform float uSeed, uTime, uPx, uCity, uAir, uStorm; uniform int uKind;
+uniform vec3 uAxis, uRing, uRingA, uRingB;
 uvec3 pcg3(uvec3 v){ v = v*1664525u + 1013904223u; v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; v ^= v >> 16u;
   v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; return v; }
 float h3(ivec3 i){ return float(pcg3(uvec3(i)).x) * (1./4294967295.); }
@@ -4805,9 +4838,37 @@ void air(vec2 q, float r, bool hit, float zs, out vec3 ins, out vec3 Tv){
     Tv *= exp(-e);
   }
 }
+// the planet's frame: U, A (the pole), V; the screen's up gives the identity
+vec3 PU, PA, PV;
+// a planet-space direction back to view space: unspun, then out of the planet's frame
+vec3 toView(vec3 p, float ca, float sa){ vec3 f = vec3(p.x*ca - p.z*sa, p.y, p.x*sa + p.z*ca); return f.x*PU + f.y*PA + f.z*PV; }
+// ring density at distance d (planet radii) from the centre: fine ringlets, a broad and a narrow gap, soft edges
+float ringDen(float d){
+  float t = (d - uRing.y)/max(uRing.z - uRing.y, 1e-3); if (t < 0. || t > 1.) return 0.;
+  float b = .5 + .5*(vnd(vec3(d*42., uSeed, 1.)).x); b *= .55 + .45*vnd(vec3(d*9., uSeed*1.7, 3.)).x;
+  float gap = smoothstep(.012, .03, abs(t - .62)), gap2 = smoothstep(.004, .012, abs(t - .86));
+  return uRing.x*b*gap*mix(1., gap2, .85)*smoothstep(0., .05, t)*smoothstep(1., .92, t);
+}
+// the ring at view point q, over what is behind it (premultiplied): in front of the disc (zs its surface's
+// height there) or clear of it
+vec4 ringOver(vec4 under, vec2 q, float r, float zs){
+  if (uRing.x <= 0. || abs(PA.z) < 1e-3) return under;
+  float zr = -(PA.x*q.x + PA.y*q.y)/PA.z;
+  if (r < 1. && zr < zs) return under;
+  vec3 Q = vec3(q, zr); float d = length(Q), den = ringDen(d);
+  if (den < .001) return under;
+  float b = dot(Q, L), c = dot(Q, Q) - 1.;
+  float sh = (b < 0. && b*b - c > 0.) ? .06 : 1.;              // in the planet's shadow
+  vec3 rc = pow(mix(uRingA, uRingB, vnd(vec3(d*14., uSeed, 7.)).x), vec3(2.2));
+  vec3 col = rc*(uSunCol*2.2*(.3 + .7*abs(dot(PA, L)))*sh*.8 + uAmb*1.6);
+  float a = clamp(den, 0., .95);
+  return vec4(col*a + under.rgb*(1. - a), a + under.a*(1. - a));
+}
 void main(){
   float r = length(vQ);
   L = normalize(uSun);
+  PA = dot(uAxis, uAxis) > .5 ? normalize(uAxis) : vec3(0., 1., 0.);
+  PU = normalize(cross(PA, abs(PA.z) < .95 ? vec3(0., 0., 1.) : vec3(1., 0., 0.))); PV = cross(PU, PA);
   HS = uKind == 1 ? .008 : uKind == 2 ? .006 : .008;
   vec3 tint = uAtm/max(max(uAtm.r, uAtm.g), max(uAtm.b, 1e-3));
   BR = tint*(.2*uAir/HS); BM = .03*uAir/HS;                     // vertical optical depth .2 x uAir in the tint
@@ -4817,15 +4878,16 @@ void main(){
   vec3 insOut = vec3(0.), Tv;
   if (aa < 1.) air(vQ, r, false, 0., insOut, Tv);                // the ray that misses: the limb and halo
   insOut *= E*3.14159;
-  if (r >= 1.) { o = vec4(insOut, 0.); return; }
+  if (r >= 1.) { o = ringOver(vec4(insOut, 0.), vQ, r, 0.); return; }
 
   float z = sqrt(1.-r*r); vec3 N = vec3(vQ, z);
   vec3 ins; air(vQ, r, true, z, ins, Tv);
   ins *= E*3.14159;
-  // planet space: the view-space sphere point, spun about the polar axis
+  // planet space: the view-space sphere point in the planet's frame, spun about the pole
   float ca = cos(uTime*.004+uSeed), sa = sin(uTime*.004+uSeed);
-  vec3 R = vec3(N.x*ca+N.z*sa, N.y, -N.x*sa+N.z*ca);
-  vec3 Lp = vec3(L.x*ca+L.z*sa, L.y, -L.x*sa+L.z*ca); // the sun, in planet space
+  vec3 Nf = vec3(dot(PU, N), dot(PA, N), dot(PV, N)), Lf = vec3(dot(PU, L), dot(PA, L), dot(PV, L));
+  vec3 R = vec3(Nf.x*ca+Nf.z*sa, Nf.y, -Nf.x*sa+Nf.z*ca);
+  vec3 Lp = vec3(Lf.x*ca+Lf.z*sa, Lf.y, -Lf.x*sa+Lf.z*ca); // the sun, in planet space
   vec3 S = vec3(uSeed*3.7, uSeed*1.3, -uSeed*2.1);    // per-planet noise offset
   vec3 alb, Np = R, em = vec3(0.); float wrap = 0., water = 0., cl = 0., cloudPt = 0.; vec3 Nc = R, Ww = R;
   float mu = dot(N, L);
@@ -4958,15 +5020,18 @@ void main(){
   }
   // back to view space, then light it: sunlight through the air (reddened, then gone, across the terminator),
   // skylight (the sky's colour, on the day side), the star system's ambient
-  vec3 Nv = vec3(Np.x*ca - Np.z*sa, Np.y, Np.x*sa + Np.z*ca);
+  vec3 Nv = toView(Np, ca, sa);
   alb = pow(alb, vec3(2.2));
-  vec3 Ts = sunT(N);
+  // the ring's shadow: where the line to the sun crosses the ring plane
+  float rs = 1.;
+  if (uRing.x > 0.) { float dn = dot(PA, L); if (abs(dn) > 1e-3) { float t = -dot(PA, N)/dn; if (t > 0.) rs = 1. - ringDen(length(N + L*t))*.85; } }
+  vec3 Ts = sunT(N)*rs;
   vec3 sky = E*(1. - exp(-BR*HS*1.5))*.6*smoothstep(-.25, .5, mu);
   float dif = max((dot(Nv, L) + wrap)/(1. + wrap), 0.);
   vec3 col = alb*(E*dif*Ts + sky + uAmb*1.5);
   if (water > 0.) {
     // the sea mirrors the sky at grazing angles, and the sun off the waves
-    vec3 Wv = vec3(Ww.x*ca - Ww.z*sa, Ww.y, Ww.x*sa + Ww.z*ca), H = normalize(L + vec3(0., 0., 1.));
+    vec3 Wv = toView(Ww, ca, sa), H = normalize(L + vec3(0., 0., 1.));
     float F = .02 + .98*pow(1. - z, 5.);
     col = mix(col, uAtm*E*.12*smoothstep(-.1, .3, mu), F*water*min(uAir, 1.));
     float nh = max(dot(Wv, H), 0.), nh0 = max(dot(N, H), 0.);
@@ -4974,12 +5039,12 @@ void main(){
   }
   if (cl > 0.) {
     // clouds sit higher, so they keep the sun a little past the ground's terminator
-    vec3 Ncv = vec3(Nc.x*ca - Nc.z*sa, Nc.y, Nc.x*sa + Nc.z*ca);
-    vec3 cc = vec3(.72)*(E*max(dot(Ncv, L)*.85 + .15, 0.)*sunT(N*(1. + 2.*HS)) + sky*.7 + uAmb*1.5);
+    vec3 Ncv = toView(Nc, ca, sa);
+    vec3 cc = vec3(.72)*(E*max(dot(Ncv, L)*.85 + .15, 0.)*sunT(N*(1. + 2.*HS))*rs + sky*.7 + uAmb*1.5);
     col = mix(col, cc*(.82 + .4*cloudPt), cl);
   }
   col += em;
-  o = vec4((col*Tv + ins)*aa + insOut*(1. - aa), aa);
+  o = ringOver(vec4((col*Tv + ins)*aa + insOut*(1. - aa), aa), vQ, r, z);
 }`;
 // Orbiters (core/src/orbit.rs): one instanced sprite each, drawn additively over the planets. iA: x, y (world m),
 // size (m), kind (0 debris, 1 traffic, 2 a lens ghost); iB: light (sunlit and facing; a ghost's strength), glint,
@@ -6692,9 +6757,132 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
 })(); window.__fly = FLY; /* test hook */ }).catch(e => { FLY_ERR = String(e.message || e); console.error(e); });
 window.__flyReady = FLY_READY; // test hook: settles once flight mode has started (or failed)
 
+// ======================= SCHEMA =======================
+// Content enters through JSON Schemas (src/schema/*.schema.json): the contract an LLM writes against, and the
+// validator that clamps what it writes before the game uses it (the Book: "output is clamped to schema ranges and
+// enumerations before use"). clampToSchema walks a value against the subset of JSON Schema the schemas use
+// (type, properties, required, items, minItems, maxItems, enum, minimum, maximum, minLength, maxLength, pattern,
+// default) and returns a value that satisfies it, with a note for every change. A missing required field with no
+// default is fatal: the value cannot be used.
+function clampToSchema(schema, value, path, notes) {
+  path = path || '$'; notes = notes || [];
+  const note = (msg, fatal) => notes.push({ path, msg, fatal: !!fatal });
+  const fallback = why => {
+    if (schema.default !== undefined) { note(`${why}; using the default`); return JSON.parse(JSON.stringify(schema.default)); }
+    note(why, true); return undefined;
+  };
+  if (value === undefined) {
+    if (schema.default === undefined) return undefined;
+    const d = JSON.parse(JSON.stringify(schema.default));
+    return schema.type === 'object' ? clampToSchema(schema, d, path, notes) : d; // an object default gets its fields' defaults
+  }
+  if (schema.enum) return schema.enum.includes(value) ? value : fallback(`${JSON.stringify(value)} is not one of ${schema.enum.join(', ')}`);
+  switch (schema.type) {
+    case 'object': {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) return fallback('not an object');
+      const out = {};
+      for (const [k, sub] of Object.entries(schema.properties || {})) {
+        const v = clampToSchema(sub, value[k], `${path}.${k}`, notes);
+        if (v !== undefined) out[k] = v;
+        else if ((schema.required || []).includes(k)) notes.push({ path: `${path}.${k}`, msg: 'required', fatal: true });
+      }
+      for (const k of Object.keys(value)) if (!(schema.properties || {})[k]) note(`unknown field ${k} dropped`);
+      return out;
+    }
+    case 'array': {
+      if (!Array.isArray(value)) return fallback('not an array');
+      let arr = value.map((v, i) => clampToSchema(schema.items || {}, v, `${path}[${i}]`, notes)).filter(v => v !== undefined);
+      if (schema.maxItems !== undefined && arr.length > schema.maxItems) { note(`more than ${schema.maxItems} items; extra dropped`); arr = arr.slice(0, schema.maxItems); }
+      if (schema.minItems !== undefined && arr.length < schema.minItems) return fallback(`fewer than ${schema.minItems} items`);
+      return arr;
+    }
+    case 'number': case 'integer': {
+      let v = typeof value === 'number' && Number.isFinite(value) ? value : NaN;
+      if (Number.isNaN(v)) return fallback('not a number');
+      if (schema.type === 'integer' && !Number.isInteger(v)) { v = Math.round(v); note('rounded to an integer'); }
+      if (schema.minimum !== undefined && v < schema.minimum) { note(`${v} below ${schema.minimum}; clamped`); v = schema.minimum; }
+      if (schema.maximum !== undefined && v > schema.maximum) { note(`${v} above ${schema.maximum}; clamped`); v = schema.maximum; }
+      return v;
+    }
+    case 'string': {
+      if (typeof value !== 'string') return fallback('not a string');
+      let v = value;
+      if (schema.maxLength !== undefined && v.length > schema.maxLength) { note(`longer than ${schema.maxLength}; cut`); v = v.slice(0, schema.maxLength); }
+      if (schema.minLength !== undefined && v.length < schema.minLength) return fallback(`shorter than ${schema.minLength}`);
+      if (schema.pattern && !new RegExp(schema.pattern).test(v)) return fallback(`does not match ${schema.pattern}`);
+      return v;
+    }
+    case 'boolean': return typeof value === 'boolean' ? value : fallback('not a boolean');
+    default: return value;
+  }
+}
+
+// A star system, validated and laid out: the star at the origin, every body placed by its orbit (moons and
+// stations around their parent), parents before children, with what the core and the renderer need. The game
+// re-places bodies with the core's own trig (World::place_body) so a layout is bit-identical across browsers. Returns { system, bodies, notes };
+// system is null if the file is unusable.
+function loadSystem(raw, schema) {
+  const notes = [];
+  const sys = clampToSchema(schema, raw, '$', notes);
+  if (!sys || notes.some(n => n.fatal)) return { system: null, bodies: [], notes };
+  const STAR_LOOK = { 'red-dwarf': 'red', orange: 'orange', yellow: 'sol', white: 'white', 'blue-giant': 'blue' };
+  const placed = new Map(), bodies = [];
+  // a station body's build, its defaults from the schema whether or not the file has a station block; the seed
+  // defaults to the body's id
+  const stationSchema = schema.properties.bodies.items.properties.station;
+  const stationOf = b => { const st = clampToSchema(stationSchema, b.station || {}, `$.bodies[${b.id}].station`, notes); if (!st.seed) st.seed = b.id; return st; };
+  // the star is body 0
+  bodies.push({ id: 'star', name: sys.star.name, kind: 'star', x: 0, y: 0, r: sys.star.radius, g: sys.star.gravity, starClass: sys.star.class, look: STAR_LOOK[sys.star.class] });
+  placed.set('', bodies[0]);
+  // place parents before children (a moon may be listed before its planet)
+  let todo = sys.bodies.slice(), guard = 0;
+  while (todo.length && guard++ < 50) {
+    const next = [];
+    for (const b of todo) {
+      const parent = placed.get(b.parent || '');
+      if (!parent) { if (sys.bodies.some(o => o.id === b.parent)) next.push(b); else notes.push({ path: `$.bodies[${b.id}]`, msg: `parent ${b.parent} not found; orbiting the star`, fatal: false }), next.push(Object.assign({}, b, { parent: '' })); continue; }
+      const a = b.orbit.angle * Math.PI / 180;
+      const body = {
+        id: b.id, name: b.name, kind: b.kind, parent: parent.id, orbit: b.orbit,
+        x: parent.x + Math.cos(a) * b.orbit.radius, y: parent.y + Math.sin(a) * b.orbit.radius, r: b.radius, g: b.gravity,
+        look: b.look, station: b.kind === 'station' ? stationOf(b) : undefined, port: b.port || null
+      };
+      bodies.push(body); placed.set(b.id, body);
+    }
+    todo = next;
+  }
+  if (sys.start && !bodies.some(b => b.id === sys.start && b.port)) notes.push({ path: '$.start', msg: `${sys.start} is not a port body; starting at the first port`, fatal: false });
+  return { system: sys, bodies, notes };
+}
+
+// A system's lore (src/lore/<id>.json), validated against its schema and against the system it narrates: it must
+// name the system, and each port entry a body with a port, once; person ids are unique (they name the portraits).
+// Entries that fail are dropped with a note, so a port without lore falls back to the system file's description.
+// Returns { lore, ports: Map body id -> entry, notes }; lore is null if the file is unusable.
+function loadLore(raw, schema, system) {
+  const notes = [];
+  const lore = clampToSchema(schema, raw, '$', notes);
+  if (!lore || notes.some(n => n.fatal)) return { lore: null, ports: new Map(), notes };
+  if (system && lore.system !== system.id) { notes.push({ path: '$.system', msg: `lore is for ${lore.system}, not ${system.id}`, fatal: true }); return { lore: null, ports: new Map(), notes }; }
+  const portBodies = new Set(system ? system.bodies.filter(b => b.port).map(b => b.id) : []), ports = new Map(), people = new Set();
+  lore.ports.forEach((p, i) => {
+    const drop = msg => notes.push({ path: `$.ports[${i}]`, msg: `${msg}; dropped`, fatal: false });
+    if (system && !portBodies.has(p.body)) return drop(`${p.body} is not a port body`);
+    if (ports.has(p.body)) return drop(`second entry for ${p.body}`);
+    p.people = p.people.filter(q => people.has(q.id) ? (notes.push({ path: `$.ports[${i}].people`, msg: `person id ${q.id} used twice; dropped`, fatal: false }), false) : people.add(q.id));
+    ports.set(p.body, p);
+  });
+  for (const id of portBodies) if (!ports.has(id)) notes.push({ path: '$.ports', msg: `no lore for port ${id}`, fatal: false });
+  return { lore, ports, notes };
+}
+
+if (typeof module !== 'undefined') module.exports = { clampToSchema, loadSystem, loadLore };
+
 // ======================= PLANETS =======================
-// Fully procedural in the fragment shader: an analytic sphere with seamless 3D noise for the surface,
-// equatorial rings that cast and receive shadows, and moons on inclined orbits drawn behind or in front of the planet.
+// The lab's planets are the game's: each is a body's `look` from system.schema.json, clamped by the same schema
+// and drawn by the game's planet shader (PLANET_FS, through look.js planetUniforms), so the JSON the builder shows is
+// exactly what a system file (or a model writing one) gives a planet or moon. NOISE3 is the shared value noise the
+// Suns and Asteroids tabs' shaders use.
 const NOISE3 = `
 float h31(vec3 p){ p = fract(p*.3183099+.1); p *= 17.; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
 float n3(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
@@ -6708,268 +6896,60 @@ vec2 worley3(vec3 p){ vec3 i=floor(p), f=fract(p); float d1=8., d2=8.;
     float d=length(g+o-f); if(d<d1){ d2=d1; d1=d; } else if(d<d2) d2=d; }
   return vec2(d1,d2); }`;
 
-const BODY_VS = `#version 300 es
-in vec2 aPos; uniform vec2 uRes, uCenter; uniform float uRpx, uExt; out vec2 vQ;
-void main(){ vQ = aPos*uExt; vec2 w = uCenter + aPos*uExt*uRpx; gl_Position = vec4(w/uRes*2.-1., 0., 1.); }`;
-
-const BODY_FS = `#version 300 es
-precision highp float;
-in vec2 vQ; out vec4 o;
-uniform vec3 uSun, uSunCol, uAmb, uAxis;
-uniform vec3 uPal[5]; uniform vec3 uCloudCol, uAtm, uEmis, uRingA, uRingB;
-uniform float uGas, uSea, uCloud, uIce, uCity, uCrater, uLava, uAtmK, uFreq, uSeed, uRot, uCloudRot, uPx, uStorm;
-uniform float uRingOn, uRingIn, uRingOut, uRingDens;
-${NOISE3}
-vec3 ramp5(float t){ t = clamp(t,0.,1.)*4.; int i = int(min(floor(t),3.)); return mix(uPal[i], uPal[i+1], smoothstep(0.,1.,t-float(i))); }
-float ringDensity(float d){
-  float t = (d-uRingIn)/(uRingOut-uRingIn); if (t < 0. || t > 1.) return 0.;
-  float b = .5 + .5*n3(vec3(d*42., uSeed, 1.)); b *= .55 + .45*n3(vec3(d*9., uSeed*1.7, 3.));
-  float gap = smoothstep(.012,.03,abs(t-.62)), gap2 = smoothstep(.004,.012,abs(t-.86));
-  return uRingDens*b*gap*mix(1.,gap2,.85)*smoothstep(0.,.05,t)*smoothstep(1.,.92,t);
-}
-void main(){
-  vec3 A = normalize(uAxis), L = normalize(uSun);
-  vec2 q = vQ; float r = length(q);
-  vec4 res = vec4(0.);
-  float zs = r < 1. ? sqrt(1.-r*r) : -1.;
-  if (r < 1.) {
-    vec3 P = vec3(q, zs);
-    vec3 ref = abs(A.z) < .95 ? vec3(0.,0.,1.) : vec3(1.,0.,0.);
-    vec3 U = normalize(cross(A, ref)), V = cross(A, U);
-    float lx = dot(P,U), ly = dot(P,V), lat = dot(P,A);
-    float cr = cos(uRot), sr = sin(uRot);
-    vec3 S = vec3(lx*cr - ly*sr, lx*sr + ly*cr, lat);
-    vec3 alb, em = vec3(0.); float specMask = 0., land = 0.;
-    float dl = dot(P, L), night = smoothstep(.08, -.18, dl);
-    if (uGas > .5) {
-      float w = fbm3(S*vec3(2.4,2.4,.9) + uSeed);
-      float t = lat*1.7 + (w-.5)*.6 + (fbm3(S*vec3(3.,3.,28.) + uSeed*2.)-.5)*.14;
-      alb = ramp5(abs(fract(t*.85)*2.-1.));
-      vec3 sp = normalize(vec3(cos(uSeed*3.), sin(uSeed*3.), -.35));
-      float sd = length((S - sp)*vec3(1.,1.,2.4));
-      float swirl = n3(S*18. + uSeed);
-      float storm = (1. - smoothstep(.1, .19, sd + (swirl-.5)*.04))*uStorm;
-      alb = mix(alb, mix(uPal[4], uPal[1], .35 + .3*swirl), storm*.85);
-      em += uEmis*uLava*night*(.4 + .6*w)*1.6;
-    } else {
-      float h = fbm3(S*uFreq + uSeed)*.85 + ridge3(S*uFreq*1.3 + uSeed*2.)*.25 - .1;
-      if (uCrater > .01) {
-        vec2 wv = worley3(S*uFreq*1.7 + uSeed);
-        float bowl = 1. - smoothstep(0., .42, wv.x);
-        float rim = smoothstep(.34,.42,wv.x)*(1.-smoothstep(.42,.56,wv.x));
-        h += (rim*.12 - bowl*.2)*uCrater;
-      }
-      if (h < uSea) {
-        alb = mix(uPal[0], uPal[1], smoothstep(uSea-.18, uSea, h)); specMask = 1. - uLava;
-        if (uLava > .01) { float g = .5 + .5*n3(S*16. + uSeed); em += uEmis*uLava*(.55 + 1.1*g)*smoothstep(uSea-.3, uSea, h)*1.8; }
-      } else {
-        land = 1.;
-        if (uSea < 0.) alb = ramp5(h*1.15 - .1);
-        else { float t = (h - uSea)/max(1. - uSea, .05)*1.8; alb = mix(mix(uPal[2], uPal[3], smoothstep(0., .45, t)), uPal[4], smoothstep(.5, 1., t)); }
-        if (uLava > .01) { float c = pow(1. - abs(n3(S*uFreq*3.5 + uSeed*3.)*2. - 1.), 10.); em += uEmis*c*uLava*2.2; alb *= 1. - c*.6; }
-      }
-      if (uIce > .01) {
-        float ic = smoothstep(1. - uIce*.55, 1. - uIce*.55 + .06, abs(lat) + (n3(S*6. + uSeed)-.5)*.14);
-        alb = mix(alb, vec3(.93,.96,1.), ic); specMask *= 1. - ic; em *= 1. - ic;
-      }
-      if (uCity > .01) {
-        float cl = smoothstep(.62,.82,n3(S*46. + uSeed))*smoothstep(.45,.75,n3(S*7. + uSeed*2.));
-        em += vec3(1.,.72,.38)*cl*night*uCity*land*1.7;
-      }
-    }
-    alb = pow(alb, vec3(2.2));
-    float lit = uGas > .5 ? max(dl*.92 + .08*smoothstep(-.15,.25,dl), 0.) : max(dl, 0.);
-    float rs = 1.;
-    if (uRingOn > .5) { float dn = dot(A, L); if (abs(dn) > 1e-3) { float t = -dot(A, P)/dn; if (t > 0.) rs = 1. - ringDensity(length(P + L*t))*.85; } }
-    vec3 col = alb*uSunCol*lit*rs*2.4 + alb*uAmb*1.2;
-    col += uSunCol*pow(max(dot(reflect(-L, P), vec3(0.,0.,1.)), 0.), 70.)*.7*specMask*max(dl,0.)*rs;
-    if (uCloud > .01) {
-      float cc = cos(uCloudRot), cs = sin(uCloudRot);
-      vec3 Sc = vec3(lx*cc - ly*cs, lx*cs + ly*cc, lat);
-      float cv = fbm3(Sc*vec3(2.6,2.6,uGas > .5 ? 7. : 2.6) + uSeed*3.);
-      cv = smoothstep(1. - uCloud, 1. - uCloud + .22, cv);
-      vec3 ccol = pow(uCloudCol, vec3(2.2));
-      col = mix(col, ccol*uSunCol*max(dl*.95 + .05, 0.)*rs*2.4 + ccol*uAmb, cv*.92);
-      em *= 1. - cv*.85;
-    }
-    col += em;
-    col += uAtm*uAtmK*pow(1. - zs, 2.6)*uSunCol*(.12 + 1.1*max(dl + .25, 0.));
-    float aa = 1. - smoothstep(1. - uPx*1.5, 1., r);
-    res = vec4(col*aa, aa);
-  }
-  if (r > .98 && uAtmK > 0.) {
-    float lt = clamp(dot(normalize(q), normalize(L.xy + 1e-5))*.7 + .45, 0., 1.);
-    float hal = exp(-max(r - 1., 0.)*11.)*smoothstep(.98, 1.01, r);
-    res.rgb += uAtm*uAtmK*hal*lt*uSunCol*.7;
-  }
-  if (uRingOn > .5) {
-    float nz = abs(A.z) < .03 ? (A.z < 0. ? -.03 : .03) : A.z;
-    float zr = -(A.x*q.x + A.y*q.y)/nz;
-    vec3 Q = vec3(q, zr); float d = length(Q);
-    float den = ringDensity(d);
-    if (den > .001 && (r >= 1. || zr > zs)) {
-      float b = dot(Q, L), c = dot(Q, Q) - 1.;
-      float sh = (b < 0. && b*b - c > 0.) ? .06 : 1.;
-      float face = .3 + .7*abs(dot(A, L));
-      vec3 rc = pow(mix(uRingA, uRingB, n3(vec3(d*14., uSeed, 7.))), vec3(2.2));
-      vec3 rcol = rc*uSunCol*face*sh*1.8 + rc*uAmb*1.6;
-      float ra = clamp(den, 0., .95);
-      res = vec4(rcol*ra + res.rgb*(1. - ra), ra + res.a*(1. - ra));
-    }
-  }
-  o = res;
-}`;
-
-const ORBIT_FS = `#version 300 es
-precision highp float;
-in vec2 vQ; out vec4 o;
-uniform vec3 uM, uCol; uniform float uRo;
-void main(){
-  float nz = abs(uM.z) < .02 ? (uM.z < 0. ? -.02 : .02) : uM.z;
-  float z = -(uM.x*vQ.x + uM.y*vQ.y)/nz;
-  float d = length(vec3(vQ, z)), fw = max(fwidth(d), 1e-4);
-  float line = 1. - smoothstep(fw*.6, fw*1.6, abs(d - uRo));
-  float r = length(vQ);
-  if (r < 1. && z < sqrt(1. - r*r)) discard;
-  float front = z > 0. ? 1. : .4;
-  o = vec4(uCol*line*front*.3, 0.);
-}`;
-
 let PLAN = null, PLAN_ERR = '';
 try { PLAN = (function () {
-  const BP = compile(BODY_VS, BODY_FS), OP = compile(BODY_VS, ORBIT_FS);
+  const FP = compile(PLANET_VS, PLANET_FS);
+  const LOOK = JSON.parse($('system-schema').textContent).properties.bodies.items.properties.look;
+  const LP = LOOK.properties, RP = LP.rings.properties;
+  // clamp a look to the schema, as the game does when it loads a system (notes are what the clamp changed)
+  const clampLook = raw => { const notes = []; return { look: clampToSchema(LOOK, raw, '$.look', notes), notes }; };
 
-  const PAL = {
-    verdant: { label: 'Verdant', gas: 0, cols: ['#0a2747', '#1d5f8f', '#4b7a35', '#7d6b45', '#eceae4'], cloud: '#f4f6f8', atm: '#7fb6ff', d: { sea: .5, cloud: .5, ice: .3, crater: 0, lava: 0, city: .6, atm: 1, freq: 2.2 } },
-    oceanic: { label: 'Oceanic', gas: 0, cols: ['#051c3a', '#17689f', '#3d7a64', '#8c8a68', '#f2f5f8'], cloud: '#ffffff', atm: '#8fd0ff', d: { sea: .66, cloud: .6, ice: .35, crater: 0, lava: 0, city: .25, atm: 1.1, freq: 2 } },
-    arid: { label: 'Arid', gas: 0, cols: ['#2e1f15', '#5e3f27', '#a8784c', '#d2a874', '#efdcb8'], cloud: '#f0e2cc', atm: '#ffc890', d: { sea: 0, cloud: .12, ice: .12, crater: .25, lava: 0, city: .15, atm: .7, freq: 2.6 } },
-    lava: { label: 'Lava', gas: 0, cols: ['#120604', '#2a0f08', '#2b1712', '#47291f', '#5e3a2c'], cloud: '#4a3a34', atm: '#ff6a2a', emis: '#ff5a14', d: { sea: .45, cloud: .15, ice: 0, crater: .2, lava: 1, city: 0, atm: .8, freq: 2.4 } },
-    frozen: { label: 'Frozen', gas: 0, cols: ['#5f86a8', '#9fc2dc', '#d6e6f2', '#eef5fb', '#ffffff'], cloud: '#ffffff', atm: '#cfe8ff', d: { sea: .42, cloud: .3, ice: .6, crater: .15, lava: 0, city: 0, atm: .8, freq: 2 } },
-    toxic: { label: 'Toxic', gas: 0, cols: ['#1a2508', '#4a6a12', '#7c8f24', '#b7c63c', '#e8f09a'], cloud: '#c9d878', atm: '#b8f060', d: { sea: .5, cloud: .62, ice: 0, crater: 0, lava: 0, city: 0, atm: 1.3, freq: 2.2 } },
-    rust: { label: 'Rust', gas: 0, cols: ['#2c130b', '#5c2715', '#9e4a2a', '#c47546', '#e6c3a2'], cloud: '#e8cdb4', atm: '#ffad80', d: { sea: 0, cloud: .08, ice: .2, crater: .5, lava: 0, city: 0, atm: .45, freq: 2.4 } },
-    barren: { label: 'Barren', gas: 0, cols: ['#2e2c2a', '#4b4845', '#6d6862', '#8f8981', '#bdb7ad'], cloud: '#ffffff', atm: '#a0a0a0', d: { sea: 0, cloud: 0, ice: 0, crater: 1, lava: 0, city: 0, atm: 0, freq: 2.8 } },
-    violet: { label: 'Violet', gas: 0, cols: ['#0f0826', '#341c66', '#5f3594', '#9a6ac8', '#f0dcff'], cloud: '#e8d8ff', atm: '#c08cff', d: { sea: .48, cloud: .42, ice: .15, crater: 0, lava: 0, city: .4, atm: 1.1, freq: 2.2 } },
-    jovian: { label: 'Jovian giant', gas: 1, cols: ['#7d4e33', '#c9925c', '#ecd9b0', '#a86a3a', '#f5e8cc'], cloud: '#f5e8cc', atm: '#ffcf9a', d: { cloud: 0, storm: 1, atm: .7, lava: 0 } },
-    azure: { label: 'Azure giant', gas: 1, cols: ['#16406f', '#2f6fb0', '#5f9bd0', '#9cc8ec', '#dff0ff'], cloud: '#ffffff', atm: '#9fd0ff', d: { cloud: .15, storm: .6, atm: 1, lava: 0 } },
-    rose: { label: 'Rose giant', gas: 1, cols: ['#5a2240', '#a8506a', '#e09a8e', '#7a3450', '#f8ddd2'], cloud: '#fff0ea', atm: '#ffb0c0', d: { cloud: 0, storm: .8, atm: .8, lava: 0 } },
-    ember: { label: 'Ember giant', gas: 1, cols: ['#2a0c06', '#6a1e0c', '#c0461a', '#ff8a3a', '#ffd08a'], cloud: '#ffd8a8', atm: '#ff7a3a', emis: '#ff6a20', d: { cloud: 0, storm: 1, atm: .9, lava: .45 } }
+  // presets: a surface, its three colours (what each means depends on the surface), the air and its colour, and
+  // how stormy, lit and ringed such worlds tend to be
+  const PRESETS = {
+    verdant: { label: 'Verdant', surface: 'terran', palette: ['#1d5f8f', '#4b7a35', '#7d6b45'], atmosphere: '#7fb6ff', air: 1, cityLights: 0.6 },
+    oceanic: { label: 'Oceanic', surface: 'terran', palette: ['#17689f', '#3d7a64', '#8c8a68'], atmosphere: '#8fd0ff', air: 1.1, cityLights: 0.25, lightning: 0.3 },
+    frozen: { label: 'Frozen', surface: 'terran', palette: ['#9fc2dc', '#d6e6f2', '#eef5fb'], atmosphere: '#cfe8ff', air: 0.8 },
+    toxic: { label: 'Toxic', surface: 'terran', palette: ['#4a6a12', '#7c8f24', '#b7c63c'], atmosphere: '#b8f060', air: 1.3, lightning: 0.5 },
+    violet: { label: 'Violet', surface: 'terran', palette: ['#341c66', '#5f3594', '#9a6ac8'], atmosphere: '#c08cff', air: 1.1, cityLights: 0.4 },
+    arid: { label: 'Arid', surface: 'rock', palette: ['#5e3f27', '#a8784c', '#d2a874'], atmosphere: '#ffc890', air: 0.7 },
+    rust: { label: 'Rust', surface: 'rock', palette: ['#5c2715', '#9e4a2a', '#c47546'], atmosphere: '#ffad80', air: 0.45 },
+    cinder: { label: 'Cinder', surface: 'rock', palette: ['#2a0f08', '#47291f', '#5e3a2c'], atmosphere: '#ff6a2a', air: 0.8 },
+    barren: { label: 'Barren', surface: 'rock', palette: ['#4b4845', '#6d6862', '#8f8981'], atmosphere: '#a0a0a0', air: 0 },
+    jovian: { label: 'Jovian giant', surface: 'giant', palette: ['#7d4e33', '#c9925c', '#ecd9b0'], atmosphere: '#ffcf9a', air: 0.7, lightning: 0.6 },
+    azure: { label: 'Azure giant', surface: 'giant', palette: ['#16406f', '#2f6fb0', '#9cc8ec'], atmosphere: '#9fd0ff', air: 1, lightning: 0.3 },
+    rose: { label: 'Rose giant', surface: 'giant', palette: ['#5a2240', '#a8506a', '#e09a8e'], atmosphere: '#ffb0c0', air: 0.8 },
+    ember: { label: 'Ember giant', surface: 'giant', palette: ['#2a0c06', '#6a1e0c', '#c0461a'], atmosphere: '#ff7a3a', air: 0.9, lightning: 0.8 }
   };
   const RINGS = { ice: ['#dfe9f2', '#94a8bc'], dust: ['#b09a80', '#5e5040'], gold: ['#ecd29a', '#9c7c4a'], rose: ['#ecb4ac', '#8a5862'], ember: ['#ffb070', '#6a2a14'], jade: ['#b8e8d0', '#4a7a6a'] };
-  const MOON_PALS = ['barren', 'barren', 'frozen', 'rust', 'arid', 'lava', 'violet'];
-  const LIN = {};
-  for (const k in PAL) {
-    const p = PAL[k];
-    LIN[k] = { pal: new Float32Array(p.cols.flatMap(hexRGB)), cloud: hexRGB(p.cloud), atm: lin(hexRGB(p.atm)), emis: lin(hexRGB(p.emis || '#ff6a20')) };
-  }
-  const RLIN = {}; for (const k in RINGS) RLIN[k] = RINGS[k].map(hexRGB);
+  const PAL_MEANS = { terran: 'Seas, lowlands, highlands', giant: 'Bands, bands, zones', rock: 'Plains, ground, ridges' };
 
   // ---------- generation ----------
   function rngOf(s) { let a = 0; for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 2654435761) >>> 0; return function () { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const SYL = ['ka', 've', 'lor', 'tis', 'an', 'dra', 'mo', 'rin', 'sel', 'ux', 'thar', 'ion', 'be', 'qua', 'zen', 'or', 'phe', 'ly', 'ga', 'nox', 'cy', 'mar', 'ost', 'el'];
   const SUF = ['', '', '', ' Prime', ' II', ' IV', ' Minor', ' b'];
   function name(r) { let s = ''; const n = 2 + (r() < 0.4 ? 1 : 0); for (let i = 0; i < n; i++) s += SYL[Math.floor(r() * SYL.length)]; return s[0].toUpperCase() + s.slice(1) + SUF[Math.floor(r() * SUF.length)]; }
-  const jit = (r, v, a) => Math.max(0, v + (r() * 2 - 1) * a);
-  function applyPalette(p, key) {
-    const d = PAL[key].d;
-    p.palette = key;
-    p.sea = d.sea || 0; p.cloud = d.cloud || 0; p.ice = d.ice || 0; p.crater = d.crater || 0; p.lava = d.lava || 0; p.city = d.city || 0; p.atm = d.atm || 0; p.freq = d.freq || 2.2; p.storm = d.storm || 0;
+  const round = v => Math.round(v * 100) / 100;
+  // a preset's look, without rings
+  const presetLook = (key, seed) => { const P = PRESETS[key]; return { surface: P.surface, palette: P.palette.slice(), atmosphere: P.atmosphere, air: P.air, lightning: P.lightning || 0, cityLights: P.cityLights || 0, debris: 1, seed }; };
+  function generate(seedText) {
+    const r = rngOf(seedText), keys = Object.keys(PRESETS), preset = keys[Math.floor(r() * keys.length)];
+    const raw = presetLook(preset, round(r() * 100));
+    const giant = raw.surface === 'giant';
+    if (r() < (giant ? 0.6 : 0.2)) {
+      const inner = round(1.25 + r() * 0.35), rk = Object.keys(RINGS);
+      raw.rings = { density: round(0.55 + r() * 0.4), inner, outer: round(inner + 0.45 + r() * 0.7), colours: RINGS[rk[Math.floor(r() * rk.length)]].slice(), tilt: Math.round(50 + r() * 32), angle: Math.round((r() * 2 - 1) * 35) };
+    }
+    return { name: name(r), preset, look: clampLook(raw).look };
   }
-  function makeMoon(r, k, sys) {
-    const key = MOON_PALS[Math.floor(r() * MOON_PALS.length)], d = PAL[key].d;
-    const base = Math.max(sys.rings.on ? sys.rings.outer + 0.45 : 1.7, 1.7);
-    return {
-      palette: key, size: 0.1 + r() * 0.16, orbit: base + k * (0.55 + r() * 0.35), seed: r() * 50,
-      speed: 0, phase: r() * 6.283, tilt: sys.tilt + (r() * 2 - 1) * 9, angle: sys.axisAngle + (r() * 2 - 1) * 10,
-      sea: d.sea || 0, cloud: (d.cloud || 0) * 0.5, ice: d.ice || 0, crater: Math.max(d.crater || 0, 0.4), lava: d.lava || 0, city: 0, atm: (d.atm || 0) * 0.4, freq: 2.6, storm: 0
-    };
-  }
-  function fixMoonSpeeds(sys) { sys.moons.forEach(m => { m.speed = 0.35 / Math.pow(m.orbit, 1.5) * (m.dir || 1); }); }
-  function generate(seed) {
-    const r = rngOf(seed);
-    const keys = Object.keys(PAL);
-    const key = keys[Math.floor(r() * keys.length)];
-    const p = { name: name(r), seed: Math.round(r() * 1000) / 10, spin: 0.2 + r() * 0.5, tilt: 50 + r() * 32, axisAngle: (r() * 2 - 1) * 35 };
-    applyPalette(p, key);
-    p.sea = PAL[key].d.sea ? jit(r, p.sea, 0.06) : 0; p.cloud = jit(r, p.cloud, 0.1); p.freq = jit(r, p.freq, 0.4);
-    const gas = PAL[key].gas;
-    const rk = Object.keys(RINGS);
-    const ringOn = r() < (gas ? 0.6 : 0.2);
-    const inner = 1.25 + r() * 0.35;
-    p.rings = { on: ringOn, style: rk[Math.floor(r() * rk.length)], inner, outer: inner + 0.45 + r() * 0.7, density: 0.55 + r() * 0.4 };
-    p.moons = [];
-    const nm = Math.floor(r() * (gas ? 4.5 : 3));
-    for (let k = 0; k < nm; k++) p.moons.push(makeMoon(r, k, p));
-    p.moons.forEach(m => { m.dir = 1; });
-    fixMoonSpeeds(p);
-    p.showOrbits = true;
-    return p;
-  }
-  let systems = [];
-  function newSet() { systems = []; for (let i = 0; i < 12; i++) systems.push(generate(state.planetSeed + ':' + i)); }
+  let worlds = [];
+  function newSet() { worlds = []; for (let i = 0; i < 12; i++) worlds.push(generate(state.planetSeed + ':' + i)); worlds.forEach(w => { w.pu = planetUniforms(w.look); }); }
   newSet();
 
-  // ---------- drawing ----------
-  const axisVec = (tilt, ang) => { const t = tilt * Math.PI / 180, a = (ang + 90) * Math.PI / 180; return [Math.sin(t) * Math.cos(a), Math.sin(t) * Math.sin(a), Math.cos(t)]; };
-  function orbitBasis(n) {
-    const ref = Math.abs(n[2]) < 0.95 ? [0, 0, 1] : [1, 0, 0];
-    let u = [n[1] * ref[2] - n[2] * ref[1], n[2] * ref[0] - n[0] * ref[2], n[0] * ref[1] - n[1] * ref[0]];
-    const ul = Math.hypot(...u); u = u.map(v => v / ul);
-    const v = [n[1] * u[2] - n[2] * u[1], n[2] * u[0] - n[0] * u[2], n[0] * u[1] - n[1] * u[0]];
-    return [u, v];
-  }
-  let frameCtx = null;
-  function drawBody(b, cxPx, cyPx, rPx, axis, t, rings) {
-    const u = BP.u, L = LIN[b.palette], pal = PAL[b.palette];
-    const ext = rings && rings.on ? Math.max(1.3, rings.outer * 1.03) : 1.3;
-    gl.uniform2f(u.uCenter, cxPx, cyPx); gl.uniform1f(u.uRpx, rPx); gl.uniform1f(u.uExt, ext); gl.uniform1f(u.uPx, 1 / rPx);
-    gl.uniform3fv(u.uAxis, axis);
-    gl.uniform3fv(u.uPal, L.pal); gl.uniform3fv(u.uCloudCol, L.cloud); gl.uniform3fv(u.uAtm, L.atm); gl.uniform3fv(u.uEmis, L.emis);
-    gl.uniform1f(u.uGas, pal.gas); gl.uniform1f(u.uSea, b.sea < 0.02 ? -1 : b.sea); gl.uniform1f(u.uCloud, b.cloud); gl.uniform1f(u.uIce, b.ice);
-    gl.uniform1f(u.uCity, b.city); gl.uniform1f(u.uCrater, b.crater); gl.uniform1f(u.uLava, b.lava); gl.uniform1f(u.uAtmK, b.atm);
-    gl.uniform1f(u.uFreq, b.freq); gl.uniform1f(u.uSeed, b.seed); gl.uniform1f(u.uStorm, b.storm || 0);
-    gl.uniform1f(u.uRot, t * (b.spin || 0.1) * 0.25); gl.uniform1f(u.uCloudRot, t * (b.spin || 0.1) * 0.3);
-    if (rings && rings.on) {
-      const R = RLIN[rings.style] || RLIN.ice;
-      gl.uniform1f(u.uRingOn, 1); gl.uniform1f(u.uRingIn, rings.inner); gl.uniform1f(u.uRingOut, Math.max(rings.outer, rings.inner + 0.1)); gl.uniform1f(u.uRingDens, rings.density);
-      gl.uniform3fv(u.uRingA, R[0]); gl.uniform3fv(u.uRingB, R[1]);
-    } else gl.uniform1f(u.uRingOn, 0);
-    draw();
-  }
-  function drawSystem(sys, cx, cy, Rp, t) {
-    const RW = canvas.width, RH = canvas.height;
-    const axis = axisVec(sys.tilt, sys.axisAngle);
-    const moons = sys.moons.map(m => {
-      const n = axisVec(m.tilt, m.angle), [e1, e2] = orbitBasis(n), th = m.phase + t * m.speed;
-      const p = [0, 1, 2].map(k => m.orbit * (Math.cos(th) * e1[k] + Math.sin(th) * e2[k]));
-      return { m, n, p, axis: axisVec(m.tilt * 0.5, m.angle) };
-    });
-    gl.useProgram(BP.p); setCommon(BP);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    for (const o of moons) if (o.p[2] < 0) { gl.uniform2f(BP.u.uRes, RW, RH); drawBody(o.m, cx + o.p[0] * Rp, cy + o.p[1] * Rp, o.m.size * Rp, o.axis, t, null); }
-    drawBody(sys, cx, cy, Rp, axis, t, sys.rings);
-    if (sys.showOrbits && moons.length) {
-      gl.useProgram(OP.p); gl.blendFunc(gl.ONE, gl.ONE);
-      gl.uniform2f(OP.u.uRes, RW, RH); gl.uniform2f(OP.u.uCenter, cx, cy); gl.uniform1f(OP.u.uRpx, Rp);
-      gl.uniform3f(OP.u.uCol, 0.55, 0.62, 0.72);
-      for (const o of moons) { gl.uniform1f(OP.u.uExt, o.m.orbit * 1.04); gl.uniform3fv(OP.u.uM, o.n); gl.uniform1f(OP.u.uRo, o.m.orbit); draw(); }
-      gl.useProgram(BP.p); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    }
-    for (const o of moons) if (o.p[2] >= 0) drawBody(o.m, cx + o.p[0] * Rp, cy + o.p[1] * Rp, o.m.size * Rp, o.axis, t, null);
-  }
-  function setCommon(prog) {
-    const u = prog.u, f = frameCtx;
-    gl.uniform2f(u.uRes, canvas.width, canvas.height);
-    gl.uniform3fv(u.uSun, f.sv); gl.uniform3fv(u.uSunCol, f.sunCol); gl.uniform3fv(u.uAmb, f.amb);
-  }
-  function systemExtent(sys) {
-    let e = sys.rings.on ? Math.max(1.3, sys.rings.outer) : 1.3;
-    for (const m of sys.moons) e = Math.max(e, (m.orbit + m.size) * 0.8);
-    return e;
-  }
+  // ---------- drawing: in pixels, the game's planet shader on a camera at the canvas centre, one pixel a metre ----------
   function frame(now) {
     const t = (now - t0) / 1000;
     const star = STARS[state.star], sv = sunVec(), sl = Math.hypot(sv[0], sv[1]) || 1;
-    frameCtx = { sv, sunCol: lin(star.col), amb: star.amb };
     const RW = canvas.width, RH = canvas.height;
     gl.bindVertexArray(null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, scene.f); gl.viewport(0, 0, RW, RH);
@@ -6979,12 +6959,19 @@ try { PLAN = (function () {
     gl.uniform3fv(P.bg.u.uStar, star.col); gl.uniform3fv(P.bg.u.uNeb, star.neb);
     gl.uniform2f(P.bg.u.uSunDir, sv[0] / sl, sv[1] / sl); gl.uniform2f(P.bg.u.uOff, 0, 0);
     draw();
-    gl.enable(gl.BLEND);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(FP.p);
+    const u = FP.u;
+    gl.uniform2f(u.uRes, RW, RH); gl.uniform2f(u.uCam, RW / 2, RH / 2); gl.uniform1f(u.uScale, 1);
+    gl.uniform3fv(u.uSun, sv); gl.uniform3fv(u.uSunCol, lin(star.col)); gl.uniform3fv(u.uAmb, star.amb);
+    // the game spins worlds slowly (a turn in about 26 minutes); the lab runs that clock 40 times faster to show it
+    gl.uniform1f(u.uTime, t * 40);
     for (const c of cells) {
-      const sys = systems[c.planet]; if (!sys) continue;
-      const fill = state.planetFocus >= 0 ? 0.5 : 0.47;
-      const Rp = c.cell * fill / systemExtent(sys) * dpr;
-      drawSystem(sys, c.cx * dpr, (H - c.cy) * dpr, Rp, t + c.planet * 13.7);
+      const w = worlds[c.planet]; if (!w) continue;
+      const fill = state.planetFocus >= 0 ? 0.5 : 0.47, Rp = c.cell * fill / w.pu.ext * dpr;
+      gl.uniform2f(u.uC, c.cx * dpr, (H - c.cy) * dpr); gl.uniform1f(u.uR, Rp); gl.uniform1f(u.uPx, 1 / Rp);
+      bindPlanet(gl, u, w.pu);
+      draw();
     }
     gl.disable(gl.BLEND);
     postProcess();
@@ -6992,67 +6979,58 @@ try { PLAN = (function () {
 
   // ---------- builder panel ----------
   const pct = v => Math.round(v * 100) + '%', deg = v => Math.round(v) + '°', x2 = v => v.toFixed(2) + '×';
-  const SL = [
-    ['sea', 'Sea level', 0, 0.8, 0.01, v => v < 0.02 ? 'None' : pct(v), 'rock'],
-    ['cloud', 'Clouds', 0, 1, 0.01, pct], ['ice', 'Ice caps', 0, 1, 0.01, pct, 'rock'], ['crater', 'Craters', 0, 1, 0.01, pct, 'rock'],
-    ['lava', 'Molten', 0, 1, 0.01, pct], ['city', 'City lights', 0, 1, 0.01, pct, 'rock'], ['storm', 'Storm', 0, 1, 0.01, pct, 'gas'],
-    ['atm', 'Atmosphere', 0, 1.5, 0.01, pct], ['freq', 'Terrain scale', 1, 5, 0.05, v => v.toFixed(1), 'rock'], ['spin', 'Spin', 0, 1, 0.01, pct],
-    ['tilt', 'Axial tilt', 0, 88, 1, deg], ['axisAngle', 'Axis angle', -180, 180, 1, deg]
-  ];
-  const RSL = [['inner', 'Inner edge', 1.1, 2.6, 0.01, x2], ['outer', 'Outer edge', 1.3, 3.6, 0.01, x2], ['density', 'Density', 0, 1, 0.01, pct]];
-  function sliderRow(id, label, lo, hi, step) {
-    return `<label class="slider" for="${id}" data-row="${id}">${label} <input id="${id}" type="range" min="${lo}" max="${hi}" step="${step}"><output id="${id}-v"></output></label>`;
-  }
-  $('pl-sliders').innerHTML = SL.map(s => sliderRow('pl-' + s[0], s[1], s[2], s[3], s[4])).join('');
-  $('pl-ring-sliders').innerHTML = RSL.map(s => sliderRow('pl-r' + s[0], s[1], s[2], s[3], s[4])).join('');
-  $('pl-palette').innerHTML = Object.keys(PAL).map(k => `<option value="${k}">${PAL[k].label}</option>`).join('');
-  $('pl-ringstyle').innerHTML = Object.keys(RINGS).map(k => `<option value="${k}">${k[0].toUpperCase() + k.slice(1)}</option>`).join('');
-  const cur = () => systems[state.planetFocus];
+  // [field, label, format]; ranges and steps from the schema
+  const SL = [['air', 'Air', pct], ['lightning', 'Lightning', pct], ['cityLights', 'City lights', pct], ['debris', 'Orbital debris (game only)', x2], ['seed', 'Seed', v => v.toFixed(1)]];
+  const RSL = [['density', 'Density', pct], ['inner', 'Inner edge', x2], ['outer', 'Outer edge', x2], ['tilt', 'Tilt from face-on', deg], ['angle', 'Pole on screen', deg]];
+  const sliderRow = (id, label, sc) => `<label class="slider" for="${id}" data-row="${id}">${label} <input id="${id}" type="range" min="${sc.minimum}" max="${sc.maximum}" step="${(sc.maximum - sc.minimum) > 50 ? 1 : 0.01}"><output id="${id}-v"></output></label>`;
+  $('pl-sliders').innerHTML = SL.map(s => sliderRow('pl-' + s[0], s[1], LP[s[0]])).join('');
+  $('pl-ring-sliders').innerHTML = RSL.map(s => sliderRow('pl-r' + s[0], s[1], RP[s[0]])).join('');
+  $('pl-preset').innerHTML = Object.keys(PRESETS).map(k => `<option value="${k}">${PRESETS[k].label}</option>`).join('');
+  $('pl-surface').innerHTML = LP.surface.enum.map(k => `<option value="${k}">${k[0].toUpperCase() + k.slice(1)}</option>`).join('');
+  $('pl-ringstyle').innerHTML = '<option value="">Custom</option>' + Object.keys(RINGS).map(k => `<option value="${k}">${k[0].toUpperCase() + k.slice(1)}</option>`).join('');
+  const cur = () => worlds[state.planetFocus];
+  // an edit: clamp to the schema (as the game would), rework the uniforms, refresh the panel
+  function apply(w) { w.look = clampLook(w.look).look; w.pu = planetUniforms(w.look); syncPanel(); }
+  const json = w => JSON.stringify(w.look, (k, v) => typeof v === 'number' ? Math.round(v * 1000) / 1000 : v, 1);
   function syncPanel() {
-    const sys = cur();
-    $('pl-editor').hidden = !sys; $('pl-gridnote').hidden = !!sys;
-    if (!sys) return;
-    const gas = PAL[sys.palette].gas;
-    $('pl-name').textContent = sys.name;
-    $('pl-kind').textContent = PAL[sys.palette].label + (sys.rings.on ? ' · ringed' : '') + (sys.moons.length ? ` · ${sys.moons.length} moon${sys.moons.length > 1 ? 's' : ''}` : '');
-    $('pl-palette').value = sys.palette;
-    for (const s of SL) {
-      const el = $('pl-' + s[0]); el.value = sys[s[0]] || 0; $('pl-' + s[0] + '-v').textContent = s[5](+el.value);
-      el.closest('[data-row]').hidden = (s[6] === 'rock' && gas) || (s[6] === 'gas' && !gas);
-    }
-    $('pl-rings').checked = sys.rings.on; $('pl-ringstyle').value = sys.rings.style; $('pl-ring-body').hidden = !sys.rings.on;
-    for (const s of RSL) { const el = $('pl-r' + s[0]); el.value = sys.rings[s[0]]; $('pl-r' + s[0] + '-v').textContent = s[5](+el.value); }
-    $('pl-moons').value = sys.moons.length; $('pl-moons-v').textContent = String(sys.moons.length);
-    $('pl-orbits').checked = sys.showOrbits;
-    $('pl-json').textContent = JSON.stringify(sys, (k, v) => typeof v === 'number' ? Math.round(v * 1000) / 1000 : v, 1);
+    const w = cur();
+    $('pl-editor').hidden = !w; $('pl-gridnote').hidden = !!w;
+    if (!w) return;
+    const L = w.look, R = L.rings, on = R.density > 0;
+    $('pl-name').textContent = w.name;
+    $('pl-kind').textContent = (PRESETS[w.preset] ? PRESETS[w.preset].label : L.surface) + (on ? ' · ringed' : '');
+    $('pl-preset').value = w.preset || ''; $('pl-surface').value = L.surface;
+    $('pl-pal-label').textContent = PAL_MEANS[L.surface];
+    L.palette.forEach((c, k) => { $('pl-c' + k).value = c; }); $('pl-atm').value = L.atmosphere;
+    for (const s of SL) { const el = $('pl-' + s[0]); el.value = L[s[0]]; $('pl-' + s[0] + '-v').textContent = s[2](+L[s[0]]); }
+    $('pl-rings').checked = on; $('pl-ring-body').hidden = !on;
+    const style = Object.keys(RINGS).find(k => RINGS[k][0] === R.colours[0] && RINGS[k][1] === R.colours[1]);
+    $('pl-ringstyle').value = style || ''; $('pl-r0').value = R.colours[0]; $('pl-r1').value = R.colours[1];
+    for (const s of RSL) { const el = $('pl-r' + s[0]); el.value = R[s[0]]; $('pl-r' + s[0] + '-v').textContent = s[2](+R[s[0]]); }
+    $('pl-json').textContent = json(w);
   }
-  const touch = () => { const sys = cur(); if (sys) $('pl-json').textContent = JSON.stringify(sys, (k, v) => typeof v === 'number' ? Math.round(v * 1000) / 1000 : v, 1); };
-  for (const s of SL) $('pl-' + s[0]).addEventListener('input', e => { const sys = cur(); if (!sys) return; sys[s[0]] = +e.target.value; $('pl-' + s[0] + '-v').textContent = s[5](+e.target.value); touch(); });
-  for (const s of RSL) $('pl-r' + s[0]).addEventListener('input', e => {
-    const sys = cur(); if (!sys) return; sys.rings[s[0]] = +e.target.value;
-    if (sys.rings.outer < sys.rings.inner + 0.12) { if (s[0] === 'inner') sys.rings.outer = sys.rings.inner + 0.12; else sys.rings.inner = Math.max(1.1, sys.rings.outer - 0.12); }
-    pushMoonsOut(sys); syncPanel();
-  });
-  function pushMoonsOut(sys) { const base = sys.rings.on ? sys.rings.outer + 0.45 : 1.7; sys.moons.forEach((m, k) => { m.orbit = Math.max(m.orbit, base + k * 0.5); }); fixMoonSpeeds(sys); }
-  $('pl-palette').addEventListener('change', e => { const sys = cur(); if (!sys) return; applyPalette(sys, e.target.value); syncPanel(); });
-  $('pl-rings').addEventListener('change', e => { const sys = cur(); if (!sys) return; sys.rings.on = e.target.checked; pushMoonsOut(sys); syncPanel(); });
-  $('pl-ringstyle').addEventListener('change', e => { const sys = cur(); if (!sys) return; sys.rings.style = e.target.value; touch(); });
-  $('pl-moons').addEventListener('input', e => {
-    const sys = cur(); if (!sys) return; const n = +e.target.value, r = rngOf(sys.name + n + Math.random());
-    while (sys.moons.length > n) sys.moons.pop();
-    while (sys.moons.length < n) { const m = makeMoon(r, sys.moons.length, sys); m.dir = 1; sys.moons.push(m); }
-    pushMoonsOut(sys); syncPanel();
-  });
-  $('pl-orbits').addEventListener('change', e => { const sys = cur(); if (sys) { sys.showOrbits = e.target.checked; touch(); } });
-  $('pl-random').addEventListener('click', () => { if (state.planetFocus < 0) return; systems[state.planetFocus] = generate(state.planetSeed + ':' + state.planetFocus + ':' + Math.random()); syncPanel(); layout(); });
+  const edit = fn => e => { const w = cur(); if (!w) return; fn(w, e.target); apply(w); };
+  for (const s of SL) $('pl-' + s[0]).addEventListener('input', edit((w, el) => { w.look[s[0]] = +el.value; }));
+  for (const s of RSL) $('pl-r' + s[0]).addEventListener('input', edit((w, el) => {
+    const R = w.look.rings; R[s[0]] = +el.value;
+    if (R.outer < R.inner + 0.1) { if (s[0] === 'inner') R.outer = R.inner + 0.1; else R.inner = R.outer - 0.1; } // outer stays past inner
+  }));
+  [0, 1, 2].forEach(k => $('pl-c' + k).addEventListener('input', edit((w, el) => { w.look.palette[k] = el.value; w.preset = ''; })));
+  $('pl-atm').addEventListener('input', edit((w, el) => { w.look.atmosphere = el.value; w.preset = ''; }));
+  $('pl-surface').addEventListener('change', edit((w, el) => { w.look.surface = el.value; w.preset = ''; }));
+  $('pl-preset').addEventListener('change', edit((w, el) => { w.look = Object.assign(presetLook(el.value, w.look.seed), { rings: w.look.rings, debris: w.look.debris }); w.preset = el.value; }));
+  $('pl-rings').addEventListener('change', edit((w, el) => { w.look.rings.density = el.checked ? 0.75 : 0; }));
+  $('pl-ringstyle').addEventListener('change', edit((w, el) => { if (RINGS[el.value]) w.look.rings.colours = RINGS[el.value].slice(); }));
+  [0, 1].forEach(k => $('pl-r' + k).addEventListener('input', edit((w, el) => { w.look.rings.colours[k] = el.value; })));
+  $('pl-random').addEventListener('click', () => { if (state.planetFocus < 0) return; const w = generate(state.planetSeed + ':' + state.planetFocus + ':' + Math.random()); w.pu = planetUniforms(w.look); worlds[state.planetFocus] = w; syncPanel(); layout(); });
   $('pl-newset').addEventListener('click', () => { state.planetSeed = 'set-' + Math.floor(Math.random() * 1e6); newSet(); state.planetFocus = -1; syncPanel(); layout(); });
   $('pl-back').addEventListener('click', () => { state.planetFocus = -1; syncPanel(); layout(); });
 
   return {
-    frame, systems: () => systems,
+    frame, systems: () => worlds,
     focus: k => { state.planetFocus = k; syncPanel(); layout(); },
     sync: syncPanel,
-    label: k => { const s = systems[k]; return s ? { name: s.name, kind: PAL[s.palette].label } : null; }
+    label: k => { const w = worlds[k]; return w ? { name: w.name, kind: (PRESETS[w.preset] ? PRESETS[w.preset].label : w.look.surface) + (w.look.rings.density > 0 ? ' · ringed' : '') } : null; }
   };
 })(); } catch (e) { PLAN_ERR = String(e.message || e); console.error(e); }
 

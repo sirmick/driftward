@@ -386,6 +386,7 @@ function postProcess() { G.postProcess(state.bloom); }
 
 /*CORE*/
 /*FLY*/
+/*SCHEMA*/
 /*PLANETS*/
 /*SUNS*/
 /*STATIONS*/

@@ -16,7 +16,7 @@ The game so far: the Book's M1 system, Brannock (an orange star, three planets, 
 |---|---|
 | **Yard** | Every faction line (4 factions × 2 lines) × 5 hull classes, assembled from parametric parts and baked to lit sprites. Drag to move the sun. |
 | **Ship** | One ship up close: map views (albedo, normal, height, emissive, shield field), part list, catalog editor. |
-| **Planets** | 12 generated systems plus a builder: 13 palettes, rings on any axis, moons on inclined orbits. |
+| **Planets** | 12 generated worlds plus a builder, drawn by the game's planet shader from the same `look` a system file gives a body: 13 presets, rings on any axis. The builder's JSON is the look exactly as the schema clamps it. |
 | **Suns** | One of each class from red dwarf to quasar, with a draggable lens flare. |
 | **Heavies** | Specialist hulls: bulk freighter, agri ship, mining tug towing its refinery, colony ship, fleet carrier, survey vessel. |
 | **Stations** | Ring habitats, container ports, forges, refineries, shipyards and relay arrays, each built in an owning brand's style. |
@@ -37,7 +37,7 @@ Flight controls: W/S set speed (assist on) or main/reverse thrust (assist off), 
 
 **Asteroids** are sphere-traced: a noise-displaced ellipsoid for the silhouette, craters, grit and ore veins as shading detail, soft self-shadowing, and a per-body tumble axis.
 
-**Planets and suns** are drawn analytically in fragment shaders: seamless 3D noise on a rotating sphere, equatorial rings that cast and receive shadows, moons on inclined orbits, blackbody star colors, granulation and corona, pulsar beams, and a ray-marched black hole with a Doppler-beamed disk that lenses the real sky behind it.
+**Planets and suns** are drawn analytically in fragment shaders: seamless 3D noise on a rotating sphere, equatorial rings that cast and receive shadows (a world spins about its rings' pole), blackbody star colors, granulation and corona, pulsar beams, and a ray-marched black hole with a Doppler-beamed disk that lenses the real sky behind it.
 
 **The sim core** (`core/`, Rust) owns flight physics. It keeps ships in fixed-capacity typed columns inside WASM memory; the page reads and writes them through zero-copy typed-array views built from a manifest the core exports, and calls one step per tick. The clock is a fixed 60 Hz tick, and the renderer draws from a pose the core interpolates between ticks, so motion is smooth at any refresh rate. Everything that feeds state is deterministic: a seeded generator, and its own sin, cos, atan2, exp and ln built from IEEE basic operations, so the native and WASM builds produce bit-identical states. Tuning constants are a named parameter column that can be changed live. The lab's Fly tab is a frozen prototype whose AI, weapons, shields, sensors and effects run in JavaScript around each tick; the game's versions will be designed fresh as core column groups when its milestones need them, not ported from it. The game page runs no game logic in JavaScript at all: the player flies by one input bitmask per tick, the world saves to a fixed-size byte image (allocated with the world, so saving never grows WASM memory), and a snapshot plus the log of input changes replays a session exactly. Mechanisms move into the core as the game needs them; rendering, UI and LLM calls stay in JavaScript.
 
@@ -45,7 +45,7 @@ Flight controls: W/S set speed (assist on) or main/reverse thrust (assist off), 
 
 **Flight** keeps all entity state in typed arrays (structure of arrays): ships, bolts, particles and lights. Every ship has main, reverse and lateral thrusters under one Newtonian model; a drive taper caps self-propelled speed and dampers bleed off anything gravity or slingshots add. Flight assist is a controller that turns a desired velocity into thruster commands, and NPCs fly through the same controller. The sector carries coarse gas and radiation fields: gas adds drag, attenuates sensors and (ionized) drains shields; radiation follows the star with shadows behind planets and spikes during flares. Detection is signature over range squared, times gas transmission, over local noise. Rendering is instanced: one draw per ship type, one each for plumes, shields, bolts and particles. Hits test against the baked shield/hull field, so bolts strike the actual silhouette.
 
-**Everything is parameterized** for LLM authoring: categorical choices are enums (brand part roles, planet palettes, ring styles, star types), everything else is a bounded number. The JSON panels in the lab show exactly what a model would emit.
+**Everything is parameterized** for LLM authoring: categorical choices are enums (brand part roles, planet surfaces, star classes), everything else is a bounded number. The lab's planet builder shows exactly the `look` a model would emit for a body; the other tabs' JSON panels show the catalog's own shapes, which have no schema yet.
 
 ## Layout
 
@@ -85,7 +85,7 @@ src/
   gen.js            ship and station assembly and baking (pure JS, runs in workers and Node)
   app.js            the lab: yard and ship views, tabs, UI
   fly.js            flight simulation and instanced rendering
-  planets.js        planet shader and builder
+  planets.js        the lab's planet builder (schema looks, drawn by the game's planet shader)
   suns.js           star, pulsar and black hole shaders, lens flare, builder
   stations.js       stations and heavies tabs: bakes via gen.js, builders
   asteroids.js      asteroid shader and builder

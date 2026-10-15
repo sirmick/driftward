@@ -344,9 +344,9 @@ void main(){ float r=length(vQ); float g=(exp(-r*r*7.)*1.4 + exp(-r*3.)*.25)*(1.
 const PLANET_VS = `#version 300 es
 in vec2 aPos;
 ${WORLD_POS}
-uniform vec2 uC; uniform float uR;
+uniform vec2 uC; uniform float uR, uExt;
 out vec2 vQ;
-void main(){ vQ=aPos*1.3; gl_Position=clipOf(uC + aPos*uR*1.3); }`;
+void main(){ float e = max(uExt, 1.3); vQ=aPos*e; gl_Position=clipOf(uC + aPos*uR*e); }`;
 // Planets, drawn analytically on a quad 1.3 radii wide. Detail follows the zoom: noise layers are added until the
 // finest is about two pixels across (uPx is one pixel in planet radii), up to 12, the last fading in, so there is
 // no popping and no shimmer; 12 is about what the closest view needs (a fighter at full zoom, 175 m across).
@@ -364,9 +364,15 @@ void main(){ vQ=aPos*1.3; gl_Position=clipOf(uC + aPos*uR*1.3); }`;
 // you close in, when uCity > 0; lightning in the clouds, uStorm of it), 1 banded giant (irregular belts, shear
 // eddies, a great storm and white ovals, lightning in the belts),
 // 2 cratered rock (craters at five scales as the zoom allows, maria). uC1..3 are the palette.
+// Rings (uRing: density, inner and outer radius in planet radii, 0 for none; colours uRingA to uRingB across them)
+// lie in the equator, whose pole is uAxis (view space; unset, the screen's up, edge-on, so no ring shows): the
+// planet spins about it, the ring casts its shadow on the planet and takes the planet's, and shows in front of the
+// disc or is hidden behind it. The quad grows to uExt radii to hold them (1.3 at least). Unset ring and axis
+// uniforms draw exactly the ringless planet, so a caller that knows nothing of rings needn't set them.
 const PLANET_FS = `#version 300 es
 precision highp float; in vec2 vQ; out vec4 o;
 uniform vec3 uSun, uSunCol, uAmb, uC1, uC2, uC3, uAtm; uniform float uSeed, uTime, uPx, uCity, uAir, uStorm; uniform int uKind;
+uniform vec3 uAxis, uRing, uRingA, uRingB;
 uvec3 pcg3(uvec3 v){ v = v*1664525u + 1013904223u; v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; v ^= v >> 16u;
   v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; return v; }
 float h3(ivec3 i){ return float(pcg3(uvec3(i)).x) * (1./4294967295.); }
@@ -518,9 +524,37 @@ void air(vec2 q, float r, bool hit, float zs, out vec3 ins, out vec3 Tv){
     Tv *= exp(-e);
   }
 }
+// the planet's frame: U, A (the pole), V; the screen's up gives the identity
+vec3 PU, PA, PV;
+// a planet-space direction back to view space: unspun, then out of the planet's frame
+vec3 toView(vec3 p, float ca, float sa){ vec3 f = vec3(p.x*ca - p.z*sa, p.y, p.x*sa + p.z*ca); return f.x*PU + f.y*PA + f.z*PV; }
+// ring density at distance d (planet radii) from the centre: fine ringlets, a broad and a narrow gap, soft edges
+float ringDen(float d){
+  float t = (d - uRing.y)/max(uRing.z - uRing.y, 1e-3); if (t < 0. || t > 1.) return 0.;
+  float b = .5 + .5*(vnd(vec3(d*42., uSeed, 1.)).x); b *= .55 + .45*vnd(vec3(d*9., uSeed*1.7, 3.)).x;
+  float gap = smoothstep(.012, .03, abs(t - .62)), gap2 = smoothstep(.004, .012, abs(t - .86));
+  return uRing.x*b*gap*mix(1., gap2, .85)*smoothstep(0., .05, t)*smoothstep(1., .92, t);
+}
+// the ring at view point q, over what is behind it (premultiplied): in front of the disc (zs its surface's
+// height there) or clear of it
+vec4 ringOver(vec4 under, vec2 q, float r, float zs){
+  if (uRing.x <= 0. || abs(PA.z) < 1e-3) return under;
+  float zr = -(PA.x*q.x + PA.y*q.y)/PA.z;
+  if (r < 1. && zr < zs) return under;
+  vec3 Q = vec3(q, zr); float d = length(Q), den = ringDen(d);
+  if (den < .001) return under;
+  float b = dot(Q, L), c = dot(Q, Q) - 1.;
+  float sh = (b < 0. && b*b - c > 0.) ? .06 : 1.;              // in the planet's shadow
+  vec3 rc = pow(mix(uRingA, uRingB, vnd(vec3(d*14., uSeed, 7.)).x), vec3(2.2));
+  vec3 col = rc*(uSunCol*2.2*(.3 + .7*abs(dot(PA, L)))*sh*.8 + uAmb*1.6);
+  float a = clamp(den, 0., .95);
+  return vec4(col*a + under.rgb*(1. - a), a + under.a*(1. - a));
+}
 void main(){
   float r = length(vQ);
   L = normalize(uSun);
+  PA = dot(uAxis, uAxis) > .5 ? normalize(uAxis) : vec3(0., 1., 0.);
+  PU = normalize(cross(PA, abs(PA.z) < .95 ? vec3(0., 0., 1.) : vec3(1., 0., 0.))); PV = cross(PU, PA);
   HS = uKind == 1 ? .008 : uKind == 2 ? .006 : .008;
   vec3 tint = uAtm/max(max(uAtm.r, uAtm.g), max(uAtm.b, 1e-3));
   BR = tint*(.2*uAir/HS); BM = .03*uAir/HS;                     // vertical optical depth .2 x uAir in the tint
@@ -530,15 +564,16 @@ void main(){
   vec3 insOut = vec3(0.), Tv;
   if (aa < 1.) air(vQ, r, false, 0., insOut, Tv);                // the ray that misses: the limb and halo
   insOut *= E*3.14159;
-  if (r >= 1.) { o = vec4(insOut, 0.); return; }
+  if (r >= 1.) { o = ringOver(vec4(insOut, 0.), vQ, r, 0.); return; }
 
   float z = sqrt(1.-r*r); vec3 N = vec3(vQ, z);
   vec3 ins; air(vQ, r, true, z, ins, Tv);
   ins *= E*3.14159;
-  // planet space: the view-space sphere point, spun about the polar axis
+  // planet space: the view-space sphere point in the planet's frame, spun about the pole
   float ca = cos(uTime*.004+uSeed), sa = sin(uTime*.004+uSeed);
-  vec3 R = vec3(N.x*ca+N.z*sa, N.y, -N.x*sa+N.z*ca);
-  vec3 Lp = vec3(L.x*ca+L.z*sa, L.y, -L.x*sa+L.z*ca); // the sun, in planet space
+  vec3 Nf = vec3(dot(PU, N), dot(PA, N), dot(PV, N)), Lf = vec3(dot(PU, L), dot(PA, L), dot(PV, L));
+  vec3 R = vec3(Nf.x*ca+Nf.z*sa, Nf.y, -Nf.x*sa+Nf.z*ca);
+  vec3 Lp = vec3(Lf.x*ca+Lf.z*sa, Lf.y, -Lf.x*sa+Lf.z*ca); // the sun, in planet space
   vec3 S = vec3(uSeed*3.7, uSeed*1.3, -uSeed*2.1);    // per-planet noise offset
   vec3 alb, Np = R, em = vec3(0.); float wrap = 0., water = 0., cl = 0., cloudPt = 0.; vec3 Nc = R, Ww = R;
   float mu = dot(N, L);
@@ -671,15 +706,18 @@ void main(){
   }
   // back to view space, then light it: sunlight through the air (reddened, then gone, across the terminator),
   // skylight (the sky's colour, on the day side), the star system's ambient
-  vec3 Nv = vec3(Np.x*ca - Np.z*sa, Np.y, Np.x*sa + Np.z*ca);
+  vec3 Nv = toView(Np, ca, sa);
   alb = pow(alb, vec3(2.2));
-  vec3 Ts = sunT(N);
+  // the ring's shadow: where the line to the sun crosses the ring plane
+  float rs = 1.;
+  if (uRing.x > 0.) { float dn = dot(PA, L); if (abs(dn) > 1e-3) { float t = -dot(PA, N)/dn; if (t > 0.) rs = 1. - ringDen(length(N + L*t))*.85; } }
+  vec3 Ts = sunT(N)*rs;
   vec3 sky = E*(1. - exp(-BR*HS*1.5))*.6*smoothstep(-.25, .5, mu);
   float dif = max((dot(Nv, L) + wrap)/(1. + wrap), 0.);
   vec3 col = alb*(E*dif*Ts + sky + uAmb*1.5);
   if (water > 0.) {
     // the sea mirrors the sky at grazing angles, and the sun off the waves
-    vec3 Wv = vec3(Ww.x*ca - Ww.z*sa, Ww.y, Ww.x*sa + Ww.z*ca), H = normalize(L + vec3(0., 0., 1.));
+    vec3 Wv = toView(Ww, ca, sa), H = normalize(L + vec3(0., 0., 1.));
     float F = .02 + .98*pow(1. - z, 5.);
     col = mix(col, uAtm*E*.12*smoothstep(-.1, .3, mu), F*water*min(uAir, 1.));
     float nh = max(dot(Wv, H), 0.), nh0 = max(dot(N, H), 0.);
@@ -687,12 +725,12 @@ void main(){
   }
   if (cl > 0.) {
     // clouds sit higher, so they keep the sun a little past the ground's terminator
-    vec3 Ncv = vec3(Nc.x*ca - Nc.z*sa, Nc.y, Nc.x*sa + Nc.z*ca);
-    vec3 cc = vec3(.72)*(E*max(dot(Ncv, L)*.85 + .15, 0.)*sunT(N*(1. + 2.*HS)) + sky*.7 + uAmb*1.5);
+    vec3 Ncv = toView(Nc, ca, sa);
+    vec3 cc = vec3(.72)*(E*max(dot(Ncv, L)*.85 + .15, 0.)*sunT(N*(1. + 2.*HS))*rs + sky*.7 + uAmb*1.5);
     col = mix(col, cc*(.82 + .4*cloudPt), cl);
   }
   col += em;
-  o = vec4((col*Tv + ins)*aa + insOut*(1. - aa), aa);
+  o = ringOver(vec4((col*Tv + ins)*aa + insOut*(1. - aa), aa), vQ, r, z);
 }`;
 // Orbiters (core/src/orbit.rs): one instanced sprite each, drawn additively over the planets. iA: x, y (world m),
 // size (m), kind (0 debris, 1 traffic, 2 a lens ghost); iB: light (sunlit and facing; a ghost's strength), glint,

@@ -23,15 +23,12 @@ pos = {}
 for b in system['bodies']:
     a = math.radians(b['orbit']['angle']); px, py = pos.get(b.get('parent'), (0, 0))
     pos[b['id']] = (px + b['orbit']['radius'] * math.cos(a), py + b['orbit']['radius'] * math.sin(a))
-SURF = {'terran': 0, 'giant': 1, 'rock': 2}
 worlds = []
 for b in system['bodies']:
     if b['kind'] not in ('planet', 'moon') or (only and b['id'] not in only): continue
     x, y = pos[b['id']]; l = math.hypot(x, y)
     sv = [-x / l, -y / l, 0.45]; n = math.hypot(*sv); sv = [v / n for v in sv]
-    L = b['look']
-    worlds.append({'id': b['id'], 'r': b['radius'], 'sun': sv, 'pal': L['palette'], 'atm': L.get('atmosphere', '#9fb4c8'),
-                   'seed': L.get('seed', 1), 'kind': SURF[L['surface']], 'city': L.get('cityLights', 0), 'air': L.get('air', 0.6)})
+    worlds.append({'id': b['id'], 'r': b['radius'], 'sun': sv, 'look': b.get('look', {})}) # clamped in the page, as the game does
 
 def views(w):
     r, (lx, ly, lz) = w['r'], w['sun']; h = math.hypot(lx, ly); dx, dy = lx / h, ly / h
@@ -45,6 +42,8 @@ page = """<!doctype html><html><body style="margin:0;background:#000"><canvas id
 %s
 %s
 const canvas = document.getElementById('c'), G = makeGfx(canvas), gl = G.gl;
+%s
+const LOOK = %s.properties.bodies.items.properties.look;
 const FP = G.compile(PLANET_VS, PLANET_FS);
 G.buildTargets();
 window.shot = (w, cam, scale, t) => {
@@ -57,9 +56,7 @@ window.shot = (w, cam, scale, t) => {
   gl.uniform2f(u.uRes, RW, RH); gl.uniform2f(u.uCam, cam[0], cam[1]); gl.uniform1f(u.uScale, scale);
   gl.uniform3fv(u.uSunCol, lin(star.col)); gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
   gl.uniform3fv(u.uSun, w.sun); gl.uniform2f(u.uC, 0, 0); gl.uniform1f(u.uR, w.r); gl.uniform1f(u.uPx, 1 / (w.r * scale));
-  gl.uniform3fv(u.uC1, hexRGB(w.pal[0])); gl.uniform3fv(u.uC2, hexRGB(w.pal[1])); gl.uniform3fv(u.uC3, hexRGB(w.pal[2]));
-  gl.uniform3fv(u.uAtm, lin(hexRGB(w.atm)));
-  gl.uniform1f(u.uSeed, w.seed); gl.uniform1i(u.uKind, w.kind); gl.uniform1f(u.uCity, w.city); gl.uniform1f(u.uAir, w.air);
+  bindPlanet(gl, u, planetUniforms(clampToSchema(LOOK, w.look, '$.look', [])));
   G.draw();
   gl.disable(gl.BLEND);
   G.postProcess(1, 0);
@@ -67,6 +64,7 @@ window.shot = (w, cam, scale, t) => {
   return canvas.toDataURL('image/png');
 };
 </script></body></html>""" % (W, H, (src / 'look.js').read_text(), (src / 'shaders.js').read_text(), (src / 'gfx.js').read_text(),
+                               (src / 'schema.js').read_text(), (src / 'schema' / 'system.schema.json').read_text(),
                                json.dumps(STAR_CLASS if STAR_CLASS in ('sol', 'red', 'blue', 'orange', 'white') else 'sol'))
 
 with tempfile.TemporaryDirectory() as d, sync_playwright() as p:

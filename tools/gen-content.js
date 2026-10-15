@@ -93,10 +93,11 @@ function bodyLooks(b) {
   // planet shader draws none on rock), a glittering haze of orbital debris
   const storms = L.surface === 'rock' ? '' : L.lightning >= 0.5 ? ', its night side flickering with lightning' : L.lightning > 0 ? ', with lightning in its storms' : '';
   const junk = (L.debris || 0) * (L.surface === 'rock' ? 3 : 1) >= 2 ? '; a glittering haze of orbital debris rings it' : '';
-  if (L.surface === 'terran') return `a water world: ${c1} seas, ${c2} lowlands and ${c3} highlands with snow on the peaks, under drifting white cloud; its sky is ${atm || 'blue'}${L.cityLights ? ', and its settlements show warm lights at dusk' : ''}${storms}${junk}`;
-  if (L.surface === 'giant') return `a gas giant banded ${c1} and ${c2}, streaked with ${c3} storms${storms}${junk}`;
+  const R = L.rings || {}, rings = R.density > 0 ? `; circled by ${R.density > 0.6 ? 'broad, bright' : 'thin, faint'} rings of ${names(R.colours || [])}, seen ${R.tilt > 75 ? 'nearly edge-on' : R.tilt < 35 ? 'nearly face-on' : 'at a slant'}` : '';
+  if (L.surface === 'terran') return `a water world: ${c1} seas, ${c2} lowlands and ${c3} highlands with snow on the peaks, under drifting white cloud; its sky is ${atm || 'blue'}${L.cityLights ? ', and its settlements show warm lights at dusk' : ''}${storms}${rings}${junk}`;
+  if (L.surface === 'giant') return `a gas giant banded ${c1} and ${c2}, streaked with ${c3} storms${storms}${rings}${junk}`;
   const all = (L.palette || []).map(colourName), grey = all.every(n => /grey|charcoal|off-white/.test(n));
-  return `${grey ? 'an ashen grey' : /^[aeiou]/.test(c2) ? `an ${c2}` : `a ${c2}`} world of bare rock and dust with no water and no plants: ${c1} plains and crater floors, ${c2} higher ground, ${c3} ridges and crater rims${atm && L.air > 0.05 ? `, under a thin ${atm} haze` : ', under a black sky'}${storms}${junk}`;
+  return `${grey ? 'an ashen grey' : /^[aeiou]/.test(c2) ? `an ${c2}` : `a ${c2}`} world of bare rock and dust with no water and no plants: ${c1} plains and crater floors, ${c2} higher ground, ${c3} ridges and crater rims${atm && L.air > 0.05 ? `, under a thin ${atm} haze` : ', under a black sky'}${storms}${rings}${junk}`;
 }
 const byId = id => BODIES.find(b => b.id === id);
 const ports = BODIES.filter(b => b.port);

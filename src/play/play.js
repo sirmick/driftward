@@ -31,11 +31,11 @@ const ART = JSON.parse($('art').textContent);
 const debug = makeDebug({ el: $('debug'), raw: JSON.parse($('system').textContent), loaded, econ: ECON, lore: LORE, art: ART, log: JSON.parse($('content-log').textContent) });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const star = STARS[STAR.look] || STARS.sol;
-const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3 };
+const BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3 };
 // planets and moons, drawn by the planet shader
 const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
-  const L = b.look, pal = L.palette; // every field filled by the schema clamp, defaults and all
-  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere)), seed: L.seed, surface: SURFACE[L.surface], city: L.cityLights, air: L.air, storm: L.lightning });
+  const pu = planetUniforms(b.look); // every field filled by the schema clamp, defaults and all
+  return Object.assign({}, b, { pu, LA: pu.atm, ext: pu.ext });
 });
 // light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
 function sunFrom(x, y, out = new Float32Array(3)) {
@@ -944,11 +944,10 @@ CORE_READY.then(CORE => {
     { const u = FP.planet.u;
       gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
       for (const p of WORLDS) {
-        if (Math.abs(p.x - cx) > halfW + p.r * 1.3 || Math.abs(p.y - cy) > halfH + p.r * 1.3) continue;
+        if (Math.abs(p.x - cx) > halfW + p.r * p.ext || Math.abs(p.y - cy) > halfH + p.r * p.ext) continue;
         gl.uniform3fv(u.uSun, sunFrom(p.x, p.y, sunAt));
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
-        gl.uniform3fv(u.uC1, p.L1); gl.uniform3fv(u.uC2, p.L2); gl.uniform3fv(u.uC3, p.L3); gl.uniform3fv(u.uAtm, p.LA);
-        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city); gl.uniform1f(u.uAir, p.air); gl.uniform1f(u.uStorm, p.storm);
+        bindPlanet(gl, u, p.pu);
         draw();
       } }
     // orbiters: the core places them and keeps only what can be seen; then lens ghosts for the brightest flares, along

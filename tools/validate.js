@@ -20,6 +20,8 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
       if (P && b.orbit.radius < P.r + b.radius) notes.push({ path: `${at}.orbit.radius`, msg: `${b.orbit.radius} m puts it inside ${P.id} (radius ${P.r} m, its own ${b.radius} m)`, fatal: true });
       const B = bodies.find(o => o.id === b.id);
       if (B && Math.hypot(B.x, B.y) + b.radius > jump) notes.push({ path: at, msg: `reaches past the jump radius (${jump} m)`, fatal: true });
+      const R = b.look && b.look.rings;
+      if (R && R.density > 0 && R.outer < R.inner + 0.1) notes.push({ path: `${at}.look.rings`, msg: `outer edge ${R.outer} is not 0.1 beyond inner ${R.inner}`, fatal: false });
       const sv = (b.port && b.port.services) || [];
       if (new Set(sv).size !== sv.length) notes.push({ path: `${at}.port.services`, msg: 'a service listed twice', fatal: false });
     }

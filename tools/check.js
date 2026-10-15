@@ -3,7 +3,7 @@
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process'), os = require('os');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const grab = id => html.split(`<script id="${id}"`)[1].split('>').slice(1).join('>').split('</script>')[0];
-const catalogTxt = grab('catalog'), genTxt = grab('gen'), coreTxt = grab('core-wasm');
+const catalogTxt = grab('catalog'), genTxt = grab('gen'), coreTxt = grab('core-wasm'), schemaTxt = grab('system-schema');
 const app = html.split('<script>').pop().split('</script>')[0];
 const U = new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => 0 : k === 'length' ? 0 : U, apply: () => U, construct: () => U, set: () => true });
 const shaders = [], consts = {}; let n = 0;
@@ -19,7 +19,7 @@ const gl = new Proxy({}, { get: (t, k) => {
   return () => U;
 } });
 const canvasEl = new Proxy({}, { get: (t, k) => k === 'getContext' ? () => gl : k === 'getBoundingClientRect' ? () => ({ width: 800, height: 600, left: 0, top: 0 }) : U, set: () => true });
-global.document = { getElementById: id => id === 'catalog' ? { textContent: catalogTxt } : id === 'gen' ? { textContent: genTxt } : id === 'core-wasm' ? { textContent: coreTxt } : id === 'view' ? canvasEl : U, querySelectorAll: () => [], createElement: () => U };
+global.document = { getElementById: id => id === 'catalog' ? { textContent: catalogTxt } : id === 'gen' ? { textContent: genTxt } : id === 'core-wasm' ? { textContent: coreTxt } : id === 'system-schema' ? { textContent: schemaTxt } : id === 'view' ? canvasEl : U, querySelectorAll: () => [], createElement: () => U };
 global.window = { addEventListener() {}, devicePixelRatio: 1 };
 global.navigator = { hardwareConcurrency: 2 };
 global.ResizeObserver = function () { return { observe() {} }; };

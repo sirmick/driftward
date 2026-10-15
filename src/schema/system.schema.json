@@ -229,6 +229,62 @@
                 "maximum": 100,
                 "default": 1,
                 "description": "Picks the world's continents, craters, bands and storms; the same seed draws the same world."
+              },
+              "rings": {
+                "description": "A ring system in the world's equator; the world spins about the same pole. Density 0 (the default) is no rings. Radii are in the world's radii, measured from its centre; outer must be at least 0.1 beyond inner.",
+                "type": "object",
+                "default": {},
+                "properties": {
+                  "density": {
+                    "description": "How opaque the rings are: 0 none, 1 nearly solid.",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0
+                  },
+                  "inner": {
+                    "description": "Inner edge, in world radii.",
+                    "type": "number",
+                    "minimum": 1.1,
+                    "maximum": 2.6,
+                    "default": 1.4
+                  },
+                  "outer": {
+                    "description": "Outer edge, in world radii.",
+                    "type": "number",
+                    "minimum": 1.3,
+                    "maximum": 3.6,
+                    "default": 2.2
+                  },
+                  "colours": {
+                    "description": "The rings' colour at the inner edge, then the outer; ringlets mix between them.",
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "default": [
+                      "#dfe9f2",
+                      "#94a8bc"
+                    ]
+                  },
+                  "tilt": {
+                    "description": "How open the rings are to the view, in degrees between the pole and the line of sight: 0 face-on (round), 90 edge-on (a line). 50 to 80 reads best.",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 88,
+                    "default": 65
+                  },
+                  "angle": {
+                    "description": "Which way the pole leans on screen, in degrees: 0 up, 90 left, -90 right.",
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180,
+                    "default": 0
+                  }
+                }
               }
             }
           },

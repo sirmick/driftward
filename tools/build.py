@@ -93,7 +93,7 @@ def page(template, script):
 
 # the lab: app.js pulls in the shared kit and every tab
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),
-    ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*PLANETS*/', '/*SUNS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
+    ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*SCHEMA*/', '/*PLANETS*/', '/*SUNS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
 # the game: its template carries the script shell and markers itself
 game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*BAKE*/', '/*CORE*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*PLAY*/']), '')
 
