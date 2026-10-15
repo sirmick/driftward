@@ -123,19 +123,14 @@ pub unsafe extern "C" fn dw_hash(w: *mut World) -> u64 { unsafe { world(w) }.has
 /// # Safety
 /// See `world`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dw_set_player(w: *mut World, slot: i32) { unsafe { world(w) }.player.slot = slot }
+pub unsafe extern "C" fn dw_set_player(w: *mut World, slot: i32) { unsafe { world(w) }.game.player[0] = slot }
 
 /// Buttons held for the coming ticks (bits in `player.rs`).
 /// # Safety
 /// See `world`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dw_set_input(w: *mut World, input: u32) { unsafe { world(w) }.player.input = input }
+pub unsafe extern "C" fn dw_set_input(w: *mut World, input: u32) { unsafe { world(w) }.game.input[0] = input }
 
-/// The player's assist set speed, m/s.
-/// # Safety
-/// See `world`.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn dw_player_set(w: *mut World) -> f64 { unsafe { world(w) }.player.set }
 
 /// Apply a game command now, between ticks (codes and results in port.rs). The page records it in the replay log.
 /// # Safety

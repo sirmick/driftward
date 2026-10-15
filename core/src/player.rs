@@ -32,35 +32,21 @@ pub const IN_ASSIST: u32 = 1 << 9;
 /// Full off: torque rotation (only read when IN_ASSIST is clear).
 pub const IN_TORQUE: u32 = 1 << 10;
 
-#[derive(Clone, Copy, Debug)]
-pub struct Player {
-    /// ship slot the player flies, or -1 for none (the Fly tab drives its player from JS)
-    pub slot: i32,
-    /// assist set speed, m/s
-    pub set: f64,
-    /// buttons held this tick
-    pub input: u32,
-}
-
-impl Default for Player {
-    fn default() -> Self { Player { slot: -1, set: 0.0, input: 0 } }
-}
-
 /// Turn this tick's input into actuator commands (or assist targets) for the player's ship.
 pub fn control(w: &mut World) {
-    let p = w.player;
-    if p.slot < 0 || p.slot as usize >= w.count { return; }
-    let i = p.slot as usize;
+    let (slot, input) = (w.game.player[0], w.game.input[0]);
+    if slot < 0 || slot as usize >= w.count { return; }
+    let i = slot as usize;
     if w.ships.alive[i] == 0 { return; }
-    let held = |bit: u32| p.input & bit != 0;
+    let held = |bit: u32| input & bit != 0;
     let (up, down, left, right) = (held(IN_THRUST), held(IN_REVERSE), held(IN_LEFT), held(IN_RIGHT));
     if w.game.auto[0] > 0 {
         if held(IN_ASSIST) && !(up || down || left || right) { autopilot(w, i); return; }
         w.game.auto[0] = 0; // the player took the stick: carry on at the speed along the nose
         let (hx, hy) = heading(w.ships.ang[i]);
-        w.player.set = (w.ships.vx[i] * hx + w.ships.vy[i] * hy).max(0.0);
+        w.game.set[0] = (w.ships.vx[i] * hx + w.ships.vy[i] * hy).max(0.0);
     }
-    let set0 = w.player.set;
+    let set0 = w.game.set[0];
     let (b_acc, b_cap, k_turn) = (w.p(P::burn_accel), w.p(P::burn_cap), w.p(P::assist_turn));
     let (k_in, k_out) = (w.p(P::well_in), w.p(P::well_out));
     let (s, t) = (&mut w.ships, &w.types);
@@ -95,7 +81,7 @@ pub fn control(w: &mut World) {
         }
         set = (vx * hx + vy * hy).max(0.0);
     }
-    w.player.set = set;
+    w.game.set[0] = set;
 }
 
 /// The autopilot's tick: a desired velocity toward the next point (a waypoint round an obstacle, or the target),
@@ -116,7 +102,7 @@ fn autopilot(w: &mut World, i: usize) {
     let s = &mut w.ships;
     if d_end < stop && sp < limit * 0.6 {
         w.game.auto[0] = 0;
-        w.player.set = 0.0;
+        w.game.set[0] = 0.0;
         s.ctl[i] = 3; s.want_vx[i] = 0.0; s.want_vy[i] = 0.0;
         return;
     }
@@ -130,7 +116,7 @@ fn autopilot(w: &mut World, i: usize) {
     s.turn_in[i] = 0.0;
     s.want_vx[i] = dx / d * v;
     s.want_vy[i] = dy / d * v;
-    w.player.set = v;
+    w.game.set[0] = v;
 }
 
 #[cfg(test)]
@@ -145,11 +131,11 @@ mod tests {
         w.types.vmax[0] = 200.0;
         w.count = 1;
         w.ships.alive[0] = 1;
-        w.player.slot = 0;
+        w.game.player[0] = 0;
         w
     }
     fn hold(w: &mut World, input: u32, secs: f64) {
-        w.player.input = input;
+        w.game.input[0] = input;
         for _ in 0..(secs / DT).round() as usize { w.step(); }
     }
     fn speed(w: &World) -> f64 { w.ships.vx[0].hypot(w.ships.vy[0]) }
@@ -158,11 +144,11 @@ mod tests {
     fn assist_set_speed_rises_holds_and_falls() {
         let mut w = world();
         hold(&mut w, IN_ASSIST | IN_THRUST, 2.0);
-        assert!((w.player.set - 120.0).abs() < 1.5, "set {}", w.player.set);
+        assert!((w.game.set[0] - 120.0).abs() < 1.5, "set {}", w.game.set[0]);
         hold(&mut w, IN_ASSIST, 8.0);
-        assert!((speed(&w) - w.player.set).abs() < 2.0, "speed {} set {}", speed(&w), w.player.set);
+        assert!((speed(&w) - w.game.set[0]).abs() < 2.0, "speed {} set {}", speed(&w), w.game.set[0]);
         hold(&mut w, IN_ASSIST | IN_REVERSE, 3.0);
-        assert_eq!(w.player.set, 0.0);
+        assert_eq!(w.game.set[0], 0.0);
         hold(&mut w, IN_ASSIST, 6.0);
         assert!(speed(&w) < 2.0, "{}", speed(&w));
     }
@@ -171,9 +157,9 @@ mod tests {
     fn burner_raises_set_speed_past_vmax_and_it_decays_after() {
         let mut w = world();
         hold(&mut w, IN_ASSIST | IN_THRUST | IN_BURN, 6.0);
-        assert!(w.player.set > 200.0 && w.player.set <= 260.0, "{}", w.player.set);
+        assert!(w.game.set[0] > 200.0 && w.game.set[0] <= 260.0, "{}", w.game.set[0]);
         hold(&mut w, IN_ASSIST, 4.0);
-        assert!((w.player.set - 200.0).abs() < 1e-9, "{}", w.player.set);
+        assert!((w.game.set[0] - 200.0).abs() < 1e-9, "{}", w.game.set[0]);
     }
 
     #[test]
@@ -220,9 +206,9 @@ mod tests {
             (w.bodies.x[j], w.bodies.r[j], w.bodies.g[j], w.bodies.kind[j]) = (x, 1000.0, 30.0, BODY_PLANET);
         }
         w.bodies.port[1] = 1;
-        (w.count, w.ships.alive[0], w.player.slot) = (1, 1, 0);
+        (w.count, w.ships.alive[0], w.game.player[0]) = (1, 1, 0);
         assert_eq!(w.command(CMD_AUTOPILOT, 1, 0), OK);
-        w.player.input = IN_ASSIST;
+        w.game.input[0] = IN_ASSIST;
         let mut closest = f64::MAX;
         for _ in 0..(400.0 / DT) as usize {
             w.step();
@@ -243,7 +229,7 @@ mod tests {
     #[test]
     fn no_player_slot_means_no_control() {
         let mut w = world();
-        w.player.slot = -1;
+        w.game.player[0] = -1;
         hold(&mut w, IN_ASSIST | IN_THRUST, 1.0);
         assert_eq!(speed(&w), 0.0);
     }

@@ -158,7 +158,7 @@ mod tests {
             w.market.price[j * MAX_GOODS] = 20;
         }
         w.count = 1;
-        w.player.slot = 0;
+        w.game.player[0] = 0;
         w.place_landed(0);
         w.game.day[0] = 1;
         w.game.credits[0] = 10_000;

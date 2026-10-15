@@ -832,13 +832,12 @@ CORE_READY.then(CORE => {
   const seqProgress = (timer, T) => Math.max(0, Math.min(1, 1 - (timer - sim.alpha() * sim.DT) / T));
   // which way round body B a ship at (x, y) heading (hx, hy) is going: +1 counter-clockwise
   const roundDir = (B, x, y, hx, hy) => (x - B.x) * hy - (y - B.y) * hx >= 0 ? 1 : -1;
-  // the player's sequence pose now (the core's game state; launch direction and speed as core/src/port.rs gives them)
+  // the player's sequence pose now (the core's game state; a launch ends on the velocity the core wrote when it began)
   function playerSeq() {
     const mode = sim.mode(), landing = mode === MODE.descending, B = BODIES[sim.game.at[0]];
     const T = landing ? DESCENT_S : LAUNCH_S, p = seqProgress(sim.game.timer[0], T), x = SH.x[0], y = SH.y[0];
-    const r = Math.hypot(x - B.x, y - B.y) || 1, dir = sim.game.curl[0] ? -1 : 1;
-    const tx = -(y - B.y) / r * dir, ty = (x - B.x) / r * dir; // round the body, the curl's way: the launch's heading
-    const v = landing ? 0 : types[SH.kind[0]].vmax * sim.param('launch_frac');
+    const dir = sim.game.curl[0] ? -1 : 1, G0 = sim.game;
+    const tx = G0.hand_x[0], ty = G0.hand_y[0], v = landing ? 0 : G0.hand_v[0]; // the launch's heading and speed
     const pose = seqPose(0, landing, p, x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);
     // its drawn velocity, for the camera's lead (as in flight, so the hand-off does not jolt the view)
     const dp = 0.004, ahead = seqPose(0, landing, Math.min(1, p + dp), x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);

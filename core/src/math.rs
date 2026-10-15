@@ -124,6 +124,25 @@ pub fn exp(x: f64) -> f64 {
     y * f64::from_bits(((k as i64 + 1023) as u64) << 52)
 }
 
+/// Natural log for x > 0 (0 or less gives -infinity): x = m 2^e with m in [sqrt(1/2), sqrt(2)), then
+/// ln m = 2 atanh(z), z = (m - 1) / (m + 1), |z| < .172, by its odd series to z^25 (below 1e-19). Basic operations
+/// only, so every target agrees bit for bit. Normal numbers only (subnormals read as 0).
+pub fn ln(x: f64) -> f64 {
+    const LN2: f64 = std::f64::consts::LN_2;
+    if x.is_nan() { return x; }
+    if x <= 0.0 || !x.is_normal() { return f64::NEG_INFINITY; }
+    if x == f64::INFINITY { return x; }
+    let bits = x.to_bits();
+    let mut e = ((bits >> 52) & 0x7ff) as i64 - 1023;
+    let mut m = f64::from_bits((bits & 0x000f_ffff_ffff_ffff) | 0x3ff0_0000_0000_0000); // [1, 2)
+    if m >= std::f64::consts::SQRT_2 { m *= 0.5; e += 1; }
+    let z = (m - 1.0) / (m + 1.0);
+    let z2 = z * z;
+    let mut sum = 0.0;
+    for k in (0..13).rev() { sum = sum * z2 + 1.0 / (2 * k + 1) as f64; }
+    2.0 * z * sum + e as f64 * LN2
+}
+
 /// Length of (x, y). Plain sqrt is correctly rounded on every target.
 #[inline]
 pub fn hypot(x: f64, y: f64) -> f64 { (x * x + y * y).sqrt() }
@@ -163,6 +182,18 @@ mod tests {
         assert_eq!(atan2(1.0, 0.0), FRAC_PI_2);
         assert_eq!(atan2(-1.0, 0.0), -FRAC_PI_2);
         assert!((atan2(0.0, -1.0) - PI).abs() < 1e-15);
+    }
+
+    #[test]
+    fn ln_matches_std() {
+        for &x in &[1e-300, 1e-12, 0.001, 0.25, 0.5, 0.70710678, 0.9999999, 1.0, 1.0000001, 1.41421356, 2.0, 2.718281828459045, 10.0, 12345.678, 1e100, 1e300] {
+            let (a, b) = (ln(x), x.ln());
+            assert!((a - b).abs() <= 2e-16 * b.abs().max(1.0), "ln({x}) = {a}, std {b}");
+        }
+        assert_eq!(ln(1.0), 0.0);
+        assert_eq!(ln(0.0), f64::NEG_INFINITY);
+        // an exponential draw: -ln(u) for u in (0, 1)
+        for i in 1..1000 { let u = i as f64 / 1000.0; assert!((ln(u) - u.ln()).abs() < 1e-15, "{u}"); }
     }
 
     #[test]

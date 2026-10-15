@@ -1,6 +1,6 @@
 //! Save and load: the whole world as one fixed-size byte image.
 //!
-//! Layout: an 80-byte little-endian header (magic, version, config, scalars, generator, player), then the
+//! Layout: a 64-byte little-endian header (magic, version, config, scalars, generator), then the
 //! raw bytes of every column in manifest order. The size depends only on the config, so the buffer is
 //! allocated with the world and nothing allocates at save or load time (WASM memory never grows, so the
 //! page's column views stay valid). The page reaches the buffer through the "world/snapshot" column.
@@ -11,11 +11,12 @@ use crate::world::{Config, World};
 
 pub const MAGIC: [u8; 4] = *b"DWSV";
 /// Bump when the layout changes (a new column, a reordered header).
-pub const VERSION: u32 = 12; // 2: ships.rot; 3, 4: Newtonian wells; 5: game wells; 6: bodies.kind/port, game, landing params;
+pub const VERSION: u32 = 13; // 2: ships.rot; 3, 4: Newtonian wells; 5: game wells; 6: bodies.kind/port, game, landing params;
 // 7: types.cargo, game credits and debt, hold, market, economy params; 8: offers, missions, mission params;
 // 9: ships.rail, bodies.pop, traffic, roles, lanes, traffic params; 10: game.auto, aim_x, aim_y;
-// 11: game.curl, launch_frac, longer sequences; 12: traffic by mix and stream, routes, jump lanes, loiter
-pub const HEADER_LEN: usize = 80;
+// 11: game.curl, launch_frac, longer sequences; 12: traffic by mix and stream, routes, jump lanes, loiter;
+// 13: the player on the game row (out of the header), game.hand_vx/vy, route.s, lane and mix arrival times
+pub const HEADER_LEN: usize = 64;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum LoadError {
@@ -72,9 +73,6 @@ impl World {
             c.put(&self.tick.to_le_bytes());
             c.put(&rs.to_le_bytes());
             c.put(&ri.to_le_bytes());
-            c.put(&self.player.slot.to_le_bytes());
-            c.put(&self.player.set.to_le_bytes());
-            c.put(&self.player.input.to_le_bytes());
             debug_assert_eq!(c.at, HEADER_LEN);
             for col in &self.cols {
                 // SAFETY: each descriptor covers a live column of this world, never resized after creation
@@ -101,9 +99,6 @@ impl World {
             self.tick = c.u64();
             let (rs, ri) = (c.u64(), c.u64());
             self.rng = Rng::from_state(rs, ri);
-            self.player.slot = c.u32() as i32;
-            self.player.set = c.f64();
-            self.player.input = c.u32();
             debug_assert_eq!(c.at, HEADER_LEN);
             for col in &self.cols {
                 let n = col.len * col.size;
@@ -140,19 +135,19 @@ mod tests {
     #[test]
     fn save_load_continue_matches_uninterrupted() {
         let mut a = scenario::build(5);
-        a.player.slot = 0;
-        a.player.input = IN_ASSIST | IN_THRUST;
+        a.game.player[0] = 0;
+        a.game.input[0] = IN_ASSIST | IN_THRUST;
         for _ in 0..300 { a.step(); }
         a.save();
         let bytes = a.snapshot().to_vec();
         let mut b = World::from_snapshot(&bytes).unwrap();
         assert_eq!(a.hash(), b.hash());
         for w in [&mut a, &mut b] {
-            w.player.input = IN_ASSIST | IN_LEFT;
+            w.game.input[0] = IN_ASSIST | IN_LEFT;
             for _ in 0..600 { w.step(); }
         }
         assert_eq!(a.hash(), b.hash());
-        assert_eq!(a.player.set.to_bits(), b.player.set.to_bits());
+        assert_eq!(a.game.set[0].to_bits(), b.game.set[0].to_bits());
         assert_eq!(a.rng.next_u32(), b.rng.next_u32());
     }
 

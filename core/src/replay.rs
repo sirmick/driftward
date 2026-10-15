@@ -44,7 +44,7 @@ pub fn run(w: &mut World, log: &[LogEntry], ticks: u64) {
     for _ in 0..ticks {
         while k < log.len() && log[k].tick() <= w.tick {
             match log[k] {
-                LogEntry::Input { input, .. } => w.player.input = input,
+                LogEntry::Input { input, .. } => w.game.input[0] = input,
                 LogEntry::Command { code, a, b, .. } => { w.command(code, a, b); }
             }
             k += 1;
@@ -66,7 +66,7 @@ mod tests {
     fn replay_from_a_save_reproduces_the_session() {
         // play a session that flies, lands at a port, trades, waits a day and launches, recording it as the page does
         let mut live = scenario::build(9);
-        live.player.slot = 0;
+        live.game.player[0] = 0;
         live.types.cargo[live.ships.kind[0] as usize] = 10;
         live.market.price[1] = 37; // the port (body 0) trades commodity 1
         (live.game.credits[0], live.game.debt[0]) = (1000, 5000);
@@ -91,7 +91,7 @@ mod tests {
         for t in 0..1000u64 {
             for &(at, input, cmd) in &script {
                 if at != t { continue; }
-                if let Some(input) = input { live.player.input = input; log.push(LogEntry::Input { tick: live.tick, input }); }
+                if let Some(input) = input { live.game.input[0] = input; log.push(LogEntry::Input { tick: live.tick, input }); }
                 if let Some((code, a, b)) = cmd { assert_eq!(live.command(code, a, b), OK, "command {code} at {t}"); log.push(LogEntry::Command { tick: live.tick, code, a, b }); }
             }
             live.step();

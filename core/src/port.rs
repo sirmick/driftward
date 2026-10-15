@@ -61,7 +61,7 @@ impl World {
 
     /// The port the player is over, if any, and whether they are slow enough to land there.
     pub fn port_below(&self) -> Option<(usize, bool)> {
-        let i = usize::try_from(self.player.slot).ok().filter(|&i| i < self.count)?;
+        let i = usize::try_from(self.game.player[0]).ok().filter(|&i| i < self.count)?;
         let (s, b) = (&self.ships, &self.bodies);
         let mut best: Option<(usize, f64)> = None;
         for j in 0..self.n_bodies {
@@ -82,7 +82,7 @@ impl World {
                 if mode != MODE_FLYING { return WRONG_MODE; }
                 let Some((j, slow)) = self.port_below() else { return NOT_OVER_PORT };
                 if !slow { return TOO_FAST; }
-                let i = self.player.slot as usize;
+                let i = self.game.player[0] as usize;
                 // curl the way the ship already points: counter-clockwise round the port unless it faces clockwise
                 let (rx, ry) = (self.ships.x[i] - self.bodies.x[j], self.ships.y[i] - self.bodies.y[j]);
                 let (hx, hy) = crate::flight::heading(self.ships.ang[i]);
@@ -94,13 +94,15 @@ impl World {
                 self.game.at[0] = j as i16;
                 self.game.auto[0] = 0;
                 self.game.timer[0] = DESCENT_S;
-                self.player.set = 0.0;
+                self.game.set[0] = 0.0;
                 OK
             }
             CMD_LAUNCH => {
                 if mode != MODE_LANDED { return WRONG_MODE; }
                 self.game.mode[0] = MODE_LAUNCHING;
                 self.game.timer[0] = LAUNCH_S;
+                let (tx, ty, v) = self.launch_velocity();
+                (self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0]) = (tx, ty, v);
                 OK
             }
             CMD_WAIT => {
@@ -126,12 +128,12 @@ impl World {
             }
             CMD_TELEPORT => {
                 if mode != MODE_FLYING { return WRONG_MODE; }
-                let (Some(j), Ok(i)) = (usize::try_from(a).ok().filter(|&j| j < self.n_bodies), usize::try_from(self.player.slot)) else { return NO_SUCH_BODY };
+                let (Some(j), Ok(i)) = (usize::try_from(a).ok().filter(|&j| j < self.n_bodies), usize::try_from(self.game.player[0])) else { return NO_SUCH_BODY };
                 let s = &mut self.ships;
                 s.x[i] = self.bodies.x[j];
                 s.y[i] = self.bodies.y[j] - self.bodies.r[j] * 0.3;
                 s.vx[i] = 0.0; s.vy[i] = 0.0; s.av[i] = 0.0;
-                self.player.set = 0.0;
+                self.game.set[0] = 0.0;
                 self.slot_reset(i, false);
                 OK
             }
@@ -141,7 +143,7 @@ impl World {
 
     /// Put the player down at a port without the sequence (a new game starts landed).
     pub fn place_landed(&mut self, body: usize) {
-        if let Ok(i) = usize::try_from(self.player.slot) {
+        if let Ok(i) = usize::try_from(self.game.player[0]) {
             let s = &mut self.ships;
             s.alive[i] = 0;
             s.x[i] = self.bodies.x[body];
@@ -160,7 +162,7 @@ impl World {
     /// station, straight out from its centre, slowly.
     pub fn launch_velocity(&self) -> (f64, f64, f64) {
         let j = self.game.at[0] as usize;
-        let Ok(i) = usize::try_from(self.player.slot) else { return (0.0, 1.0, 0.0) };
+        let Ok(i) = usize::try_from(self.game.player[0]) else { return (0.0, 1.0, 0.0) };
         let (rx, ry) = (self.ships.x[i] - self.bodies.x[j], self.ships.y[i] - self.bodies.y[j]);
         let d = hypot(rx, ry);
         let (ux, uy) = if d < 1.0 { (1.0, 0.0) } else { (rx / d, ry / d) };
@@ -193,8 +195,8 @@ impl World {
                 if self.game.timer[0] <= DONE {
                     self.game.timer[0] = 0.0;
                     self.game.mode[0] = MODE_FLYING;
-                    let (tx, ty, v) = self.launch_velocity();
-                    if let Ok(i) = usize::try_from(self.player.slot) {
+                    let (tx, ty, v) = (self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0]);
+                    if let Ok(i) = usize::try_from(self.game.player[0]) {
                         let s = &mut self.ships;
                         s.alive[i] = 1;
                         // moving the way the sequence swept, nose first, at its speed: the assist eases it back to
@@ -206,7 +208,7 @@ impl World {
                         s.prev_x[i] = s.x[i];
                         s.prev_y[i] = s.y[i];
                         s.prev_ang[i] = s.ang[i];
-                        self.player.set = v;
+                        self.game.set[0] = v;
                     }
                 }
             }
@@ -233,7 +235,7 @@ mod tests {
         w.ships.alive[0] = 1;
         w.ships.x[0] = x;
         w.ships.y[0] = y;
-        w.player.slot = 0;
+        w.game.player[0] = 0;
         w.game.credits[0] = 1000;
         w
     }

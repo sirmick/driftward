@@ -19,7 +19,7 @@
 //! waypoints (round any body in the way, or the loop of a loiter), end.
 
 use crate::market::MAX_GOODS;
-use crate::math::{atan2, cos, exp, hypot, sin, TAU};
+use crate::math::{atan2, cos, exp, hypot, ln, sin, TAU};
 use crate::port::{BODY_STAR, BODY_STATION, DESCENT_S, DONE, LAUNCH_S};
 use crate::world::{World, DT, P};
 
@@ -214,7 +214,15 @@ impl World {
             self.mix.dwell[m] = len / cruise.max(1.0) + LAUNCH_S + DESCENT_S;
             self.mix.rate[m] = self.mix.weight[m] / self.mix.dwell[m];
         }
+        // each lane's first launch, an exponential gap from now
+        let now = self.tick as f64 * DT;
+        for l in 0..self.lanes.cap { self.lanes.next[l] = if self.lanes.rate[l] > 0.0 { now + self.gap(self.lanes.rate[l]) } else { f64::INFINITY }; }
+        for l in 0..self.jlanes.cap { self.jlanes.next[l] = if self.jlanes.rate[l] > 0.0 { now + self.gap(self.jlanes.rate[l]) } else { f64::INFINITY }; }
+        for m in 0..MAX_MIX { self.mix.next[m] = if self.mix.rate[m] > 0.0 { now + self.gap(self.mix.rate[m]) } else { f64::INFINITY }; }
     }
+
+    /// A Poisson process's gap to its next event at `rate` a second: exponential, -ln(u) / rate, u in (0, 1].
+    fn gap(&mut self, rate: f64) -> f64 { -ln(1.0 - self.rng.next_f64()) / rate }
 
     /// How well a destination's market complements an origin's: the summed relative markup, for every commodity both
     /// trade, of selling at the destination what was bought at the origin; floored so every route sees some freight.
@@ -276,7 +284,7 @@ impl World {
     /// A free slot for a new traffic ship (never the player's), growing the live range if needed, within the cap.
     fn free_slot(&mut self) -> Option<usize> {
         if self.traffic_count() as f64 >= self.p(P::traffic_cap) { return None; }
-        let player = usize::try_from(self.player.slot).ok();
+        let player = usize::try_from(self.game.player[0]).ok();
         if let Some(i) = (0..self.count).find(|&i| Some(i) != player && self.ships.alive[i] == 0 && self.traffic.role[i] == 0) { return Some(i); }
         if self.count < self.cfg.max_ships { self.count += 1; return Some(self.count - 1); }
         None
@@ -310,8 +318,8 @@ impl World {
         let pts = &pts[..n_pts];
         let mut len = 0.0;
         for (i, p) in pts.iter().enumerate() {
-            self.route.x[base + i] = p.0; self.route.y[base + i] = p.1;
             if i > 0 { len += hypot(p.0 - pts[i - 1].0, p.1 - pts[i - 1].1); }
+            self.route.x[base + i] = p.0; self.route.y[base + i] = p.1; self.route.s[base + i] = len;
         }
         self.traffic.len[k] = len;
         self.traffic.npts[k] = pts.len() as u8;
@@ -343,20 +351,17 @@ impl World {
         Some(k)
     }
 
-    /// Put a railed ship at its route position `s`, facing along the route, moving at cruise.
+    /// Put a railed ship at its route position `s`, facing along the route, moving at cruise. Ships move forward
+    /// along their routes, so the search starts from the leg it was on (from the start if it is already past `s`).
     fn place_on_route(&mut self, k: usize) {
-        let n = self.traffic.npts[k] as usize;
-        let mut s = self.traffic.s[k];
-        let mut leg = 0;
-        let (mut p0, mut p1) = (self.pt(k, 0), self.pt(k, 1));
-        while leg + 2 < n {
-            let l = hypot(p1.0 - p0.0, p1.1 - p0.1);
-            if s <= l { break; }
-            s -= l; leg += 1; p0 = p1; p1 = self.pt(k, leg + 1);
-        }
+        let (n, base, s) = (self.traffic.npts[k] as usize, k * MAX_PTS, self.traffic.s[k]);
+        let mut leg = self.traffic.leg[k] as usize;
+        if leg + 1 >= n || self.route.s[base + leg] > s { leg = 0; }
+        while leg + 2 < n && s > self.route.s[base + leg + 1] { leg += 1; }
+        let (p0, p1) = (self.pt(k, leg), self.pt(k, leg + 1));
         let (dx, dy) = (p1.0 - p0.0, p1.1 - p0.1);
         let d = hypot(dx, dy).max(1e-6);
-        let f = (s / d).min(1.0);
+        let f = ((s - self.route.s[base + leg]) / d).min(1.0);
         let cruise = self.traffic.cruise[k];
         self.traffic.leg[k] = leg as u8;
         let sh = &mut self.ships;
@@ -373,33 +378,43 @@ impl World {
     /// switch between rails and physics by distance to the player, and the AI that flies the near ones.
     pub(crate) fn step_traffic(&mut self) {
         let nb = self.n_bodies;
-        // local: each lane launches ships as a Poisson process
+        let now = self.tick as f64 * DT;
+        // every lane launches as a Poisson process: each holds the time of its next launch, so a quiet lane costs a
+        // compare (at most one launch a lane a tick)
         for i in 0..nb {
             if self.bodies.port[i] == 0 { continue; }
             for j in 0..nb {
                 for role in 0..N_ROLES {
-                    let rate = self.lanes.rate[self.lane(i, j, role)];
-                    if rate > 0.0 && self.rng.next_f64() < rate * DT { self.spawn(LOCAL, End::Body(i), End::Body(j), None); }
+                    let l = self.lane(i, j, role);
+                    if self.lanes.rate[l] > 0.0 && self.lanes.next[l] <= now {
+                        self.lanes.next[l] += self.gap(self.lanes.rate[l]);
+                        self.spawn(LOCAL, End::Body(i), End::Body(j), None);
+                    }
                 }
             }
         }
         // through: arrivals at the jump zones, departures from the ports
         for z in 0..N_JUMP {
             for j in 0..nb {
-                let (a, d) = (self.jlanes.rate[self.jlane(0, z, j)], self.jlanes.rate[self.jlane(1, z, j)]);
-                if a > 0.0 && self.rng.next_f64() < a * DT { self.spawn(ARRIVE, End::Jump(z), End::Body(j), None); }
-                if d > 0.0 && self.rng.next_f64() < d * DT { self.spawn(DEPART, End::Body(j), End::Jump(z), None); }
+                for (dir, from, to, stream) in [(0, End::Jump(z), End::Body(j), ARRIVE), (1, End::Body(j), End::Jump(z), DEPART)] {
+                    let l = self.jlane(dir, z, j);
+                    if self.jlanes.rate[l] > 0.0 && self.jlanes.next[l] <= now {
+                        self.jlanes.next[l] += self.gap(self.jlanes.rate[l]);
+                        self.spawn(stream, from, to, None);
+                    }
+                }
             }
         }
         // loiter: each row launches at its rate
         for m in 0..MAX_MIX {
-            if self.mix.stream[m] == MIX_LOITER && self.mix.body[m] >= 0 && self.mix.rate[m] > 0.0 && self.rng.next_f64() < self.mix.rate[m] * DT {
+            if self.mix.stream[m] == MIX_LOITER && self.mix.body[m] >= 0 && self.mix.rate[m] > 0.0 && self.mix.next[m] <= now {
+                self.mix.next[m] += self.gap(self.mix.rate[m]);
                 let j = End::Body(self.mix.body[m] as usize);
                 self.spawn(LOITER, j, j, Some(m));
             }
         }
         let (near, far) = (self.p(P::traffic_near), self.p(P::traffic_near) * 1.25);
-        let player = usize::try_from(self.player.slot).ok().filter(|&p| p < self.count);
+        let player = usize::try_from(self.game.player[0]).ok().filter(|&p| p < self.count);
         let (px, py) = player.map_or((f64::MAX, f64::MAX), |p| (self.ships.x[p], self.ships.y[p]));
         for k in 0..self.count {
             if self.traffic.role[k] == 0 { continue; }
@@ -425,7 +440,7 @@ impl World {
         self.traffic.phase[k] = 0;
         // shrink the live range past trailing dead slots
         while self.count > 0 && self.ships.alive[self.count - 1] == 0 && self.traffic.role[self.count - 1] == 0
-            && usize::try_from(self.player.slot).ok() != Some(self.count - 1) { self.count -= 1; }
+            && usize::try_from(self.game.player[0]).ok() != Some(self.count - 1) { self.count -= 1; }
     }
 
     /// Begin the landing (or docking) sequence where the ship is.
@@ -462,8 +477,7 @@ impl World {
         } else if d_player > far {
             // far again: back onto the rails, at the nearest point of its current leg
             let leg = self.traffic.leg[k] as usize;
-            let mut base = 0.0;
-            for i in 0..leg { let (a, b) = (self.pt(k, i), self.pt(k, i + 1)); base += hypot(b.0 - a.0, b.1 - a.1); }
+            let base = self.route.s[k * MAX_PTS + leg];
             let (p0, p1) = (self.pt(k, leg), self.pt(k, leg + 1));
             let (dx, dy) = (p1.0 - p0.0, p1.1 - p0.1);
             let l = hypot(dx, dy).max(1e-6);
@@ -531,7 +545,7 @@ mod tests {
         w.market.price[MAX_GOODS] = 10;       // body 1 sells commodity 0 cheap
         w.market.price[2 * MAX_GOODS] = 30;   // body 2 pays well for it
         w.count = 1;
-        w.player.slot = 0;
+        w.game.player[0] = 0;
         w.ships.alive[0] = 1;
         w.ships.x[0] = 0.0; w.ships.y[0] = -60_000.0;
         w.game.mode[0] = MODE_FLYING;

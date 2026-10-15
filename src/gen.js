@@ -438,7 +438,7 @@ function bake(ship, brand, size) {
   const st = brand.style, D = st.detail || {}, pal = st.palette;
   const res = size.res, L = ship.L, parts = ship.parts;
   const smooth = st.union === 'smooth';
-  const k = smooth ? (st.blend || 0.03) * L : 0;
+  const k = smooth ? (st.blend ?? 0.03) * L : 0;
   const hullCols = pal.hull.map(hexRGB), trim = hexRGB(pal.trim), glass = hexRGB(pal.glass), accent = hexRGB(pal.accent);
   const engine = hexRGB(pal.engine), windowC = hexRGB(pal.window), emissive = hexRGB(pal.emissive), rustC = hexRGB(pal.rust || '#000000');
   for (const p of parts) p.col = p.colOverride ? hexRGB(p.colOverride) : p.paint === -1 ? trim : p.paint === -2 ? glass : hullCols[p.paint % hullCols.length];
@@ -552,7 +552,7 @@ function bake(ship, brand, size) {
           const e = Math.min(Math.min(fy, 1 - fy), Math.min(fx, 1 - fx) * asp);
           const lw = Math.max(pxd * 0.7, S * 0.03) / S;
           if (t > Math.min(S * 0.2, inRd * 0.4)) {
-            if (e < lw) { const g = f * (1 - e / lw); dh -= (D.panelDepth || 0.5) * pxd * 0.9 * g; mulc(1 - 0.3 * g * (D.panelDark || 0.5)); spec *= 1 - 0.3 * g; }
+            if (e < lw) { const g = f * (1 - e / lw); dh -= (D.panelDepth ?? 0.5) * pxd * 0.9 * g; mulc(1 - 0.3 * g * (D.panelDark ?? 0.5)); spec *= 1 - 0.3 * g; }
             const tone = (h2(row, col, p.seedI) - 0.5) * (D.panelTone || 0) * f; mulc(1 + tone);
           }
         }
@@ -582,8 +582,8 @@ function bake(ship, brand, size) {
         }
       }
       // ribs (organic)
-      if (smooth && (D.ribs || 0) > 0 && ['core', 'hull', 'pod', 'nacelle', 'wing', 'fin'].includes(p.role)) {
-        const S = D.ribSpacing || 1.4, f = fade(S);
+      if (smooth && (D.ribs || 0) > 0 && (D.ribSpacing ?? 1.4) > 0 && ['core', 'hull', 'pod', 'nacelle', 'wing', 'fin'].includes(p.role)) {
+        const S = D.ribSpacing ?? 1.4, f = fade(S);
         if (f > 0) dh += D.ribs * Math.min(p.H * 0.05, pxd * 1.2) * Math.sin(ly * 2 * Math.PI / S) * sstep(0, inRd * 0.4, t) * f;
       }
       // grime

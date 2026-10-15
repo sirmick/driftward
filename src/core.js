@@ -62,7 +62,7 @@ const CORE_READY = (async () => {
       price: (body, g) => groups.market.price[body * M.maxGoods + g],
       holdUsed: () => X.dw_hold_used(w), // trade and mission cargo, tons
       setInput: bits => X.dw_set_input(w, bits >>> 0),
-      playerSet: () => X.dw_player_set(w), // assist set speed, m/s
+      playerSet: () => groups.game.set[0], // assist set speed, m/s (the player is on the game row)
       // save: a copy of the whole world as bytes; load(bytes): 0 ok, else an error code (see snapshot.rs)
       save: () => groups.world.snapshot.slice(0, X.dw_save(w)),
       load: bytes => { if (bytes.length !== groups.world.snapshot.length) return 4; groups.world.snapshot.set(bytes); return X.dw_load(w); },

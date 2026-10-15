@@ -35,7 +35,7 @@ impl World {
     /// Tons in the player's hold (trade cargo and mission cargo), and what it holds at most.
     pub fn hold_used(&self) -> u32 { self.hold.tons.iter().sum::<u32>() + self.mission_tons() }
     pub fn hold_cap(&self) -> u32 {
-        usize::try_from(self.player.slot).ok().filter(|&i| i < self.count).map_or(0, |i| self.types.cargo[self.ships.kind[i] as usize])
+        usize::try_from(self.game.player[0]).ok().filter(|&i| i < self.count).map_or(0, |i| self.types.cargo[self.ships.kind[i] as usize])
     }
 
     /// The trading commands (CMD_BUY, CMD_SELL, CMD_REPAY); landed only.
@@ -96,7 +96,7 @@ mod tests {
         w.bodies.r[0] = 500.0; w.bodies.kind[0] = BODY_PLANET; w.bodies.port[0] = 1;
         w.market.price[ORE] = 50;
         w.count = 1;
-        w.player.slot = 0;
+        w.game.player[0] = 0;
         w.place_landed(0);
         w.game.credits[0] = credits;
         w

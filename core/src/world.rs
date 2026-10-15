@@ -6,7 +6,7 @@ use crate::market::MAX_GOODS;
 use crate::mission::{MAX_MISSIONS, MAX_OFFERS};
 use crate::orbit::Orbit;
 use crate::traffic::{MAX_MIX, MAX_PTS, N_JUMP, N_ROLES};
-use crate::player::{self, Player};
+use crate::player;
 use crate::port::{DESCENT_S, LAUNCH_S};
 use crate::snapshot;
 use crate::math::{sin_cos, wrap, PI};
@@ -74,8 +74,15 @@ soa! {
     /// a descent or launch sequence, the strategic day, the player's credits and debt to the lender, and the fly-to
     /// autopilot's target body plus one (0: off; player.rs) and the point it is steering for (a waypoint round an
     /// obstacle, or the target).
-    /// The landing and launch sequences curl round the port's body: `curl` 0 counter-clockwise, 1 clockwise (port.rs).
-    pub struct Game { mode: u8, at: i16, timer: f64, curl: u8, day: u32, credits: u32, debt: u32, auto: i16, aim_x: f64, aim_y: f64 }
+    /// The landing and launch sequences curl round the port's body: `curl` 0 counter-clockwise, 1 clockwise (port.rs);
+    /// a launch hands the ship back moving along the unit vector (hand_x, hand_y) at hand_v m/s, written when it starts
+    /// (port.rs `launch_velocity`), so the page draws the sequence toward the velocity the core will give.
+    /// The player (player.rs): the ship slot flown (-1 for none: the Fly tab drives its player from JS), the assist
+    /// set speed (m/s), and the buttons held this tick.
+    pub struct Game {
+        mode: u8, at: i16, timer: f64, curl: u8, day: u32, credits: u32, debt: u32, auto: i16, aim_x: f64, aim_y: f64,
+        hand_x: f64, hand_y: f64, hand_v: f64, player: i32, set: f64, input: u32,
+    }
 }
 
 soa! {
@@ -114,28 +121,30 @@ soa! {
 }
 
 soa! {
-    /// Each traffic ship's route points, MAX_PTS a slot (slot * MAX_PTS + point): start, waypoints, end.
-    pub struct Route { x: f64, y: f64 }
+    /// Each traffic ship's route points, MAX_PTS a slot (slot * MAX_PTS + point): start, waypoints, end; `s` is the
+    /// distance along the route to the point, so a ship's place on it is a lookup from its current leg.
+    pub struct Route { x: f64, y: f64, s: f64 }
 }
 
 soa! {
     /// The traffic mix (content: the system file's traffic, written by the page), MAX_MIX rows: stream (MIX_LOCAL,
     /// MIX_THROUGH, MIX_LOITER; 0 an empty row), the ship type, and a weight (local and through: its share of the
     /// stream; loiter: ships it keeps in flight round `body`). Loiter rows also carry their planned launch rate and
-    /// dwell (traffic.rs).
-    pub struct Mix { stream: u8, body: i16, kind: u16, weight: f64, rate: f64, dwell: f64 }
+    /// dwell, and the time (seconds of game time) of their next launch (traffic.rs).
+    pub struct Mix { stream: u8, body: i16, kind: u16, weight: f64, rate: f64, dwell: f64, next: f64 }
 }
 
 soa! {
     /// Local traffic lanes, per directed route between ports and role ((from * max_bodies + to) * N_ROLES + role):
-    /// launch rate (ships a second) and dwell (seconds a ship spends on the route). Planned at a new game (traffic.rs).
-    pub struct Lanes { rate: f64, dwell: f64 }
+    /// launch rate (ships a second), dwell (seconds a ship spends on the route), and the time (seconds of game time)
+    /// of the next launch, drawn as a Poisson process's exponential gaps. Planned at a new game (traffic.rs).
+    pub struct Lanes { rate: f64, dwell: f64, next: f64 }
 }
 
 soa! {
     /// Through traffic lanes, per jump zone and port, arriving (zone to port) and departing (port to zone):
-    /// ((dir * N_JUMP + zone) * max_bodies + body): rate and dwell, as for Lanes.
-    pub struct JLanes { rate: f64, dwell: f64 }
+    /// ((dir * N_JUMP + zone) * max_bodies + body): rate, dwell and next, as for Lanes.
+    pub struct JLanes { rate: f64, dwell: f64, next: f64 }
 }
 
 soa! {
@@ -224,7 +233,6 @@ pub struct World {
     pub n_bodies: usize,
     pub tick: u64,
     pub rng: Rng,
-    pub player: Player,
     acc: f64,
     /// every state column, in manifest and snapshot order (cached: computing it allocates)
     pub(crate) cols: Vec<ColumnDesc>,
@@ -258,7 +266,6 @@ impl World {
             n_bodies: 0,
             tick: 0,
             rng: Rng::new(seed),
-            player: Player::default(),
             acc: 0.0,
             cols: Vec::new(),
             snap: Vec::new(),
@@ -267,6 +274,7 @@ impl World {
         });
         w.cols = w.columns();
         w.snap = vec![0; snapshot::snapshot_len(&w.cols)];
+        w.game.player[0] = -1; // no player until the page sets one
         w.manifest = w.build_manifest();
         w
     }
@@ -317,7 +325,9 @@ impl World {
     /// separately; post boards with `post_boards`, start traffic with `plan_traffic` and `seed_traffic`). Handles from before a clear are invalid.
     pub fn clear(&mut self) {
         self.ships.clear();
+        let player = self.game.player[0]; // the slot flown survives a clear; its set speed and input don't
         self.game.clear();
+        self.game.player[0] = player;
         self.hold.clear();
         self.offers.clear();
         self.missions.clear();
@@ -327,8 +337,6 @@ impl World {
         self.jlanes.clear();
         self.count = 0;
         self.tick = 0;
-        self.player.set = 0.0;
-        self.player.input = 0;
         self.reset_clock();
     }
 
@@ -430,12 +438,16 @@ impl World {
         };
         eat(self.tick);
         eat(self.count as u64);
-        eat(self.player.set.to_bits());
-        eat(self.player.slot as u32 as u64 | (self.player.input as u64) << 32);
+        eat(self.game.set[0].to_bits());
+        eat(self.game.player[0] as u32 as u64 | (self.game.input[0] as u64) << 32);
         eat(self.game.mode[0] as u64 | (self.game.at[0] as u16 as u64) << 8 | (self.game.day[0] as u64) << 32);
         eat(self.game.timer[0].to_bits());
         eat(self.game.credits[0] as u64 | (self.game.debt[0] as u64) << 32);
         eat(self.game.auto[0] as u16 as u64 | (self.game.curl[0] as u64) << 16);
+        for v in [self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0]] { eat(v.to_bits()); }
+        // tuning and the system: a live param change or a moved body shows in the hash at once
+        for &p in &self.params { eat(p.to_bits()); }
+        for j in 0..self.n_bodies { eat(self.bodies.x[j].to_bits()); eat(self.bodies.y[j].to_bits()); eat(self.bodies.r[j].to_bits()); eat(self.bodies.g[j].to_bits()); }
         for &t in &self.hold.tons { eat(t as u64); }
         for &p in &self.market.price[..self.n_bodies * MAX_GOODS] { eat(p as u64); }
         let f = &self.offers;
