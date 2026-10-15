@@ -3,3 +3,5 @@ preview.png
 *.log
 .DS_Store
 core/target/
+art/*/raw/
+*.token

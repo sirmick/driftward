@@ -1,7 +1,7 @@
 // Validate every system file against its schema with the game's own clamp (src/schema.js), check the economy's
 // price tables and traffic's hulls, and check the clamp itself on a deliberately bad system. Usage: node tools/validate.js (part of npm run check)
 const fs = require('fs'), path = require('path');
-const { clampToSchema, loadSystem } = require('../src/schema.js');
+const { clampToSchema, loadSystem, loadLore } = require('../src/schema.js');
 const root = path.join(__dirname, '..');
 const schema = JSON.parse(fs.readFileSync(path.join(root, 'src', 'schema', 'system.schema.json'), 'utf8'));
 let bad = 0;
@@ -43,6 +43,25 @@ for (const [id, c] of Object.entries(traffic.cultures)) {
 for (const tier of schema.properties.bodies.items.properties.port.properties.population.enum) if (!(traffic.population[tier] > 0)) tBad.push(`no weight for population ${tier}`);
 if (tBad.length) { bad += tBad.length; tBad.forEach(m => console.log(`traffic.json: ${m}`)); }
 else console.log(`traffic.json: valid; ${Object.keys(traffic.cultures).length} culture(s)`);
+
+// lore (src/lore/<system id>.json, from tools/gen-content.js): valid against its schema and its system, a port entry
+// for every port, and every portrait and vista in art/<id>/ naming a person or port the lore has
+const loreSchema = JSON.parse(fs.readFileSync(path.join(root, 'src', 'schema', 'lore.schema.json'), 'utf8'));
+const loreDir = path.join(root, 'src', 'lore');
+for (const f of fs.existsSync(loreDir) ? fs.readdirSync(loreDir).filter(f => f.endsWith('.json')) : []) {
+  const raw = JSON.parse(fs.readFileSync(path.join(loreDir, f), 'utf8'));
+  const sysF = fs.readdirSync(path.join(root, 'src', 'systems')).find(s => JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', s), 'utf8')).id === raw.system);
+  if (!sysF) { bad++; console.log(`lore/${f}: no system ${raw.system}`); continue; }
+  const { system } = loadSystem(JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', sysF), 'utf8')), schema);
+  const { lore, ports, notes } = loadLore(raw, loreSchema, system);
+  const people = new Set([...ports.values()].flatMap(p => p.people.map(q => q.id)));
+  const artDir = path.join(root, 'art', raw.system), art = fs.existsSync(artDir) ? fs.readdirSync(artDir).filter(a => a.endsWith('.webp')) : [];
+  const stray = art.filter(a => { const [, kind, id] = a.match(/^(vista|portrait)-(.+)\.webp$/) || []; return kind === 'vista' ? !ports.has(id) : kind === 'portrait' ? !people.has(id) : true; });
+  if (!lore || notes.length || stray.length) {
+    bad++; console.log(`lore/${f}: ${notes.length + stray.length} problem(s)`);
+    notes.forEach(n => console.log(`  ${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`)); stray.forEach(a => console.log(`  art/${raw.system}/${a} matches nothing in the lore`));
+  } else console.log(`lore/${f}: valid; ${ports.size} ports, ${people.size} people, ${art.filter(a => a.startsWith('vista-')).length} vistas and ${art.filter(a => a.startsWith('portrait-')).length} portraits`);
+}
 
 // the clamp on bad input: out-of-range numbers clamp, bad enums fall back to defaults, unknown fields drop,
 // a missing required field is fatal

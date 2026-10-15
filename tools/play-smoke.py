@@ -56,6 +56,24 @@ with sync_playwright() as p:
     check(start['mode'] == 2 and start['day'] == 1 and pg.is_visible('#port'), f"starts landed on day 1 at {pg.inner_text('#port-name')}")
     SPACE = '{ space: [0, -8000] }'  # open space: outside every well
 
+    # the port's lore and art (src/lore, art/ beside the page): the description, the bar's people with their
+    # portraits and rumors, the about page's places, and the painted vista over the procedural one
+    lore_file = pathlib.Path(__file__).resolve().parent.parent / 'src' / 'lore' / 'brannock.json'
+    if lore_file.exists():
+        lore = json.loads(lore_file.read_text()); L = next(p for p in lore['ports'] if p['body'] == 'halde')
+        check(pg.inner_text('#port-desc') == L['description'][0], 'the port card shows the lore\'s description')
+        pg.keyboard.press('KeyB'); pg.wait_for_timeout(300)
+        loaded = ev("[...document.querySelectorAll('#bar-people img')].filter(i => i.complete && i.naturalWidth > 0).length")
+        check(pg.is_visible('#bar') and pg.locator('#bar .person').count() == len(L['people']) and pg.locator('#bar-rumors li').count() == len(L['rumors']),
+              f"B opens the bar: {', '.join(q['name'] for q in L['people'])}, {len(L['rumors'])} rumors, {loaded} portraits loaded")
+        pg.keyboard.press('KeyI'); pg.wait_for_timeout(100)
+        check(pg.is_visible('#about') and not pg.is_visible('#bar') and pg.locator('#about-places li').count() == len(L['places']), f"I opens the about page with {len(L['places'])} places")
+        pg.keyboard.press('Escape')
+        check(not pg.is_visible('#about'), 'Escape closes it')
+        if (lore_file.parent.parent.parent / 'art' / 'brannock' / 'vista-halde.webp').exists():
+            pg.wait_for_function("document.getElementById('vista').classList.contains('on')", timeout=5000)
+            check(True, 'the painted vista shows')
+
     # the market at the start port: the panel lists what it trades; buying and selling go through the core
     econ = ev('__play.ECON')
     check(start['credits'] == econ['start']['credits'] and start['debt'] == econ['start']['debt'] and start['holdCap'] > 0,

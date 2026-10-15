@@ -20,6 +20,13 @@ const SYS = loaded.system, BODIES = loaded.bodies, STAR = BODIES[0];
 const ECON = JSON.parse($('economy').textContent), GOODS = ECON.commodities;
 // ambient traffic (src/traffic.json): hulls by culture and role, population weights
 const TRAFFIC_DATA = JSON.parse($('traffic').textContent);
+// the system's lore (src/lore/<id>.json, from tools/gen-content.js), validated against its schema and the system; a
+// port without it shows the system file's description and an empty bar. The art manifest lists the painted vistas
+// and portraits found in art/<id>/ at build time.
+const LORE = (raw => raw ? loadLore(raw, JSON.parse($('lore-schema').textContent), SYS) : { lore: null, ports: new Map(), notes: [] })(JSON.parse($('lore').textContent));
+LORE.notes.forEach(n => console.warn(`lore ${n.path}: ${n.msg}`));
+const ART = JSON.parse($('art').textContent);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const star = STARS[STAR.look] || STARS.sol;
 const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3 };
 // planets and moons, drawn by the planet shader
@@ -176,15 +183,18 @@ window.addEventListener('keydown', e => {
       if (e.code === 'KeyM') toggleMap();
       if (/^Digit[1-9]$/.test(e.code)) pickLocation(+e.code.slice(5));
     }
-    if (e.code === 'KeyI') setNav(!navOn);
-    // debugging the flashing black squares: B toggles bloom, N paints bad scene pixels (see postProcess)
-    if (e.code === 'KeyB') { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
+    if (e.code === 'KeyI' && !inPort()) setNav(!navOn);
+    // debugging the flashing black squares: B toggles bloom (in flight; in port it is the bar), N paints bad scene
+    // pixels (see postProcess)
+    if (e.code === 'KeyB' && !inPort()) { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
     if (e.code === 'KeyN') { nanView = 1 - nanView; toast(nanView ? 'NaN view: magenta = bad scene pixel, cyan = bad bloom, yellow = negative' : 'NaN view off'); }
     if (e.code === 'KeyL') landOrLaunch();
     if (e.code === 'Enter') skipSequence();
     if (e.code === 'KeyW' && inPort()) waitDay();
     if (e.code === 'KeyT' && inPort()) showPanel(panelOpen() === 'trade' ? null : 'trade');
     if (e.code === 'KeyM' && inPort()) showPanel(panelOpen() === 'board' ? null : 'board');
+    if (e.code === 'KeyB' && inPort()) showPanel(panelOpen() === 'bar' ? null : 'bar');
+    if (e.code === 'KeyI' && inPort()) showPanel(panelOpen() === 'about' ? null : 'about');
     if (e.code === 'F6') saveGame();
     if (e.code === 'F9') loadGame();
     if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(zoom * 1.25);
@@ -227,8 +237,8 @@ function onEscape() {
   if (inFlight() && escapeFlight()) return;
   pauseGame(true);
 }
-// the port screen's panels beside the port card: the market or the mission board, one at a time
-const PANELS = ['trade', 'board'];
+// the port screen's panels beside the port card, one at a time: the market, the mission board, the bar, about
+const PANELS = ['trade', 'board', 'bar', 'about'];
 const panelOpen = () => PANELS.find(p => !$(p).hidden) || null;
 let showPanel = () => {};
 const fmtCr = n => n.toLocaleString('en-US');
@@ -314,6 +324,8 @@ CORE_READY.then(CORE => {
   $('svc-wait').onclick = () => { waitDay(); canvas.focus(); };
   $('svc-trade').onclick = () => { showPanel(panelOpen() === 'trade' ? null : 'trade'); canvas.focus(); };
   $('svc-board').onclick = () => { showPanel(panelOpen() === 'board' ? null : 'board'); canvas.focus(); };
+  $('svc-bar').onclick = () => { showPanel(panelOpen() === 'bar' ? null : 'bar'); canvas.focus(); };
+  $('svc-about').onclick = () => { showPanel(panelOpen() === 'about' ? null : 'about'); canvas.focus(); };
   $('svc-launch').onclick = () => { landOrLaunch(); canvas.focus(); };
   // saves: the world's bytes, and a note of where and when for the title's Continue
   function store(key) {
@@ -440,15 +452,46 @@ CORE_READY.then(CORE => {
       const B = BODIES[sim.game.at[0]], P0 = B.port;
       $('port-kicker').textContent = [B.name, P0.role.replace('-', ' '), P0.population].join(' · ');
       $('port-name').textContent = P0.name;
-      $('port-desc').textContent = P0.description || '';
+      const L = LORE.ports.get(B.id);
+      $('port-desc').textContent = L ? L.description[0] : P0.description || '';
       $('svc-trade').disabled = !(P0.services || []).includes('market');
       $('svc-board').disabled = !(P0.services || []).includes('missions');
+      $('svc-bar').disabled = !(P0.services || []).includes('bar') || !L;
+      fillLore(B, L);
+      showVista(B.id);
       port.hidden = false;
       showPanel(null);
       // newly landed (not a new game or a load): autosave. Any earlier mode counts, as a stalled frame or a test
       // stepping the sim directly can pass the whole descent between two frames
       if (prev !== -1 && prev !== MODE.landed) { autosave(); toast(`Landed at ${P0.name}: day ${sim.day()}, saved`); }
-    } else port.hidden = true;
+    } else { port.hidden = true; showVista(null); }
+  }
+  // the painted vista of the port on body id (none: the procedural view shows), faded in once it has loaded
+  function showVista(id) {
+    const img = $('vista'), src = id && ART.vistas[id];
+    img.classList.remove('on');
+    if (!src) { img.removeAttribute('src'); return; }
+    img.onload = () => { if (img.getAttribute('src') === src) img.classList.add('on'); };
+    img.onerror = () => console.warn(`vista ${src} did not load; showing the procedural view`);
+    img.src = src;
+  }
+  // the bar (people with their portraits, rumors) and the about page (description, places, the system), from the
+  // lore; without it the about page has the system file's descriptions
+  function fillLore(B, L) {
+    const P0 = B.port, lore = LORE.lore;
+    $('bar-sum').textContent = L ? `${L.people.length} people in tonight` : '';
+    $('bar-people').innerHTML = L ? L.people.map(q => `<div class="person">${ART.portraits[q.id]
+      ? `<img src="${esc(ART.portraits[q.id])}" alt="${esc(q.name)}">` : `<div class="face">${esc(q.name[0])}</div>`}`
+      + `<div><h4>${esc(q.name)}</h4><p class="role">${esc(q.role)}</p><p>${esc(q.text)}</p><q>${esc(q.line)}</q></div></div>`).join('') : '';
+    // a portrait that fails to load (the page opened without art/ beside it) falls back to an initial
+    $('bar-people').querySelectorAll('img').forEach(img => { img.onerror = () => img.replaceWith(Object.assign(document.createElement('div'), { className: 'face', textContent: img.alt[0] })); });
+    $('bar-rumors').innerHTML = L ? L.rumors.map(r => `<li>${esc(r)}</li>`).join('') : '';
+    $('about-name').textContent = P0.name;
+    $('about-sum').textContent = `${B.name} · ${P0.population}`;
+    $('about-desc').innerHTML = (L ? L.description : [P0.description || '']).map(t => `<p>${esc(t)}</p>`).join('');
+    $('about-places').innerHTML = L ? L.places.map(p => `<li><b>${esc(p.name)}</b> · ${esc(p.text)}</li>`).join('') : '<li>No guide to this port yet.</li>';
+    $('about-sys-head').textContent = `The ${SYS.name} system`;
+    $('about-sys').innerHTML = (lore ? [...lore.history, lore.culture] : [SYS.description || '']).map(t => `<p>${esc(t)}</p>`).join('');
   }
 
   // ---------- the port's market and mission board ----------

@@ -65,8 +65,25 @@ economy = json.dumps(json.loads((src / 'economy.json').read_text()))
 traffic = json.dumps(json.loads((src / 'traffic.json').read_text()))
 assert '</script' not in system + system_schema + economy + traffic
 
+# the system's lore (tools/gen-content.js writes it; null if there is none yet) and its schema, inlined; the art is
+# not: the page loads the vistas and portraits from art/<system>/ beside it, so the manifest lists only files that
+# exist, and a page without them (opened on its own) shows the procedural backdrop and no portraits
+system_id = json.loads(system)['id']
+lore_file = src / 'lore' / f'{system_id}.json'
+lore = json.dumps(json.loads(lore_file.read_text())) if lore_file.exists() else 'null'
+lore_schema = json.dumps(json.loads((src / 'schema' / 'lore.schema.json').read_text()))
+art_dir = root / 'art' / system_id
+art = {'vistas': {}, 'portraits': {}}
+for f in sorted(art_dir.glob('*.webp')) if art_dir.exists() else []:
+    kind, _, name = f.stem.partition('-')
+    if kind in ('vista', 'portrait'):
+        art[kind + 's'][name] = f.relative_to(root).as_posix()
+art = json.dumps(art)
+assert '</script' not in lore + lore_schema + art
+
 def page(template, script):
     t = template.replace('/*COREWASM*/', core_b64).replace('/*CATALOG*/', catalog).replace('/*GEN*/', gen).replace('/*APP*/', script)
+    t = t.replace('/*LORE*/', lore).replace('/*LORESCHEMA*/', lore_schema).replace('/*ART*/', art)
     return t.replace('/*SYSTEM*/', system).replace('/*SYSTEMSCHEMA*/', system_schema).replace('/*ECONOMY*/', economy).replace('/*TRAFFIC*/', traffic)
 
 # the lab: app.js pulls in the shared kit and every tab
@@ -78,4 +95,5 @@ game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOO
 for name, html in (('index.html', lab), ('play.html', game)):
     (root / name).write_text(html)
     print(f'wrote {name} ({len(html):,} bytes)', end='; ')
+print(f"lore {'yes' if lore != 'null' else 'none'}, art {len(json.loads(art)['vistas'])} vistas and {len(json.loads(art)['portraits'])} portraits", end='; ')
 print(f'core {wasm.stat().st_size:,} bytes of WASM')

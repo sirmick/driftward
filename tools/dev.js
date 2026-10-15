@@ -36,6 +36,9 @@ fs.watch(path.join(root, 'src'), { recursive: true }, () => changed(false));
 fs.watch(path.join(root, 'core', 'src'), { recursive: true }, () => changed(true));
 fs.watch(path.join(root, 'core', 'Cargo.toml'), () => changed(true));
 fs.watch(path.join(root, 'tools', 'build.py'), () => changed(false));
+// the build lists the art it finds, so new or redone images rebuild too
+fs.mkdirSync(path.join(root, 'art'), { recursive: true });
+fs.watch(path.join(root, 'art'), { recursive: true }, (ev, f) => { if (f && f.endsWith('.webp') && !f.includes('raw')) changed(false); });
 
 http.createServer((req, res) => {
   const url = req.url.split('?')[0];
@@ -53,6 +56,16 @@ http.createServer((req, res) => {
       if (err) { res.writeHead(500); res.end(String(err)); return; }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(html + SNIPPET);
+    });
+    return;
+  }
+  // the ports' vistas and portraits (tools/gen-content.js), which the game loads from art/ beside it
+  const art = url.match(/^\/art\/([a-z0-9-]+)\/([a-z0-9-]+\.webp)$/);
+  if (art) {
+    fs.readFile(path.join(root, 'art', art[1], art[2]), (err, data) => {
+      if (err) { res.writeHead(404); res.end('not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'no-store' });
+      res.end(data);
     });
     return;
   }

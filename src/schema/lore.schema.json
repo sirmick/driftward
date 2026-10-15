@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://driftward.game/schema/lore.schema.json",
+  "title": "Driftward system lore",
+  "description": "The words and the art direction for one star system, written by an LLM from the system's sim facts (tools/gen-content.js) and clamped by src/schema.js before use. Lore holds no numbers the sim uses: it narrates, and the system file, the economy and the core decide. Each port entry names its body by the system file's body id.",
+  "type": "object",
+  "required": [
+    "system",
+    "history",
+    "culture",
+    "artBible",
+    "ports"
+  ],
+  "properties": {
+    "system": {
+      "description": "The system file's id.",
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "maxLength": 40
+    },
+    "history": {
+      "description": "How the system was settled and what has happened here since: one to three paragraphs.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 900
+      }
+    },
+    "culture": {
+      "description": "How people here live, talk and see outsiders: one paragraph.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 900
+    },
+    "artBible": {
+      "description": "The system's look, included in every image prompt so its vistas and portraits agree (the Book's Art chapter).",
+      "type": "object",
+      "required": [
+        "palette",
+        "lighting",
+        "architecture",
+        "materials",
+        "mood",
+        "design"
+      ],
+      "properties": {
+        "palette": {
+          "description": "Three to six key colours, lowercase hex.",
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          }
+        },
+        "lighting": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "architecture": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "materials": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "mood": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "design": {
+          "description": "The owning faction's design language, as it shows here.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        }
+      }
+    },
+    "ports": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": [
+          "body",
+          "description",
+          "places",
+          "people",
+          "rumors",
+          "vista"
+        ],
+        "properties": {
+          "body": {
+            "description": "The system file's id of the body the port is on.",
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "maxLength": 40
+          },
+          "description": {
+            "description": "Two or three paragraphs shown on the port screen.",
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 3,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 900
+            }
+          },
+          "places": {
+            "description": "Notable places at the port.",
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "text"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                }
+              }
+            }
+          },
+          "people": {
+            "description": "Named people you can meet in the port's bar; each gets a portrait.",
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "role",
+                "text",
+                "line",
+                "look"
+              ],
+              "properties": {
+                "id": {
+                  "description": "Unique within the system; names the portrait file.",
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+$",
+                  "maxLength": 40
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "role": {
+                  "description": "What they do, in a few words.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "text": {
+                  "description": "Who they are.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 400
+                },
+                "line": {
+                  "description": "What they say to a pilot who sits down near them.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "look": {
+                  "description": "Their appearance, for the portrait prompt: face, age, build, clothes, one telling detail.",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 400
+                }
+              }
+            }
+          },
+          "rumors": {
+            "description": "What pilots say in the bar. Colour only: a rumor promises no mechanic.",
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            }
+          },
+          "vista": {
+            "description": "The painted view of the port for the image prompt: what stands where, seen from the landing field or dock, with the sky.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 700
+          }
+        }
+      }
+    }
+  }
+}

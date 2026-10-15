@@ -8,7 +8,7 @@ This repository holds two self-contained WebGL2 pages with no dependencies and n
 
 Open `index.html` for the lab or `play.html` for the game (it opens on its title: continue from your last landing, or start a new game from a seed), in a browser with WebGL2 (any current Chrome, Firefox, Safari or Edge). That's it.
 
-The game so far: the Book's M1 system, Brannock (an orange star, three planets, a moon and a shipyard station, four of them ports), loaded from a schema-validated file. You start landed at Halde Landing in a used fighter with 1,500 credits and a 12,000-credit debt to a lender; launch, fly, and land or dock at any port (be over it and slow, press L: the ship curls round the planet and spirals down over its horizon inside a plasma sheath, a day passes, the game autosaves; launch rises from the horizon and spirals back in, handing you control at speed). Each port's market (T) trades commodities at fixed prices set by its role (a mine sells ore cheap and pays well for food and goods; the refinery buys ore and sells metals), so buying low at one port and selling high at another pays; waiting in port costs a docking fee, and the debt gathers interest daily. The mission board (M) posts deliveries to the other ports: accept one, carry its cargo, and land at the destination by the deadline to be paid; your missions show on the HUD and their destinations on the nav overlay, radar and map. Ironhull shuttles, haulers and liners (Rustline hulls) fly between the ports, launching and landing with the same plasma-sheath sequence as you, in numbers set by a gravity model of the ports' populations, distances and prices; they show as dots on the radar. Flight runs on the core's model, with the Book's three assist levels on Tab (full assist; drift off, with Q/E strafe and X retro; full off, where spins persist), side, reverse and turning thruster jets on each hull, gravity wells that pull you in and bend your top speed, so you fall in fast and crawl out (game physics, stronger on bigger hulls, though every hull can climb out), a radar, a location list (click or 1 to 9 to target), a nav target panel, a message log, a system map (M), a fly-to autopilot (G) and a navigation overlay (I) that labels or points to every planet with its distance and closing speed; pause (P or Esc) with a menu and settings, save (F6) and load (F9), and export a replay of the session. Everything that changes game state runs in the core, so a save restores the exact state and a replay reruns identically, in the browser or natively.
+The game so far: the Book's M1 system, Brannock (an orange star, three planets, a moon and a shipyard station, four of them ports), loaded from a schema-validated file. You start landed at Halde Landing in a used fighter with 1,500 credits and a 12,000-credit debt to a lender; launch, fly, and land or dock at any port (be over it and slow, press L: the ship curls round the planet and spirals down over its horizon inside a plasma sheath, a day passes, the game autosaves; launch rises from the horizon and spirals back in, handing you control at speed). Each port's market (T) trades commodities at fixed prices set by its role (a mine sells ore cheap and pays well for food and goods; the refinery buys ore and sells metals), so buying low at one port and selling high at another pays; waiting in port costs a docking fee, and the debt gathers interest daily. The mission board (M) posts deliveries to the other ports: accept one, carry its cargo, and land at the destination by the deadline to be paid; your missions show on the HUD and their destinations on the nav overlay, radar and map. Ironhull shuttles, haulers and liners (Rustline hulls) fly between the ports, launching and landing with the same plasma-sheath sequence as you, in numbers set by a gravity model of the ports' populations, distances and prices; they show as dots on the radar. Flight runs on the core's model, with the Book's three assist levels on Tab (full assist; drift off, with Q/E strafe and X retro; full off, where spins persist), side, reverse and turning thruster jets on each hull, gravity wells that pull you in and bend your top speed, so you fall in fast and crawl out (game physics, stronger on bigger hulls, though every hull can climb out), a radar, a location list (click or 1 to 9 to target), a nav target panel, a message log, a system map (M), a fly-to autopilot (G) and a navigation overlay (I) that labels or points to every planet with its distance and closing speed; in port, a painted vista of the place, its lore (I), and a bar (B) with named people, their portraits and the rumors going round, all written and painted by models from the sim's facts ahead of time; pause (P or Esc) with a menu and settings, save (F6) and load (F9), and export a replay of the session. Everything that changes game state runs in the core, so a save restores the exact state and a replay reruns identically, in the browser or natively.
 
 ## What's in the lab
 
@@ -74,9 +74,10 @@ src/
   gfx.js            the WebGL2 kit: context, programs, textures, HDR targets, bloom and tone map
   bake.js           the bake worker pool and its texture uploads
   look.js           colour helpers, star presets, brand plume and shield looks
-  schema.js         clamps content to its JSON Schema before use; lays out a star system
-  schema/           JSON Schemas: the contract for LLM-authored content (system.schema.json)
+  schema.js         clamps content to its JSON Schema before use; lays out a star system; checks lore against it
+  schema/           JSON Schemas: the contract for LLM-authored content (system.schema.json, lore.schema.json)
   systems/          star systems (m1.json: Brannock, the Book's M1 system)
+  lore/             each system's lore, written by tools/gen-content.js: history, culture, art bible, ports' people and rumors
   economy.json      commodities, price tiers by port role, the starting credits and debt
   traffic.json      traffic hulls by culture and role, population weights for the flows
   play/             the game page: template.html and play.js
@@ -89,13 +90,15 @@ src/
   stations.js       stations and heavies tabs: bakes via gen.js, builders
   asteroids.js      asteroid shader and builder
   template.html     lab page shell and styles
+art/                painted port vistas and portraits per system (WebP, from tools/gen-content.js; the game loads them beside play.html)
 tools/
   build.py          compiles core/ to WASM and assembles it with src/ into index.html and play.html
   check.js          boots the page against a stub WebGL context and validates every shader
   core-test.js      core unit tests, native vs WASM state hashes, and a WASM session replayed natively
   fly-smoke.py      drives the lab's Fly tab in headless Chromium: speeds, seeded replay, clock rate
   play-smoke.py     drives the game page: start landed, the market, ambient traffic, the mission board and a delivery, flight, a port visit, save and load, a browser session replayed natively
-  validate.js       validates every system file against its schema, and checks the clamp itself
+  validate.js       validates every system file and its lore against their schemas, and checks the clamp itself
+  gen-content.js    writes a system's lore and paints its vistas and portraits via OpenRouter (offline; the output is committed)
   dev.js            dev server: rebuilds on change, live-reloads both pages
   preview.js        CPU bake of the whole catalog to a PNG grid
 ```
@@ -112,6 +115,8 @@ npm run preview      # bake every ship on the CPU -> preview.png
 ```
 
 Building needs Rust with the WASM target (`rustup target add wasm32-unknown-unknown`). `python3 tools/build.py --skip-core` reuses the last compiled core. The browser smoke tests need Playwright for Python: `python tools/fly-smoke.py` and `python tools/play-smoke.py` (on the dev box, use `~/.venvs/web/bin/python`).
+
+Lore and art are generated ahead of time and committed: `node tools/gen-content.js lore` writes `src/lore/<system>.json`, `node tools/gen-content.js art` paints `art/<system>/` from it (`--dry` prints the prompts; `--only id,id --force` redoes a port's vista or a person's portrait). It needs an OpenRouter key in `OPENROUTER_API_KEY` or `~/openrouter.token`, and Python with Pillow for the WebP conversion.
 
 In the lab, `__fly.sim` is the core: `__fly.sim.param('damper', 0.8)` retunes live, `__fly.reset(seed)` starts a seeded sector, and `__fly.probe()` reports the tick and state hash. In the game, `__play` does the same (`__play.newGame(seed)`, `__play.advance(sec, keys)`, `__play.probe()`), plus `__play.teleport(body)`, which puts the flying player at rest over a body as a logged command, so a session that uses it still replays.
 

@@ -85,6 +85,26 @@ button { font: inherit; color: inherit; }
 .trade-foot { display: flex; align-items: center; gap: 4px; margin: 12px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
 .trade-foot span { flex: 1; }
 .trade-note { margin: 8px 0 0; color: var(--muted); font: 400 11.5px var(--f-mono); }
+/* the port's painted vista (art/<system>/, from tools/gen-content.js) over the procedural one, fading in once loaded;
+   the port screen's gradient sits on top of it */
+#vista { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s; pointer-events: none; }
+#vista.on { opacity: 1; }
+.port-more { margin: -12px 0 20px; padding: 0; background: none; border: 0; cursor: pointer; color: var(--amber); font: 500 12px var(--f-mono); }
+.port-more:hover { text-decoration: underline; }
+.port-more span { color: var(--muted); }
+/* the bar (people and rumors) and the port's about page (description, places, the system), from the lore */
+#bar, #about { background: rgba(12,16,21,.92); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; max-height: calc(100vh - 120px); overflow-y: auto; }
+#about p, #bar p { margin: 0 0 10px; color: #c4ccd6; font-size: 14px; line-height: 1.55; }
+.person { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(30,38,48,.6); }
+.person img, .person .face { width: 76px; height: 95px; border-radius: 5px; border: 1px solid var(--line); object-fit: cover; background: #121821; }
+.person .face { display: grid; place-items: center; color: var(--muted); font: 700 22px var(--f-display); }
+.person h4 { margin: 0; font: 700 16px/1.2 var(--f-display); letter-spacing: .03em; }
+.person .role { margin: 0 0 4px; color: var(--amber); font: 500 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; }
+.person p { margin: 0 0 6px; font-size: 13px; }
+.person q { display: block; color: var(--fg); font-style: italic; font-size: 13.5px; }
+.lore-list { margin: 0 0 6px; padding: 0; list-style: none; }
+.lore-list li { margin: 0 0 8px; color: #c4ccd6; font-size: 13.5px; line-height: 1.5; }
+.lore-list b { color: var(--fg); font: 600 14px var(--f-display); letter-spacing: .03em; }
 /* flight: the location list on the right, under the radar; the system map over everything but the strip */
 #loc { position: fixed; right: 14px; width: 238px; display: grid; gap: 2px; font: 500 12px var(--f-mono); }
 #loc button { display: grid; grid-template-columns: 14px 12px 1fr auto; align-items: baseline; gap: 6px; padding: 4px 8px; text-align: left;
@@ -132,15 +152,17 @@ button { font: inherit; color: inherit; }
 <nav id="loc" hidden aria-label="Locations"></nav>
 <canvas id="map" hidden aria-label="System map"></canvas>
 <div id="glerr" hidden>This needs WebGL2.</div>
+<img id="vista" alt="">
 <section id="port" hidden aria-label="Port">
   <div class="port-card">
     <p class="port-kicker" id="port-kicker"></p>
     <h2 id="port-name"></h2>
     <p class="port-desc" id="port-desc"></p>
+    <button type="button" class="port-more" id="svc-about" aria-pressed="false">More about this port <span>I</span></button>
     <div class="port-services">
       <button type="button" id="svc-trade" aria-pressed="false">Trade<span>T</span></button>
       <button type="button" id="svc-board" aria-pressed="false">Mission board<span>M</span></button>
-      <button type="button" disabled>Bar<span>later</span></button>
+      <button type="button" id="svc-bar" aria-pressed="false">Bar<span>B</span></button>
       <button type="button" disabled>Refuel &amp; repair<span>later</span></button>
       <button type="button" id="svc-wait">Wait a day<span>W</span></button>
       <button type="button" id="svc-launch" class="primary">Launch<span>L</span></button>
@@ -168,6 +190,20 @@ button { font: inherit; color: inherit; }
       <tbody id="mission-rows"></tbody>
     </table>
     <p class="trade-note">Mission cargo takes hold space; land at the destination by the deadline to be paid. Late, the cargo is reclaimed and nothing is paid.</p>
+  </div>
+  <div id="bar" hidden aria-label="Bar">
+    <div class="trade-head"><h3>Bar</h3><span id="bar-sum"></span></div>
+    <div id="bar-people"></div>
+    <p class="board-sub">Overheard</p>
+    <ul class="lore-list" id="bar-rumors"></ul>
+  </div>
+  <div id="about" hidden aria-label="About the port">
+    <div class="trade-head"><h3 id="about-name"></h3><span id="about-sum"></span></div>
+    <div id="about-desc"></div>
+    <p class="board-sub">Notable places</p>
+    <ul class="lore-list" id="about-places"></ul>
+    <p class="board-sub" id="about-sys-head"></p>
+    <div id="about-sys"></div>
   </div>
 </section>
 <section id="title" class="shell" hidden aria-label="Title">
@@ -222,6 +258,9 @@ button { font: inherit; color: inherit; }
 <script id="system-schema" type="application/json">/*SYSTEMSCHEMA*/</script>
 <script id="economy" type="application/json">/*ECONOMY*/</script>
 <script id="traffic" type="application/json">/*TRAFFIC*/</script>
+<script id="lore" type="application/json">/*LORE*/</script>
+<script id="lore-schema" type="application/json">/*LORESCHEMA*/</script>
+<script id="art" type="application/json">/*ART*/</script>
 <script id="gen">/*GEN*/</script>
 <script>
 (function () {

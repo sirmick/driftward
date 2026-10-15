@@ -87,4 +87,25 @@ function loadSystem(raw, schema) {
   return { system: sys, bodies, notes };
 }
 
-if (typeof module !== 'undefined') module.exports = { clampToSchema, loadSystem };
+// A system's lore (src/lore/<id>.json), validated against its schema and against the system it narrates: it must
+// name the system, and each port entry a body with a port, once; person ids are unique (they name the portraits).
+// Entries that fail are dropped with a note, so a port without lore falls back to the system file's description.
+// Returns { lore, ports: Map body id -> entry, notes }; lore is null if the file is unusable.
+function loadLore(raw, schema, system) {
+  const notes = [];
+  const lore = clampToSchema(schema, raw, '$', notes);
+  if (!lore || notes.some(n => n.fatal)) return { lore: null, ports: new Map(), notes };
+  if (system && lore.system !== system.id) { notes.push({ path: '$.system', msg: `lore is for ${lore.system}, not ${system.id}`, fatal: true }); return { lore: null, ports: new Map(), notes }; }
+  const portBodies = new Set(system ? system.bodies.filter(b => b.port).map(b => b.id) : []), ports = new Map(), people = new Set();
+  lore.ports.forEach((p, i) => {
+    const drop = msg => notes.push({ path: `$.ports[${i}]`, msg: `${msg}; dropped`, fatal: false });
+    if (system && !portBodies.has(p.body)) return drop(`${p.body} is not a port body`);
+    if (ports.has(p.body)) return drop(`second entry for ${p.body}`);
+    p.people = p.people.filter(q => people.has(q.id) ? (notes.push({ path: `$.ports[${i}].people`, msg: `person id ${q.id} used twice; dropped`, fatal: false }), false) : people.add(q.id));
+    ports.set(p.body, p);
+  });
+  for (const id of portBodies) if (!ports.has(id)) notes.push({ path: '$.ports', msg: `no lore for port ${id}`, fatal: false });
+  return { lore, ports, notes };
+}
+
+if (typeof module !== 'undefined') module.exports = { clampToSchema, loadSystem, loadLore };

@@ -4,7 +4,7 @@ M1 in the Book is "Trade and delivery": one system, a game shell, the sim core a
 
 This file tracks that milestone against the Book's `[M1]` items. Update it as work lands. Status: **done**, **partial** (with what is missing), or **to do**.
 
-Last updated: 2026-10-14, with step 8 (the shell).
+Last updated: 2026-10-15, with step 9 (lore and art).
 
 ## Summary
 
@@ -14,13 +14,13 @@ Last updated: 2026-10-14, with step 8 (the shell).
 | Flight (M0 physics in the core, three-level assist) | Done |
 | The M1 system, from its schema | Done |
 | Landing, docking, launch, the day clock, autosave | Done |
-| Port screen | Partial: trade and missions work; bar, refuel and repair are placeholders |
+| Port screen | Partial: trade, missions, the bar and the port's lore work; refuel and repair are placeholders |
 | Cargo, credits, markets, trading | Done |
 | Mission board and delivery missions | Done |
 | Ambient traffic | Done |
 | HUD, targeting, system map, location list | Done, but for ship status and sensor error radii |
 | Shell | Done, but for death (no combat yet) |
-| Lore, painted vistas and portraits (OpenRouter) | To do (next) |
+| Lore, painted vistas and portraits (OpenRouter) | Done, generated offline |
 | Exit test, headless | Every piece works and is tested; the single scripted test is to do |
 
 ## Done
@@ -52,10 +52,12 @@ Last updated: 2026-10-14, with step 8 (the shell).
 - **Shell.** The page opens on the title, over a live view of Halde with traffic flying past: Continue (the last landing's autosave, with its day, port and credits), New game (from a seed: blank is random, a number is used as is, text is hashed), Settings. P, or Esc with nothing else to close, pauses: the clock stops (the replay log is by tick, so a pause leaves no trace); the pause menu has resume, save, load, settings, export replay and quit to title. Settings (bloom, the nav overlay and assist level a game starts with, the debug readout) are kept in the browser. Every landing autosaves, even one a stalled frame skips past.
 - **Teleport (dev).** `__play.teleport(body)` puts the flying player at rest over a body, as a logged command, so tests can fly a delivery and still replay it.
 - **Dev server.** Node, live reload of both pages, the crate rebuilds on change.
+- **Lore and art (OpenRouter).** `tools/gen-content.js` writes a system's content offline, from its sim facts: the bodies (order from the star, size, surface, colours), the owning faction and its design language (the Book's appendix), and each port's role, population, authored description, what its market sells cheap and pays well for, and which ports are near or far. One text call (Claude Sonnet 5.5) writes the whole system, so its ports agree: history, culture, an art bible (palette, lighting, architecture, materials, mood, design language) and per port two or three paragraphs, notable places, two to four named people (role, who they are, a line, a look) and rumors, plus what its vista shows. The answer is clamped by the game's own validator against `src/schema/lore.schema.json` and checked against the system (every port covered, person ids unique); a failing answer is retried with the problems fed back. It goes to `src/lore/<id>.json`. Then an image model (Gemini 3.1 Flash Image) paints a 16:9 vista per port and a portrait per person into `art/<id>/` as WebP. The art bible and the body's sim parameters go into every vista prompt, so the painting matches the flight view, and the start port's vista is the style reference for the others (the first portrait likewise for the portraits). Every prompt, model, seed and cost is logged in `art/<id>/log.json`. Content is reviewed and committed, so play never waits on a model and every player sees the same port. The M1 run cost $1.17. `npm run check` validates the lore and checks every image matches a port or person in it.
+- **Port lore on the port screen.** The card shows the lore's first paragraph; About (I) has the full description, notable places and the system's history and culture; the Bar (B) lists the people in tonight with their portraits, what they say, and the rumors overheard. The painted vista fades in over the procedural view of the body. The build inlines the lore, and the page loads the art from `art/` beside it: opened on its own, without that folder, the page falls back to the procedural view and the people's initials.
 
 ## Partial
 
-- **Port screen.** Name, body, role, population, description and a vista of the body; trade, the mission board, wait a day and launch work. Missing: bar, refuel and repair (shown disabled), painted vista and lore.
+- **Port screen.** Name, body, role, population, the painted vista, lore, trade, the mission board, the bar, wait a day and launch. Missing: refuel and repair (shown disabled), which wait for fuel and damage in the core. The bar is people and rumors only: no hiring or bar missions until M2.
 - **HUD.** Missing: ship status (shields, hull, energy, heat, fuel), which waits for damage and fuel in the core, and radar contacts drawn at their sensor error radius, which waits for sensors in the core.
 - **Shell.** Missing: death reloading the last landing save, which waits for something that can kill you (M2).
 - **Debug control plane.** The page exposes `window.__play` (new game, advance, commands, teleport, probe, save, load, export replay), which headless tests drive. Missing: a local API (time scale, teleport, spawn, state inspector, replay and diff) that Claude Code can drive without a browser script.
@@ -65,8 +67,7 @@ Last updated: 2026-10-14, with step 8 (the shell).
 
 In build order.
 
-1. **Lore and art (OpenRouter).** Lore per location written from sim facts (population, owner, role, description, notable places, named NPCs, rumors); painted vistas and portraits from an image model, with a per-system art bible; seeded and cached, with the procedural backdrop offline.
-2. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
+1. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
 
 ## Deviations from the Book
 
