@@ -30,6 +30,7 @@
           "#c08a5a"
         ],
         "atmosphere": "#d08a58",
+        "air": 0.3,
         "seed": 3.3
       },
       "port": {
@@ -64,6 +65,7 @@
           "#d8cba8"
         ],
         "atmosphere": "#6fb3ff",
+        "air": 1,
         "seed": 1.3,
         "cityLights": 1
       },
@@ -99,6 +101,7 @@
           "#ecd9b0"
         ],
         "atmosphere": "#ffc98a",
+        "air": 1.2,
         "seed": 4.1
       }
     },
@@ -121,6 +124,7 @@
           "#c9c0b4"
         ],
         "atmosphere": "#b0a8a0",
+        "air": 0,
         "seed": 7.7
       },
       "port": {

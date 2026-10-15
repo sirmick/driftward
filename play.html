@@ -2326,8 +2326,8 @@ button { font: inherit; color: inherit; }
   }
  ]
 }</script>
-<script id="system" type="application/json">{"id": "brannock", "name": "Brannock", "owner": "ironhulls", "ring": "middle", "description": "An Ironhull system of the middle ring: an orange star, a scorched mining world, a cloudy habitat world where most of its people live, a gas giant whose moon refines what the mines dig up, and a shipyard station where the Ironhulls weld their hulls.", "star": {"name": "Brannock", "class": "orange", "radius": 2400, "gravity": 55}, "start": "halde", "bodies": [{"id": "cinder", "name": "Cinder", "kind": "planet", "orbit": {"radius": 11000, "angle": 35}, "radius": 900, "gravity": 25, "look": {"surface": "rock", "palette": ["#4a3a33", "#7a5a46", "#c08a5a"], "atmosphere": "#d08a58", "seed": 3.3}, "port": {"name": "Cinder Deep", "role": "mining", "population": "outpost", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "Shafts sunk into a world too close to its star. The day side cooks; the crews live and work on the night side, in tunnels that follow the ore. Ore goes up the lift to waiting tugs; food, water and spare parts come down."}}, {"id": "halde", "name": "Halde", "kind": "planet", "orbit": {"radius": 19000, "angle": 200}, "radius": 1500, "gravity": 40, "look": {"surface": "terran", "palette": ["#1d4f7a", "#5d7a3c", "#d8cba8"], "atmosphere": "#6fb3ff", "seed": 1.3, "cityLights": 1}, "port": {"name": "Halde Landing", "role": "habitat", "population": "town", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "The system's only real town: terraces of habitat blocks along a cold coast, a landing field cut into the cliffs above them. Most of Brannock's people live here, and most of its money changes hands in the market halls by the field."}}, {"id": "vast", "name": "Vast", "kind": "planet", "orbit": {"radius": 32000, "angle": 110}, "radius": 3000, "gravity": 45, "look": {"surface": "giant", "palette": ["#c9925c", "#7d4e33", "#ecd9b0"], "atmosphere": "#ffc98a", "seed": 4.1}}, {"id": "tallow", "name": "Tallow", "kind": "moon", "parent": "vast", "orbit": {"radius": 6500, "angle": 250}, "radius": 600, "gravity": 15, "look": {"surface": "rock", "palette": ["#5e5953", "#8a8178", "#c9c0b4"], "atmosphere": "#b0a8a0", "seed": 7.7}, "port": {"name": "Tallow Works", "role": "refinery", "population": "colony", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "Refinery towers on a grey moon, lit orange by their own flares and by Vast hanging overhead. Ore from Cinder comes in raw and leaves as metal; the air in the dome tastes of it."}}, {"id": "kettle", "name": "Kettle Yard", "kind": "station", "orbit": {"radius": 15000, "angle": 300}, "radius": 450, "gravity": 4, "station": {"archetype": "shipyard", "brand": "rustline", "seed": "kettle-yard"}, "port": {"name": "Kettle Yard", "role": "shipyard", "population": "colony", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "A cradle of girders where the Ironhulls build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."}}]}</script>
-<script id="system-schema" type="application/json">{"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://driftward.game/schema/system.schema.json", "title": "Driftward star system", "description": "One star system: its star, bodies and ports. The contract an LLM authors against and the validator that clamps what it writes (src/schema.js). Distances are metres; the star sits at the origin; angles are degrees counter-clockwise from +x. Bodies hold still in M1.", "type": "object", "required": ["id", "name", "owner", "ring", "star", "bodies"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "owner": {"description": "The faction that holds the system (the Book's appendix, by role).", "enum": ["federation", "prism", "ironhulls", "blackhulls", "freeflag", "bloom", "glass", "shadow", "none"]}, "ring": {"description": "Inner rings are prosperous, the outer ring poor and lawless.", "enum": ["inner", "middle", "outer"]}, "description": {"type": "string", "maxLength": 800, "default": ""}, "star": {"type": "object", "required": ["name", "class"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "class": {"enum": ["red-dwarf", "orange", "yellow", "white", "blue-giant"], "default": "yellow"}, "radius": {"type": "number", "minimum": 800, "maximum": 6000, "default": 2400}, "gravity": {"description": "Well strength at the surface; 40 is a full-strength well.", "type": "number", "minimum": 0, "maximum": 80, "default": 55}}}, "start": {"description": "The id of the port body a new game starts landed at.", "type": "string", "default": ""}, "bodies": {"type": "array", "minItems": 1, "maxItems": 15, "items": {"type": "object", "required": ["id", "name", "kind", "orbit", "radius"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "kind": {"enum": ["planet", "moon", "station"]}, "parent": {"description": "Id of the body a moon or station orbits; omit to orbit the star.", "type": "string", "default": ""}, "orbit": {"type": "object", "required": ["radius", "angle"], "properties": {"radius": {"type": "number", "minimum": 1500, "maximum": 60000}, "angle": {"type": "number", "minimum": 0, "maximum": 360}}}, "radius": {"description": "Planets and moons: the body. Stations: the docking zone's reach.", "type": "number", "minimum": 150, "maximum": 4000}, "gravity": {"type": "number", "minimum": 0, "maximum": 60, "default": 30}, "look": {"description": "How a planet or moon is drawn.", "type": "object", "properties": {"surface": {"enum": ["terran", "giant", "rock"], "default": "rock"}, "palette": {"type": "array", "items": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "minItems": 3, "maxItems": 3, "default": ["#5e5953", "#8a8178", "#c9c0b4"]}, "atmosphere": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#9fb4c8"}, "seed": {"type": "number", "minimum": 0, "maximum": 100, "default": 1}, "cityLights": {"type": "number", "minimum": 0, "maximum": 1, "default": 0}}}, "station": {"description": "How a station is built: a catalog archetype in an owning brand's style.", "type": "object", "properties": {"archetype": {"enum": ["ring", "port", "forge", "refinery", "shipyard", "relay"], "default": "port"}, "brand": {"enum": ["vaelith", "rustline", "halcyon", "concord"], "default": "rustline"}, "seed": {"type": "string", "maxLength": 40, "default": "station-1"}}}, "port": {"description": "Present if the body has a port the player can land at.", "type": "object", "required": ["name", "role"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "role": {"description": "The facility's economic role (the Book's Facilities table).", "enum": ["mining", "ice", "gas", "refinery", "forge", "agri", "habitat", "container-port", "shipyard", "relay", "military", "research", "haven"]}, "population": {"enum": ["outpost", "colony", "town", "world"], "default": "colony"}, "description": {"type": "string", "maxLength": 1200, "default": ""}, "services": {"type": "array", "items": {"enum": ["market", "missions", "bar", "refuel", "repair", "outfitter", "shipyard"]}, "default": ["market", "missions", "bar", "refuel", "repair"]}}}}}}}}</script>
+<script id="system" type="application/json">{"id": "brannock", "name": "Brannock", "owner": "ironhulls", "ring": "middle", "description": "An Ironhull system of the middle ring: an orange star, a scorched mining world, a cloudy habitat world where most of its people live, a gas giant whose moon refines what the mines dig up, and a shipyard station where the Ironhulls weld their hulls.", "star": {"name": "Brannock", "class": "orange", "radius": 2400, "gravity": 55}, "start": "halde", "bodies": [{"id": "cinder", "name": "Cinder", "kind": "planet", "orbit": {"radius": 11000, "angle": 35}, "radius": 900, "gravity": 25, "look": {"surface": "rock", "palette": ["#4a3a33", "#7a5a46", "#c08a5a"], "atmosphere": "#d08a58", "air": 0.3, "seed": 3.3}, "port": {"name": "Cinder Deep", "role": "mining", "population": "outpost", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "Shafts sunk into a world too close to its star. The day side cooks; the crews live and work on the night side, in tunnels that follow the ore. Ore goes up the lift to waiting tugs; food, water and spare parts come down."}}, {"id": "halde", "name": "Halde", "kind": "planet", "orbit": {"radius": 19000, "angle": 200}, "radius": 1500, "gravity": 40, "look": {"surface": "terran", "palette": ["#1d4f7a", "#5d7a3c", "#d8cba8"], "atmosphere": "#6fb3ff", "air": 1, "seed": 1.3, "cityLights": 1}, "port": {"name": "Halde Landing", "role": "habitat", "population": "town", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "The system's only real town: terraces of habitat blocks along a cold coast, a landing field cut into the cliffs above them. Most of Brannock's people live here, and most of its money changes hands in the market halls by the field."}}, {"id": "vast", "name": "Vast", "kind": "planet", "orbit": {"radius": 32000, "angle": 110}, "radius": 3000, "gravity": 45, "look": {"surface": "giant", "palette": ["#c9925c", "#7d4e33", "#ecd9b0"], "atmosphere": "#ffc98a", "air": 1.2, "seed": 4.1}}, {"id": "tallow", "name": "Tallow", "kind": "moon", "parent": "vast", "orbit": {"radius": 6500, "angle": 250}, "radius": 600, "gravity": 15, "look": {"surface": "rock", "palette": ["#5e5953", "#8a8178", "#c9c0b4"], "atmosphere": "#b0a8a0", "air": 0, "seed": 7.7}, "port": {"name": "Tallow Works", "role": "refinery", "population": "colony", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "Refinery towers on a grey moon, lit orange by their own flares and by Vast hanging overhead. Ore from Cinder comes in raw and leaves as metal; the air in the dome tastes of it."}}, {"id": "kettle", "name": "Kettle Yard", "kind": "station", "orbit": {"radius": 15000, "angle": 300}, "radius": 450, "gravity": 4, "station": {"archetype": "shipyard", "brand": "rustline", "seed": "kettle-yard"}, "port": {"name": "Kettle Yard", "role": "shipyard", "population": "colony", "services": ["market", "missions", "bar", "refuel", "repair"], "description": "A cradle of girders where the Ironhulls build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."}}]}</script>
+<script id="system-schema" type="application/json">{"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://driftward.game/schema/system.schema.json", "title": "Driftward star system", "description": "One star system: its star, bodies and ports. The contract an LLM authors against and the validator that clamps what it writes (src/schema.js). Distances are metres; the star sits at the origin; angles are degrees counter-clockwise from +x. Bodies hold still in M1.", "type": "object", "required": ["id", "name", "owner", "ring", "star", "bodies"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "owner": {"description": "The faction that holds the system (the Book's appendix, by role).", "enum": ["federation", "prism", "ironhulls", "blackhulls", "freeflag", "bloom", "glass", "shadow", "none"]}, "ring": {"description": "Inner rings are prosperous, the outer ring poor and lawless.", "enum": ["inner", "middle", "outer"]}, "description": {"type": "string", "maxLength": 800, "default": ""}, "star": {"type": "object", "required": ["name", "class"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "class": {"enum": ["red-dwarf", "orange", "yellow", "white", "blue-giant"], "default": "yellow"}, "radius": {"type": "number", "minimum": 800, "maximum": 6000, "default": 2400}, "gravity": {"description": "Well strength at the surface; 40 is a full-strength well.", "type": "number", "minimum": 0, "maximum": 80, "default": 55}}}, "start": {"description": "The id of the port body a new game starts landed at.", "type": "string", "default": ""}, "bodies": {"type": "array", "minItems": 1, "maxItems": 15, "items": {"type": "object", "required": ["id", "name", "kind", "orbit", "radius"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 40}, "name": {"type": "string", "minLength": 1, "maxLength": 40}, "kind": {"enum": ["planet", "moon", "station"]}, "parent": {"description": "Id of the body a moon or station orbits; omit to orbit the star.", "type": "string", "default": ""}, "orbit": {"type": "object", "required": ["radius", "angle"], "properties": {"radius": {"type": "number", "minimum": 1500, "maximum": 60000}, "angle": {"type": "number", "minimum": 0, "maximum": 360}}}, "radius": {"description": "Planets and moons: the body. Stations: the docking zone's reach.", "type": "number", "minimum": 150, "maximum": 4000}, "gravity": {"type": "number", "minimum": 0, "maximum": 60, "default": 30}, "look": {"description": "How a planet or moon is drawn.", "type": "object", "properties": {"surface": {"enum": ["terran", "giant", "rock"], "default": "rock"}, "palette": {"type": "array", "items": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "minItems": 3, "maxItems": 3, "default": ["#5e5953", "#8a8178", "#c9c0b4"]}, "atmosphere": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#9fb4c8"}, "air": {"description": "How much atmosphere: 0 airless, 1 Earth-like, up to 2 thick haze. Scatters the atmosphere colour, so the light that gets through (sunsets, the terminator) takes its complement.", "type": "number", "minimum": 0, "maximum": 2, "default": 0.6}, "seed": {"type": "number", "minimum": 0, "maximum": 100, "default": 1}, "cityLights": {"type": "number", "minimum": 0, "maximum": 1, "default": 0}}}, "station": {"description": "How a station is built: a catalog archetype in an owning brand's style.", "type": "object", "properties": {"archetype": {"enum": ["ring", "port", "forge", "refinery", "shipyard", "relay"], "default": "port"}, "brand": {"enum": ["vaelith", "rustline", "halcyon", "concord"], "default": "rustline"}, "seed": {"type": "string", "maxLength": 40, "default": "station-1"}}}, "port": {"description": "Present if the body has a port the player can land at.", "type": "object", "required": ["name", "role"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 40}, "role": {"description": "The facility's economic role (the Book's Facilities table).", "enum": ["mining", "ice", "gas", "refinery", "forge", "agri", "habitat", "container-port", "shipyard", "relay", "military", "research", "haven"]}, "population": {"enum": ["outpost", "colony", "town", "world"], "default": "colony"}, "description": {"type": "string", "maxLength": 1200, "default": ""}, "services": {"type": "array", "items": {"enum": ["market", "missions", "bar", "refuel", "repair", "outfitter", "shipyard"]}, "default": ["market", "missions", "bar", "refuel", "repair"]}}}}}}}}</script>
 <script id="economy" type="application/json">{"description": "M1's economy: fixed prices by port role (the Book: 'fixed prices that vary with the port's role'). A port trades the commodities its role lists, at the commodity's base price times its tier: low where the role makes it, high where the role needs it. Commodities are core rows in this order (at most 16). The player starts with credits and a debt to a lender.", "start": {"credits": 1500, "debt": 12000}, "tiers": {"low": 0.7, "medium": 1.0, "high": 1.4}, "commodities": [{"id": "food", "name": "Food", "base": 25}, {"id": "water", "name": "Water", "base": 12}, {"id": "ore", "name": "Ore", "base": 35}, {"id": "metals", "name": "Metals", "base": 80}, {"id": "fuel", "name": "Fuel", "base": 45}, {"id": "chemicals", "name": "Chemicals", "base": 65}, {"id": "alloys", "name": "Alloys", "base": 130}, {"id": "components", "name": "Components", "base": 170}, {"id": "goods", "name": "Consumer goods", "base": 110}, {"id": "medicine", "name": "Medicine", "base": 220}], "roles": {"mining": {"ore": "low", "fuel": "medium", "food": "high", "water": "high", "components": "high", "goods": "high", "medicine": "high"}, "ice": {"water": "low", "chemicals": "medium", "fuel": "medium", "food": "high", "components": "high", "goods": "high"}, "gas": {"fuel": "low", "chemicals": "low", "water": "medium", "food": "high", "components": "high", "goods": "medium"}, "refinery": {"metals": "low", "chemicals": "low", "fuel": "medium", "ore": "high", "water": "high", "food": "high", "components": "medium"}, "forge": {"alloys": "low", "components": "low", "fuel": "medium", "metals": "high", "chemicals": "high", "food": "high"}, "agri": {"food": "low", "water": "medium", "chemicals": "high", "components": "high", "goods": "high", "medicine": "medium"}, "habitat": {"goods": "low", "medicine": "medium", "food": "high", "water": "medium", "fuel": "medium", "metals": "medium", "components": "medium"}, "container-port": {"food": "medium", "water": "medium", "ore": "medium", "metals": "medium", "fuel": "medium", "chemicals": "medium", "alloys": "medium", "components": "medium", "goods": "medium", "medicine": "medium"}, "shipyard": {"fuel": "medium", "chemicals": "medium", "metals": "high", "alloys": "high", "components": "high", "goods": "medium", "food": "medium"}, "relay": {"food": "medium", "goods": "medium", "fuel": "medium", "medicine": "medium", "components": "high"}, "military": {"fuel": "medium", "alloys": "medium", "components": "medium", "food": "high", "medicine": "high"}, "research": {"medicine": "low", "chemicals": "high", "components": "high", "goods": "medium", "food": "medium"}, "haven": {"fuel": "medium", "food": "medium", "goods": "high", "medicine": "high", "alloys": "medium"}}}</script>
 <script id="traffic" type="application/json">{"description": "M1's ambient traffic: which hulls each culture flies in each traffic role (a catalog brand and size class), and each population tier's weight in the gravity model that sets the flows between ports. The Ironhulls (miners) fly Rustline hulls, the catalog's mining guild. Rates, shares and speeds are core params (core/src/world.rs).", "cultures": {"ironhulls": {"brand": "rustline", "roles": {"shuttle": "fighter", "hauler": "frigate", "liner": "cruiser"}}}, "population": {"outpost": 1, "colony": 3, "town": 10, "world": 30}}</script>
 <script id="lore" type="application/json">{"system": "brannock", "history": ["Brannock was settled by miners who came for Cinder and stayed because the ore never ran out. The first crews lived in the hulls of the ships that brought them. When the hulls wore out, the crews bolted them to rock and called the result a habitat. Most of the hab rings in the system are still those first hulls, patched so often that nobody can say what is original.", "The rest followed the ore. Tugs hauled it out to Tallow, a grey moon of the gas giant Vast, and a refinery grew there. A yard went up in the girders of Kettle to turn the metal into ships. Halde, with its cold coast and its clouds, became the place where people raised children and spent their wages. It was the only world in the system where a person could walk outside without a suit or a sunscreen.", "The Ironhulls keep Brannock as a working system and have never made it much more. The Federation's navy passes through and takes its cut in inspections. Blackhulls drink in the docks and are not asked about their cargo. Prism's agents come for contracts and leave without friends. Nobody here calls this a golden age, but the lifts still run."], "culture": "People in Brannock measure each other by what they can fix. A good welder gets a drink bought for her, and a clean-handed visitor gets a look. They speak shortly, swear mildly, and tease newcomers with the old names, rusters and rockheads, until the newcomer answers in kind. Then the teasing stops. Outsiders are tolerated if they pay, and trusted if they turn up with the right part at the right time. Nothing is thrown away. A broken thing is a future patch, and a dead ship is a shopping list.", "artBible": {"palette": ["#c8661e", "#4a3a33", "#7a5a46", "#5e5953", "#1d4f7a", "#d8cba8"], "lighting": "Low orange starlight from a dim sun, and sodium lamps that turn every shadow brown. Welding arcs flash blue-white in the gloom. Refinery flares throw moving orange light across grey surfaces.", "architecture": "Modular boxes and drums welded to girders or bolted to bare rock. Hab rings are clamped onto cliffs and asteroids. Walkways are added wherever someone needed one, and ladders and cable runs cross every wall.", "materials": "Rust-streaked plate, weld seams left visible, riveted patches in mismatched greys and browns. Cable, chain, scored steel, stained concrete, and cracked sealant gone yellow.", "mood": "Tired, practical, and warm at the edges. It is a place where hard work is done and nobody is impressed by it.", "design": "Ironhull design is welded, modular, rusted and patched. Every structure has been repaired many times, and the repairs are never hidden. Sodium-lamp orange marks everything that is lit, and hab rings are bolted straight onto rock."}, "ports": [{"body": "cinder", "description": ["Cinder Deep is a mine and nothing else. The planet sits too close to its star, so the day side cooks, and the crews live and work on the night side. The shafts follow the ore into the rock, and the tunnels bend with the seams. They were never drawn up, only dug. The hab modules sit in the tunnel mouths like barnacles, their plating scorched at one end and frosted at the other.", "The ore goes up the lift to waiting tugs, and the tugs bring back what the crews cannot make. Food, water and spare parts come down, and so do consumer goods and medicine. Anyone who arrives with a hold full of those is welcome. Anyone who wants ore will find it cheap here, with no one making a fuss about it.", "The air smells of hot dust and machine oil. Nobody here is sentimental about the place, but they do not leave it either."], "places": [{"name": "The Lift Head", "text": "A gantry of black girders where the ore cars unload onto the tugs. It is the loudest place on the planet and the best place to find a hauler who needs a hand."}, {"name": "Shaft Nine Canteen", "text": "A long low room cut into the rock, with a cooling duct that rattles overhead. The coffee is bad, the water is rationed, and there is always someone asleep at a table."}, {"name": "Spares Cage", "text": "A wire-fronted store of salvaged parts, run by crews who will happily take your old pump in exchange for a worse one."}], "people": [{"id": "marit-vosk", "name": "Marit Vosk", "role": "shift boss, Shaft Four", "text": "She has worked the night-side seams since she was a girl and treats the dark as her own. She remembers every crew that left and every one that did not come back.", "line": "If you've brought water, sit down and I'll buy. If you haven't, sit down anyway, and you can explain yourself.", "look": "A woman in her fifties, broad and weathered, with a grey crop and soot worked into her knuckles. She wears a patched orange coverall with a heat-scorched collar and a lamp strapped to her forehead. A welded steel tag hangs from a bootlace around her neck."}, {"id": "dennick-ashe", "name": "Dennick Ashe", "role": "tug pilot", "text": "He flies ore from the lift head to the refinery and back. He knows the routes better than the charts do, and trusts neither.", "line": "Cinder's ore is the cheapest thing in the system. The food I bring down is the dearest, and nobody's complained yet.", "look": "A lean man in his thirties with a sunburned neck and sharp eyes, in a flight jacket with the sleeves cut off. A long burn scar runs up his left forearm. He keeps a cold pipe in his teeth."}, {"id": "oyelaran-pike", "name": "Oyelaran Pike", "role": "clinic orderly", "text": "He runs the only clinic on the night side, with a cabinet of medicine that is never quite full. He asks every pilot who comes in what they are carrying.", "line": "Medicine, if you've got it. Or water. Or a kind word, but I'd rather have the medicine.", "look": "A tall, stooped man in his sixties with dark skin, grey stubble and tired kind eyes. He wears a stained white apron over an orange coverall and has reading glasses pushed up into his hair."}], "rumors": ["They say the Blackhulls drop cargo at the far shafts when the Federation patrols come near, and nobody asks who collects it.", "A survey crew went down a dead shaft last year and came up quiet. Now the shaft is welded shut and nobody will say why.", "Prism sent a clean-suited man to look at the ore seams. He left in a hurry, and the crews are still arguing about why."], "vista": "A night-side field of black rock under a thin amber haze. Welded orange-lit hab modules cling to the tunnel mouths in the foreground, scorched at one end and frosted at the other. Ore cars run on rails toward a tall girder lift that rises into a dark sky. A faint orange glow along the horizon marks the day side and the unseen star."}, {"body": "halde", "description": ["Halde Landing is the only real town in Brannock. Terraces of habitat blocks step down a cold coast, each one welded to the last and painted whatever colour was left over. The landing field is cut into the cliffs above them. Under low cloud and a pale orange sun, the sea below is a hard blue, and the beaches are grey and cold.", "Most of the system's people live here, and most of its money changes hands in the market halls beside the field. Consumer goods are cheap in them and food is dear. The halls sell everything the mines and the yards cannot make: cloth, crockery, music, toys. The stall holders will tell you with a straight face that all of it was made locally.", "Evenings on the terraces are loud. Shift crews come in from the other worlds, the bars fill, and the lamps come on in sodium orange, one block after another down the cliff."], "places": [{"name": "The Market Halls", "text": "Long welded sheds beside the field, stacked with goods and crowded with bargaining. The roof leaks in three places and everyone knows which."}, {"name": "Cliff Stairs", "text": "A zigzag of steel steps between the landing field and the lowest terrace. Locals climb them without noticing. Visitors stop halfway."}, {"name": "The Cold Coast Bar", "text": "A long room bolted to the cliff edge, with a window that looks out over the grey sea. It is full from the end of the day shift until very late."}], "people": [{"id": "ines-calloway", "name": "Ines Calloway", "role": "market hall factor", "text": "She buys and sells for half the stalls in the halls. She says she is retired, and nobody believes her.", "line": "Food's dear this season and goods are cheap. Funny how it's always the other way round for the people who buy.", "look": "A woman in her forties, short and round, with bright eyes, dark curls tied in a scarf, and rings on every finger. She wears a quilted orange jacket patched at the elbows. A pencil is always behind her ear."}, {"id": "tobiah-rune", "name": "Tobiah Rune", "role": "dock inspector", "text": "He checks cargo on the field for the town council. He is honest, which makes him rare, and tired, which makes him polite.", "line": "I don't care what you carry, as long as it's what the manifest says it is. That's the whole job.", "look": "A man in his late fifties, thin and stooped, with a grey moustache and a weathered, careful face. He wears a council-issue coat in faded rust with a clipboard strapped to the forearm."}, {"id": "wren-adeyemi", "name": "Wren Adeyemi", "role": "ex-Freeflag deckhand", "text": "She left a rebel ship under circumstances she describes only as 'a disagreement about the food.' She now drinks quietly and listens a lot.", "line": "I've seen what the Federation does to a quiet system. Brannock's quiet. Enjoy it.", "look": "A woman in her late twenties, wiry, with close-cropped hair dyed a faded green and a sharp, watchful face. She wears a salvaged flight vest over a plain shirt. A torn strip of dark cloth is knotted around her wrist."}], "rumors": ["The Federation navy wants a permanent post on Halde. The council keeps losing the paperwork.", "A trader swears he saw a Glass relay beacon blinking out past the gas giant. Nobody else has.", "Someone in the market halls is selling goods with no stamp on them. The council pretends not to see it."], "vista": "A landing field cut into pale cliffs, its pad lights glowing orange against a cloudy sky of blue-grey and low gold. Terraces of welded habitat blocks step down toward a cold dark-blue sea, their lamps just coming on. The market halls are long rusted sheds at the field's edge. A slow orange sun sits low behind the cloud."}, {"body": "tallow", "description": ["Tallow is a small grey moon of Vast, and almost everything on it is a refinery. Tall towers burn off their waste in orange flares, and Vast hangs overhead, huge and banded, adding its own warm light. The domes are patched and re-patched, and the streets between them run with condensation. The light never quite gets to grey.", "Ore from Cinder comes in raw and leaves as metal, and the air in the dome tastes of it. Metals and chemicals are cheap here, and everything the refiners need to keep working is dear: ore, water, food. The crews have a habit of tallying what each pilot brings in without saying it aloud.", "It is a small colony, close-knit and short-tempered. The work is hot, loud and dull, and the people accept that. Visitors are fine so long as they do not stand in the way of a ladle."], "places": [{"name": "The Casting Floor", "text": "A vast shed where molten metal is poured into moulds. It is hot and deafening, and the whole colony gathers to watch when the big pours begin."}, {"name": "Flare Street", "text": "The main way through the dome, lit all night by the orange of the burn-offs. Stalls selling hot food and bad coffee line both sides."}, {"name": "Vast Watch", "text": "A patched observation blister on the dome's top, where off-shift workers sit and look at the gas giant. Someone has painted a small arrow on the floor: 'You are here.'"}], "people": [{"id": "hollis-brandt", "name": "Hollis Brandt", "role": "refinery foreman", "text": "He has run the main stack for longer than most of the crew has been alive. He says he will retire when the refinery does.", "line": "Bring ore and water and I'll talk all day. Bring neither and I've got a stack to mind.", "look": "A heavy man in his sixties with a bald head, a grey beard stained at the edges, and deep lines around his eyes. He wears a heat-blackened apron over a patched orange coverall, and his left glove is welded at the cuff."}, {"id": "sadie-quill", "name": "Sadie Quill", "role": "chemical assayer", "text": "She tests every batch that leaves the moon and refuses to sign off on a bad one. Her stamp is respected from Cinder to Kettle.", "line": "Don't ask me whether it's good. Ask me whether it's good enough, and I'll tell you honestly.", "look": "A narrow woman in her thirties with sharp features, dark hair under a respirator hood, and ink-stained fingers. She wears a stained white lab coat over orange work trousers and keeps a row of vials clipped to her belt."}], "rumors": ["The Bloom has been seen, they say, far out past Vast. No one on Tallow will say it aloud, but the night crews keep a lamp lit.", "Prism offered the refinery a new process and the foreman threw the offer into a smelter.", "A Blackhull ship came in with a hold of nothing and left with a hold of metal. The tally sheet disagrees with itself."], "vista": "A grey cratered moonscape under a huge banded sky of cream and brown, where Vast fills a third of the heavens. Refinery towers rise from the dome complex, their flares throwing orange light on rust-streaked plating and wet grey rock. The landing field is a flat of scorched concrete with welded pipe-racks and cable runs across it."}, {"body": "kettle", "description": ["Kettle Yard is a cradle of girders, and the Ironhulls build and patch their hulls inside it. The station is welded together from whatever the last yards left behind: old gantries, scrapped ring sections, a crane arm from some forgotten dock. It has never been finished, and nobody expects it to be.", "Metal comes in from Tallow, and ships go out. The yard pays well for metals, alloys and components, since a hull is only as good as its stock. It has little to say about water or medicine, which it does not trade. Everything else passes through, one way or another.", "Arcs flash all through the cradle, and the sound of hammering carries even through the corridors. It is an honest place. A ship built here may be ugly, but it will hold."], "places": [{"name": "The Cradle", "text": "The great open frame where hulls are built. Half-finished ships hang in it like ribs, with welders crawling over them on tethers."}, {"name": "Scrap Hall", "text": "A long gallery of salvaged plate, tubing and frame, sorted by weight and rust. The yard hands buy from it by eye."}, {"name": "The Tether", "text": "A bar on the cradle's rim, named for the safety line the welders clip on before they come in. Nobody has ever stopped doing it."}], "people": [{"id": "gideon-marsh", "name": "Gideon Marsh", "role": "master welder", "text": "He has laid seams on half the hulls that fly out of Brannock. He can tell a Kettle weld from across a dock.", "line": "Pretty doesn't hold, friend. Ugly holds. Look at the seam, not the paint.", "look": "A stocky man in his fifties with a shaved head, a broken nose, and forearms scarred by sparks. He wears a leather-patched orange apron and a flip-up welder's visor pushed back on his head."}, {"id": "petra-lindqvist", "name": "Petra Lindqvist", "role": "yard purser", "text": "She tracks every plate and bolt that enters the cradle. She is small and brisk, and she is never wrong about the stock.", "line": "You want a refit? Tell me what you've got first. Then we'll discuss what you want.", "look": "A slight woman in her forties with straight black hair in a tight knot, tired eyes, and quick hands. She wears a patched coverall in faded orange with a tablet strapped to her wrist and a pencil through her hair."}, {"id": "joss-harker", "name": "Joss Harker", "role": "Blackhull go-between", "text": "He sits in the corner of The Tether and arranges things. He is polite, and nobody has ever seen him pay for a drink.", "line": "Plenty of work out there for a pilot who doesn't ask the wrong questions. I can point you at some.", "look": "A lean man in his thirties with a narrow smile, slicked dark hair, and a coat too clean for the station. A thin black band is stitched into his sleeve, and he turns a steel washer over and over in his fingers."}], "rumors": ["They say a new hull is under way in the deepest part of the cradle, and the yard hands who work on it do not talk at the bar.", "The Federation wanted to inspect the yard's books. Petra Lindqvist gave them very thorough books indeed.", "A Freeflag cutter limped in last month with its hull cut open, and left again before anyone had finished the welding."], "vista": "A great open cradle of rusted girders, with half-built hulls hanging in the frame and welding arcs flashing blue-white across them. Sodium lamps wash the plating orange. Beyond the open dock, a dim orange star burns low and the scorched curve of Cinder hangs in the dark. Docking arms and patched gantries cross the foreground."}]}</script>
@@ -3797,14 +3797,23 @@ out vec2 vQ;
 void main(){ vQ=aPos*1.3; gl_Position=clipOf(uC + aPos*uR*1.3); }`;
 // Planets, drawn analytically on a quad 1.3 radii wide. Detail follows the zoom: noise layers are added until the
 // finest is about two pixels across (uPx is one pixel in planet radii), up to 12, the last fading in, so there is
-// no popping and no shimmer. Noise is 3D value noise on an integer hash, sampled on the sphere itself: seamless,
-// and stable at fine scales. Each layer is zero-mean, so coastlines stay put as layers arrive. Layers also return
-// their gradient, which bends the surface normal: relief lighting with no extra samples.
-// Kinds: 0 terran (ocean, land, mountains, ice, clouds and their shadows, sun glint, city lights at night when
-// uCity > 0), 1 banded giant, 2 cratered rock. uC1..3 are the palette; uAtm the atmosphere tint.
+// no popping and no shimmer; 12 is about what the closest view needs (a fighter at full zoom, 175 m across).
+// Noise is 3D value noise on an integer hash, sampled on the sphere itself: seamless, and stable at fine scales.
+// Each layer is zero-mean, so coastlines stay put as layers arrive. Layers also return their gradient, which bends
+// the surface normal: relief lighting with no extra samples. Relief and albedo detail weight the same layers more
+// heavily as they get finer, so a close view keeps its slopes and mottling instead of going smooth.
+// The atmosphere is real single scattering through an exponential shell (uAir thick, scattering the uAtm colour),
+// marched along the view ray, with sunlight through it from an analytic optical depth (Schuler's Chapman
+// approximation). So the limb is a thin bright line, the terminator is soft and takes the complement of the sky's
+// colour (a blue sky gives orange dusk), high clouds catch the light after the ground goes dark, and the night
+// side sits under its planet's shadow.
+// Kinds: 0 terran (oceans with shelves, surf and wave glint; biomes by latitude, height and moisture; snow and
+// rock by slope; clouds in climate belts with cyclones, lit and shadowing; city lights resolving into points as
+// you close in, when uCity > 0), 1 banded giant (irregular belts, shear eddies, a great storm and white ovals),
+// 2 cratered rock (craters at five scales as the zoom allows, maria). uC1..3 are the palette.
 const PLANET_FS = `#version 300 es
 precision highp float; in vec2 vQ; out vec4 o;
-uniform vec3 uSun, uSunCol, uAmb, uC1, uC2, uC3, uAtm; uniform float uSeed, uTime, uPx, uCity; uniform int uKind;
+uniform vec3 uSun, uSunCol, uAmb, uC1, uC2, uC3, uAtm; uniform float uSeed, uTime, uPx, uCity, uAir; uniform int uKind;
 uvec3 pcg3(uvec3 v){ v = v*1664525u + 1013904223u; v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; v ^= v >> 16u;
   v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; return v; }
 float h3(ivec3 i){ return float(pcg3(uvec3(i)).x) * (1./4294967295.); }
@@ -3820,6 +3829,8 @@ vec4 vnd(vec3 x){
 }
 // noise layers for features down to about two pixels, for a base frequency f0 (per radius)
 float lod(float f0){ return clamp(log2(1./(2.*uPx*f0)), 1., 12.); }
+// 0 until cells of frequency f are 4 pixels across, 1 by 8: for features that only exist up close
+float near(float f){ return clamp(log2(1./(2.*uPx*f)) - 1., 0., 1.); }
 // zero-mean fractal sum with gradient; oct may be fractional (the last layer fades in)
 vec4 fbmd(vec3 p, float f0, float gain, float oct){
   vec4 s = vec4(0.); float a = .5, f = f0;
@@ -3829,6 +3840,24 @@ vec4 fbmd(vec3 p, float f0, float gain, float oct){
     s += a*w*vec4(n.x - .5, n.yzw*f);
     a *= gain; f *= 2.03;
   }
+  return s;
+}
+// the same layers weighted three ways: x the height (gain g) and gt its gradient; yzw the gradient of a rougher
+// sum (gain gr), for relief that keeps its slopes as layers arrive, each layer damped where the layers above it
+// are already steep (so valleys stay smooth and ridges take the detail, like eroded ground); pt a patchiness whose
+// layers all keep their contrast, for albedo detail at any zoom
+vec4 fbmr(vec3 p, float f0, float g, float gr, float oct, out float pt, out vec3 gt){
+  vec4 s = vec4(0.); float a = .5, ar = .5, f = f0, n2 = 0.; pt = 0.; gt = vec3(0.); vec3 dd = vec3(0.);
+  for (int k = 0; k < 12; k++) {
+    float w = clamp(oct - float(k), 0., 1.); if (w <= 0.) break;
+    vec4 n = vnd(p*f + float(k)*17.31);
+    s.x += a*w*(n.x - .5); gt += a*w*n.yzw*f;
+    dd += n.yzw; float damp = 1./(1. + .35*dot(dd, dd));    // steep ground carries the fine detail
+    s.yzw += ar*w*n.yzw*f*damp;
+    if (k > 1) { pt += w*(n.x - .5)*(.4 + .6*damp); n2 += w*w; }
+    a *= g; ar *= gr; f *= 2.03;
+  }
+  pt /= sqrt(max(n2, 1.));
   return s;
 }
 // ridged layers (sharp crests), for mountains
@@ -3843,10 +3872,12 @@ vec4 ridged(vec3 p, float f0, float oct){
   }
   return s;
 }
+float crB = 0.; // crater brightness: rims and ejecta, fresh craters most
 // craters: one per cell at most, radius under half a cell, so the 8 cells around the point are enough.
 // Returns height change and its gradient.
 vec4 craters(vec3 p, float F, float depth){
   vec3 q = p*F; vec3 base = floor(q - .5); vec4 s = vec4(0.);
+  if (depth <= 0.) return s;
   for (int z = 0; z < 2; z++) for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) {
     ivec3 c = ivec3(base) + ivec3(x, y, z);
     uvec3 hv = pcg3(uvec3(c) + 7u); vec3 j = vec3(hv & 1023u)/1023.;
@@ -3854,96 +3885,241 @@ vec4 craters(vec3 p, float F, float depth){
     vec3 ctr = vec3(c) + .5 + (j - .5)*.3; float rad = .18 + .22*j.y;
     vec3 dv = q - ctr; float d = length(dv) + 1e-5;
     if (d > rad*1.6) continue;
-    float t = d/rad, bowl = t < 1. ? -(1. - t*t) : 0., rim = .35*exp(-(t - 1.)*(t - 1.)*18.);
-    float dbowl = t < 1. ? 2.*t : 0., drim = .35*exp(-(t - 1.)*(t - 1.)*18.)*(-36.)*(t - 1.);
-    s += depth*vec4(bowl + rim, (dbowl + drim)/rad*(dv/d)*F);
+    float t = d/rad, u = clamp((t - .35)/.65, 0., 1.), h, dh, fade = 1. - smoothstep(1.3, 1.6, t); // the blanket ends inside the cell
+    if (t < 1.) { h = -1. + 1.35*u*u*(3. - 2.*u); dh = 1.35*6.*u*(1. - u)/.65; }
+    else { float e = exp(-(t - 1.)*5.); h = .35*e; dh = -1.75*e; }
+    crB += (j.z < .15 ? .35 : .04)*exp(-max(t - .9, 0.)*6.)*(t < 1. ? .5 : 1.)*fade*depth*F*3.;
+    s += depth*fade*vec4(h, dh/rad*(dv/d)*F);
   }
   return s;
 }
+// city lights: at most one light per cell of frequency F, present with probability D, at least most of a pixel
+// wide, dimmed as it widens so a blurred light keeps its total brightness
+float lights(vec3 p, float F, float D){
+  vec3 q = p*F; vec3 c = floor(q); uvec3 hv = pcg3(uvec3(ivec3(c)) + 101u);
+  if (float(hv.y & 1023u)/1023. > D) return 0.;
+  vec3 ctr = c + .3 + .4*vec3(hv.x & 1023u, (hv.x >> 10) & 1023u, (hv.x >> 20) & 1023u)/1023.;
+  float sg = max(.07, uPx*F*.7), d = length(q - ctr);
+  vec3 e = min(fract(q), 1. - fract(q)); float edge = smoothstep(0., .08, min(e.x, min(e.y, e.z))); // never clipped square
+  return (.35 + .65*float(hv.z & 255u)/255.)*exp(-d*d/(sg*sg))*(.07*.07)/(sg*sg)*12.*edge;
+}
 // tilt the sphere normal R by a height gradient g (both in planet space): relief
 vec3 bump(vec3 R, vec3 g, float k){ return normalize(R - k*(g - dot(g, R)*R)); }
+// a vortex: turn p about the axis c by up to w radians, fading with distance; k > 0 squashes it into an oval
+// stretched along the latitude lines
+vec3 swirl(vec3 p, vec3 c, float w, float s, float k){
+  vec3 v = p - c; float a = w*exp(-(dot(v, v) + k*v.y*v.y)/s), ca = cos(a), sa = sin(a);
+  return p*ca + cross(c, p)*sa + c*dot(c, p)*(1. - ca);
+}
+float bell(float x, float c, float w){ x = (x - c)/w; return exp(-x*x); }
+
+// ---- the atmosphere: scale height HS (radii); scattering BR (the sky's colour) and BM (haze), extinction BE
+vec3 L, BR, BE; float HS, BM;
+// column density toward the sun, in units of HS times the density at the ground (Schuler 2012); X = 1/HS,
+// h the height in scale heights, mu the cosine of the sun's zenith angle
+float chap(float X, float h, float mu){
+  float c = sqrt(X + h);
+  if (mu >= 0.) return c/(c*mu + 1.)*exp(-h);
+  float x0 = sqrt(1. - mu*mu)*(X + h), c0 = sqrt(x0);
+  return 2.*c0*exp(min(X - x0, 30.)) - c/(1. - c*mu)*exp(-h);
+}
+// sunlight reaching p (|p| >= 1): through the air, and nothing once the planet is in the way (a soft edge for the
+// sun's disc)
+vec3 sunT(vec3 p){
+  float rp = length(p), mu = dot(p, L)/rp, hor = -sqrt(max(1. - 1./(rp*rp), 0.));
+  float vis = smoothstep(hor - .012, hor + .012, mu);
+  if (vis <= 0.) return vec3(0.);
+  return vis*exp(-BE*HS*chap(1./HS, max(rp - 1., 0.)/HS, max(mu, hor)));
+}
+// march the view ray (straight down -z at q) through the shell: light scattered toward the eye, and the
+// transmittance to the ground. Samples crowd toward the densest point (the ground, or the ray's lowest point).
+void air(vec2 q, float r, bool hit, float zs, out vec3 ins, out vec3 Tv){
+  ins = vec3(0.); Tv = vec3(1.);
+  float Ra = 1. + 8.*HS;
+  if (uAir <= 0. || r >= Ra) return;
+  float zt = sqrt(Ra*Ra - r*r), c = -L.z;
+  float PR = .0597*(1. + c*c), PM = .0796*(1. - .49)/pow(1.49 - 1.4*c, 1.5); // Rayleigh; Henyey-Greenstein g .7
+  for (int k = 0; k < 16; k++) {
+    if (hit && k >= 8) break;
+    float u, z, dz;
+    if (hit) { u = 1. - (float(k) + .5)/8.; z = zs + (zt - zs)*u*u; dz = (zt - zs)*2.*u/8.; }
+    else if (k < 8) { u = 1. - (float(k) + .5)/8.; z = zt*u*u; dz = zt*2.*u/8.; }
+    else { u = (float(k - 8) + .5)/8.; z = -zt*u*u; dz = zt*2.*u/8.; }
+    vec3 p = vec3(q, z); float rho = exp(-max(length(p) - 1., 0.)/HS);
+    vec3 e = BE*rho*dz;
+    ins += Tv*exp(-.5*e)*sunT(p)*(BR*PR + BM*PM)*rho*dz;
+    Tv *= exp(-e);
+  }
+}
 void main(){
   float r = length(vQ);
-  vec3 L = normalize(uSun);
-  vec2 ld = normalize(L.xy+1e-5);
-  if (r > 1.) { // atmosphere halo
-    float a = exp(-(r-1.)*9.)*(1.-smoothstep(1.25,1.3,r));
-    float lit = clamp(dot(normalize(vQ), ld)*.6+.45, 0., 1.);
-    o = vec4(uAtm*uSunCol*a*lit*.8, 0.); return;
-  }
+  L = normalize(uSun);
+  HS = uKind == 1 ? .008 : uKind == 2 ? .006 : .008;
+  vec3 tint = uAtm/max(max(uAtm.r, uAtm.g), max(uAtm.b, 1e-3));
+  BR = tint*(.2*uAir/HS); BM = .03*uAir/HS;                     // vertical optical depth .2 x uAir in the tint
+  BE = mix(vec3(dot(tint, vec3(1./3.))), tint, .6)*(.2*uAir/HS) + BM*1.1; // a gentler complement in what gets through
+  vec3 E = uSunCol*2.2;                                          // sunlight, as the surface sees it
+  float aa = 1. - smoothstep(1. - uPx*1.5, 1., r);
+  vec3 insOut = vec3(0.), Tv;
+  if (aa < 1.) air(vQ, r, false, 0., insOut, Tv);                // the ray that misses: the limb and halo
+  insOut *= E*3.14159;
+  if (r >= 1.) { o = vec4(insOut, 0.); return; }
+
   float z = sqrt(1.-r*r); vec3 N = vec3(vQ, z);
+  vec3 ins; air(vQ, r, true, z, ins, Tv);
+  ins *= E*3.14159;
   // planet space: the view-space sphere point, spun about the polar axis
   float ca = cos(uTime*.004+uSeed), sa = sin(uTime*.004+uSeed);
   vec3 R = vec3(N.x*ca+N.z*sa, N.y, -N.x*sa+N.z*ca);
   vec3 Lp = vec3(L.x*ca+L.z*sa, L.y, -L.x*sa+L.z*ca); // the sun, in planet space
   vec3 S = vec3(uSeed*3.7, uSeed*1.3, -uSeed*2.1);    // per-planet noise offset
-  vec3 alb, Np = R, em = vec3(0.); float spec = 0., wrap = 0.;
+  vec3 alb, Np = R, em = vec3(0.); float wrap = 0., water = 0., cl = 0., cloudPt = 0.; vec3 Nc = R, Ww = R;
+  float mu = dot(N, L);
   if (uKind == 1) {
-    // banded giant: latitude bands, bent by turbulence that gains detail with zoom
-    vec4 w = fbmd(R + S, 2., .55, lod(2.));
-    float lat = R.y + w.x*.09;
-    float b = sin(lat*14. + w.x*2.6);
-    alb = mix(uC1, uC2, smoothstep(-.6, .6, b));
-    vec4 st = fbmd(vec3(R.x*1.5, R.y*9., R.z*1.5) + S*1.7, 2., .5, lod(9.));
-    alb = mix(alb, uC3, smoothstep(.05, .3, st.x)*.85);
-    wrap = .25;
+    // banded giant. Storms first: the bands curl round them.
+    vec3 P = R;
+    vec3 gsC = normalize(vec3(cos(uSeed*3.1), -.36, sin(uSeed*3.1)));
+    P = swirl(P, gsC, 2.6, .012, 3.);
+    for (int i = 0; i < 3; i++) {
+      float a = uSeed*1.7 + float(i)*2.1;
+      P = swirl(P, normalize(vec3(cos(a), (i == 1 ? .55 : -.6) + .04*float(i), sin(a))), 3., .0012, 2.);
+    }
+    // turbulence, stretched along the bands
+    vec4 w = fbmd(P*vec3(1., 3., 1.) + S, 2., .5, 5.);
+    float lat = P.y + w.x*.05;
+    // irregular belts and zones: noise in latitude at two scales; where neighbours differ most, shear eddies
+    vec4 b1 = vnd(vec3(lat*9., uSeed*7.1, .5)), b2 = vnd(vec3(lat*23., uSeed*3.3, 2.5));
+    float shear = clamp(abs(b1.y*9.*.7 + b2.y*23.*.3)*.12, 0., 1.);
+    vec4 ed = fbmd(P*vec3(5., 9., 5.) + S*1.3, 1., .5, 4.);
+    lat += ed.x*.035*shear;
+    float band = vnd(vec3(lat*9., uSeed*7.1, .5)).x*.7 + vnd(vec3(lat*23., uSeed*3.3, 2.5)).x*.3;
+    // fine streaks, gaining detail with zoom
+    float pt; vec3 gt;
+    vec4 d = fbmr(P*vec3(1., 4., 1.) + vec3(w.x, ed.x*shear, 0.)*.6 + S*1.7, 7., .55, .62, lod(14.), pt, gt);
+    float t = band + d.x*.45 + w.x*.18 + pt*.1;            // fine layers move the belt edges: crisp at any zoom
+    alb = mix(uC2, uC1, smoothstep(.3, .48, t));
+    alb = mix(alb, uC3, smoothstep(.52, .7, t));
+    alb *= 1. + pt*.3;
+    alb = mix(alb, uC2*.75, smoothstep(.72, .95, abs(R.y))*.55);      // duskier poles
+    vec3 gv = R - gsC; float gs = exp(-(dot(gv, gv) + 3.*gv.y*gv.y)/.004);
+    alb = mix(alb, mix(uC1, vec3(.78, .34, .2), .55), gs*(.7 + .3*d.x));   // the great storm's reddened eye
+    Np = bump(R, d.yzw*.5 + w.yzw, .0035);
+    wrap = .2;
   } else if (uKind == 2) {
-    // cratered rock: rolling ground plus two crater sizes, a third when close
-    vec4 hgt = fbmd(R + S, 3., .5, lod(3.));
-    vec4 cr = craters(R + S, 7., .045) + craters(R + S*1.3, 19., .02) + craters(R + S*.7, 55., .009)*clamp(lod(55.) - 1., 0., 1.);
+    // cratered rock: rolling ground, dark maria, craters at five sizes (the smaller ones only up close)
+    float pt; vec3 gt;
+    vec4 hgt = fbmr(R + S, 3., .5, .6, lod(3.), pt, gt);
+    vec4 cr = craters(R + S, 7., .045) + craters(R + S*1.3, 19., .02) + craters(R + S*.7, 55., .009*near(55.))
+            + craters(R + S*.4, 150., .0035*near(150.)) + craters(R + S*.2, 420., .0013*near(420.));
+    float mare = smoothstep(.0, .14, vnd((R + S)*1.4 + 3.).x - .52 - hgt.x*.3);
     float h = hgt.x + cr.x*4.;
     alb = mix(uC1, uC2, smoothstep(-.2, .25, h));
     alb = mix(alb, uC3, smoothstep(.18, .4, hgt.x + .5*cr.x));
-    alb *= (.85 + .3*vnd((R + S)*40.).x)*clamp(1. + cr.x*5., .6, 1.25); // darker floors, brighter rims
-    Np = bump(R, hgt.yzw*.6 + cr.yzw, .035);
+    alb = mix(alb, uC1*.75, mare*.55);
+    alb *= (.9 + .3*pt)*clamp(1. + cr.x*5., .7, 1.2)*(1. + min(crB, 1.)*.55);   // darker floors; bright rims and ejecta
+    Np = bump(R, hgt.yzw*.35 + cr.yzw, .035);
   } else {
-    // terran: warped continents with ridged mountains, beaches, snow, ice, clouds
+    // terran: warped continents with ridged mountains inland
     vec3 Rw = R + vnd(R*1.8 + S).yzw*.07;            // warp: coastlines that wander
-    vec4 hgt = fbmd(Rw + S, 2.2, .47, lod(2.2));
-    float land = smoothstep(0., .02, hgt.x);
+    float pt; vec3 gt;
+    vec4 hgt = fbmr(Rw + S, 2.2, .47, .58, lod(2.2), pt, gt);
+    float mtn = smoothstep(.03, .2, hgt.x);
     vec4 mt = ridged(Rw + S*1.9, 6., lod(6.) - 1.);
-    float mtn = smoothstep(.03, .2, hgt.x);            // mountains rise inland, not at the coast
     float h = hgt.x + mt.x*.22*mtn;
-    vec3 grad = hgt.yzw + mt.yzw*.22*mtn;
-    float polar = smoothstep(.78, .9, abs(R.y) + hgt.x*.4);
-    vec3 deep = uC1*.45, shallow = mix(uC1, vec3(.25, .6, .65), .35);
-    vec3 ocean = mix(deep, shallow, smoothstep(-.12, 0., hgt.x));
-    vec3 ground = mix(uC2, uC3, smoothstep(.06, .22, h));
-    ground = mix(ground, mix(uC3, vec3(.95, .9, .78), .5), smoothstep(.006, 0., hgt.x)*land); // beaches
-    ground = mix(ground, vec3(.92, .94, .97), smoothstep(.2, .28, h));                         // snow on peaks
+    vec3 rel = hgt.yzw*.6 + mt.yzw*.22*mtn;            // relief gradient
+    float wpx = length(gt - dot(gt, R)*R)*uPx*1.2 + 1e-6; // the height change across a pixel, for crisp coasts
+    float land = smoothstep(-wpx, wpx, hgt.x);
+    float slope = length(rel - dot(rel, R)*R)*.03;
+    // climate: cold toward the poles and with height; dry belts in the subtropics, wet at the equator
+    float lat = abs(R.y);
+    vec4 cn = vnd((R + S)*1.3 + 5.);
+    float moist = .55 + (vnd((R + S)*2.6 + 9.).x - .5)*.8 + (cn.x - .5)*.4 - .5*bell(lat, .42, .13) + .25*bell(lat, 0., .12)
+                - smoothstep(0., .35, hgt.x)*.15 + pt*.12;
+    float temp = 1. - 1.15*pow(lat, 1.4) - 1.8*max(h, 0.) + (cn.x - .5)*.25;
+    vec3 forest = uC2*vec3(.55, .72, .55), savanna = mix(uC2, uC3, .55), desert = mix(uC3, vec3(.86, .74, .55), .35);
+    vec3 tundra = mix(uC2, vec3(.52, .5, .44), .6), rock = mix(uC3, vec3(.42, .4, .38), .55);
+    vec3 ground = mix(desert, savanna, smoothstep(.12, .32, moist));
+    ground = mix(ground, uC2, smoothstep(.32, .52, moist));
+    ground = mix(ground, forest, smoothstep(.55, .8, moist));
+    ground = mix(tundra, ground, smoothstep(.12, .38, temp));
+    ground *= 1. + pt*.4;                                                           // patchy at every zoom
+    ground = mix(ground, rock, smoothstep(.3, .65, slope + mt.x*.25*mtn));        // bare rock on the steeps
+    float snow = smoothstep(.05, -.05, temp + pt*.06)*(1. - smoothstep(.5, .8, slope));
+    ground = mix(ground, vec3(.92, .94, .97), snow);
+    ground = mix(ground, mix(uC3, vec3(.95, .9, .78), .5), smoothstep(.006 + wpx*2., 0., hgt.x)*smoothstep(.2, .4, temp)*.8); // beaches
+    // seas: dark deeps, pale shelves, surf on the shore once it's resolvable, ice where it's cold
+    float dep = -hgt.x;
+    vec3 ocean = mix(uC1, uC1*.3, smoothstep(0., .16, dep));
+    ocean = mix(ocean, mix(uC1, vec3(.2, .62, .62), .5), smoothstep(.035, 0., dep)*.8);
+    ocean *= 1. + pt*.06;
+    ocean = mix(ocean, vec3(.85, .9, .92), smoothstep(wpx*3. + .0012, 0., dep)*near(400.)*.7);
+    float seaIce = smoothstep(.04, -.04, 1. - 1.15*pow(lat, 1.4) + pt*.08 + (cn.x - .5)*.2);
+    ocean = mix(ocean, vec3(.86, .9, .95), seaIce);
     alb = mix(ocean, ground, land);
-    alb = mix(alb, vec3(.9, .93, .97), polar);
-    Np = land > .5 ? bump(R, grad, .028) : R;
-    spec = (1. - land)*(1. - polar);
-    // clouds, drifting faster than the ground, and the shadow they cast (sampled toward the sun)
-    vec3 Rc = vec3(R.x*cos(uTime*.002) - R.z*sin(uTime*.002), R.y, R.x*sin(uTime*.002) + R.z*cos(uTime*.002));
-    float cOct = min(lod(3.), 10.);
-    float cl = smoothstep(.02, .2, fbmd(Rc*vec3(1., 1.6, 1.) + S*2.3, 3., .55, cOct).x);
-    float clS = smoothstep(.02, .2, fbmd((Rc + Lp*.012)*vec3(1., 1.6, 1.) + S*2.3, 3., .55, min(cOct, 5.)).x);
-    alb *= 1. - .5*clS;
-    // city lights, on the night side of inhabited land near the coast
+    water = (1. - land)*(1. - seaIce);
+    Np = bump(R, rel*(1. - water), .03);
+    // waves near the pixel scale: the glint breaks into sparkle
+    float fw = .3/uPx;
+    vec4 wv = vnd(R*fw + vec3(0., uTime*.6, 0.)) + .5*vnd(R*fw*2.03 + vec3(uTime*.4, 0., 3.));
+    Ww = bump(R, wv.yzw/fw, .25);
+    // where people live: temperate lowlands near the coast
+    float town = 0.;
     if (uCity > 0.) {
-      float coast = smoothstep(.12, .0, hgt.x)*land;
-      float town = smoothstep(.6, .85, vnd((R + S)*38.).x) * smoothstep(.0, .25, fbmd(R + S*.5, 7., .5, 2.).x + .1);
-      em = vec3(1., .66, .32)*town*coast*uCity*(1. - .8*cl)*1.6;
+      float hab = land*smoothstep(.16, .0, hgt.x)*smoothstep(.2, .45, temp)*smoothstep(.1, .3, moist)*(1. - snow)*(1. - slope*1.5);
+      town = clamp(hab*smoothstep(.42, .62, vnd((R + S)*9.).x + pt*.3), 0., 1.)*uCity;
+      alb = mix(alb, vec3(.42, .41, .4), town*.3*smoothstep(.35, .7, vnd((R + S)*120.).x + pt*.4));
+      float night = 1. - smoothstep(-.1, .02, mu);
+      if (night*town > 0.) {
+        // unresolved, the lights are a glow; closer, each scale resolves into points, gathered into clusters a
+        // few cells across (towns, then districts, then streets)
+        float g1 = near(240.), g2 = near(960.), g3 = near(3800.);  // a scale resolves once its cells are 8 px
+        float k1 = smoothstep(.4, .7, vnd((R + S)*30.).x), k2 = smoothstep(.35, .7, vnd((R + S)*120.).x), k3 = smoothstep(.3, .65, vnd((R + S)*480.).x);
+        float lt = mix(.15*town, lights(R + S, 120., town*k1), g1);            // a glow is about the points' average
+        lt += g1*mix(.04*town*k1*k2, lights(R + S*1.1, 480., town*k1*k2), g2);
+        lt += g2*mix(.04*town*k2*k3, lights(R + S*1.2, 1900., town*k2*k3)*1.2, g3);
+        em = mix(vec3(1., .62, .28), vec3(1., .85, .65), pt + .5)*lt*night*2.2;
+      }
     }
-    alb = mix(alb, vec3(.92), cl*.85);
-    spec *= 1. - cl;
-    Np = normalize(mix(Np, R, cl));
+    // clouds in climate belts, two cyclones (turning opposite ways either side of the equator), drifting faster
+    // than the ground
+    vec3 Rc = vec3(R.x*cos(uTime*.002) - R.z*sin(uTime*.002), R.y, R.x*sin(uTime*.002) + R.z*cos(uTime*.002));
+    Rc = swirl(Rc, normalize(vec3(cos(uSeed*5.), .5 + .15*sin(uSeed*2.), sin(uSeed*5.))), 3.2, .03, 0.);
+    Rc = swirl(Rc, normalize(vec3(cos(uSeed*2.3 + 2.), -.62, sin(uSeed*2.3 + 2.))), -2.8, .025, 0.);
+    float cOct = min(lod(3.), 11.), cp; vec3 cg;
+    vec4 cn2 = fbmr(Rc*vec3(1., 1.7, 1.) + S*2.3, 3., .6, .62, cOct, cp, cg);
+    float th = .05 + .12*bell(lat, .38, .13) - .07*bell(lat, 0., .1) - .06*bell(lat, .68, .1);
+    float ramp = mix(.025, .09, clamp(uPx*600., 0., 1.));      // a far view softens the edges; a near one doesn't
+    // a crisp edge, then thickening inward, so a cloud's body keeps its texture
+    cl = smoothstep(th - length(cg)*uPx*1.5, th + ramp, cn2.x)*(.5 + .45*smoothstep(th, th + .16, cn2.x));
+    float clS = smoothstep(th, th + ramp, fbmd((Rc + Lp*.012)*vec3(1., 1.7, 1.) + S*2.3, 3., .6, min(cOct, 6.)).x);
+    alb *= 1. - .55*clS*(1. - cl);
+    em *= 1. - .85*cl;
+    Nc = bump(R, cn2.yzw, .05); cloudPt = cp;
   }
-  // back to view space, then light it
+  // back to view space, then light it: sunlight through the air (reddened, then gone, across the terminator),
+  // skylight (the sky's colour, on the day side), the star system's ambient
   vec3 Nv = vec3(Np.x*ca - Np.z*sa, Np.y, Np.x*sa + Np.z*ca);
   alb = pow(alb, vec3(2.2));
+  vec3 Ts = sunT(N);
+  vec3 sky = E*(1. - exp(-BR*HS*1.5))*.6*smoothstep(-.25, .5, mu);
   float dif = max((dot(Nv, L) + wrap)/(1. + wrap), 0.);
-  float day = smoothstep(-.08, .12, dot(N, L));     // the sphere's own day side, for lights and glint
-  vec3 col = alb*uSunCol*dif*2.2 + alb*uAmb*1.5;
-  vec3 Hh = normalize(L + vec3(0., 0., 1.));
-  col += uSunCol*spec*(pow(max(dot(N, Hh), 0.), 90.)*1.6 + pow(max(dot(N, Hh), 0.), 12.)*.08)*day; // sun glint on water
-  col += em*(1. - day);
-  float rim = pow(1.-z, 3.);
-  col += uAtm*uSunCol*rim*(.25+max(dot(N, L), 0.))*1.2;
-  float aa = 1.-smoothstep(1.-uPx*1.5, 1., r);
-  o = vec4(col*aa, aa);
+  vec3 col = alb*(E*dif*Ts + sky + uAmb*1.5);
+  if (water > 0.) {
+    // the sea mirrors the sky at grazing angles, and the sun off the waves
+    vec3 Wv = vec3(Ww.x*ca - Ww.z*sa, Ww.y, Ww.x*sa + Ww.z*ca), H = normalize(L + vec3(0., 0., 1.));
+    float F = .02 + .98*pow(1. - z, 5.);
+    col = mix(col, uAtm*E*.12*smoothstep(-.1, .3, mu), F*water*min(uAir, 1.));
+    float nh = max(dot(Wv, H), 0.), nh0 = max(dot(N, H), 0.);
+    col += E*Ts*water*(pow(nh, 500.)*3. + pow(nh0, 60.)*.05)*(1. - cl);
+  }
+  if (cl > 0.) {
+    // clouds sit higher, so they keep the sun a little past the ground's terminator
+    vec3 Ncv = vec3(Nc.x*ca - Nc.z*sa, Nc.y, Nc.x*sa + Nc.z*ca);
+    vec3 cc = vec3(.72)*(E*max(dot(Ncv, L)*.85 + .15, 0.)*sunT(N*(1. + 2.*HS)) + sky*.7 + uAmb*1.5);
+    col = mix(col, cc*(.82 + .4*cloudPt), cl);
+  }
+  col += em;
+  o = vec4((col*Tv + ins)*aa + insOut*(1. - aa), aa);
 }`;
 // A star, in world space on a quad 2.4 radii wide: a granulated, limb-darkened disc, HDR-bright so it blooms, inside
 // a corona that streams outward. uCol is the star's linear colour.
@@ -4624,7 +4800,7 @@ const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet:
 // planets and moons, drawn by the planet shader
 const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
   const L = b.look || {}, pal = L.palette || ['#5e5953', '#8a8178', '#c9c0b4'];
-  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere || '#9fb4c8')), seed: L.seed || 1, surface: SURFACE[L.surface] || 0, city: L.cityLights || 0 });
+  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere || '#9fb4c8')), seed: L.seed || 1, surface: SURFACE[L.surface] || 0, city: L.cityLights || 0, air: L.air != null ? L.air : 0.6 });
 });
 // light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
 function sunFrom(x, y) {
@@ -5392,7 +5568,7 @@ CORE_READY.then(CORE => {
         gl.uniform3fv(u.uSun, sunFrom(p.x, p.y));
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
         gl.uniform3fv(u.uC1, p.L1); gl.uniform3fv(u.uC2, p.L2); gl.uniform3fv(u.uC3, p.L3); gl.uniform3fv(u.uAtm, p.LA);
-        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city);
+        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city); gl.uniform1f(u.uAir, p.air);
         draw();
       } }
     // stations: one draw each, with the ship shader and their own bake

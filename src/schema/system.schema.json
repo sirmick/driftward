@@ -190,6 +190,13 @@
                 "pattern": "^#[0-9a-fA-F]{6}$",
                 "default": "#9fb4c8"
               },
+              "air": {
+                "description": "How much atmosphere: 0 airless, 1 Earth-like, up to 2 thick haze. Scatters the atmosphere colour, so the light that gets through (sunsets, the terminator) takes its complement.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2,
+                "default": 0.6
+              },
               "seed": {
                 "type": "number",
                 "minimum": 0,

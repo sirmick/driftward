@@ -154,9 +154,9 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
   const shieldCount = new Int32Array(64), shieldStart = new Int32Array(64), shieldFill = new Int32Array(64);
 
   const PLANETS = [
-    { x: -3200, y: 2600, r: 1300, kind: 0, c1: '#1d4f7a', c2: '#5d7a3c', c3: '#d8cba8', atm: '#6fb3ff', seed: 1.3, name: 'Tessaly' },
-    { x: 6800, y: -4400, r: 2700, kind: 1, c1: '#c9925c', c2: '#7d4e33', c3: '#ecd9b0', atm: '#ffc98a', seed: 4.1, name: 'Orrin' },
-    { x: -8200, y: -6400, r: 820, kind: 2, c1: '#5e5953', c2: '#8a8178', c3: '#c9c0b4', atm: '#b0a8a0', seed: 7.7, name: 'Kell' }
+    { x: -3200, y: 2600, r: 1300, kind: 0, c1: '#1d4f7a', c2: '#5d7a3c', c3: '#d8cba8', atm: '#6fb3ff', air: 1, seed: 1.3, name: 'Tessaly' },
+    { x: 6800, y: -4400, r: 2700, kind: 1, c1: '#c9925c', c2: '#7d4e33', c3: '#ecd9b0', atm: '#ffc98a', air: 1.2, seed: 4.1, name: 'Orrin' },
+    { x: -8200, y: -6400, r: 820, kind: 2, c1: '#5e5953', c2: '#8a8178', c3: '#c9c0b4', atm: '#b0a8a0', air: 0, seed: 7.7, name: 'Kell' }
   ].map(p => Object.assign(p, { g: 0.004 * p.r, L1: hexRGB(p.c1), L2: hexRGB(p.c2), L3: hexRGB(p.c3), LA: lin(hexRGB(p.atm)) }));
   PLANETS.forEach((p, j) => { sim.body.x[j] = p.x; sim.body.y[j] = p.y; sim.body.r[j] = p.r; sim.body.g[j] = p.g; });
   sim.setBodies(PLANETS.length);
@@ -575,7 +575,7 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
         if (Math.abs(p.x - camX) > halfW + p.r * 1.3 || Math.abs(p.y - camY) > halfH + p.r * 1.3) continue;
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
         gl.uniform3fv(u.uC1, p.L1); gl.uniform3fv(u.uC2, p.L2); gl.uniform3fv(u.uC3, p.L3); gl.uniform3fv(u.uAtm, p.LA);
-        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.kind);
+        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.kind); gl.uniform1f(u.uAir, p.air);
         draw();
       } }
 

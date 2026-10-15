@@ -34,7 +34,7 @@ const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet:
 // planets and moons, drawn by the planet shader
 const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
   const L = b.look || {}, pal = L.palette || ['#5e5953', '#8a8178', '#c9c0b4'];
-  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere || '#9fb4c8')), seed: L.seed || 1, surface: SURFACE[L.surface] || 0, city: L.cityLights || 0 });
+  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere || '#9fb4c8')), seed: L.seed || 1, surface: SURFACE[L.surface] || 0, city: L.cityLights || 0, air: L.air != null ? L.air : 0.6 });
 });
 // light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
 function sunFrom(x, y) {
@@ -802,7 +802,7 @@ CORE_READY.then(CORE => {
         gl.uniform3fv(u.uSun, sunFrom(p.x, p.y));
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
         gl.uniform3fv(u.uC1, p.L1); gl.uniform3fv(u.uC2, p.L2); gl.uniform3fv(u.uC3, p.L3); gl.uniform3fv(u.uAtm, p.LA);
-        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city);
+        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city); gl.uniform1f(u.uAir, p.air);
         draw();
       } }
     // stations: one draw each, with the ship shader and their own bake
