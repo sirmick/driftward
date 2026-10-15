@@ -253,7 +253,7 @@ let showPanel = () => {};
 const fmtCr = n => n.toLocaleString('en-US');
 
 CORE_READY.then(CORE => {
-  const sim = CORE.world({ maxShips: 64, maxTypes: 64, maxBodies: 8, envN: 16, envW: 40000, seed: 1 });
+  const sim = CORE.world({ maxShips: 96, maxTypes: 64, maxBodies: 8, envN: 16, envW: 40000, seed: 1 });
   const SH = sim.ship, IN = CORE.IN;
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; });
   const CMD = CORE.CMD, MODE = CORE.MODE;
@@ -262,9 +262,26 @@ CORE_READY.then(CORE => {
     B.pop[j] = b.port ? TRAFFIC_DATA.population[b.port.population] || 1 : 0; // traffic's gravity model
   });
   // traffic hulls: the owning culture's brand, a size class per role (src/traffic.json; validated by npm run check)
-  { const C = TRAFFIC_DATA.cultures[SYS.owner] || Object.values(TRAFFIC_DATA.cultures)[0];
-    const bi = Math.max(0, catalog.brands.findIndex(b => b.id === C.brand));
-    CORE.TRAFFIC.roles.forEach((r, k) => { sim.role.kind[k] = bi * nSizes + Math.max(0, catalog.sizes.findIndex(z => z.id === C.roles[r])); }); }
+  // the traffic mix (the system file's traffic, validated against the catalog by npm run check): each entry's share
+  // split over its classes by weight, one core mix row per line and class; loiter rows carry ships to keep up
+  const TRAFFIC = CORE.TRAFFIC, TCFG = SYS.traffic || {};
+  const kindOf = (line, cls) => { const bi = catalog.brands.findIndex(b => b.id === line), zi = catalog.sizes.findIndex(z => z.id === cls); return bi < 0 || zi < 0 ? -1 : bi * nSizes + zi; };
+  function writeTraffic() {
+    const M = sim.mix; let m = 0;
+    for (const k of ['stream', 'body', 'kind', 'weight', 'rate', 'dwell']) M[k].fill(0);
+    const add = (stream, body, e, total) => {
+      const cls = Object.entries(e.classes || {}).filter(([c, w]) => w > 0 && kindOf(e.line, c) >= 0), sum = cls.reduce((s, [, w]) => s + w, 0);
+      for (const [c, w] of cls) { if (m >= TRAFFIC.maxMix) { console.warn('traffic mix: too many rows'); return; } M.stream[m] = stream; M.body[m] = body; M.kind[m] = kindOf(e.line, c); M.weight[m] = total * w / sum; m++; }
+    };
+    (TCFG.local || []).forEach(e => add(TRAFFIC.mix.local, -1, e, e.share));
+    (TCFG.through || []).forEach(e => add(TRAFFIC.mix.through, -1, e, e.share));
+    (TCFG.loiter || []).forEach(e => { const j = BODIES.findIndex(b => b.id === e.port && b.port); if (j > 0) add(TRAFFIC.mix.loiter, j, e, e.count); });
+    if (TCFG.ships !== undefined) sim.param('traffic_ships', TCFG.ships);
+    if (TCFG.throughShare !== undefined) sim.param('share_through', TCFG.throughShare);
+    if (TCFG.jumpRadius !== undefined) sim.param('jump_radius', TCFG.jumpRadius);
+  }
+  const mixKinds = () => [...new Set([...sim.mix.kind].filter((k, m) => sim.mix.stream[m]))];
+  let bakeKinds = []; // every ship type the mix can fly, baked up front
   sim.setBodies(BODIES.length);
   // Market prices: a port with a market trades what its role lists, at base price times the tier. Written at each new
   // game; a loaded save brings its own (prices are world state).
@@ -299,6 +316,7 @@ CORE_READY.then(CORE => {
     sim.game.day[0] = 1; // day one
     sim.game.credits[0] = ECON.start.credits; sim.game.debt[0] = ECON.start.debt; // a used ship and a debt to a lender
     sim.postBoards();
+    writeTraffic(); bakeKinds = mixKinds();
     sim.startTraffic(); // ambient traffic, already mid-flow
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
     navTarget = null; viewScale = 0; // the view snaps rather than glides to a new game
@@ -435,7 +453,7 @@ CORE_READY.then(CORE => {
     fpsAcc += dt; fpsN++; if (fpsAcc > 0.5) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
     sim.checkViews();
     // bake the traffic hulls up front (behind the start port's screen), not when the first one flies into view
-    for (let k = 0; k < 3; k++) typeReady(types[sim.role.kind[k]]);
+    for (const k of bakeKinds) typeReady(types[k]);
     if (!paused && !debug.isOpen()) { // paused (or debugging): the clock stops (the replay log is by tick, so a pause leaves no trace)
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
@@ -511,6 +529,8 @@ CORE_READY.then(CORE => {
   const MS = sim.mission, OF = sim.offer, NM = sim.maxMissions, NO = sim.maxOffers, MSTATE = CORE.MISSION;
   const activeMissions = () => { const a = []; for (let k = 0; k < NM; k++) if (MS.state[k] === MSTATE.active) a.push(k); return a; };
   const portName = j => BODIES[j].port ? BODIES[j].port.name : BODIES[j].name;
+  // a traffic route's end: a port, or jump zone z (coded -1 - z)
+  const endName = c => c < 0 ? `the ${TRAFFIC.zones[-1 - c]} jump zone` : portName(c);
   const cargoText = (tons, g) => `${tons} t ${(GOODS[g] || { name: '?' }).name.toLowerCase()}`;
   const daysText = n => n <= 0 ? 'due today' : n === 1 ? '1 day' : `${n} days`;
   function refreshPort() {
@@ -580,9 +600,25 @@ CORE_READY.then(CORE => {
       cargoBest: goods.reduce((n, g) => n + g.aboard * Math.max(0, ...g.prices), 0),
       holdUsed: sim.holdUsed(), tradeTons, missionTons,
       ports: ports.map(o => ({ name: o.b.port.name, role: o.b.port.role, here: landed && o.j === at })), goods, missions,
-      day: sim.day(), tick: sim.tick(), hash: sim.hash(), seed: seedNow
+      day: sim.day(), tick: sim.tick(), hash: sim.hash(), seed: seedNow,
+      traffic: trafficInfo()
     };
   });
+  // the traffic for the debug screen: the targets, the mix rows with how many of each fly now, the counts by stream
+  function trafficInfo() {
+    const M = sim.mix, rows = [], live = new Map(), byStream = [0, 0, 0, 0];
+    for (let i = 0; i < sim.count(); i++) if (TR.role[i]) { byStream[TR.role[i] - 1]++; live.set(TR.mix[i], (live.get(TR.mix[i]) || 0) + 1); }
+    const total = s => { let t = 0; for (let m = 0; m < TRAFFIC.maxMix; m++) if (M.stream[m] === s) t += M.weight[m]; return t; };
+    const tot = [0, total(1), total(2), total(3)];
+    for (let m = 0; m < TRAFFIC.maxMix; m++) {
+      if (!M.stream[m]) continue;
+      const T = types[M.kind[m]];
+      rows.push({ m, stream: ['', 'local', 'through', 'loiter'][M.stream[m]], at: M.body[m] >= 0 ? portName(M.body[m]) : '', line: T.brand.id, name: `${T.brand.factionName.replace(/^The /, '')} ${T.name}`, cls: catalog.sizes[T.zi].name,
+        share: M.stream[m] === 3 ? M.weight[m] : M.weight[m] / (tot[M.stream[m]] || 1), live: live.get(m) || 0 });
+    }
+    return { ships: sim.param('traffic_ships'), through: sim.param('share_through'), cap: sim.param('traffic_cap'), jump: sim.param('jump_radius'),
+      loiter: tot[3], byStream, rows };
+  }
   // buy or sell n tons (n omitted: all that fits or is aboard); returns the core's result
   function trade(act, g, n) {
     const price = sim.price(sim.game.at[0], g), c = GOODS[g];
@@ -653,7 +689,7 @@ CORE_READY.then(CORE => {
   let scale = 1;
   const sheaths = []; // [slot, sequence look] to draw this frame (reused)
   const LAUNCH_S = 3.2, DESCENT_S = 3.2; // core/src/port.rs
-  const TR = sim.traffic, TRAFFIC = CORE.TRAFFIC;
+  const TR = sim.traffic;
   // a landing or launch sequence's look at d (0 in flight .. 1 down) over body B: hull scale, plasma heat, fade-out
   // into the atmosphere's tint
   function seqLook(d, B) {
@@ -1133,12 +1169,13 @@ CORE_READY.then(CORE => {
   }
   const targetBody = () => navTarget && navTarget.body !== undefined ? navTarget.body : -1;
   const targetShip = () => navTarget && navTarget.ship !== undefined ? sim.resolve(navTarget.ship) : -1;
-  const ROLE_NAME = { shuttle: 'Shuttle', hauler: 'Hauler', liner: 'Liner' };
-  const owner = (SYS.owner || '').replace(/s$/, '');
+  // a traffic ship by its hull: the faction and the line's name for its class (Ironhulls Brasshaul)
   function targetName(t) {
     if (t.body !== undefined) { const B = BODIES[t.body]; return B.port ? `${B.name} (${B.port.name})` : B.name; }
     const i = sim.resolve(t.ship);
-    return i < 0 ? 'lost' : `${owner ? owner[0].toUpperCase() + owner.slice(1) + ' ' : ''}${ROLE_NAME[TRAFFIC.roles[TR.role[i] - 1]] || 'ship'}`;
+    if (i < 0) return 'lost';
+    const T = types[SH.kind[i]];
+    return T ? `${T.brand.factionName.replace(/^The /, '')} ${T.name}` : 'ship';
   }
   // T: ships within radar range, nearest first; each press takes the next
   cycleTarget = () => {
@@ -1203,7 +1240,7 @@ CORE_READY.then(CORE => {
     } else {
       const dx = SH.rx[i] - SH.rx[0], dy = SH.ry[i] - SH.ry[0], d = Math.hypot(dx, dy) || 1;
       title = targetName(navTarget);
-      sub = `${TR.phase[i] === TRAFFIC.launch ? 'launching from' : TR.phase[i] === TRAFFIC.land ? 'landing at' : 'bound for'} ${portName(TR.phase[i] === TRAFFIC.launch ? TR.from[i] : TR.to[i])}`;
+      sub = TR.role[i] === 4 && TR.phase[i] === TRAFFIC.cruise ? `loitering round ${endName(TR.to[i])}` : `${TR.phase[i] === TRAFFIC.launch ? 'launching from' : TR.phase[i] === TRAFFIC.land ? 'landing at' : TR.to[i] < 0 ? 'leaving by' : 'bound for'} ${endName(TR.phase[i] === TRAFFIC.launch ? TR.from[i] : TR.to[i])}`;
       range = fmtDist(d); close = ((SH.vx[0] - SH.vx[i]) * dx + (SH.vy[0] - SH.vy[i]) * dy) / d;
       rows.push([`SPEED ${Math.hypot(SH.vx[i], SH.vy[i]).toFixed(0)} M/S`, '#8a95a4']);
     }
@@ -1315,7 +1352,9 @@ CORE_READY.then(CORE => {
   // to target it; G flies there. The sim runs on underneath.
   const mapEl = $('map'), mx2 = mapEl.getContext('2d');
   let mapOn = false;
-  const mapExtent = Math.max(...BODIES.map(b => Math.hypot(b.x - STAR.x, b.y - STAR.y) + b.r)) * 1.08;
+  // the map shows the bodies and the jump zones (north, east, south and west, at the system's jump radius)
+  const jumpR = () => sim.param('jump_radius'), jumpSpread = () => sim.param('jump_spread');
+  const mapExtent = Math.max(...BODIES.map(b => Math.hypot(b.x - STAR.x, b.y - STAR.y) + b.r), (TCFG.jumpRadius || 45000) + 4000) * 1.08;
   const MAP_TOP = 76; // the title and help lines
   const mapView = () => { const h = H - stripH, s = Math.min(W, h - MAP_TOP) / 2 / mapExtent; return { s, cx: W / 2, cy: MAP_TOP + (h - MAP_TOP) / 2, h }; };
   toggleMap = on => {
@@ -1337,6 +1376,13 @@ CORE_READY.then(CORE => {
       const P = BODIES.find(o => o.id === B.parent) || STAR, [px, py] = mapPos(P.x, P.y, v);
       c.beginPath(); c.arc(px, py, Math.hypot(B.x - P.x, B.y - P.y) * v.s, 0, 6.283); c.stroke();
     }
+    // the jump zones: where through traffic arrives and leaves
+    c.font = '600 11px "IBM Plex Mono", ui-monospace, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    TRAFFIC.zones.forEach((name, z) => {
+      const R = jumpR(), [x, y] = mapPos([0, R, 0, -R][z], [R, 0, -R, 0][z], v), r = Math.max(6, jumpSpread() * v.s);
+      c.setLineDash([3, 4]); c.strokeStyle = 'rgba(143,211,255,.55)'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.stroke(); c.setLineDash([]);
+      c.fillStyle = 'rgba(143,211,255,.75)'; c.fillText(`${name.toUpperCase()} JUMP`, x, y + (z === 0 ? -r - 10 : r + 10));
+    });
     // the autopilot's course: to the point it is steering for (round any obstacle), then the target
     const auto = sim.game.auto[0] - 1;
     if (auto >= 0) {
@@ -1394,7 +1440,7 @@ CORE_READY.then(CORE => {
     target: () => navTarget && (navTarget.body !== undefined ? { body: navTarget.body } : { ship: sim.resolve(navTarget.ship) }),
     locations: () => locRows.map(([j, child]) => ({ j, name: BODIES[j].name, child })),
     // ambient traffic: every ship in flight, with its role, phase, route and whether it is on rails
-    traffic: () => { const out = []; for (let i = 0; i < sim.count(); i++) if (TR.role[i]) out.push({ i, role: TRAFFIC.roles[TR.role[i] - 1], phase: TR.phase[i], from: TR.from[i], to: TR.to[i], rail: SH.rail[i], x: SH.x[i], y: SH.y[i], v: Math.hypot(SH.vx[i], SH.vy[i]) }); return out; },
+    traffic: () => { const out = []; for (let i = 0; i < sim.count(); i++) if (TR.role[i]) out.push({ i, role: TRAFFIC.streams[TR.role[i] - 1], line: types[SH.kind[i]].brand.id, cls: catalog.sizes[types[SH.kind[i]].zi].id, phase: TR.phase[i], from: TR.from[i], to: TR.to[i], rail: SH.rail[i], x: SH.x[i], y: SH.y[i], v: Math.hypot(SH.vx[i], SH.vy[i]) }); return out; },
     // dev: put the (flying) player at rest over body j; a logged command, so replays still match
     teleport: j => command(CMD.teleport, j),
     // this port's offers and the player's active missions, as plain objects

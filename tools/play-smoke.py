@@ -124,7 +124,7 @@ with sync_playwright() as p:
       const left = [...ids].filter(h => P.sim.resolve(h) >= 0).length;
       return { seen, roles: [...roles], left, phases: P.traffic().map(t => t.phase) }; })()""")
     print('traffic counts every 5 s', tr['seen'], 'roles', tr['roles'])
-    check(min(tr['seen']) >= 2 and max(tr['seen']) <= cap and len(tr['roles']) == 3, f"traffic stays between {min(tr['seen'])} and {max(tr['seen'])} ships, all three roles")
+    check(min(tr['seen']) >= 10 and max(tr['seen']) <= cap and sorted(tr['roles']) == ['arrive', 'depart', 'local', 'loiter'], f"traffic stays between {min(tr['seen'])} and {max(tr['seen'])} ships: local, arriving, departing and loitering")
     check(tr['left'] < len(t0), f"ships land and are forgotten ({len(t0) - tr['left']} of the first {len(t0)} landed in two minutes)")
 
     # the mission board at the start port
@@ -154,7 +154,9 @@ with sync_playwright() as p:
     check(tgt is not None and tgt.get('ship', -1) > 0, 'T targets the nearest ship')
     pg.keyboard.press('Digit2'); pg.keyboard.press('KeyG'); pg.wait_for_timeout(100)
     check(ev('__play.probe().auto') == h[1]['j'], 'G engages the autopilot to the target body')
-    pg.keyboard.press('KeyM'); pg.wait_for_timeout(300)
+    pg.keyboard.press('KeyM')
+    try: pg.wait_for_function("!document.getElementById('map').hidden && document.getElementById('loc').hidden", timeout=5000) # the HUD hides the list next frame
+    except Exception: pass
     check(pg.is_visible('#map') and not pg.is_visible('#loc'), 'M opens the system map')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     check(not pg.is_visible('#map'), 'Escape closes it')

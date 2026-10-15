@@ -5,6 +5,7 @@
 //            out, the art bible and the parts every image prompt shares); one card per port with its body, its
 //            lore and its art, each image showing only its own part of the prompt; then the raw files.
 //   Player   the live state: ship and its stats, flight, money, the hold priced at every port, missions.
+//   Traffic  the traffic mix (local, through, loiter) against what is flying now, by stream and by row.
 //   Ships    every faction line's hulls in every class, drawn behind the tab by the shipyard (src/play/shipyard.js)
 //            with plumes and shields: click a hull for a new seed, shift-click for the one before.
 // tools/gen-content.js records how content was made; the build inlines the records. Everything here is read-only.
@@ -183,7 +184,28 @@ function makeDebug(ctx) {
     return { cells, opts: yardOpts };
   }
 
-  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }];
+  // ---------- Traffic: live, rebuilt each time the tab shows ----------
+  function trafficTab() {
+    const d = live && live();
+    if (!d) return '<p class="dbg-note">The game has not started yet.</p>';
+    const T = d.traffic, pct = x => `${(x * 100).toFixed(0)}%`, S = [];
+    const [local, arrive, depart, loiter] = T.byStream, flying = local + arrive + depart + loiter;
+    S.push({ id: 'tr-now', title: 'Now', body: kv([
+      ['in flight', `<b>${flying}</b> of a ${T.cap} cap <small>(target ${T.ships} local and through, plus ${T.loiter.toFixed(1)} loitering)</small>`],
+      ['local', `${local} <small>port to port (target ${(T.ships * (1 - T.through)).toFixed(1)})</small>`],
+      ['through', `${arrive} arriving, ${depart} leaving <small>(target ${(T.ships * T.through).toFixed(1)}; jump zones ${(T.jump / 1000).toFixed(0)} km out, north, east, south and west)</small>`],
+      ['loitering', `${loiter} <small>(target ${T.loiter.toFixed(1)})</small>`]]) });
+    for (const st of ['local', 'through', 'loiter']) {
+      const rows = T.rows.filter(r => r.stream === st);
+      S.push({ id: 'tr-' + st, title: { local: 'Local mix', through: 'Through mix', loiter: 'Loiter' }[st], body: rows.length
+        ? `<table class="dbg-grid"><thead><tr>${st === 'loiter' ? '<th>Port</th>' : ''}<th>Ship</th><th>Line</th><th>Class</th><th class="n">${st === 'loiter' ? 'Keeps up' : 'Share'}</th><th class="n">Flying</th></tr></thead><tbody>`
+          + rows.map(r => `<tr>${st === 'loiter' ? `<td>${e(r.at)}</td>` : ''}<td><b>${e(r.name)}</b></td><td><code>${e(r.line)}</code></td><td>${e(r.cls)}</td><td class="n">${st === 'loiter' ? r.share.toFixed(2) : pct(r.share)}</td><td class="n">${r.live || ''}</td></tr>`).join('') + '</tbody></table>'
+        : '<p class="dbg-note">None in this system.</p>' });
+    }
+    return sections(S);
+  }
+
+  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }];
   let tab = TABS[0].id;
   const cache = new Map();
   function show(id) {

@@ -1,7 +1,9 @@
 {
-  "description": "M1's ambient traffic: which hulls each culture flies in each traffic role (a catalog faction line and size class), and each population tier's weight in the gravity model that sets the flows between ports. The Ironhulls (miners) fly their civilian line: Tinhauls, Brasshauls and Ironhauls (classes I, III and IV). Rates, shares and speeds are core params (core/src/world.rs).",
-  "cultures": {
-    "ironhulls": { "brand": "ironhulls.civilian", "roles": { "shuttle": "c1", "hauler": "c3", "liner": "c4" } }
-  },
-  "population": { "outpost": 1, "colony": 3, "town": 10, "world": 30 }
+  "description": "Each port population tier's weight in the traffic models: the gravity model between ports (local traffic) and how through traffic picks its ports. Who flies is each system's traffic mix (the system file); rates, shares, speeds and distances are core params (core/src/world.rs).",
+  "population": {
+    "outpost": 1,
+    "colony": 3,
+    "town": 10,
+    "world": 30
+  }
 }

@@ -306,6 +306,236 @@
           }
         }
       }
+    },
+    "traffic": {
+      "description": "Ambient traffic (the Book's Traffic chapter): local ships between the ports, through traffic in from and out to the jump zones, and ships loitering round their ports. Which hulls fly is the mix; the core decides when and where.",
+      "type": "object",
+      "default": {},
+      "properties": {
+        "ships": {
+          "description": "Local and through ships in flight at steady state.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50,
+          "default": 30
+        },
+        "throughShare": {
+          "description": "Through traffic's share of the ships.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.45
+        },
+        "jumpRadius": {
+          "description": "Distance of the four jump zones (north, east, south, west) from the star, metres.",
+          "type": "number",
+          "minimum": 10000,
+          "maximum": 200000,
+          "default": 45000
+        },
+        "local": {
+          "description": "Who flies between the ports.",
+          "type": "array",
+          "maxItems": 12,
+          "default": [],
+          "items": {
+            "type": "object",
+            "required": [
+              "line",
+              "share",
+              "classes"
+            ],
+            "properties": {
+              "line": {
+                "description": "A catalog faction line, faction.line.",
+                "type": "string",
+                "pattern": "^[a-z0-9-]+\\.[a-z0-9-]+$",
+                "maxLength": 60
+              },
+              "share": {
+                "description": "The entry's share of its stream (shares are normalised).",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "classes": {
+                "description": "Weights by size class (catalog sizes): which classes the entry flies, and how often. Leave a class out to never fly it.",
+                "type": "object",
+                "default": {},
+                "properties": {
+                  "c1": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c2": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c3": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c4": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c5": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "through": {
+          "description": "Who arrives and leaves by the jump zones.",
+          "type": "array",
+          "maxItems": 12,
+          "default": [],
+          "items": {
+            "type": "object",
+            "required": [
+              "line",
+              "share",
+              "classes"
+            ],
+            "properties": {
+              "line": {
+                "description": "A catalog faction line, faction.line.",
+                "type": "string",
+                "pattern": "^[a-z0-9-]+\\.[a-z0-9-]+$",
+                "maxLength": 60
+              },
+              "share": {
+                "description": "The entry's share of its stream (shares are normalised).",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "classes": {
+                "description": "Weights by size class (catalog sizes): which classes the entry flies, and how often. Leave a class out to never fly it.",
+                "type": "object",
+                "default": {},
+                "properties": {
+                  "c1": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c2": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c3": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c4": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c5": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "loiter": {
+          "description": "Ships that launch, circle their port and land there again.",
+          "type": "array",
+          "maxItems": 12,
+          "default": [],
+          "items": {
+            "type": "object",
+            "required": [
+              "port",
+              "line",
+              "count",
+              "classes"
+            ],
+            "properties": {
+              "port": {
+                "description": "The body id of the port they loiter round.",
+                "type": "string",
+                "pattern": "^[a-z0-9-]+$",
+                "maxLength": 40
+              },
+              "line": {
+                "description": "A catalog faction line, faction.line.",
+                "type": "string",
+                "pattern": "^[a-z0-9-]+\\.[a-z0-9-]+$",
+                "maxLength": 60
+              },
+              "count": {
+                "description": "Ships kept loitering at a time, on average.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 8
+              },
+              "classes": {
+                "description": "Weights by size class (catalog sizes): which classes the entry flies, and how often. Leave a class out to never fly it.",
+                "type": "object",
+                "default": {},
+                "properties": {
+                  "c1": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c2": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c3": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c4": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  },
+                  "c5": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

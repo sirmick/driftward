@@ -1023,7 +1023,7 @@ Sim sources and the offers they spawn:
 
 * \[M1\] An Ironhull-owned mid-ring industrial system with six bodies: the star, three planets, one moon and one station. Four are ports, giving 12 directed routes.  
 * \[M1\] Two ways to earn: buying and selling commodities on each port's market, at fixed prices that vary with the port's role; and delivery missions from the mission board, carrying cargo to a named port in the system.  
-* \[M1\] Traffic: flows between ports from a gravity model (population × population ÷ distance, weighted by how well the ports' roles complement each other), spawned as described in Traffic. One culture (Ironhull), flying its civilian line: shuttles, haulers and liners from the line's class I, III and IV hulls; about 10–20 ships to start. M5 replaces the static flows with ones derived from the economy.
+* \[M1\] Traffic: flows between ports from a gravity model (population × population ÷ distance, weighted by how well the ports' roles complement each other), plus through traffic arriving at and leaving by placeholder jump zones (north, east, south, west) and ships loitering round their ports, spawned as described in Traffic. Who flies is a per-system mix of faction lines and size classes: mostly Ironhull, with Federation and Prism civilian visitors. M5 replaces the static flows with ones derived from the economy.
 
 # **Part V: Building it**
 

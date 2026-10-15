@@ -166,5 +166,125 @@
         "description": "A cradle of girders where the Ironhulls build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."
       }
     }
-  ]
+  ],
+  "traffic": {
+    "ships": 34,
+    "throughShare": 0.5,
+    "jumpRadius": 45000,
+    "local": [
+      {
+        "line": "ironhulls.civilian",
+        "share": 0.8,
+        "classes": {
+          "c1": 4,
+          "c2": 3,
+          "c3": 3,
+          "c4": 2,
+          "c5": 1
+        }
+      },
+      {
+        "line": "ironhulls.military",
+        "share": 0.1,
+        "classes": {
+          "c1": 2,
+          "c2": 3,
+          "c3": 2
+        }
+      },
+      {
+        "line": "ironhulls.container-hauler",
+        "share": 0.1,
+        "classes": {
+          "c5": 1
+        }
+      }
+    ],
+    "through": [
+      {
+        "line": "ironhulls.civilian",
+        "share": 0.4,
+        "classes": {
+          "c2": 2,
+          "c3": 3,
+          "c4": 3,
+          "c5": 2
+        }
+      },
+      {
+        "line": "ironhulls.military",
+        "share": 0.15,
+        "classes": {
+          "c1": 2,
+          "c2": 3,
+          "c3": 2,
+          "c4": 1,
+          "c5": 0.5
+        }
+      },
+      {
+        "line": "federation.civilian",
+        "share": 0.2,
+        "classes": {
+          "c1": 1,
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.civilian",
+        "share": 0.13,
+        "classes": {
+          "c2": 2,
+          "c3": 1,
+          "c4": 1
+        }
+      },
+      {
+        "line": "federation.container-carrier",
+        "share": 0.06,
+        "classes": {
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.container-liner",
+        "share": 0.06,
+        "classes": {
+          "c4": 1
+        }
+      }
+    ],
+    "loiter": [
+      {
+        "port": "kettle",
+        "line": "ironhulls.military",
+        "count": 2,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "port": "halde",
+        "line": "ironhulls.military",
+        "count": 1,
+        "classes": {
+          "c2": 1,
+          "c3": 1
+        }
+      },
+      {
+        "port": "cinder",
+        "line": "ironhulls.military",
+        "count": 1,
+        "classes": {
+          "c1": 1,
+          "c2": 1
+        }
+      }
+    ]
+  }
 }

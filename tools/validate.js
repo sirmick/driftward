@@ -32,17 +32,30 @@ for (const [r, t] of Object.entries(econ.roles)) {
 if (econBad.length) { bad += econBad.length; econBad.forEach(m => console.log(`economy.json: ${m}`)); }
 else console.log(`economy.json: valid; ${ids.length} commodities, ${roles.length} role price tables`);
 
-// traffic: every culture's roles name a catalog brand and size; every population tier has a weight
+// traffic: every population tier has a weight; every system's traffic mix names catalog lines, classes those lines
+// build, and loiter ports that exist, with something in each stream it lists
 const traffic = JSON.parse(fs.readFileSync(path.join(root, 'src', 'traffic.json'), 'utf8'));
 const catalog = require('../src/gen.js').resolveCatalog(JSON.parse(fs.readFileSync(path.join(root, 'src', 'catalog.json'), 'utf8')));
 const tBad = [];
-for (const [id, c] of Object.entries(traffic.cultures)) {
-  if (!catalog.brands.some(b => b.id === c.brand)) tBad.push(`${id}: unknown brand ${c.brand}`);
-  for (const role of ['shuttle', 'hauler', 'liner']) if (!catalog.sizes.some(z => z.id === c.roles[role])) tBad.push(`${id}: ${role} has unknown size ${c.roles[role]}`);
+for (const tier of schema.properties.bodies.items.properties.port.properties.population.enum) if (!(traffic.population[tier] > 0)) tBad.push(`traffic.json: no weight for population ${tier}`);
+let mixes = 0;
+for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.endsWith('.json'))) {
+  const { system, bodies } = loadSystem(JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', f), 'utf8')), schema);
+  const T = (system && system.traffic) || {};
+  const check = (where, e) => {
+    const B = catalog.brands.find(b => b.id === e.line);
+    if (!B) return tBad.push(`${f} ${where}: unknown line ${e.line}`);
+    const cls = Object.entries(e.classes || {}).filter(([, w]) => w > 0).map(([c]) => c);
+    if (!cls.length) tBad.push(`${f} ${where} ${e.line}: no class with a weight`);
+    for (const c of cls) if (B.classes && !B.classes.includes(c)) tBad.push(`${f} ${where} ${e.line}: the line builds no ${c}`);
+    mixes++;
+  };
+  (T.local || []).forEach(e => check('local', e));
+  (T.through || []).forEach(e => check('through', e));
+  (T.loiter || []).forEach(e => { check('loiter', e); if (!bodies.some(b => b.id === e.port && b.port)) tBad.push(`${f} loiter: no port ${e.port}`); });
 }
-for (const tier of schema.properties.bodies.items.properties.port.properties.population.enum) if (!(traffic.population[tier] > 0)) tBad.push(`no weight for population ${tier}`);
-if (tBad.length) { bad += tBad.length; tBad.forEach(m => console.log(`traffic.json: ${m}`)); }
-else console.log(`traffic.json: valid; ${Object.keys(traffic.cultures).length} culture(s)`);
+if (tBad.length) { bad += tBad.length; tBad.forEach(m => console.log(m)); }
+else console.log(`traffic: valid; population weights, ${mixes} mix entries`);
 
 // lore (src/lore/<system id>.json, from tools/gen-content.js): valid against its schema and its system, a port entry
 // for every port, and every portrait and vista in art/<id>/ naming a person or port the lore has
