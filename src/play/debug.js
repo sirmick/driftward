@@ -73,7 +73,7 @@ function makeDebug(ctx) {
       const lk = b.look || {}, f = factOf(b.id), P0 = b.port;
       return kv([['kind', `${e(b.kind)}${b.parent && b.parent !== 'star' ? ` of ${e(b.parent)}` : ''}${f ? ` · ${e(f.position)} · ${e(f.size)}` : ''}`],
         ['place', `${Math.round(b.x)}, ${Math.round(b.y)} m · radius ${e(b.r)} · gravity ${e(b.g)}`],
-        ['look', b.station ? `${e(b.station.archetype)} · ${e(b.station.brand)} · seed ${e(b.station.seed)}` : `${e(lk.surface)} · seed ${e(lk.seed)}${lk.cityLights ? ' · city lights' : ''} · ${(lk.palette || []).map(sw).join('')} ${lk.atmosphere ? `atmosphere ${sw(lk.atmosphere)}` : ''}`],
+        ['look', b.station ? `${e(b.station.archetype)} · ${e(b.station.brand)} · seed ${e(b.station.seed)}` : `${e(lk.surface)} · seed ${e(lk.seed)}${lk.cityLights ? ` · city lights ${e(lk.cityLights)}` : ''} · ${(lk.palette || []).map(sw).join('')} ${lk.atmosphere ? `atmosphere ${sw(lk.atmosphere)} air ${e(lk.air)}` : ''}${lk.lightning ? ` · lightning ${e(lk.lightning)}` : ''} · debris ×${e(lk.debris)}`],
         ['in words', f && f.looks ? e(f.looks) : undefined],
         ['port', P0 ? `${e(P0.role)} · ${e(P0.population)} · ${e((P0.services || []).join(', '))}` : undefined],
         ['market', f && f.port ? `cheap: ${e(f.port.market.cheapHere.join(', ') || 'nothing')}<br>dear: ${e(f.port.market.dearHere.join(', ') || 'nothing')}` : undefined],

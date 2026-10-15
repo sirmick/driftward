@@ -12,7 +12,11 @@ function clampToSchema(schema, value, path, notes) {
     if (schema.default !== undefined) { note(`${why}; using the default`); return JSON.parse(JSON.stringify(schema.default)); }
     note(why, true); return undefined;
   };
-  if (value === undefined) return schema.default !== undefined ? JSON.parse(JSON.stringify(schema.default)) : undefined;
+  if (value === undefined) {
+    if (schema.default === undefined) return undefined;
+    const d = JSON.parse(JSON.stringify(schema.default));
+    return schema.type === 'object' ? clampToSchema(schema, d, path, notes) : d; // an object default gets its fields' defaults
+  }
   if (schema.enum) return schema.enum.includes(value) ? value : fallback(`${JSON.stringify(value)} is not one of ${schema.enum.join(', ')}`);
   switch (schema.type) {
     case 'object': {

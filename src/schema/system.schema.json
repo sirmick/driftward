@@ -160,8 +160,9 @@
             "default": 30
           },
           "look": {
-            "description": "How a planet or moon is drawn.",
+            "description": "How a planet or moon is drawn (the flight planet shader, src/shaders.js PLANET_FS) and what orbits it (core/src/orbit.rs). Every field has a default, so an omitted look is a plain grey rock.",
             "type": "object",
+            "default": {},
             "properties": {
               "surface": {
                 "enum": [
@@ -169,7 +170,8 @@
                   "giant",
                   "rock"
                 ],
-                "default": "rock"
+                "default": "rock",
+                "description": "terran: seas, land in biomes, clouds; giant: banded gas, storms; rock: craters, no water."
               },
               "palette": {
                 "type": "array",
@@ -183,12 +185,14 @@
                   "#5e5953",
                   "#8a8178",
                   "#c9c0b4"
-                ]
+                ],
+                "description": "Three colours, used by surface. terran: seas, lowlands (the green of its vegetation), highlands (dry ground and deserts). giant: two band colours, then the pale zones and storms. rock: crater floors and plains, ground, rims and ridges."
               },
               "atmosphere": {
                 "type": "string",
                 "pattern": "^#[0-9a-fA-F]{6}$",
-                "default": "#9fb4c8"
+                "default": "#9fb4c8",
+                "description": "The colour the air scatters: the limb and the day-side haze take it, and the light that gets through (dusk on the terminator) takes its complement, as a blue sky gives an orange dusk. How much air there is is `air`."
               },
               "air": {
                 "description": "How much atmosphere: 0 airless, 1 Earth-like, up to 2 thick haze. Scatters the atmosphere colour, so the light that gets through (sunsets, the terminator) takes its complement.",
@@ -211,17 +215,19 @@
                 "maximum": 3,
                 "default": 1
               },
-              "seed": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 100,
-                "default": 1
-              },
               "cityLights": {
                 "type": "number",
                 "minimum": 0,
                 "maximum": 1,
-                "default": 0
+                "default": 0,
+                "description": "Settlement lights on the night side of temperate coasts and lowlands (terran only): 0 none, 1 a busy world."
+              },
+              "seed": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "default": 1,
+                "description": "Picks the world's continents, craters, bands and storms; the same seed draws the same world."
               }
             }
           },
