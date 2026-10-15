@@ -109,14 +109,23 @@ function finOutline(span, root, tip, sweep, curve, rootIn) {
 }
 
 // ---------- assembly ----------
+// Two random streams: the hull (core, plates, wings, fins, nacelles, engines, rings, bridge) is drawn from one seeded
+// by the line's hull key, the outfit (pods, weapons) from one seeded by the line itself. Lines that share hulls
+// (catalog: hullFrom) share the hull key and the hull loadout, so the same seed gives the same vessel in each,
+// outfitted differently. Outfit parts are numbered apart from hull parts, so hull detail noise matches too.
+const OUTFIT_ROLES = new Set(['pod', 'weapon', 'barrel', 'cargo']);
 function assemble(brand, size, seed, sizeIdx) {
-  const r = rng32(hashStr(brand.id + '|' + size.id + '|' + seed));
+  const hullKey = brand.hullKey || brand.id;
+  const rh = rng32(hashStr(hullKey + '|' + size.id + '|' + seed)), ro = rng32(hashStr(brand.id + '|outfit|' + size.id + '|' + seed));
+  let r = rh, outfit = false;
+  const stream = o => { outfit = o; r = o ? ro : rh; };
   const st = brand.style, L = size.length;
   const q = st.angleQuant || 0;
   const quant = a => (q ? Math.round(a / q) * q : a);
   const load = brand.loadout[size.id] || {};
   const parts = [];
-  let uid = 0;
+  let uid = 0, ouid = 10000;
+  const nextId = () => outfit ? ouid++ : uid++;
 
   function pick(role, ids) {
     const list = brand.parts.filter(p => p.role === role && (!ids || ids.includes(p.id)));
@@ -126,9 +135,9 @@ function assemble(brand, size, seed, sizeIdx) {
     return list[list.length - 1];
   }
   function mk(tmpl, prim, a, x, y, ang, z, H, extra) {
-    return Object.assign({ id: uid++, tmpl: tmpl ? tmpl.id : null, prim, a, x, y, ang, z, H, prof: (tmpl && tmpl.prof) || st.bevel, role: tmpl ? tmpl.role : 'core', flip: false, paint: 0, det: {}, em: null }, extra || {});
+    return Object.assign({ id: nextId(), tmpl: tmpl ? tmpl.id : null, prim, a, x, y, ang, z, H, prof: (tmpl && tmpl.prof) || st.bevel, role: tmpl ? tmpl.role : 'core', flip: false, paint: 0, det: {}, em: null }, extra || {});
   }
-  function mirror(p) { return Object.assign({}, p, { id: uid++, x: -p.x, ang: -p.ang, flip: !p.flip, a: Object.assign({}, p.a), det: Object.assign({}, p.det) }); }
+  function mirror(p) { return Object.assign({}, p, { id: nextId(), x: -p.x, ang: -p.ang, flip: !p.flip, a: Object.assign({}, p.a), det: Object.assign({}, p.det) }); }
   function driftCopy(p) {
     const d = st.drift || 0; if (!d) return p;
     const a = Object.assign({}, p.a);
@@ -282,7 +291,8 @@ function assemble(brand, size, seed, sizeIdx) {
     }
   }
 
-  // --- pods ---
+  // --- pods (outfit) ---
+  stream(true);
   const nPod = count(load.pod, r);
   const podT = pick('pod');
   if (podT && nPod > 0) {
@@ -298,7 +308,27 @@ function assemble(brand, size, seed, sizeIdx) {
     }
   }
 
+  // --- cargo (outfit): rows of shipping containers down both sides of the spine, each its own colour (container
+  // ships). A cargo template: w and len (container half-size, fractions of L), across (columns a side), from/to
+  // (the run along the core, 0 aft to 1 fore), fill (chance a slot is taken), stack (chance of a second tier),
+  // z and H (core heights); colours from the style's palette.cargo, else the shipping-line set.
+  const nAcross = count(load.cargo, r), cgT = pick('cargo');
+  if (cgT && nAcross > 0) {
+    const cols = st.palette.cargo || CONTAINER_COLS, cw = sample(cgT.w, r) * L, cl = sample(cgT.len, r) * L;
+    const z = (cgT.z || 0) * coreH, H = (cgT.H || 0.6) * coreH, ya = core.y0 + core.len * (cgT.from == null ? 0.12 : cgT.from), yb = core.y0 + core.len * (cgT.to == null ? 0.8 : cgT.to);
+    for (let y = ya + cl; y <= yb - cl; y += cl * 2.15) {
+      const x0 = core.hwAt(y);
+      for (const side of [-1, 1]) for (let i = 0; i < nAcross; i++) {
+        if (r() > (cgT.fill == null ? 0.92 : cgT.fill)) continue;
+        const tiers = r() < (cgT.stack || 0) ? 2 : 1;
+        for (let k = 0; k < tiers; k++) parts.push(mk(cgT, 'rbox', { hw: cw, hl: cl, rad: cw * 0.08 }, side * (x0 + cw * (1.08 + i * 2.2)), y, 0, z + k * H * 0.85, H,
+          { paint: -1, colOverride: cols[Math.floor(r() * cols.length)], det: { container: true }, prof: 'chamfer' }));
+      }
+    }
+  }
+
   // --- rings ---
+  stream(false);
   const nRing = count(load.ring, r);
   for (let i = 0; i < nRing; i++) {
     const t = pick('ring'); if (!t) break;
@@ -307,7 +337,8 @@ function assemble(brand, size, seed, sizeIdx) {
     parts.push(mk(t, 'ring', { R, t: sample(t.t, r) * L, gap: sample(t.gap, r) }, 0, y, r() < 0.5 ? 0 : 180, t.z * coreH, t.H * coreH, { paint: paintOf(t, 'ring') }));
   }
 
-  // --- weapons ---
+  // --- weapons (outfit) ---
+  stream(true);
   const nW = count(load.weapon, r);
   const wt = pick('weapon');
   function weapon(x, y) {
@@ -340,6 +371,7 @@ function assemble(brand, size, seed, sizeIdx) {
   }
 
   // --- bridge / cockpit ---
+  stream(false);
   if (count(load.bridge, r) > 0) {
     const t = pick('bridge');
     if (t) {
@@ -359,6 +391,7 @@ function assemble(brand, size, seed, sizeIdx) {
   const pj = (st.posJitter || 0) * L, aj = st.angJitter || 0;
   const D = st.detail || {};
   for (const p of parts) {
+    stream(OUTFIT_ROLES.has(p.role));
     if (p.role !== 'core') { p.x += (r() * 2 - 1) * pj; p.y += (r() * 2 - 1) * pj; p.ang += (r() * 2 - 1) * aj; }
     const structural = ['core', 'hull', 'wing', 'pod', 'nacelle', 'fin', 'ring', 'strut', 'bridge'].includes(p.role);
     if (structural && p.paint !== -2) p.det.panel = true;
@@ -369,14 +402,16 @@ function assemble(brand, size, seed, sizeIdx) {
     if ((D.rivets || 0) > 0 && structural) p.det.rivets = true;
     if ((D.stripes || 0) > 0 && brand.style.symmetry < 1 && ['pod', 'bridge', 'hull'].includes(p.role) && r() < D.stripes * 0.5) p.det.hazard = true;
     if ((D.veins || 0) > 0 && ['core', 'hull', 'pod', 'nacelle'].includes(p.role)) p.det.veins = true;
-    p.seedI = hashStr(brand.id + seed + ':' + p.id) & 0xffff;
+    p.seedI = hashStr(hullKey + seed + ':' + p.id) & 0xffff;
   }
+  stream(false);
 
-  // --- metrics, recenter ---
+  // --- metrics, recenter (on the hull alone, so a shared hull sits the same in every line) ---
   let bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9;
   for (const p of parts) {
     const m = partMetrics(p); p.inR = Math.max(m.inR, 1e-3); p.hl = m.hl; p.rad = m.rad;
     const bw = (st.bevelW || 0.3) * p.inR; p.bw = Math.max(bw, 0.02);
+    if (OUTFIT_ROLES.has(p.role)) continue;
     bx0 = Math.min(bx0, p.x - p.rad); bx1 = Math.max(bx1, p.x + p.rad);
     by0 = Math.min(by0, p.y - p.rad); by1 = Math.max(by1, p.y + p.rad);
   }
@@ -1053,15 +1088,65 @@ function assembleStation(arch, brand, seed) {
   return { brand: brand.id, size: 'station', seed, L, coreH: H0, coreTemplate: arch.id, parts, detailScale: arch.detailScale || 5, noShield: true };
 }
 
+// ---------- catalog: factions and lines ----------
+// The catalog lists factions (the Book's Ships chapter): each has a style (palette, materials, plume, shield, detail,
+// flight), part templates, a core and loadout per size class, and lines. A line names its classes (series) and
+// overrides what differs: a style patch, extra parts, loadout entries, flight multipliers (cargo among them), and
+// optionally hullFrom, another line whose hulls it shares. A unique line is one special hull (a container ship),
+// built only in the classes it lists. resolveCatalog turns each line into a brand: the
+// self-contained grammar everything downstream (assemble, bake, the pages) works from, id "faction.line".
+function deepMerge(a, b) {
+  if (b === undefined) return a;
+  if (typeof a !== 'object' || a === null || Array.isArray(a) || typeof b !== 'object' || b === null || Array.isArray(b)) return b;
+  const out = Object.assign({}, a);
+  for (const k of Object.keys(b)) out[k] = deepMerge(a[k], b[k]);
+  return out;
+}
+function resolveCatalog(raw) {
+  if (!raw.factions) return raw; // already resolved (a worker gets the resolved catalog)
+  const brands = [];
+  for (const f of raw.factions) {
+    const lines = f.lines || [];
+    const loadOf = l => {
+      const out = {};
+      for (const z of raw.sizes) out[z.id] = Object.assign({}, (f.loadout || {})[z.id], ((l && l.loadout) || {})[z.id]);
+      return out;
+    };
+    for (const l of lines) {
+      const style = deepMerge(JSON.parse(JSON.stringify(f.style)), l.style);
+      const flight = Object.assign({}, f.style.flight || {});
+      for (const [k, v] of Object.entries(l.flight || {})) flight[k] = (flight[k] == null ? 1 : flight[k]) * v;
+      style.flight = flight;
+      const drop = new Set(l.drop || []);
+      const parts = f.parts.filter(p => !drop.has(p.id)).concat(l.parts || []);
+      let loadout = loadOf(l);
+      const base = l.hullFrom && lines.find(x => x.id === l.hullFrom);
+      if (base) { // a shared hull: the hull roles' counts are the base line's; only the outfit roles are this line's
+        const bl = loadOf(base);
+        for (const z of raw.sizes) for (const role of Object.keys(bl[z.id])) if (!OUTFIT_ROLES.has(role)) loadout[z.id][role] = bl[z.id][role];
+      }
+      brands.push({
+        id: f.id + '.' + l.id, faction: f.id, factionName: f.name, line: l.id, lineName: l.name,
+        name: f.name.replace(/^The /, '') + ' ' + l.name.toLowerCase(), kind: f.role, blurb: l.blurb || '', design: f.design,
+        series: l.series || raw.sizes.map(z => z.name), seeds: l.seeds || null, classes: l.classes || null, unique: !!l.unique, hullKey: f.id + '.' + (base ? base.id : l.id),
+        style, parts, core: Object.assign({}, f.core, base && base.core, l.core), loadout
+      });
+    }
+  }
+  return Object.assign({}, raw, { brands, factions: undefined });
+}
+// a brand by id, or a faction id (its first line: what stations and other faction-owned assets are built in)
+function brandOf(catalog, id) { return catalog.brands.find(b => b.id === id) || catalog.brands.find(b => b.faction === id); }
+
 function generateStation(catalog, archId, brandId, seed) {
-  const arch = [...catalog.stations, ...(catalog.heavies || [])].find(a => a.id === archId), brand = catalog.brands.find(b => b.id === brandId);
+  const arch = [...catalog.stations, ...(catalog.heavies || [])].find(a => a.id === archId), brand = brandOf(catalog, brandId);
   const ship = assembleStation(arch, brand, seed);
   const maps = bake(ship, brand, { res: arch.res || 768, length: ship.L });
   return { ship, maps };
 }
 
 function generate(catalog, brandId, sizeId, seed) {
-  const brand = catalog.brands.find(b => b.id === brandId);
+  const brand = brandOf(catalog, brandId);
   const sizeIdx = catalog.sizes.findIndex(s => s.id === sizeId);
   const size = catalog.sizes[sizeIdx];
   const ship = assemble(brand, size, seed, sizeIdx);
@@ -1082,6 +1167,6 @@ function describe(ship) {
   };
 }
 
-const api = { generate, generateStation, assemble, assembleStation, bake, describe, hexRGB };
+const api = { generate, generateStation, assemble, assembleStation, bake, describe, hexRGB, resolveCatalog, brandOf };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ShipGen = api;
 })(typeof self !== 'undefined' ? self : this);

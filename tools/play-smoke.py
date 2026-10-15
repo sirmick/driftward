@@ -82,7 +82,7 @@ with sync_playwright() as p:
               f"` opens the debug screen with the clock stopped: the pipeline with the lore prompt, {d['ports']} port cards with {d['images']} images, the raw files")
         pg.click('.dbg-tabs button[data-tab="player"]'); pg.wait_for_timeout(200)
         pl = ev("({ sections: document.querySelectorAll('.dbg-body section').length, ship: document.querySelector('#dbg-ship').innerText, rows: document.querySelectorAll('#dbg-hold tbody tr').length })")
-        check(pl['sections'] == 6 and 'Fighter' in pl['ship'] and pl['rows'] == len(econ0['commodities']), f"its Player tab shows the ship, flight, money, the hold priced at every port, missions and the session")
+        check(pl['sections'] == 6 and 'Copperhaul' in pl['ship'] and pl['rows'] == len(econ0['commodities']), f"its Player tab shows the ship, flight, money, the hold priced at every port, missions and the session")
         pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
         check(not pg.is_visible('#debug'), 'Escape closes it')
         if (lore_file.parent.parent.parent / 'art' / 'brannock' / 'vista-halde.webp').exists():
@@ -103,7 +103,8 @@ with sync_playwright() as p:
     pg.locator('#trade-rows button[data-act="buy"][data-g="%d"]' % ev("__play.good('goods')")).click(modifiers=['Shift'])
     m = ev('__play.probe()')
     check(m['hold'].get('goods') == min(m['holdCap'], start['credits'] // goods), f"shift-click buys all that fits ({m['hold'].get('goods')} t, {m['credits']} cr left)")
-    t = ev("(() => { const P = __play, C = P.CMD, g = P.good('goods'); return { full: P.command(C.buy, g, 1), notHere: P.command(C.buy, P.good('ore'), 1), tooMany: P.command(C.sell, g, 99), sell: P.trade('sell', g), after: P.probe() }; })()")
+    # sell the goods back, fill the hold with water (cheap enough to fill any hold), then the core refuses more
+    t = ev("(() => { const P = __play, C = P.CMD, g = P.good('goods'), w = P.good('water'); const back = P.trade('sell', g), fill = P.trade('buy', w); return { back, fill, full: P.command(C.buy, w, 1), notHere: P.command(C.buy, P.good('ore'), 1), tooMany: P.command(C.sell, g, 99), sell: P.trade('sell', w), after: P.probe() }; })()")
     check(t['full'] == 6 and t['notHere'] == 7 and t['tooMany'] == 8, f"the core refuses a full hold, an untraded good, cargo not aboard ({t['full']}, {t['notHere']}, {t['tooMany']})")
     check(t['sell'] == 0 and t['after']['credits'] == start['credits'] and not t['after']['hold'], 'selling it all back restores the credits (fixed prices)')
     pg.keyboard.press('Escape')
@@ -123,7 +124,7 @@ with sync_playwright() as p:
       const left = [...ids].filter(h => P.sim.resolve(h) >= 0).length;
       return { seen, roles: [...roles], left, phases: P.traffic().map(t => t.phase) }; })()""")
     print('traffic counts every 5 s', tr['seen'], 'roles', tr['roles'])
-    check(min(tr['seen']) >= 2 and max(tr['seen']) <= cap and len(tr['roles']) == 3, f"traffic stays between {min(tr['seen'])} and {max(tr['seen'])} ships, all three roles")
+    check(min(tr['seen']) >= 10 and max(tr['seen']) <= cap and sorted(tr['roles']) == ['arrive', 'depart', 'local', 'loiter'], f"traffic stays between {min(tr['seen'])} and {max(tr['seen'])} ships: local, arriving, departing and loitering")
     check(tr['left'] < len(t0), f"ships land and are forgotten ({len(t0) - tr['left']} of the first {len(t0)} landed in two minutes)")
 
     # the mission board at the start port
@@ -153,13 +154,15 @@ with sync_playwright() as p:
     check(tgt is not None and tgt.get('ship', -1) > 0, 'T targets the nearest ship')
     pg.keyboard.press('Digit2'); pg.keyboard.press('KeyG'); pg.wait_for_timeout(100)
     check(ev('__play.probe().auto') == h[1]['j'], 'G engages the autopilot to the target body')
-    pg.keyboard.press('KeyM'); pg.wait_for_timeout(300)
+    pg.keyboard.press('KeyM')
+    try: pg.wait_for_function("!document.getElementById('map').hidden && document.getElementById('loc').hidden", timeout=5000) # the HUD hides the list next frame
+    except Exception: pass
     check(pg.is_visible('#map') and not pg.is_visible('#loc'), 'M opens the system map')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     check(not pg.is_visible('#map'), 'Escape closes it')
 
-    # flight: the same numbers as the lab's Fly tab (Halcyon fighter, from rest, clear space)
-    a = ev("(() => { const P = __play; P.newGame(4242, " + SPACE + "); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe()]; })()")
+    # flight: the same numbers as the lab's Fly tab (the Prism military class I, the M0 Halcyon fighter, from rest, clear space)
+    a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -8000], ship: 'prism.military:c1' }); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe()]; })()")
     print('after 4 s W   ', json.dumps({k: a[0][k] for k in ('tick', 'v', 'set')}))
     print('after 3 s burn', json.dumps({k: a[1][k] for k in ('tick', 'v', 'set')}))
     check(355 < a[0]['v'] < 365, f"cruise speed {a[0]['v']:.1f} m/s (the lab gives 359.7)")
@@ -174,7 +177,7 @@ with sync_playwright() as p:
     # a port visit: start landed, launch (it hands back control moving fast round the planet), brake, back to the port
     # on the autopilot and land again, wait a day
     v = ev("""(() => { const P = __play, C = P.CMD, out = {}; P.newGame(77);
-      out.buy = P.command(C.buy, P.good('goods'), 3); out.credits0 = P.probe().credits;
+      out.buy = P.command(C.buy, P.good('goods'), 3); out.credits0 = P.probe().credits; out.vmax = P.sim.type.vmax[P.sim.ship.kind[0]];
       out.launch = P.command(C.launch); P.advance(3.4, []); const f = P.probe(); out.flying = f.mode; out.launchV = Math.round(f.v);
       P.advance(3, ['KeyS']);
       P.command(C.autopilot, f.at); let t = 0; while (P.probe().auto >= 0 && t < 120) { P.advance(1, []); t++; }
@@ -200,7 +203,7 @@ with sync_playwright() as p:
     check(d['after']['credits'] == d['before']['credits'] + d['offer']['pay'] and d['after']['hold'] == d['before']['hold'],
           f"and pays {d['offer']['pay']} cr, freeing the hold")
     print('port visit', json.dumps(v))
-    check(v['launch'] == 0 and v['flying'] == 0 and 400 < v['launchV'] < 600, f"launch hands back control at the speed it arrived at ({v['launchV']} m/s)")
+    check(v['launch'] == 0 and v['flying'] == 0 and 1.2 * v['vmax'] < v['launchV'] < 1.6 * v['vmax'], f"launch hands back control at the speed it arrived at ({v['launchV']} m/s, 1.4 times the ship's {v['vmax']:.0f} m/s top speed)")
     check(v['land'] == 0 and v['landed'] == 2 and v['day'] == 2, 'landing takes a day')
     check(v['wait'] == 0 and v['day2'] == 3 and v['fee'] == ev("__play.sim.param('dock_fee')"), f"waiting in port takes a day and a {v['fee']} cr docking fee")
     check(v['buy'] == 0 and v['sell'] == 0 and v['repay'] == 0 and v['hold'] == {'goods': 1}, 'trades and a repayment in the recorded session')

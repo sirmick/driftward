@@ -28,7 +28,7 @@ const CORE_READY = (async () => {
       offer: groups.offer, mission: groups.mission, maxOffers: M.maxOffers, maxMissions: M.maxMissions,
       postBoards: () => X.dw_post_boards(w), // fresh boards at every port, for a new game
       // ambient traffic (core/src/traffic.rs): per-ship state, the ship type per role, and the lanes
-      traffic: groups.traffic, role: groups.role, lane: groups.lane,
+      traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
       startTraffic: () => X.dw_start_traffic(w), // plan the lanes and seed the steady state, for a new game
       trafficCount: () => X.dw_traffic_count(w),
       // tuning: core.param('damper') / core.param('damper', 0.6); names in core/src/world.rs
@@ -80,7 +80,8 @@ const CORE_READY = (async () => {
   // game commands, modes and results, mirrored from core/src/port.rs, market.rs and mission.rs
   const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, teleport: 100 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
-  const TRAFFIC = { launch: 1, cruise: 2, land: 3, roles: ['shuttle', 'hauler', 'liner'] };
+  // traffic.rs: phases; streams (traffic.role); mix row streams; the jump zones, north, east, south, west
+  const TRAFFIC = { launch: 1, cruise: 2, land: 3, streams: ['local', 'arrive', 'depart', 'loiter'], mix: { local: 1, through: 2, loiter: 3 }, maxMix: 48, zones: ['north', 'east', 'south', 'west'] };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3 };
   const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body' };
   const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };

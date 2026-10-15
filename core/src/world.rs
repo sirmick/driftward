@@ -5,7 +5,7 @@ use crate::flight;
 use crate::market::MAX_GOODS;
 use crate::mission::{MAX_MISSIONS, MAX_OFFERS};
 use crate::orbit::Orbit;
-use crate::traffic::N_ROLES;
+use crate::traffic::{MAX_MIX, MAX_PTS, N_JUMP, N_ROLES};
 use crate::player::{self, Player};
 use crate::snapshot;
 use crate::math::wrap;
@@ -102,25 +102,39 @@ soa! {
 }
 
 soa! {
-    /// Traffic state per ship slot (traffic.rs): role (0: not traffic), phase, time left in a launch or landing, the
-    /// route (from and to bodies; start, waypoint and end points; length; which leg), progress along it, cruise speed,
+    /// Traffic state per ship slot (traffic.rs): role (0: not traffic; LOCAL, ARRIVE, DEPART, LOITER), phase, time
+    /// left in a launch or landing, the mix row it was drawn from, the route (from and to: a body, or -1 - z for jump
+    /// zone z; its points in `route`, npts of them; its length; the leg being flown), progress along it, cruise speed,
     /// and age.
     pub struct Traffic {
-        role: u8, phase: u8, leg: u8, from: i16, to: i16,
+        role: u8, phase: u8, leg: u8, npts: u8, mix: u8, from: i16, to: i16,
         timer: f64, s: f64, len: f64, cruise: f64, age: f64,
-        ax: f64, ay: f64, wx: f64, wy: f64, bx: f64, by: f64,
     }
 }
 
 soa! {
-    /// Traffic roles (traffic.rs SHUTTLE, HAULER, LINER, in that order): the ship type each flies (content).
-    pub struct Roles { kind: u16 }
+    /// Each traffic ship's route points, MAX_PTS a slot (slot * MAX_PTS + point): start, waypoints, end.
+    pub struct Route { x: f64, y: f64 }
 }
 
 soa! {
-    /// Traffic lanes, per directed route and role ((from * max_bodies + to) * N_ROLES + role): arrival rate (ships a
-    /// second) and dwell (seconds a ship spends on the route). Planned at a new game (traffic.rs).
+    /// The traffic mix (content: the system file's traffic, written by the page), MAX_MIX rows: stream (MIX_LOCAL,
+    /// MIX_THROUGH, MIX_LOITER; 0 an empty row), the ship type, and a weight (local and through: its share of the
+    /// stream; loiter: ships it keeps in flight round `body`). Loiter rows also carry their planned launch rate and
+    /// dwell (traffic.rs).
+    pub struct Mix { stream: u8, body: i16, kind: u16, weight: f64, rate: f64, dwell: f64 }
+}
+
+soa! {
+    /// Local traffic lanes, per directed route between ports and role ((from * max_bodies + to) * N_ROLES + role):
+    /// launch rate (ships a second) and dwell (seconds a ship spends on the route). Planned at a new game (traffic.rs).
     pub struct Lanes { rate: f64, dwell: f64 }
+}
+
+soa! {
+    /// Through traffic lanes, per jump zone and port, arriving (zone to port) and departing (port to zone):
+    /// ((dir * N_JUMP + zone) * max_bodies + body): rate and dwell, as for Lanes.
+    pub struct JLanes { rate: f64, dwell: f64 }
 }
 
 soa! {
@@ -161,13 +175,19 @@ params! {
     route_day = 20000.0;  "metres of route counted as a day when setting deadlines"
     slack_min = 1.5;      "tightest deadline, as a multiple of route days (pays the most)"
     slack_max = 3.0;      "loosest deadline, as a multiple of route days"
-    traffic_ships = 14.0; "ambient ships in flight at steady state (the Book: about 10 to 20 in M1)"
-    traffic_cap = 24.0;   "most ambient ships in flight at once"
-    share_shuttle = 0.3;  "shuttles' share of the traffic"
-    share_hauler = 0.5;   "haulers' share of the traffic"
-    share_liner = 0.2;    "liners' share of the traffic"
+    traffic_ships = 30.0; "ambient ships in flight at steady state, local and through (loiter adds its own)"
+    traffic_cap = 60.0;   "most ambient ships in flight at once"
+    share_through = 0.45; "through traffic's share of traffic_ships (arriving at and leaving by the jump zones)"
+    share_shuttle = 0.3;  "shuttles' share of the local traffic"
+    share_hauler = 0.5;   "haulers' share of the local traffic"
+    share_liner = 0.2;    "liners' share of the local traffic"
     traffic_cruise = 0.7; "ambient ships cruise at this fraction of their top speed"
     traffic_near = 8000.0; "within this many metres of the player, ambient ships fly full physics; beyond, rails"
+    jump_radius = 45000.0; "distance from the star of the four jump zones (north, east, south, west)"
+    jump_spread = 2500.0; "radius of a jump zone: ships arrive and leave anywhere within it"
+    loiter_orbit = 3.0;   "loitering ships circle their port at this many body radii"
+    loiter_turns = 1.25;  "mean number of turns a loitering ship flies round its port before landing"
+    loiter_cruise = 0.45; "loitering ships fly at this fraction of their top speed"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -193,8 +213,10 @@ pub struct World {
     pub offers: Offers,
     pub missions: Missions,
     pub traffic: Traffic,
-    pub roles: Roles,
+    pub route: Route,
+    pub mix: Mix,
     pub lanes: Lanes,
+    pub jlanes: JLanes,
     pub params: Vec<f64>,
     /// live ship slots are 0..count
     pub count: usize,
@@ -226,8 +248,10 @@ impl World {
             offers: Offers::with_capacity(cfg.max_bodies * MAX_OFFERS),
             missions: Missions::with_capacity(MAX_MISSIONS),
             traffic: Traffic::with_capacity(cfg.max_ships),
-            roles: Roles::with_capacity(N_ROLES),
+            route: Route::with_capacity(cfg.max_ships * MAX_PTS),
+            mix: Mix::with_capacity(MAX_MIX),
             lanes: Lanes::with_capacity(cfg.max_bodies * cfg.max_bodies * N_ROLES),
+            jlanes: JLanes::with_capacity(2 * N_JUMP * cfg.max_bodies),
             params: param_defaults(),
             count: 0,
             n_bodies: 0,
@@ -261,8 +285,10 @@ impl World {
         self.offers.describe("offer", &mut c);
         self.missions.describe("mission", &mut c);
         self.traffic.describe("traffic", &mut c);
-        self.roles.describe("role", &mut c);
+        self.route.describe("route", &mut c);
+        self.mix.describe("mix", &mut c);
         self.lanes.describe("lane", &mut c);
+        self.jlanes.describe("jlane", &mut c);
         c.push(ColumnDesc::of("world", "params", &self.params));
         c
     }
@@ -286,7 +312,7 @@ impl World {
     }
 
     /// Start over: every ship column zeroed, the game row, hold, missions and boards emptied, no live slots, clock at
-    /// tick 0, no traffic. Types, bodies, markets, traffic roles, gas, params and the generator are kept (reseed
+    /// tick 0, no traffic. Types, bodies, markets, the traffic mix, gas, params and the generator are kept (reseed
     /// separately; post boards with `post_boards`, start traffic with `plan_traffic` and `seed_traffic`). Handles from before a clear are invalid.
     pub fn clear(&mut self) {
         self.ships.clear();
@@ -295,7 +321,9 @@ impl World {
         self.offers.clear();
         self.missions.clear();
         self.traffic.clear();
+        self.route.clear();
         self.lanes.clear();
+        self.jlanes.clear();
         self.count = 0;
         self.tick = 0;
         self.player.set = 0.0;

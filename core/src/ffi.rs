@@ -148,7 +148,7 @@ pub unsafe extern "C" fn dw_place_landed(w: *mut World, body: u32) { unsafe { wo
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dw_post_boards(w: *mut World) { unsafe { world(w) }.post_boards() }
 
-/// Start ambient traffic for a new game: plan the lanes from the bodies, markets, populations and role ship types,
+/// Start ambient traffic for a new game: plan the lanes from the bodies, markets, populations and the traffic mix,
 /// then seed the steady state. Call after the player's slot is set up.
 /// # Safety
 /// See `world`.

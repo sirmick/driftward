@@ -5,6 +5,9 @@
 //            out, the art bible and the parts every image prompt shares); one card per port with its body, its
 //            lore and its art, each image showing only its own part of the prompt; then the raw files.
 //   Player   the live state: ship and its stats, flight, money, the hold priced at every port, missions.
+//   Traffic  the traffic mix (local, through, loiter) against what is flying now, by stream and by row.
+//   Ships    every faction line's hulls in every class, drawn behind the tab by the shipyard (src/play/shipyard.js)
+//            with plumes and shields: click a hull for a new seed, shift-click for the one before.
 // tools/gen-content.js records how content was made; the build inlines the records. Everything here is read-only.
 function makeDebug(ctx) {
   const { el, raw, loaded, econ, lore, art, log } = ctx;
@@ -133,7 +136,76 @@ function makeDebug(ctx) {
     return sections(S);
   }
 
-  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }];
+  // ---------- Ships: a grid of cells the shipyard draws hulls behind; the pane is see-through ----------
+  let yard = null;
+  const yardOpts = { throttle: 0.7, shields: true, trueScale: false, hover: null };
+  const cargoOf = (B, z) => Math.round(((z.flight || {}).cargo || 0) * (B.style.flight.cargo == null ? 1 : B.style.flight.cargo));
+  const shipLabel = (B, z, i) => `<b>${e(B.series[i])}</b><small>${e(z.name)} · ${z.length} m · ${cargoOf(B, z)} t</small><small class="seed">seed ${e(yard.seedOf(B.id, z.id))}${yard.picked(B.id, z.id) ? ' · picked' : ''}<span class="st"></span></small>`;
+  function ships() {
+    if (!yard) return '<p class="dbg-note">The shipyard starts with the game.</p>';
+    const C = yard.catalog;
+    return `<div class="dbg-yard"><div class="dbg-yard-bar">`
+      + `<label>Throttle <input type="range" id="yd-thr" min="0" max="1" step="0.05" value="${yardOpts.throttle}"></label>`
+      + `<label><input type="checkbox" id="yd-sh"${yardOpts.shields ? ' checked' : ''}> Shields</label>`
+      + `<label><input type="checkbox" id="yd-ts"${yardOpts.trueScale ? ' checked' : ''}> True scale</label>`
+      + `<button type="button" id="yd-copy">Copy picks</button><button type="button" id="yd-reset">Reset picks</button>`
+      + `<span class="hint">Click a hull for a new seed · shift-click for the one before · picks are kept in this browser and used by the game's ships</span></div>`
+      + `<div class="dbg-yard-grid" style="grid-template-columns: 220px repeat(${C.sizes.length}, minmax(0, 1fr))"><div></div>`
+      + C.sizes.map(z => `<div class="dbg-yard-col"><b>${e(z.name)}</b><small>${z.length} m</small></div>`).join('')
+      + C.brands.map(B => `<div class="dbg-yard-row"><b>${e(B.factionName)}</b><span>${e(B.lineName)}${B.unique ? ' · unnamed' : ''}</span><small>${e(B.blurb)}</small></div>`
+        + C.sizes.map((z, i) => B.classes && !B.classes.includes(z.id) ? '<div></div>' : `<div class="dbg-ship" data-b="${e(B.id)}" data-z="${e(z.id)}" title="${e(B.series[i])}: click for a new seed, shift-click for the one before"><div class="lbl">${shipLabel(B, z, i)}</div></div>`).join('')).join('')
+      + `</div></div>`;
+  }
+  function mountShips(pane) {
+    if (!yard) return;
+    yard.bakeAll();
+    const relabel = el => { const B = yard.catalog.brands.find(x => x.id === el.dataset.b), i = yard.catalog.sizes.findIndex(z => z.id === el.dataset.z); el.querySelector('.lbl').innerHTML = shipLabel(B, yard.catalog.sizes[i], i); };
+    pane.querySelectorAll('.dbg-ship').forEach(el => {
+      el.onclick = ev => { if (ev.shiftKey) yard.back(el.dataset.b, el.dataset.z); else yard.reroll(el.dataset.b, el.dataset.z); pane.querySelectorAll('.dbg-ship').forEach(relabel); }; // a shared hull's other line changes too
+      el.onmouseenter = () => { yardOpts.hover = el; }; el.onmouseleave = () => { if (yardOpts.hover === el) yardOpts.hover = null; };
+    });
+    pane.querySelector('#yd-thr').oninput = ev => { yardOpts.throttle = +ev.target.value; };
+    pane.querySelector('#yd-sh').onchange = ev => { yardOpts.shields = ev.target.checked; };
+    pane.querySelector('#yd-ts').onchange = ev => { yardOpts.trueScale = ev.target.checked; };
+    pane.querySelector('#yd-copy').onclick = ev => {
+      const txt = JSON.stringify(yard.exportPicks(), null, 1);
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { ev.target.textContent = 'Copied'; }, () => { window.prompt('Picks (a line\'s seeds, for the catalog):', txt); });
+      setTimeout(() => { ev.target.textContent = 'Copy picks'; }, 1500);
+    };
+    pane.querySelector('#yd-reset').onclick = () => { if (confirm('Forget every picked seed in this browser?')) { yard.reset(); pane.querySelectorAll('.dbg-ship').forEach(relabel); } };
+  }
+  // the cells on show and their options, for the game's frame to draw (null unless the Ships tab is up)
+  function yardView() {
+    if (el.hidden || tab !== 'ships' || !yard) return null;
+    const cells = [...el.querySelectorAll('.dbg-ship')].map(c => ({ el: c, b: c.dataset.b, z: c.dataset.z }));
+    for (const c of cells) { const st = c.el.querySelector('.st'), s = yard.status(c.b, c.z); if (st) st.textContent = s === 'ready' ? '' : ' · ' + s; }
+    const bar = el.querySelector('.dbg-yard-bar');
+    yardOpts.clipTop = bar ? bar.getBoundingClientRect().bottom : 0;
+    return { cells, opts: yardOpts };
+  }
+
+  // ---------- Traffic: live, rebuilt each time the tab shows ----------
+  function trafficTab() {
+    const d = live && live();
+    if (!d) return '<p class="dbg-note">The game has not started yet.</p>';
+    const T = d.traffic, pct = x => `${(x * 100).toFixed(0)}%`, S = [];
+    const [local, arrive, depart, loiter] = T.byStream, flying = local + arrive + depart + loiter;
+    S.push({ id: 'tr-now', title: 'Now', body: kv([
+      ['in flight', `<b>${flying}</b> of a ${T.cap} cap <small>(target ${T.ships} local and through, plus ${T.loiter.toFixed(1)} loitering)</small>`],
+      ['local', `${local} <small>port to port (target ${(T.ships * (1 - T.through)).toFixed(1)})</small>`],
+      ['through', `${arrive} arriving, ${depart} leaving <small>(target ${(T.ships * T.through).toFixed(1)}; jump zones ${(T.jump / 1000).toFixed(0)} km out, north, east, south and west)</small>`],
+      ['loitering', `${loiter} <small>(target ${T.loiter.toFixed(1)})</small>`]]) });
+    for (const st of ['local', 'through', 'loiter']) {
+      const rows = T.rows.filter(r => r.stream === st);
+      S.push({ id: 'tr-' + st, title: { local: 'Local mix', through: 'Through mix', loiter: 'Loiter' }[st], body: rows.length
+        ? `<table class="dbg-grid"><thead><tr>${st === 'loiter' ? '<th>Port</th>' : ''}<th>Ship</th><th>Line</th><th>Class</th><th class="n">${st === 'loiter' ? 'Keeps up' : 'Share'}</th><th class="n">Flying</th></tr></thead><tbody>`
+          + rows.map(r => `<tr>${st === 'loiter' ? `<td>${e(r.at)}</td>` : ''}<td><b>${e(r.name)}</b></td><td><code>${e(r.line)}</code></td><td>${e(r.cls)}</td><td class="n">${st === 'loiter' ? r.share.toFixed(2) : pct(r.share)}</td><td class="n">${r.live || ''}</td></tr>`).join('') + '</tbody></table>'
+        : '<p class="dbg-note">None in this system.</p>' });
+    }
+    return sections(S);
+  }
+
+  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }];
   let tab = TABS[0].id;
   const cache = new Map();
   function show(id) {
@@ -142,6 +214,8 @@ function makeDebug(ctx) {
     const T = TABS.find(t => t.id === id), pane = el.querySelector('.dbg-pane');
     if (!T.fixed || !cache.has(id)) cache.set(id, T.render()); // content is static: rendered once; live tabs every time
     pane.innerHTML = cache.get(id);
+    document.body.classList.toggle('dbg-clear', !!T.clear); // see-through: the game's canvas draws behind this tab, the rest of the page hides
+    if (T.mount) T.mount(pane);
     // section links scroll the pane, not the page's hash
     pane.querySelectorAll('.dbg-nav a').forEach(a => { a.onclick = ev => { ev.preventDefault(); pane.querySelector(a.getAttribute('href')).scrollIntoView({ block: 'start' }); }; });
   }
@@ -149,7 +223,9 @@ function makeDebug(ctx) {
   return {
     isOpen: () => !el.hidden,
     open() { show(tab); el.hidden = false; },
-    close() { el.hidden = true; },
-    setLive(fn) { live = fn; } // the Player tab's source, bound once the core has loaded
+    close() { el.hidden = true; document.body.classList.remove('dbg-clear'); },
+    setLive(fn) { live = fn; }, // the Player tab's source, bound once the core has loaded
+    setYard(y) { yard = y; },
+    yardView
   };
 }
