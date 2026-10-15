@@ -89,8 +89,9 @@ const names = list => { const n = [...new Set(list.map(colourName))]; return n.l
 function bodyLooks(b) {
   const L = b.look || {}, [c1, c2, c3] = (L.palette || []).map(colourName), atm = L.atmosphere ? colourName(L.atmosphere) : null;
   if (b.kind === 'station' || !c1) return '';
-  // what the flight view adds round it: storms flickering with lightning, a glittering haze of orbital debris
-  const storms = L.lightning >= 0.5 ? ', its night side flickering with lightning' : L.lightning > 0 ? ', with lightning in its storms' : '';
+  // what the flight view adds round it: storms flickering with lightning (in terran clouds and giants' belts only: the
+  // planet shader draws none on rock), a glittering haze of orbital debris
+  const storms = L.surface === 'rock' ? '' : L.lightning >= 0.5 ? ', its night side flickering with lightning' : L.lightning > 0 ? ', with lightning in its storms' : '';
   const junk = (L.debris || 0) * (L.surface === 'rock' ? 3 : 1) >= 2 ? '; a glittering haze of orbital debris rings it' : '';
   if (L.surface === 'terran') return `a water world: ${c1} seas, ${c2} lowlands and ${c3} highlands with snow on the peaks, under drifting white cloud; its sky is ${atm || 'blue'}${L.cityLights ? ', and its settlements show warm lights at dusk' : ''}${storms}${junk}`;
   if (L.surface === 'giant') return `a gas giant banded ${c1} and ${c2}, streaked with ${c3} storms${storms}${junk}`;

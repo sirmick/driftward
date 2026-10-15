@@ -289,7 +289,7 @@ CORE_READY.then(CORE => {
     for (const k of ['stream', 'body', 'kind', 'weight', 'rate', 'dwell']) M[k].fill(0);
     const add = (stream, body, e, total) => {
       const cls = Object.entries(e.classes || {}).filter(([c, w]) => w > 0 && kindOf(e.line, c) >= 0), sum = cls.reduce((s, [, w]) => s + w, 0);
-      for (const [c, w] of cls) { if (m >= TRAFFIC.maxMix) { console.warn('traffic mix: too many rows'); return; } M.stream[m] = stream; M.body[m] = body; M.kind[m] = kindOf(e.line, c); M.weight[m] = total * w / sum; m++; }
+      for (const [c, w] of cls) { if (m >= sim.maxMix) { console.warn('traffic mix: too many rows'); return; } M.stream[m] = stream; M.body[m] = body; M.kind[m] = kindOf(e.line, c); M.weight[m] = total * w / sum; m++; }
     };
     (TCFG.local || []).forEach(e => add(TRAFFIC.mix.local, -1, e, e.share));
     (TCFG.through || []).forEach(e => add(TRAFFIC.mix.through, -1, e, e.share));
@@ -638,9 +638,9 @@ CORE_READY.then(CORE => {
   function trafficInfo() {
     const M = sim.mix, rows = [], live = new Map(), byStream = [0, 0, 0, 0];
     for (let i = 0; i < sim.count(); i++) if (TR.role[i]) { byStream[TR.role[i] - 1]++; live.set(TR.mix[i], (live.get(TR.mix[i]) || 0) + 1); }
-    const total = s => { let t = 0; for (let m = 0; m < TRAFFIC.maxMix; m++) if (M.stream[m] === s) t += M.weight[m]; return t; };
+    const total = s => { let t = 0; for (let m = 0; m < sim.maxMix; m++) if (M.stream[m] === s) t += M.weight[m]; return t; };
     const tot = [0, total(1), total(2), total(3)];
-    for (let m = 0; m < TRAFFIC.maxMix; m++) {
+    for (let m = 0; m < sim.maxMix; m++) {
       if (!M.stream[m]) continue;
       const T = types[M.kind[m]];
       rows.push({ m, stream: ['', 'local', 'through', 'loiter'][M.stream[m]], at: M.body[m] >= 0 ? portName(M.body[m]) : '', line: T.brand.id, name: `${T.brand.factionName.replace(/^The /, '')} ${T.name}`, cls: catalog.sizes[T.zi].name,
@@ -728,7 +728,7 @@ CORE_READY.then(CORE => {
   const order = types.map((_, k) => k).sort((a, b) => types[b].zi - types[a].zi);
   let scale = 1;
   const sheaths = []; // [slot, sequence look] to draw this frame (reused)
-  const LAUNCH_S = 3.2, DESCENT_S = 3.2; // core/src/port.rs
+  const LAUNCH_S = sim.launchS, DESCENT_S = sim.descentS;
   const TR = sim.traffic;
   // a landing or launch sequence's look at d (0 in flight .. 1 down) over body B: hull scale, plasma heat, fade-out
   // into the atmosphere's tint

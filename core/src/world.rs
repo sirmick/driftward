@@ -7,6 +7,7 @@ use crate::mission::{MAX_MISSIONS, MAX_OFFERS};
 use crate::orbit::Orbit;
 use crate::traffic::{MAX_MIX, MAX_PTS, N_JUMP, N_ROLES};
 use crate::player::{self, Player};
+use crate::port::{DESCENT_S, LAUNCH_S};
 use crate::snapshot;
 use crate::math::{sin_cos, wrap, PI};
 use crate::rng::Rng;
@@ -305,8 +306,8 @@ impl World {
         )).collect();
         let names: Vec<String> = PARAM_NAMES.iter().map(|n| format!("\"{n}\"")).collect();
         format!(
-            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"envN":{},"envW":{},"params":[{}],"columns":[{}]}}"#,
-            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, MAX_OFFERS, MAX_MISSIONS, self.cfg.env_n, self.cfg.env_w,
+            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"maxMix":{},"launchS":{},"descentS":{},"envN":{},"envW":{},"params":[{}],"columns":[{}]}}"#,
+            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, MAX_OFFERS, MAX_MISSIONS, MAX_MIX, LAUNCH_S, DESCENT_S, self.cfg.env_n, self.cfg.env_w,
             names.join(","), cols.join(",")
         )
     }

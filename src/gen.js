@@ -410,7 +410,7 @@ function assemble(brand, size, seed, sizeIdx) {
   let bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9;
   for (const p of parts) {
     const m = partMetrics(p); p.inR = Math.max(m.inR, 1e-3); p.hl = m.hl; p.rad = m.rad;
-    const bw = (st.bevelW || 0.3) * p.inR; p.bw = Math.max(bw, 0.02);
+    const bw = (st.bevelW ?? 0.3) * p.inR; p.bw = Math.max(bw, 0.02);
     if (OUTFIT_ROLES.has(p.role)) continue;
     bx0 = Math.min(bx0, p.x - p.rad); bx1 = Math.max(bx1, p.x + p.rad);
     by0 = Math.min(by0, p.y - p.rad); by1 = Math.max(by1, p.y + p.rad);
@@ -459,7 +459,7 @@ function bake(ship, brand, size) {
     }
   }
   const ccx = (ex0 + ex1) / 2, ccy = (ey0 + ey1) / 2;
-  const shieldS = (ship.noShield ? 0.002 : ((st.shield && st.shield.standoff) || 0.035)) * L, Dmax = shieldS * 2.2;
+  const shieldS = (ship.noShield ? 0.002 : ((st.shield && st.shield.standoff) ?? 0.035)) * L, Dmax = shieldS * 2.2;
   const extent = Math.max(ex1 - ex0, ey1 - ey0) * 1.08 + k * 2 + shieldS * 2.8;
   const px = extent / res;
   // recenter parts so the ship sits at texture center
@@ -731,7 +731,7 @@ function bake(ship, brand, size) {
   }
 
   // normals from height (Sobel), exaggerated per brand
-  const ex = st.heightScale || 1;
+  const ex = st.heightScale ?? 1;
   const albedo = new Uint8ClampedArray(n * 4), nrm = new Uint8ClampedArray(n * 4), emis = new Uint8ClampedArray(n * 4), aux = new Uint8ClampedArray(n * 4);
   const he = (ix, iy) => { ix = clamp(ix, 0, res - 1); iy = clamp(iy, 0, res - 1); const o = iy * res + ix; return hBase + (Hm[o] - hBase) * A[o]; };
   const hRange = Math.max(hTop - hBase, 1e-3);
@@ -785,7 +785,7 @@ function finalizeParts(parts, brand, seedStr, L, opts) {
     if (p.det.windows && !(D.windows > 0)) p.det.windows = false;
     p.seedI = hashStr(seedStr + ':' + p.id) & 0xffff;
     const m = partMetrics(p); p.inR = Math.max(m.inR, 1e-3); p.hl = m.hl; p.rad = m.rad;
-    p.bw = Math.max((st.bevelW || 0.3) * p.inR, 0.02);
+    p.bw = Math.max((st.bevelW ?? 0.3) * p.inR, 0.02);
     p.ca = Math.cos(p.ang * D2R); p.sa = Math.sin(p.ang * D2R);
   }
 }

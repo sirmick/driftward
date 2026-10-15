@@ -9,6 +9,21 @@ let bad = 0;
 for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.endsWith('.json'))) {
   const { system, bodies, notes } = loadSystem(JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', f), 'utf8')), schema);
   const ports = bodies.filter(b => b.port).map(b => b.port.name);
+  // what the clamp can't see (loadSystem notes a bad parent or start): ids unique, every orbit clear of its parent and
+  // inside the jump zones (traffic's arrivals start there), services listed once
+  if (system) {
+    const ids = new Set(), jump = (system.traffic || {}).jumpRadius ?? schema.properties.traffic.properties.jumpRadius.default;
+    for (const b of system.bodies) {
+      const at = `$.bodies[${b.id}]`, P = bodies.find(o => o.id === (b.parent || 'star'));
+      if (ids.has(b.id) || b.id === 'star') notes.push({ path: at, msg: `id ${b.id} used twice (or "star", the star's)`, fatal: true });
+      ids.add(b.id);
+      if (P && b.orbit.radius < P.r + b.radius) notes.push({ path: `${at}.orbit.radius`, msg: `${b.orbit.radius} m puts it inside ${P.id} (radius ${P.r} m, its own ${b.radius} m)`, fatal: true });
+      const B = bodies.find(o => o.id === b.id);
+      if (B && Math.hypot(B.x, B.y) + b.radius > jump) notes.push({ path: at, msg: `reaches past the jump radius (${jump} m)`, fatal: true });
+      const sv = (b.port && b.port.services) || [];
+      if (new Set(sv).size !== sv.length) notes.push({ path: `${at}.port.services`, msg: 'a service listed twice', fatal: false });
+    }
+  }
   if (!system || notes.length) { bad++; console.log(`${f}: ${notes.length} problem(s)`); notes.forEach(n => console.log(`  ${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`)); }
   else console.log(`${f}: valid; ${bodies.length} bodies, ${ports.length} ports (${ports.join(', ')})`);
 }
