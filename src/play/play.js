@@ -34,7 +34,7 @@ const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet:
 // planets and moons, drawn by the planet shader
 const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
   const L = b.look || {}, pal = L.palette || ['#5e5953', '#8a8178', '#c9c0b4'];
-  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere || '#9fb4c8')), seed: L.seed || 1, surface: SURFACE[L.surface] || 0, city: L.cityLights || 0, air: L.air != null ? L.air : 0.6 });
+  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere || '#9fb4c8')), seed: L.seed || 1, surface: SURFACE[L.surface] || 0, city: L.cityLights || 0, air: L.air != null ? L.air : 0.6, storm: L.lightning || 0 });
 });
 // light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
 function sunFrom(x, y) {
@@ -117,7 +117,8 @@ const FP = {
   plume: compile(FLY_PLUME_VS, derive(PLUME_FS, DERIVE.plume), { iN: 1, iP: 2, iB: 3 }),
   planet: compile(PLANET_VS, PLANET_FS),
   star: compile(STARBODY_VS, STARBODY_FS),
-  sheath: compile(SHEATH_VS, SHEATH_FS)
+  sheath: compile(SHEATH_VS, SHEATH_FS),
+  orbiter: compile(ORBITER_VS, ORBITER_FS, { iA: 1, iB: 2 })
 };
 function instVAO(sizes) {
   const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
@@ -129,7 +130,7 @@ function instVAO(sizes) {
   gl.bindVertexArray(null);
   return { vao, buf, sizes, per, stride };
 }
-const VS = { ship: instVAO([4, 2]), plume: instVAO([4, 4, 2]) };
+const VS = { ship: instVAO([4, 2]), plume: instVAO([4, 4, 2]), orbiter: instVAO([4, 4]), ghost: instVAO([4, 4]) };
 function upload(V, data, count) { gl.bindBuffer(gl.ARRAY_BUFFER, V.buf); gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, Math.max(1, count) * V.per), gl.DYNAMIC_DRAW); }
 function pointAt(V, first) {
   gl.bindBuffer(gl.ARRAY_BUFFER, V.buf);
@@ -262,6 +263,15 @@ CORE_READY.then(CORE => {
     const bi = Math.max(0, catalog.brands.findIndex(b => b.id === C.brand));
     CORE.TRAFFIC.roles.forEach((r, k) => { sim.role.kind[k] = bi * nSizes + Math.max(0, catalog.sizes.findIndex(z => z.id === C.roles[r])); }); }
   sim.setBodies(BODIES.length);
+  // orbiting debris and small traffic (core/src/orbit.rs, looks only): rocky worlds wear the most debris, the busier
+  // a port the more traffic; look.debris scales a world's share
+  { const TRAFFIC_N = { outpost: 120, colony: 350, town: 900, world: 2000 }, DEBRIS_N = { rock: 9000, terran: 2500, giant: 3000 };
+    BODIES.forEach((b, j) => {
+      if (b.kind !== 'planet' && b.kind !== 'moon') return;
+      const L = b.look || {}, k = Math.min(1.6, Math.max(0.4, b.r / 1200));
+      sim.orbitAdd(j, 0, Math.round((DEBRIS_N[L.surface] || 1000) * k * (L.debris != null ? L.debris : 1)), 1009 * j + 17);
+      if (b.port) sim.orbitAdd(j, 1, TRAFFIC_N[b.port.population] || 160, 2027 * j + 5);
+    }); }
   // Market prices: a port with a market trades what its role lists, at base price times the tier. Written at each new
   // game; a loaded save brings its own (prices are world state).
   if (GOODS.length > sim.maxGoods) console.error(`economy.json has ${GOODS.length} commodities; the core holds ${sim.maxGoods}`);
@@ -642,6 +652,8 @@ CORE_READY.then(CORE => {
   plCol.set(lin([0.72, 0.78, 0.88]), RCS * 3); plCore.set([1, 1, 1], RCS * 3); plP.set([0.5, 0, 0.25, 0], RCS * 4); plSpread[RCS] = 0.9; plBurn.set(plCol.subarray(RCS * 3, RCS * 3 + 3), RCS * 3);
   const sunCol = lin(star.col), starCol = lin(star.col);
   const stInst = new Float32Array(6);
+  // lens ghosts per flare: [distance along the flare-to-centre line (1 is the far side), size in px at 900 px tall, tint]
+  const GHOSTS = [[-0.35, 14, 0.8], [0.4, 34, 0.2], [0.75, 18, 0.9], [1.25, 60, 0.35]], ghostInst = new Float32Array(2 * 4 * 8);
   // draw order: largest classes first, so small ships sit on top
   const order = types.map((_, k) => k).sort((a, b) => types[b].zi - types[a].zi);
   let scale = 1;
@@ -802,8 +814,35 @@ CORE_READY.then(CORE => {
         gl.uniform3fv(u.uSun, sunFrom(p.x, p.y));
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
         gl.uniform3fv(u.uC1, p.L1); gl.uniform3fv(u.uC2, p.L2); gl.uniform3fv(u.uC3, p.L3); gl.uniform3fv(u.uAtm, p.LA);
-        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city); gl.uniform1f(u.uAir, p.air);
+        gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city); gl.uniform1f(u.uAir, p.air); gl.uniform1f(u.uStorm, p.storm);
         draw();
+      } }
+    // orbiters: the core places them and keeps only what can be seen; then lens ghosts for the brightest flares, along
+    // the line from the flare through the middle of the screen
+    { const n = sim.orbitEval((sim.tick() + sim.alpha()) * sim.DT, STAR.x, STAR.y, cx, cy, halfW, halfH, 0.06 / scale);
+      if (n) {
+        gl.blendFunc(gl.ONE, gl.ONE);
+        setView(FP.orbiter, RW, RH, cx, cy);
+        const u = FP.orbiter.u, O = sim.orbitOut, px = 1 / scale;
+        gl.uniform1f(u.uTime, t); gl.uniform3fv(u.uSunCol, sunCol);
+        gl.bindVertexArray(VS.orbiter.vao); upload(VS.orbiter, O, n);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
+        let ng = 0, best = [-1, -1];
+        for (let k = 0; k < n; k++) {
+          const g = O[k * 8 + 5];
+          if (g < 0.8 || Math.abs(O[k * 8] - cx) > halfW || Math.abs(O[k * 8 + 1] - cy) > halfH) continue;
+          if (best[0] < 0 || g > O[best[0] * 9 + 5]) { best[1] = best[0]; best[0] = k; } else if (best[1] < 0 || g > O[best[1] * 9 + 5]) best[1] = k;
+        }
+        for (const k of best) {
+          if (k < 0) continue;
+          const fx = O[k * 8], fy = O[k * 8 + 1], g = Math.min(O[k * 8 + 5], 6) / 6;
+          GHOSTS.forEach(([f, sz, tint]) => {
+            ghostInst.set([cx + (cx - fx) * f, cy + (cy - fy) * f, sz * px * RH / 900, 2, g, 0, tint, 0], ng * 8); ng++;
+          });
+        }
+        if (ng) { gl.bindVertexArray(VS.ghost.vao); upload(VS.ghost, ghostInst, ng); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, ng); }
+        gl.bindVertexArray(null);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       } }
     // stations: one draw each, with the ship shader and their own bake
     const shipUniforms = (u, sun) => {

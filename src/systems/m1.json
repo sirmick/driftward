@@ -67,7 +67,8 @@
         "atmosphere": "#6fb3ff",
         "air": 1,
         "seed": 1.3,
-        "cityLights": 1
+        "cityLights": 1,
+        "lightning": 0.3
       },
       "port": {
         "name": "Halde Landing",
@@ -102,7 +103,8 @@
         ],
         "atmosphere": "#ffc98a",
         "air": 1.2,
-        "seed": 4.1
+        "seed": 4.1,
+        "lightning": 1
       }
     },
     {

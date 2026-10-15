@@ -194,3 +194,33 @@ pub extern "C" fn dw_scenario_world(seed: u32) -> *mut World { Box::into_raw(cra
 /// Run the shared scripted scenario and return its final state hash (compare with the native build).
 #[unsafe(no_mangle)]
 pub extern "C" fn dw_scenario(seed: u32, ticks: u32) -> u64 { crate::scenario::run(seed as u64, ticks as u64) }
+
+/// Drop every orbiter swarm (orbit.rs).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_orbit_clear(w: *mut World) { unsafe { world(w) }.orbit.clear() }
+
+/// Add a swarm of `count` orbiters (kind 0 debris, 1 traffic) round a body; returns how many fit.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_orbit_add(w: *mut World, body: u32, kind: u32, count: u32, seed: u32) -> u32 {
+    let w = unsafe { world(w) };
+    let b = body as usize;
+    if b >= w.n_bodies { return 0; }
+    let r = w.bodies.r[b];
+    w.orbit.add(b, r, kind as u8, count as usize, seed) as u32
+}
+
+/// Place the orbiters near the view at time `t` and write the visible ones to the "orbit/out" column; returns the count.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn dw_orbit_eval(w: *mut World, t: f64, sx: f64, sy: f64, cx: f64, cy: f64, hw: f64, hh: f64, min_m: f64) -> u32 {
+    let w = unsafe { world(w) };
+    let n = w.n_bodies;
+    let (bx, by, br) = (&w.bodies.x[..n], &w.bodies.y[..n], &w.bodies.r[..n]);
+    w.orbit.eval(bx, by, br, t, sx, sy, cx, cy, hw, hh, min_m) as u32
+}

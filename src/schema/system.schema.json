@@ -197,6 +197,20 @@
                 "maximum": 2,
                 "default": 0.6
               },
+              "lightning": {
+                "description": "How stormy: 0 none, 1 a world full of lightning (in its clouds, or a giant's belts).",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0
+              },
+              "debris": {
+                "description": "Scales the orbiting debris the world wears (rocky worlds wear the most).",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 3,
+                "default": 1
+              },
               "seed": {
                 "type": "number",
                 "minimum": 0,

@@ -4,6 +4,7 @@ use crate::cols::{params, soa, ColumnDesc};
 use crate::flight;
 use crate::market::MAX_GOODS;
 use crate::mission::{MAX_MISSIONS, MAX_OFFERS};
+use crate::orbit::Orbit;
 use crate::traffic::N_ROLES;
 use crate::player::{self, Player};
 use crate::snapshot;
@@ -206,6 +207,8 @@ pub struct World {
     pub(crate) cols: Vec<ColumnDesc>,
     /// snapshot buffer, sized for this config at creation (see snapshot.rs)
     pub(crate) snap: Vec<u8>,
+    /// orbiting debris and traffic: looks only, outside the snapshot and the hash (orbit.rs)
+    pub orbit: Orbit,
     manifest: String,
 }
 
@@ -234,6 +237,7 @@ impl World {
             acc: 0.0,
             cols: Vec::new(),
             snap: Vec::new(),
+            orbit: Orbit::new(),
             manifest: String::new(),
         });
         w.cols = w.columns();
@@ -267,8 +271,10 @@ impl World {
     pub fn manifest(&self) -> &str { &self.manifest }
 
     fn build_manifest(&self) -> String {
-        let snap = ColumnDesc::of("world", "snapshot", &self.snap);
-        let cols: Vec<String> = self.cols.iter().chain(std::iter::once(&snap)).map(|c| format!(
+        // the snapshot buffer and the orbiters' output are exposed too, but are not state
+        let mut extra = vec![ColumnDesc::of("world", "snapshot", &self.snap)];
+        self.orbit.describe(&mut extra);
+        let cols: Vec<String> = self.cols.iter().chain(extra.iter()).map(|c| format!(
             r#"{{"group":"{}","name":"{}","kind":"{}","ptr":{},"len":{}}}"#, c.group, c.name, c.kind, c.ptr, c.len
         )).collect();
         let names: Vec<String> = PARAM_NAMES.iter().map(|n| format!("\"{n}\"")).collect();

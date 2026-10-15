@@ -65,6 +65,13 @@ const CORE_READY = (async () => {
       load: bytes => { if (bytes.length !== groups.world.snapshot.length) return 4; groups.world.snapshot.set(bytes); return X.dw_load(w); },
       hash: () => BigInt.asUintN(64, X.dw_hash(w)).toString(16).padStart(16, '0'),
       // views die if WASM memory ever grows; nothing allocates after creation, so this should never fire
+      // orbiting debris and traffic (core/src/orbit.rs): looks only, outside the snapshot. orbitAdd(body, kind 0 debris
+      // or 1 traffic, count, seed); orbitEval(t, star x, y, view centre x, y, half width, half height, smallest size m)
+      // fills orbitOut with that many visible instances, 8 floats each (see orbit.rs OUT_STRIDE)
+      orbitOut: groups.orbit.out,
+      orbitClear: () => X.dw_orbit_clear(w),
+      orbitAdd: (body, kind, count, seed) => X.dw_orbit_add(w, body, kind, count, seed >>> 0),
+      orbitEval: (t, sx, sy, cx, cy, hw, hh, minM) => X.dw_orbit_eval(w, t, sx, sy, cx, cy, hw, hh, minM),
       checkViews: () => { if (mem.buffer !== buffer) throw new Error('sim core memory grew; column views are stale'); },
       free: () => X.dw_world_free(w)
     };

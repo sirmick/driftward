@@ -350,11 +350,12 @@ void main(){ vQ=aPos*1.3; gl_Position=clipOf(uC + aPos*uR*1.3); }`;
 // side sits under its planet's shadow.
 // Kinds: 0 terran (oceans with shelves, surf and wave glint; biomes by latitude, height and moisture; snow and
 // rock by slope; clouds in climate belts with cyclones, lit and shadowing; city lights resolving into points as
-// you close in, when uCity > 0), 1 banded giant (irregular belts, shear eddies, a great storm and white ovals),
+// you close in, when uCity > 0; lightning in the clouds, uStorm of it), 1 banded giant (irregular belts, shear
+// eddies, a great storm and white ovals, lightning in the belts),
 // 2 cratered rock (craters at five scales as the zoom allows, maria). uC1..3 are the palette.
 const PLANET_FS = `#version 300 es
 precision highp float; in vec2 vQ; out vec4 o;
-uniform vec3 uSun, uSunCol, uAmb, uC1, uC2, uC3, uAtm; uniform float uSeed, uTime, uPx, uCity, uAir; uniform int uKind;
+uniform vec3 uSun, uSunCol, uAmb, uC1, uC2, uC3, uAtm; uniform float uSeed, uTime, uPx, uCity, uAir, uStorm; uniform int uKind;
 uvec3 pcg3(uvec3 v){ v = v*1664525u + 1013904223u; v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; v ^= v >> 16u;
   v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; return v; }
 float h3(ivec3 i){ return float(pcg3(uvec3(i)).x) * (1./4294967295.); }
@@ -443,6 +444,20 @@ float lights(vec3 p, float F, float D){
   float sg = max(.07, uPx*F*.7), d = length(q - ctr);
   vec3 e = min(fract(q), 1. - fract(q)); float edge = smoothstep(0., .08, min(e.x, min(e.y, e.z))); // never clipped square
   return (.35 + .65*float(hv.z & 255u)/255.)*exp(-d*d/(sg*sg))*(.07*.07)/(sg*sg)*12.*edge;
+}
+// lightning: storm cells of frequency F, a fraction prob of them live; each flashes every few seconds, three or four
+// strokes in a quarter second, as a glow in the cloud round it and the bolt's bright core
+float lightning(vec3 p, float F, float prob){
+  vec3 q = p*F, c = floor(q); uvec3 hv = pcg3(uvec3(ivec3(c)) + 211u);
+  if (float(hv.x & 1023u)/1023. > prob) return 0.;
+  float h1 = float(hv.y & 1023u)/1023., h2 = float((hv.y >> 10) & 1023u)/1023.;
+  float ph = fract(uTime*(.15 + .25*h1) + h2);
+  if (ph > .06) return 0.;
+  float strokes = step(.4, fract(ph*60. + h1*3.))*(1. - ph*8.);
+  vec3 ctr = c + .3 + .4*vec3(hv.z & 1023u, (hv.z >> 10) & 1023u, (hv.z >> 20) & 1023u)/1023.;
+  float d = length(q - ctr);
+  vec3 e = min(fract(q), 1. - fract(q));
+  return strokes*(exp(-d*d*18.)*1.2 + exp(-d*d*500.)*5.)*smoothstep(0., .1, min(e.x, min(e.y, e.z)));
 }
 // tilt the sphere normal R by a height gradient g (both in planet space): relief
 vec3 bump(vec3 R, vec3 g, float k){ return normalize(R - k*(g - dot(g, R)*R)); }
@@ -544,6 +559,9 @@ void main(){
     alb = mix(alb, uC2*.75, smoothstep(.72, .95, abs(R.y))*.55);      // duskier poles
     vec3 gv = R - gsC; float gs = exp(-(dot(gv, gv) + 3.*gv.y*gv.y)/.004);
     alb = mix(alb, mix(uC1, vec3(.78, .34, .2), .55), gs*(.7 + .3*d.x));   // the great storm's reddened eye
+    if (uStorm > 0.) em = vec3(.75, .82, 1.)*(lightning(P*vec3(1., 2., 1.) + S, 12., uStorm*.45)
+                        + lightning(P*vec3(1., 2., 1.) + S*1.4, 40., uStorm*.35)*near(40.)*.7)*(.4 + .6*shear)
+                        *clamp(.5 + pt*3. + d.x*2., .1, 2.)*(.12 + .88*(1. - smoothstep(-.1, .15, mu)))*2.5;
     Np = bump(R, d.yzw*.5 + w.yzw, .0035);
     wrap = .2;
   } else if (uKind == 2) {
@@ -602,7 +620,7 @@ void main(){
     // waves near the pixel scale: the glint breaks into sparkle
     float fw = .3/uPx;
     vec4 wv = vnd(R*fw + vec3(0., uTime*.6, 0.)) + .5*vnd(R*fw*2.03 + vec3(uTime*.4, 0., 3.));
-    Ww = bump(R, wv.yzw/fw, .25);
+    Ww = bump(R, wv.yzw/fw, .15);
     // where people live: temperate lowlands near the coast
     float town = 0.;
     if (uCity > 0.) {
@@ -635,6 +653,9 @@ void main(){
     float clS = smoothstep(th, th + ramp, fbmd((Rc + Lp*.012)*vec3(1., 1.7, 1.) + S*2.3, 3., .6, min(cOct, 6.)).x);
     alb *= 1. - .55*clS*(1. - cl);
     em *= 1. - .85*cl;
+    if (uStorm > 0.) em += vec3(.75, .82, 1.)*(lightning(Rc + S, 18., uStorm*.5)*(.25 + .75*cl)
+                         + lightning(Rc + S*1.3, 55., uStorm*.4)*near(55.)*.6*cl)
+                         *clamp(.5 + cp*3., .1, 2.)*(.12 + .88*(1. - smoothstep(-.1, .15, mu)))*2.5;
     Nc = bump(R, cn2.yzw, .05); cloudPt = cp;
   }
   // back to view space, then light it: sunlight through the air (reddened, then gone, across the terminator),
@@ -651,7 +672,7 @@ void main(){
     float F = .02 + .98*pow(1. - z, 5.);
     col = mix(col, uAtm*E*.12*smoothstep(-.1, .3, mu), F*water*min(uAir, 1.));
     float nh = max(dot(Wv, H), 0.), nh0 = max(dot(N, H), 0.);
-    col += E*Ts*water*(pow(nh, 500.)*3. + pow(nh0, 60.)*.05)*(1. - cl);
+    col += E*Ts*water*(pow(nh, 500.)*.8 + pow(nh0, 80.)*.025)*(1. - cl);
   }
   if (cl > 0.) {
     // clouds sit higher, so they keep the sun a little past the ground's terminator
@@ -661,6 +682,59 @@ void main(){
   }
   col += em;
   o = vec4((col*Tv + ins)*aa + insOut*(1. - aa), aa);
+}`;
+// Orbiters (core/src/orbit.rs): one instanced sprite each, drawn additively over the planets. iA: x, y (world m),
+// size (m), kind (0 debris, 1 traffic, 2 a lens ghost); iB: light (sunlit and facing; a ghost's strength), glint,
+// seed, depth. Everything is a speck of light about a pixel wide at any zoom; one smaller than a pixel is dimmer,
+// not smaller. Debris flecks are mostly dull rock, some bright metal and a few gold foil, sunlit. Traffic is beacons:
+// red, green, amber, white or cyan, each slowly pulsing, double-flashing or steady, with a faint sunlit glint of its
+// own. A glint flares: a hot point for a tumbling fleck's twinkle; for a real flare, four spikes and a long
+// horizontal streak too, bright enough to bloom. A ghost is a soft tinted disc with a brighter rim, laid along the
+// line from a flare through the middle of the screen.
+const ORBITER_VS = `#version 300 es
+in vec2 aPos; in vec4 iA; in vec4 iB;
+${WORLD_POS}
+out vec2 vQ; flat out vec4 vA; flat out vec4 vB;
+void main(){
+  float px = 1./uScale, g = min(iB.y, 6.), base = max(iA.z, px*3.);
+  vec2 hs = iA.w > 1.5 ? vec2(iA.z) : g > .2 ? vec2(base + px*(20. + 110.*sqrt(g)), base + px*(14. + 40.*sqrt(g))) : vec2(base);
+  vQ = aPos*hs; vA = iA; vB = iB;
+  gl_Position = clipOf(iA.xy + vQ);
+}`;
+const ORBITER_FS = `#version 300 es
+precision highp float; in vec2 vQ; flat in vec4 vA; flat in vec4 vB; out vec4 o;
+uniform float uScale, uTime; uniform vec3 uSunCol;
+void main(){
+  float px = 1./uScale, size = vA.z, lit = vB.x, g = min(vB.y, 6.), seed = vB.z;
+  vec2 q = vQ; float d2 = dot(q, q);
+  if (vA.w > 1.5) {
+    float r = sqrt(d2)/size, a = (1. - smoothstep(.85, 1., r))*(.55 + .45*smoothstep(.55, .97, r));
+    o = vec4(mix(vec3(.35, .65, 1.), vec3(1., .55, .3), seed)*uSunCol*a*lit*.07, 0.); return;
+  }
+  float pt = exp(-d2/(px*px*.5)), halo = exp(-d2/(px*px*4.))*.12, k = clamp(size/px, .35, 1.);
+  vec3 col, tint;
+  if (vA.w < .5) {
+    // a fleck: what it's made of, by its seed
+    float m = fract(seed*5.13);
+    tint = m < .72 ? mix(vec3(.55, .52, .48), vec3(.72, .67, .6), fract(seed*11.7)) : m < .92 ? vec3(.86, .9, .96) : vec3(1., .76, .36);
+    col = tint*uSunCol*lit*(pt + halo)*k*(m < .72 ? 1.8 : 3.);
+  } else {
+    // a beacon: its colour and blink, by its seed
+    float c = fract(seed*7.31), b = fract(seed*3.71), ph = fract(uTime/(1.1 + 1.3*fract(seed*17.3)) + seed*13.);
+    vec3 lc = c < .3 ? vec3(1., .14, .08) : c < .55 ? vec3(.15, 1., .35) : c < .75 ? vec3(1., .62, .16) : c < .9 ? vec3(1.) : vec3(.35, .8, 1.);
+    float blink = b < .45 ? .15 + .85*pow(.5 + .5*sin(ph*6.2832), 6.)            // a slow pulse
+                : b < .8 ? .08 + 1.4*(step(ph, .05) + step(abs(ph - .14), .025))  // a double flash
+                : .55;                                                            // steady
+    tint = vec3(.8, .84, .9);
+    col = lc*(pt + halo*2.)*blink*2.6 + tint*uSunCol*lit*pt*k*.8;
+  }
+  if (g > .002) {
+    vec2 a = abs(q)/px; float sg = sqrt(g), big = smoothstep(.2, 1., g);
+    float sp = exp(-a.y*1.3)*exp(-a.x/(3. + 9.*sg)) + exp(-a.x*1.3)*exp(-a.y/(3. + 9.*sg));
+    float st = exp(-a.y*2.2)*exp(-a.x/(8. + 28.*sg))*.3;
+    col += mix(vec3(1.), tint, .6)*uSunCol*g*(exp(-d2/(px*px*.6))*(1.5 + 2.5*big) + (sp + st)*big);  // a twinkle stays a point; a flare blooms
+  }
+  o = vec4(col, 0.);
 }`;
 // A star, in world space on a quad 2.4 radii wide: a granulated, limb-darkened disc, HDR-bright so it blooms, inside
 // a corona that streams outward. uCol is the star's linear colour.
