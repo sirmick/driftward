@@ -38,10 +38,10 @@ const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(
   return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere)), seed: L.seed, surface: SURFACE[L.surface], city: L.cityLights, air: L.air, storm: L.lightning });
 });
 // light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
-function sunFrom(x, y) {
+function sunFrom(x, y, out = new Float32Array(3)) {
   const dx = STAR.x - x, dy = STAR.y - y, l = Math.hypot(dx, dy);
-  const v = l > 1 ? [dx / l, dy / l, 0.45] : [0, 0, 1], n = Math.hypot(v[0], v[1], v[2]);
-  return [v[0] / n, v[1] / n, v[2] / n];
+  const vx = l > 1 ? dx / l : 0, vy = l > 1 ? dy / l : 0, vz = l > 1 ? 0.45 : 1, n = Math.hypot(vx, vy, vz);
+  out[0] = vx / n; out[1] = vy / n; out[2] = vz / n; return out;
 }
 
 // ---------- ship types: one per brand x size; flight stats from the catalog, looks from the bake ----------
@@ -125,18 +125,22 @@ const FP = {
   sheath: compile(SHEATH_VS, SHEATH_FS),
   orbiter: compile(ORBITER_VS, ORBITER_FS, { iA: 1, iB: 2 })
 };
-function instVAO(sizes) {
+// an instanced quad's VAO and its instance buffer, allocated once for `cap` instances; `upload` refills it in place
+function instVAO(sizes, cap) {
   const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
   gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   const per = sizes.reduce((a, b) => a + b, 0), stride = per * 4;
+  gl.bufferData(gl.ARRAY_BUFFER, cap * stride, gl.DYNAMIC_DRAW);
   let off = 0;
   sizes.forEach((sz, k) => { gl.enableVertexAttribArray(k + 1); gl.vertexAttribPointer(k + 1, sz, gl.FLOAT, false, stride, off); gl.vertexAttribDivisor(k + 1, 1); off += sz * 4; });
   gl.bindVertexArray(null);
-  return { vao, buf, sizes, per, stride };
+  return { vao, buf, sizes, per, stride, cap };
 }
-const VS = { ship: instVAO([4, 2]), plume: instVAO([4, 4, 2]), orbiter: instVAO([4, 4]), ghost: instVAO([4, 4]) };
-function upload(V, data, count) { gl.bindBuffer(gl.ARRAY_BUFFER, V.buf); gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, Math.max(1, count) * V.per), gl.DYNAMIC_DRAW); }
+function upload(V, data, count) {
+  if (count > V.cap) throw new Error(`instance upload of ${count} past capacity ${V.cap}`);
+  gl.bindBuffer(gl.ARRAY_BUFFER, V.buf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, count * V.per);
+}
 function pointAt(V, first) {
   gl.bindBuffer(gl.ARRAY_BUFFER, V.buf);
   let off = first * V.stride;
@@ -257,7 +261,7 @@ function onEscape() {
 const PANELS = ['trade', 'board', 'bar', 'about'];
 const panelOpen = () => PANELS.find(p => !$(p).hidden) || null;
 let showPanel = () => {};
-const fmtCr = n => n.toLocaleString('en-US');
+const NUM = new Intl.NumberFormat('en-US'), fmtCr = n => NUM.format(n); // one formatter: toLocaleString builds one per call, and the HUD formats every frame
 
 CORE_READY.then(CORE => {
   // body capacity from the schema's cap on bodies, plus the star
@@ -699,6 +703,8 @@ CORE_READY.then(CORE => {
 
   // ---------- render ----------
   const MAXS = CFG.maxShips;
+  const VS = { ship: instVAO([4, 2], MAXS), station: instVAO([4, 2], Math.max(1, STATIONS.length)), plume: instVAO([4, 4, 2], MAXS * 12),
+    orbiter: instVAO([4, 4], sim.orbitOut.length / 8), ghost: instVAO([4, 4], 8) };
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
   const typeCount = new Int32Array(types.length), typeStart = new Int32Array(types.length), typeFill = new Int32Array(types.length);
   const LP = new Float32Array(64), LC = new Float32Array(64);
@@ -709,7 +715,12 @@ CORE_READY.then(CORE => {
   const turnSlew = sim.param('turn_slew');
   plCol.set(lin([0.72, 0.78, 0.88]), RCS * 3); plCore.set([1, 1, 1], RCS * 3); plP.set([0.5, 0, 0.25, 0], RCS * 4); plSpread[RCS] = 0.9; plBurn.set(plCol.subarray(RCS * 3, RCS * 3 + 3), RCS * 3);
   const sunCol = lin(star.col), starCol = lin(star.col);
-  const stInst = new Float32Array(6);
+  // the plume look tables are constant: set once on the program
+  gl.useProgram(FP.plume.p);
+  { const u = FP.plume.u; gl.uniform3fv(u.uPlCol, plCol); gl.uniform3fv(u.uPlCore, plCore); gl.uniform4fv(u.uPlP, plP); gl.uniform1fv(u.uPlSpread, plSpread); gl.uniform3fv(u.uPlBurn, plBurn); }
+  const stInst = new Float32Array(Math.max(1, STATIONS.length) * 6);
+  const sunCam = new Float32Array(3), sunAt = new Float32Array(3); // sunFrom's results, reused
+  const nearW = new Int32Array(4); // the star dimming's nearest worlds
   const dimU = new Float32Array(16); // worlds the sky dims its stars round: screen x, y, radius (px)
   // lens ghosts per flare: [distance along the flare-to-centre line (1 is the far side), size in px at 900 px tall, tint]
   const GHOSTS = [[-0.35, 9, 0.8], [0.4, 22, 0.2], [0.75, 12, 0.9], [1.25, 38, 0.35]], ghostInst = new Float32Array(2 * 4 * 8);
@@ -721,9 +732,10 @@ CORE_READY.then(CORE => {
   const TR = sim.traffic;
   // a landing or launch sequence's look at d (0 in flight .. 1 down) over body B: hull scale, plasma heat, fade-out
   // into the atmosphere's tint
+  const ATM_NONE = [0.6, 0.7, 0.8], atmOf = new Map(WORLDS.map(w => [BODIES.find(b => b.id === w.id), w.LA]));
   function seqLook(d, B) {
     const st = B.kind === 'station', ss = x => x * x * (3 - 2 * x), seg = (a, b, x) => ss(Math.max(0, Math.min(1, (x - a) / (b - a))));
-    return { sc: st ? 1 - 0.45 * seg(0, 1, d) : 1 - 0.85 * seg(0.08, 1, d), heat: st ? 0 : seg(0, 0.2, d) * (1 - seg(0.88, 1, d)), fade: seg(0.5, 0.95, d), atm: (WORLDS.find(w => w.id === B.id) || {}).LA || [0.6, 0.7, 0.8] };
+    return { sc: st ? 1 - 0.45 * seg(0, 1, d) : 1 - 0.85 * seg(0.08, 1, d), heat: st ? 0 : seg(0, 0.2, d) * (1 - seg(0.88, 1, d)), fade: seg(0.5, 0.95, d), atm: atmOf.get(B) || ATM_NONE };
   }
   // ---------- the sequences' path: the curl ----------
   // A landing turns across the planet and spirals out to its horizon (the limb), shrinking into the atmosphere; a
@@ -732,72 +744,86 @@ CORE_READY.then(CORE => {
   // ends (where a landing starts, where a launch ends). Stations: a straight slide into the clamps and back out.
   const angOf = (x, y) => Math.atan2(-x, y), wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
   const smooth = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+  // A sequence's path is fixed while it plays (its ends are the core's held pose), so each slot builds its path
+  // once and keeps it, as points with arc lengths from the port, until the inputs change: a new sequence.
+  const PATH_N = 61, pathX = new Float64Array(MAXS * PATH_N), pathY = new Float64Array(MAXS * PATH_N), pathS = new Float64Array(MAXS * PATH_N);
+  const pathN = new Int32Array(MAXS), pathKey = new Float64Array(MAXS * 8).fill(NaN);
+  const pathPush = (i, x, y, s) => { const o = i * PATH_N + pathN[i]++; pathX[o] = x; pathY[o] = y; pathS[o] = s; };
+  const pathLen = i => pathS[i * PATH_N + pathN[i] - 1];
   // The spiral from (px, py) out to the horizon of body B, leaving the port going round it (dir +1 counter-clockwise,
   // -1 clockwise): its radius eases out from the port's to just inside the limb while it sweeps round; the sweep is
-  // sized so the path is about `budget` metres. Returns sampled points with arc lengths from the port.
-  function spiral(B, px, py, dir, budget) {
+  // sized so the path is about `budget` metres. Written into slot i's path.
+  function spiral(i, B, px, py, dir, budget) {
     const dx = px - B.x, dy = py - B.y, d0 = Math.hypot(dx, dy), th0 = Math.atan2(dy, dx), rh = Math.max(d0, B.r * 0.97);
     const dr = rh - d0, rm = Math.max(B.r * 0.3, (d0 + rh) / 2);
     const sweep = Math.max(0.5, Math.min(1.9, Math.sqrt(Math.max(0, budget * budget - dr * dr)) / rm));
-    const N = 40, pts = [];
-    let len = 0;
+    const N = 40;
+    let len = 0, lx = 0, ly = 0;
+    pathN[i] = 0;
     for (let k = 0; k <= N; k++) {
       const u = k / N, r = d0 + dr * Math.pow(u, 1.6), th = th0 + dir * sweep * u; // r' = 0 at the port: it leaves along the curl
       const x = B.x + Math.cos(th) * r, y = B.y + Math.sin(th) * r;
-      if (k) len += Math.hypot(x - pts[k - 1].x, y - pts[k - 1].y);
-      pts.push({ x, y, s: len });
+      if (k) len += Math.hypot(x - lx, y - ly);
+      pathPush(i, x, y, len); lx = x; ly = y;
     }
-    return { pts, len };
   }
   // The launch's path, built backwards from the hand-off at (px, py) moving along (ux, uy): a straight run-in (the
   // last stretch is already on the course the flight sim carries on along, so nothing swerves when it takes over),
   // and before that the curl: going back, the heading swings by up to `turn` (dir +1: the ship turns
   // counter-clockwise as it comes in), easing in and out, so the path bends out to the horizon. Cut where it first
-  // reaches the limb, if it does. Same shape as `spiral`: points with distances from the port.
-  function launchPath(B, px, py, ux, uy, dir, budget) {
-    const N = 60, ds = budget / N, run = budget * 0.35, turn = 1.4, a0 = Math.atan2(uy, ux), limb = B.r * 0.97;
-    const pts = [{ x: px, y: py, s: 0 }];
+  // reaches the limb, if it does. Same shape as `spiral`.
+  function launchPath(i, B, px, py, ux, uy, dir, budget) {
+    const N = PATH_N - 1, ds = budget / N, run = budget * 0.35, turn = 1.4, a0 = Math.atan2(uy, ux), limb = B.r * 0.97;
+    pathN[i] = 0; pathPush(i, px, py, 0);
     let x = px, y = py;
     for (let k = 1; k <= N; k++) {
       const sm = (k - 0.5) * ds, a = a0 + dir * turn * smooth((sm - run) / (budget - run));
       x -= Math.cos(a) * ds; y -= Math.sin(a) * ds;
-      pts.push({ x, y, s: k * ds });
+      pathPush(i, x, y, k * ds);
       if (Math.hypot(x - B.x, y - B.y) >= limb && Math.hypot(px - B.x, py - B.y) < limb) break;
     }
-    return { pts, len: pts[pts.length - 1].s };
   }
-  // the point at arc length s from the port, and the outward direction there
-  function along(sp, s) {
-    const P = sp.pts;
-    s = Math.max(0, Math.min(sp.len, s));
+  // slot i's path for these inputs, built only if they differ from the last; returns its length
+  function pathFor(i, landing, B, x, y, hx, hy, dir, budget) {
+    const k = i * 8, bj = BODIES.indexOf(B), key = pathKey;
+    if (key[k] !== +landing || key[k + 1] !== bj || key[k + 2] !== x || key[k + 3] !== y || key[k + 4] !== hx || key[k + 5] !== hy || key[k + 6] !== dir || key[k + 7] !== budget) {
+      key[k] = +landing; key[k + 1] = bj; key[k + 2] = x; key[k + 3] = y; key[k + 4] = hx; key[k + 5] = hy; key[k + 6] = dir; key[k + 7] = budget;
+      if (landing) spiral(i, B, x, y, dir, budget); else launchPath(i, B, x, y, hx, hy, dir, budget);
+    }
+    return pathLen(i);
+  }
+  // the point at arc length s from the port on slot i's path, and the outward direction there
+  function along(i, s) {
+    const o = i * PATH_N, n = pathN[i];
+    s = Math.max(0, Math.min(pathLen(i), s));
     let k = 1;
-    while (k < P.length - 1 && P[k].s < s) k++;
-    const a = P[k - 1], b = P[k], f = (s - a.s) / Math.max(1e-6, b.s - a.s), ux = b.x - a.x, uy = b.y - a.y, l = Math.hypot(ux, uy) || 1;
-    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, ux: ux / l, uy: uy / l };
+    while (k < n - 1 && pathS[o + k] < s) k++;
+    const a = o + k - 1, b = o + k, f = (s - pathS[a]) / Math.max(1e-6, pathS[b] - pathS[a]), ux = pathX[b] - pathX[a], uy = pathY[b] - pathY[a], l = Math.hypot(ux, uy) || 1;
+    return { x: pathX[a] + ux * f, y: pathY[a] + uy * f, ux: ux / l, uy: uy / l };
   }
   // The drawn pose at progress p (0..1) of a sequence over body B. (x, y, ang): the core's pose, where a landing
   // starts or a launch ends. dir: which way round the port the path leaves it (+1 counter-clockwise). v: the speed a
   // launch ends at (the core hands it back), or a landing starts at. Speeds are kept honest: a launch accelerates
   // from the horizon (s = len p^n, so it ends at n len / T = v), and a path too long for that is trimmed.
-  function seqPose(landing, p, x, y, ang, dir, v, B, T) {
+  function seqPose(i, landing, p, x, y, ang, dir, v, B, T) {
     if (B.kind === 'station') { // straight in to the clamps, or out of them, easing
       const e = smooth(p), f = landing ? e : 1 - e, dx = x - B.x, dy = y - B.y;
       return { x: B.x + dx * (1 - f), y: B.y + dy * (1 - f), ang: landing || Math.hypot(dx, dy) < 1 ? ang : angOf(dx, dy) };
     }
     const full = Math.max(B.r * 0.6, B.r * 1.3), budget = landing ? full : Math.min(full, Math.max(150, v * T / 1.2));
     const hx = -Math.sin(ang), hy = Math.cos(ang);
-    const sp = landing ? spiral(B, x, y, dir, budget) : launchPath(B, x, y, hx, hy, dir, budget), L = sp.len;
+    const L = pathFor(i, landing, B, x, y, hx, hy, dir, budget);
     if (landing) {
       // the nose swings onto the path first; it speeds up from rest (or from the speed it came in at) through the
       // middle, then slows as it sinks over the horizon: a cubic with start slope k0 and end slope K1 (in units of
       // the path's mean speed)
       const k0 = Math.min(1, v * T / L), K1 = 0.3, h = (k0 + K1 - 2) * p * p * p + (3 - 2 * k0 - K1) * p * p + k0 * p;
-      const q = along(sp, L * h);
+      const q = along(i, L * h);
       const turn = smooth(p / 0.25), a1 = angOf(q.ux, q.uy);
       return { x: q.x, y: q.y, ang: ang + wrapA(a1 - ang) * turn };
     }
     // accelerating in from the horizon (s = L p^n back from the port, so it arrives at n L / T = v), nose first
-    const n = Math.max(1.2, Math.min(4, v * T / L)), s = L * (1 - Math.pow(p, n)), q = along(sp, s);
+    const n = Math.max(1.2, Math.min(4, v * T / L)), s = L * (1 - Math.pow(p, n)), q = along(i, s);
     return { x: q.x, y: q.y, ang: s < 1 ? ang : angOf(-q.ux, -q.uy) };
   }
   // A sequence's progress, 0..1, from its timer in the core, interpolated between ticks like every other drawn pose:
@@ -813,9 +839,9 @@ CORE_READY.then(CORE => {
     const r = Math.hypot(x - B.x, y - B.y) || 1, dir = sim.game.curl[0] ? -1 : 1;
     const tx = -(y - B.y) / r * dir, ty = (x - B.x) / r * dir; // round the body, the curl's way: the launch's heading
     const v = landing ? 0 : types[SH.kind[0]].vmax * sim.param('launch_frac');
-    const pose = seqPose(landing, p, x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);
+    const pose = seqPose(0, landing, p, x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);
     // its drawn velocity, for the camera's lead (as in flight, so the hand-off does not jolt the view)
-    const dp = 0.004, ahead = seqPose(landing, Math.min(1, p + dp), x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);
+    const dp = 0.004, ahead = seqPose(0, landing, Math.min(1, p + dp), x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);
     const live = Math.min(1, p + dp) - p;
     pose.vx = live > 0 ? (ahead.x - pose.x) / (live * T) : (landing ? 0 : v * tx);
     pose.vy = live > 0 ? (ahead.y - pose.y) / (live * T) : (landing ? 0 : v * ty);
@@ -825,11 +851,48 @@ CORE_READY.then(CORE => {
   function npcPose(i) {
     const landing = TR.phase[i] === TRAFFIC.land, B = BODIES[landing ? TR.to[i] : TR.from[i]], T = landing ? DESCENT_S : LAUNCH_S;
     const p = seqProgress(TR.timer[i], T), hx = -Math.sin(SH.ang[i]), hy = Math.cos(SH.ang[i]);
-    return { p, B, landing, pose: seqPose(landing, p, SH.x[i], SH.y[i], SH.ang[i], roundDir(B, SH.x[i], SH.y[i], hx, hy), landing ? 0 : TR.cruise[i], B, T) };
+    return { p, B, landing, pose: seqPose(i, landing, p, SH.x[i], SH.y[i], SH.ang[i], roundDir(B, SH.x[i], SH.y[i], hx, hy), landing ? 0 : TR.cruise[i], B, T) };
   }
   // the view's scale glides between flight, a sequence (pulled back a little) and the port's vista, rather than
   // jumping
   let viewScale = 0, frameDt = 1 / 60;
+  function shipUniforms(u, sun, t) {
+    gl.uniform3fv(u.uSun, sun); gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb);
+    gl.uniform1f(u.uTime, t); gl.uniform1i(u.uMode, 0); gl.uniform1f(u.uShadow, 1);
+    gl.uniform1i(u.uA, 0); gl.uniform1i(u.uN, 1); gl.uniform1i(u.uE, 2); gl.uniform1i(u.uX, 3);
+  }
+  function bindLook(u, s, half, brand) {
+    const m = brand.style.material, mp = s.maps;
+    gl.uniform1f(u.uHalfM, half); gl.uniform1f(u.uExtent, mp.extent); gl.uniform1f(u.uHRange, mp.hRange);
+    gl.uniform1f(u.uDmax, mp.Dmax); gl.uniform1f(u.uS, mp.shieldS);
+    gl.uniform1f(u.uGloss, m.gloss); gl.uniform1f(u.uSpecK, 0.6 + m.spec * 1.4); gl.uniform1f(u.uWrap, m.wrap); gl.uniform1f(u.uIrid, m.irid); gl.uniform1f(u.uRim, m.rim);
+    for (let q = 0; q < 4; q++) { gl.activeTexture(gl.TEXTURE0 + q); gl.bindTexture(gl.TEXTURE_2D, s.tex[q]); }
+  }
+  // traffic ship i's landing or launch look and pose, or null when it is flying
+  function npcSeq(i) {
+    const ph = TR.phase[i];
+    if (!TR.role[i] || (ph !== TRAFFIC.launch && ph !== TRAFFIC.land)) return null;
+    const q = npcPose(i);
+    return Object.assign(seqLook(q.landing ? q.p : 1 - q.p, q.B), q.pose);
+  }
+  // whether ship i is drawable and within (hw, hh) of (cx, cy)
+  function shown(i, cx, cy, hw, hh) {
+    if (!SH.alive[i]) return false;
+    const T = types[SH.kind[i]];
+    if (!typeReady(T)) return false;
+    const m = T.half * 1.2 + T.L * 2;
+    return Math.abs(SH.rx[i] - cx) < hw + m && Math.abs(SH.ry[i] - cy) < hh + m;
+  }
+  // a thruster jet of ship i (type T, heading c, s) at hull point (lx, ly), pointing (dx, dy), strength k
+  function jet(nPl, i, T, c, s, lx, ly, dx, dy, k) {
+    if (nPl >= MAXS * 12) return nPl;
+    const o = nPl * 10;
+    plumeInst[o] = SH.rx[i] + c * lx - s * ly; plumeInst[o + 1] = SH.ry[i] + s * lx + c * ly;
+    plumeInst[o + 2] = c * dx - s * dy; plumeInst[o + 3] = s * dx + c * dy;
+    plumeInst[o + 4] = T.L * (0.08 + 0.22 * k); plumeInst[o + 5] = T.L * 0.05; plumeInst[o + 6] = i * 3.1 + lx; plumeInst[o + 7] = 0.35 + 0.9 * k;
+    plumeInst[o + 8] = RCS; plumeInst[o + 9] = 0;
+    return nPl + 1;
+  }
   function setView(prog, RW, RH, cx, cy) { gl.useProgram(prog.p); gl.uniform2f(prog.u.uRes, RW, RH); gl.uniform2f(prog.u.uCam, cx, cy); gl.uniform1f(prog.u.uScale, scale); }
   function render(t, cx, cy) {
     const RW = canvas.width, RH = canvas.height, T0 = types[SH.kind[0]], live = Math.min(MAXS, sim.count());
@@ -843,7 +906,7 @@ CORE_READY.then(CORE => {
     }
     viewScale = viewScale > 0 ? Math.exp(Math.log(viewScale) + (Math.log(want) - Math.log(viewScale)) * (1 - Math.exp(-frameDt * 2.5))) : want;
     scale = viewScale;
-    const sunCam = sunFrom(cx, cy), sl = Math.hypot(sunCam[0], sunCam[1]) || 1;
+    sunFrom(cx, cy, sunCam); const sl = Math.hypot(sunCam[0], sunCam[1]) || 1;
     const halfW = RW / scale / 2, halfH = RH / scale / 2;
     gl.bindVertexArray(null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, G.targets.scene.f); gl.viewport(0, 0, RW, RH);
@@ -855,9 +918,16 @@ CORE_READY.then(CORE => {
     gl.uniform2f(P.bg.u.uOff, cx * scale * 0.04, cy * scale * 0.04);
     // dim the stars round the (up to four) nearest worlds whose debris could be on screen
     { let nd = 0; dimU.fill(0);
-      const near = WORLDS.filter(p => Math.abs(p.x - cx) < halfW + p.r * 2.6 && Math.abs(p.y - cy) < halfH + p.r * 2.6)
-        .sort((a, b) => Math.hypot(a.x - cx, a.y - cy) / a.r - Math.hypot(b.x - cx, b.y - cy) / b.r);
-      for (const p of near.slice(0, 4)) { dimU.set([(p.x - cx) * scale + RW / 2, (p.y - cy) * scale + RH / 2, p.r * scale, 0], nd * 4); nd++; }
+      const rank = p => Math.hypot(p.x - cx, p.y - cy) / p.r;
+      for (let w = 0; w < WORLDS.length; w++) { // insertion into the nearest four, by distance in radii
+        const p = WORLDS[w];
+        if (Math.abs(p.x - cx) >= halfW + p.r * 2.6 || Math.abs(p.y - cy) >= halfH + p.r * 2.6) continue;
+        let k = Math.min(nd, 3);
+        if (nd === 4 && rank(p) >= rank(WORLDS[nearW[3]])) continue;
+        while (k > 0 && rank(WORLDS[nearW[k - 1]]) > rank(p)) { nearW[k] = nearW[k - 1]; k--; }
+        nearW[k] = w; if (nd < 4) nd++;
+      }
+      for (let k = 0; k < nd; k++) { const p = WORLDS[nearW[k]]; dimU[k * 4] = (p.x - cx) * scale + RW / 2; dimU[k * 4 + 1] = (p.y - cy) * scale + RH / 2; dimU[k * 4 + 2] = p.r * scale; }
       gl.uniform4fv(P.bg.u.uDim, dimU); gl.uniform1i(P.bg.u.uDimN, nd); }
     draw();
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -876,7 +946,7 @@ CORE_READY.then(CORE => {
       gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
       for (const p of WORLDS) {
         if (Math.abs(p.x - cx) > halfW + p.r * 1.3 || Math.abs(p.y - cy) > halfH + p.r * 1.3) continue;
-        gl.uniform3fv(u.uSun, sunFrom(p.x, p.y));
+        gl.uniform3fv(u.uSun, sunFrom(p.x, p.y, sunAt));
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
         gl.uniform3fv(u.uC1, p.L1); gl.uniform3fv(u.uC2, p.L2); gl.uniform3fv(u.uC3, p.L3); gl.uniform3fv(u.uAtm, p.LA);
         gl.uniform1f(u.uSeed, p.seed); gl.uniform1i(u.uKind, p.surface); gl.uniform1f(u.uCity, p.city); gl.uniform1f(u.uAir, p.air); gl.uniform1f(u.uStorm, p.storm);
@@ -892,48 +962,41 @@ CORE_READY.then(CORE => {
         gl.uniform1f(u.uTime, t); gl.uniform3fv(u.uSunCol, sunCol);
         gl.bindVertexArray(VS.orbiter.vao); upload(VS.orbiter, O, n);
         gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
-        let ng = 0, best = [-1, -1];
+        let ng = 0, b0 = -1, b1 = -1;
         for (let k = 0; k < n; k++) {
           const g = O[k * 8 + 5];
           if (g < 0.8 || Math.abs(O[k * 8] - cx) > halfW || Math.abs(O[k * 8 + 1] - cy) > halfH) continue;
-          if (best[0] < 0 || g > O[best[0] * 8 + 5]) { best[1] = best[0]; best[0] = k; } else if (best[1] < 0 || g > O[best[1] * 8 + 5]) best[1] = k;
+          if (b0 < 0 || g > O[b0 * 8 + 5]) { b1 = b0; b0 = k; } else if (b1 < 0 || g > O[b1 * 8 + 5]) b1 = k;
         }
-        for (const k of best) {
+        for (let b = 0; b < 2; b++) {
+          const k = b ? b1 : b0;
           if (k < 0) continue;
           const fx = O[k * 8], fy = O[k * 8 + 1], g = Math.min(O[k * 8 + 5], 6) / 6;
-          GHOSTS.forEach(([f, sz, tint]) => {
-            ghostInst.set([cx + (cx - fx) * f, cy + (cy - fy) * f, sz * px * RH / 900, 2, g, 0, tint, 0], ng * 8); ng++;
-          });
+          for (const [f, sz, tint] of GHOSTS) {
+            const o = ng++ * 8;
+            ghostInst[o] = cx + (cx - fx) * f; ghostInst[o + 1] = cy + (cy - fy) * f; ghostInst[o + 2] = sz * px * RH / 900; ghostInst[o + 3] = 2;
+            ghostInst[o + 4] = g; ghostInst[o + 5] = 0; ghostInst[o + 6] = tint; ghostInst[o + 7] = 0;
+          }
         }
         if (ng) { gl.bindVertexArray(VS.ghost.vao); upload(VS.ghost, ghostInst, ng); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, ng); }
         gl.bindVertexArray(null);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       } }
-    // stations: one draw each, with the ship shader and their own bake
-    const shipUniforms = (u, sun) => {
-      gl.uniform3fv(u.uSun, sun); gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb);
-      gl.uniform1f(u.uTime, t); gl.uniform1i(u.uMode, 0); gl.uniform1f(u.uShadow, 1);
-      gl.uniform1i(u.uA, 0); gl.uniform1i(u.uN, 1); gl.uniform1i(u.uE, 2); gl.uniform1i(u.uX, 3);
-    };
-    const bindLook = (u, s, half, brand) => {
-      const m = brand.style.material, mp = s.maps;
-      gl.uniform1f(u.uHalfM, half); gl.uniform1f(u.uExtent, mp.extent); gl.uniform1f(u.uHRange, mp.hRange);
-      gl.uniform1f(u.uDmax, mp.Dmax); gl.uniform1f(u.uS, mp.shieldS);
-      gl.uniform1f(u.uGloss, m.gloss); gl.uniform1f(u.uSpecK, 0.6 + m.spec * 1.4); gl.uniform1f(u.uWrap, m.wrap); gl.uniform1f(u.uIrid, m.irid); gl.uniform1f(u.uRim, m.rim);
-      for (let q = 0; q < 4; q++) { gl.activeTexture(gl.TEXTURE0 + q); gl.bindTexture(gl.TEXTURE_2D, s.tex[q]); }
-    };
+    // stations: one upload, then a draw each with the ship shader and their own bake
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    for (const S of STATIONS) {
+    for (let k = 0; k < STATIONS.length; k++) { const S = STATIONS[k], o = k * 6; stInst[o] = S.x; stInst[o + 1] = S.y; stInst[o + 2] = t * S.spin; stInst[o + 3] = 0; stInst[o + 4] = 0; stInst[o + 5] = 1; }
+    let stUp = false;
+    for (let k = 0; k < STATIONS.length; k++) {
+      const S = STATIONS[k];
       if (!stationReady(S) || Math.abs(S.x - cx) > halfW + S.half || Math.abs(S.y - cy) > halfH + S.half) continue;
-      setView(FP.ship, RW, RH, cx, cy);
       const u = FP.ship.u;
-      shipUniforms(u, sunFrom(S.x, S.y)); gl.uniform1i(u.uLN, 0);
+      if (!stUp) { setView(FP.ship, RW, RH, cx, cy); gl.bindVertexArray(VS.station.vao); upload(VS.station, stInst, STATIONS.length); gl.uniform1i(u.uLN, 0); stUp = true; }
+      shipUniforms(u, sunFrom(S.x, S.y, sunAt), t);
       bindLook(u, S.s, S.half, S.brand);
-      stInst.set([S.x, S.y, t * S.spin, 0, 0, 1]);
-      gl.bindVertexArray(VS.ship.vao); upload(VS.ship, stInst, 1); pointAt(VS.ship, 0);
+      pointAt(VS.station, k);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
-      gl.bindVertexArray(null);
     }
+    if (stUp) gl.bindVertexArray(null);
 
     // Landing and launch sequences, the player's and the traffic's: d runs 0 in flight .. 1 down. The player's ship
     // is out of the flight sim meanwhile (drawn from the game state); a traffic ship stays in its slot, held by the
@@ -944,24 +1007,10 @@ CORE_READY.then(CORE => {
       const q = playerSeq();
       pseq = Object.assign(seqLook(q.landing ? q.p : 1 - q.p, q.B), q.pose);
     }
-    const npcSeq = i => {
-      const ph = TR.phase[i];
-      if (!TR.role[i] || (ph !== TRAFFIC.launch && ph !== TRAFFIC.land)) return null;
-      const q = npcPose(i);
-      return Object.assign(seqLook(q.landing ? q.p : 1 - q.p, q.B), q.pose);
-    };
-    // which ships are drawable and on screen
     typeCount.fill(0);
-    const shown = i => {
-      if (!SH.alive[i]) return false;
-      const T = types[SH.kind[i]];
-      if (!typeReady(T)) return false;
-      const m = T.half * 1.2 + T.L * 2;
-      return Math.abs(SH.rx[i] - cx) < halfW + m && Math.abs(SH.ry[i] - cy) < halfH + m;
-    };
     let nL = 0, nPl = 0;
     for (let i = 0; i < live; i++) {
-      if (!shown(i)) continue;
+      if (!shown(i, cx, cy, halfW, halfH)) continue;
       const T = types[SH.kind[i]], c = Math.cos(SH.ra[i]), s = Math.sin(SH.ra[i]), th = SH.thr[i];
       typeCount[SH.kind[i]]++;
       // burner intensity follows the engine glow, which ramps toward 1 only on the burner (cruise tops out at .72),
@@ -969,20 +1018,13 @@ CORE_READY.then(CORE => {
       const bi = Math.max(0, Math.min(1, (th - 0.72) / 0.28)), pw = plumePower(th) * 1.35 * (1 + 0.35 * bi);
       if (th >= 0.05 && nL < 16) { // engine light on the hull
         const ex = T.engX, ey = T.engY - T.L * 0.12, k = pw * 1.5;
-        LP.set([SH.rx[i] + c * ex - s * ey, SH.ry[i] + s * ex + c * ey, T.L * 0.05 + 1.5, T.L * 1.6 + 8], nL * 4);
-        LC.set([T.br.plCol[0] * k, T.br.plCol[1] * k, T.br.plCol[2] * k, 0], nL * 4); nL++;
+        const o = nL++ * 4;
+        LP[o] = SH.rx[i] + c * ex - s * ey; LP[o + 1] = SH.ry[i] + s * ex + c * ey; LP[o + 2] = T.L * 0.05 + 1.5; LP[o + 3] = T.L * 1.6 + 8;
+        LC[o] = T.br.plCol[0] * k; LC[o + 1] = T.br.plCol[1] * k; LC[o + 2] = T.br.plCol[2] * k; LC[o + 3] = 0;
       }
       // thruster jets: side jets fire away from the push (lateral thrust +x pushes right), reverse jets out of the nose
-      const jet = (lx, ly, dx, dy, k) => {
-        if (nPl >= MAXS * 12) return;
-        const o = nPl * 10;
-        plumeInst[o] = SH.rx[i] + c * lx - s * ly; plumeInst[o + 1] = SH.ry[i] + s * lx + c * ly;
-        plumeInst[o + 2] = c * dx - s * dy; plumeInst[o + 3] = s * dx + c * dy;
-        plumeInst[o + 4] = T.L * (0.08 + 0.22 * k); plumeInst[o + 5] = T.L * 0.05; plumeInst[o + 6] = i * 3.1 + lx; plumeInst[o + 7] = 0.35 + 0.9 * k;
-        plumeInst[o + 8] = RCS; plumeInst[o + 9] = 0; nPl++;
-      };
       const lat = SH.lat[i], rev = -Math.min(0, SH.main[i]);
-      const A = T.rcs || { fl: [-T.half * 0.3, T.half * 0.28], fr: [T.half * 0.3, T.half * 0.28], rl: [-T.half * 0.3, -T.half * 0.24], rr: [T.half * 0.3, -T.half * 0.24], nl: [-T.half * 0.12, T.half * 0.42], nr: [T.half * 0.12, T.half * 0.42] };
+      const A = T.rcs || (T.rcs0 ||= { fl: [-T.half * 0.3, T.half * 0.28], fr: [T.half * 0.3, T.half * 0.28], rl: [-T.half * 0.3, -T.half * 0.24], rr: [T.half * 0.3, -T.half * 0.24], nl: [-T.half * 0.12, T.half * 0.42], nr: [T.half * 0.12, T.half * 0.42] });
       // turning: diagonal pairs (front-right with rear-left turns left, the other pair right). The torque is what the
       // core's steer stage applies this tick: the turn command itself in full off, else the step toward the target
       // rate. Pulses linger a few frames, and a faint trim shows while the ship is turning, so a turn reads clearly.
@@ -992,12 +1034,16 @@ CORE_READY.then(CORE => {
       const spin = Math.max(-1, Math.min(1, spinVis[i] + 0.25 * SH.av[i] / turnT)), ks = Math.abs(spin);
       if (ks > 0.06) {
         // turning left (counter-clockwise): front-right and rear-left fire outward; turning right, the other pair
-        if (spin > 0) { jet(A.fr[0], A.fr[1], 1, 0, ks); jet(A.rl[0], A.rl[1], -1, 0, ks); }
-        else { jet(A.fl[0], A.fl[1], -1, 0, ks); jet(A.rr[0], A.rr[1], 1, 0, ks); }
+        if (spin > 0) { nPl = jet(nPl, i, T, c, s, A.fr[0], A.fr[1], 1, 0, ks); nPl = jet(nPl, i, T, c, s, A.rl[0], A.rl[1], -1, 0, ks); }
+        else { nPl = jet(nPl, i, T, c, s, A.fl[0], A.fl[1], -1, 0, ks); nPl = jet(nPl, i, T, c, s, A.rr[0], A.rr[1], 1, 0, ks); }
       }
       // strafing right (+x) fires the left flank outward, front and rear; strafing left, the right flank
-      if (Math.abs(lat) > 0.05) { const k = Math.abs(lat); if (lat > 0) { jet(A.fl[0], A.fl[1], -1, 0, k); jet(A.rl[0], A.rl[1], -1, 0, k); } else { jet(A.fr[0], A.fr[1], 1, 0, k); jet(A.rr[0], A.rr[1], 1, 0, k); } }
-      if (rev > 0.05) { jet(A.nl[0], A.nl[1], 0, 1, rev); jet(A.nr[0], A.nr[1], 0, 1, rev); }
+      if (Math.abs(lat) > 0.05) {
+        const k = Math.abs(lat);
+        if (lat > 0) { nPl = jet(nPl, i, T, c, s, A.fl[0], A.fl[1], -1, 0, k); nPl = jet(nPl, i, T, c, s, A.rl[0], A.rl[1], -1, 0, k); }
+        else { nPl = jet(nPl, i, T, c, s, A.fr[0], A.fr[1], 1, 0, k); nPl = jet(nPl, i, T, c, s, A.rr[0], A.rr[1], 1, 0, k); }
+      }
+      if (rev > 0.05) { nPl = jet(nPl, i, T, c, s, A.nl[0], A.nl[1], 0, 1, rev); nPl = jet(nPl, i, T, c, s, A.nr[0], A.nr[1], 0, 1, rev); }
       if (th < 0.03) continue;
       for (let e = 0; e < T.eng.length && nPl < MAXS * 12; e++) {
         const E = T.eng[e], o = nPl * 10;
@@ -1012,7 +1058,6 @@ CORE_READY.then(CORE => {
       gl.blendFunc(gl.ONE, gl.ONE);
       setView(FP.plume, RW, RH, cx, cy);
       const u = FP.plume.u; gl.uniform1f(u.uTime, t);
-      gl.uniform3fv(u.uPlCol, plCol); gl.uniform3fv(u.uPlCore, plCore); gl.uniform4fv(u.uPlP, plP); gl.uniform1fv(u.uPlSpread, plSpread); gl.uniform3fv(u.uPlBurn, plBurn);
       gl.bindVertexArray(VS.plume.vao); upload(VS.plume, plumeInst, nPl);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nPl);
       gl.bindVertexArray(null);
@@ -1022,21 +1067,22 @@ CORE_READY.then(CORE => {
     let acc = 0;
     for (const k of order) { typeStart[k] = acc; acc += typeCount[k]; typeFill[k] = typeStart[k]; }
     for (let i = 0; i < live; i++) {
-      if (!shown(i)) continue;
+      if (!shown(i, cx, cy, halfW, halfH)) continue;
       const o = typeFill[SH.kind[i]]++ * 6, q = npcSeq(i);
       shipInst[o] = q ? q.x : SH.rx[i]; shipInst[o + 1] = q ? q.y : SH.ry[i]; shipInst[o + 2] = q ? q.ang : SH.ra[i];
       shipInst[o + 3] = SH.thr[i]; shipInst[o + 4] = 0; shipInst[o + 5] = q ? q.sc : 0;
       if (q && q.heat > 0.01) sheaths.push([i, q]);
     }
     if (pseq) {
-      shipInst.set([pseq.x, pseq.y, pseq.ang, 0, 0, pseq.sc], typeFill[SH.kind[0]]++ * 6);
+      const o = typeFill[SH.kind[0]]++ * 6;
+      shipInst[o] = pseq.x; shipInst[o + 1] = pseq.y; shipInst[o + 2] = pseq.ang; shipInst[o + 3] = 0; shipInst[o + 4] = 0; shipInst[o + 5] = pseq.sc;
       if (pseq.heat > 0.01) sheaths.push([0, pseq]);
     }
     if (acc) {
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       setView(FP.ship, RW, RH, cx, cy);
       const u = FP.ship.u;
-      shipUniforms(u, sunCam);
+      shipUniforms(u, sunCam, t);
       gl.uniform4fv(u.uLP, LP); gl.uniform4fv(u.uLC, LC); gl.uniform1i(u.uLN, nL);
       gl.bindVertexArray(VS.ship.vao); upload(VS.ship, shipInst, acc);
       for (const k of order) {
@@ -1336,7 +1382,8 @@ CORE_READY.then(CORE => {
   const ZONE_IN = 6, ZONE_OUT = 7;
   const fromStar = j => Math.hypot(BODIES[j].x - STAR.x, BODIES[j].y - STAR.y);
   const TOP = BODIES.map((_, j) => j).filter(j => j === 0 || BODIES[j].parent === STAR.id).sort((a, b) => fromStar(a) - fromStar(b));
-  const KIDS = TOP.map(p => BODIES.map((_, j) => j).filter(j => BODIES[j].parent === BODIES[p].id)
+  // a body's moons and stations, nearest first; the star's planets are top-level rows already, so it has none
+  const KIDS = TOP.map(p => BODIES.map((_, j) => j).filter(j => p !== 0 && BODIES[j].parent === BODIES[p].id)
     .sort((a, b) => Math.hypot(BODIES[a].x - BODIES[p].x, BODIES[a].y - BODIES[p].y) - Math.hypot(BODIES[b].x - BODIES[p].x, BODIES[b].y - BODIES[p].y)));
   const ICON = { star: '✹', planet: '●', moon: '•', station: '◇' };
   let expanded = -1, locRows = [], locAt = 0;
