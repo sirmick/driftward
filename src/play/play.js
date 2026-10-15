@@ -652,8 +652,9 @@ CORE_READY.then(CORE => {
   plCol.set(lin([0.72, 0.78, 0.88]), RCS * 3); plCore.set([1, 1, 1], RCS * 3); plP.set([0.5, 0, 0.25, 0], RCS * 4); plSpread[RCS] = 0.9; plBurn.set(plCol.subarray(RCS * 3, RCS * 3 + 3), RCS * 3);
   const sunCol = lin(star.col), starCol = lin(star.col);
   const stInst = new Float32Array(6);
+  const dimU = new Float32Array(16); // worlds the sky dims its stars round: screen x, y, radius (px)
   // lens ghosts per flare: [distance along the flare-to-centre line (1 is the far side), size in px at 900 px tall, tint]
-  const GHOSTS = [[-0.35, 14, 0.8], [0.4, 34, 0.2], [0.75, 18, 0.9], [1.25, 60, 0.35]], ghostInst = new Float32Array(2 * 4 * 8);
+  const GHOSTS = [[-0.35, 9, 0.8], [0.4, 22, 0.2], [0.75, 12, 0.9], [1.25, 38, 0.35]], ghostInst = new Float32Array(2 * 4 * 8);
   // draw order: largest classes first, so small ships sit on top
   const order = types.map((_, k) => k).sort((a, b) => types[b].zi - types[a].zi);
   let scale = 1;
@@ -794,6 +795,12 @@ CORE_READY.then(CORE => {
     gl.uniform3fv(P.bg.u.uStar, star.col); gl.uniform3fv(P.bg.u.uNeb, star.neb);
     gl.uniform2f(P.bg.u.uSunDir, sunCam[0] / sl, sunCam[1] / sl);
     gl.uniform2f(P.bg.u.uOff, cx * scale * 0.04, cy * scale * 0.04);
+    // dim the stars round the (up to four) nearest worlds whose debris could be on screen
+    { let nd = 0; dimU.fill(0);
+      const near = WORLDS.filter(p => Math.abs(p.x - cx) < halfW + p.r * 2.6 && Math.abs(p.y - cy) < halfH + p.r * 2.6)
+        .sort((a, b) => Math.hypot(a.x - cx, a.y - cy) / a.r - Math.hypot(b.x - cx, b.y - cy) / b.r);
+      for (const p of near.slice(0, 4)) { dimU.set([(p.x - cx) * scale + RW / 2, (p.y - cy) * scale + RH / 2, p.r * scale, 0], nd * 4); nd++; }
+      gl.uniform4fv(P.bg.u.uDim, dimU); gl.uniform1i(P.bg.u.uDimN, nd); }
     draw();
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 

@@ -15,6 +15,7 @@ in vec2 aPos; out vec2 vUv; void main(){ vUv=aPos*0.5+0.5; gl_Position=vec4(aPos
 // Shared sky: the plain background and the black-hole lens both sample it, so lensed stars match the sky around them.
 const SKY = `uniform vec2 uRes; uniform float uTime; uniform vec3 uStar; uniform vec3 uNeb; uniform vec2 uSunDir; uniform vec2 uOff;
 ${NOISE}
+float starK = 1.; // the stars' brightness (the background dims them near worlds, so orbiting debris reads)
 vec3 sky(vec2 px){
   vec2 uv = (px - uOff)/uRes;
   vec2 q = (uv-.5)*vec2(uRes.x/uRes.y,1.) + uOff/uRes.y*.5;
@@ -30,14 +31,21 @@ vec3 sky(vec2 px){
     float tw = .75+.25*sin(uTime*(1.+r*9.)+r*40.);
     float b = (1.-smoothstep(0.,.06-.015*float(l),d))*(.35+.65*h21(id+11.))*tw;
     vec3 sc3 = mix(vec3(1.,.8,.6), vec3(.6,.75,1.), h21(id+5.));
-    c += sc3*b*(.6-.15*float(l));
+    c += sc3*b*(.6-.15*float(l))*starK;
   }
   return c;
 }`;
 const BG_FS = `#version 300 es
 precision highp float; in vec2 vUv; out vec4 o;
 ${SKY}
-void main(){ o = vec4(sky(vUv*uRes + uOff), 1.); }`;
+// worlds near the view, in screen pixels (centre, radius): stars fade out toward each one's limb, almost gone there
+// and back in full by about 2.6 radii, past its orbiting debris
+uniform vec4 uDim[4]; uniform int uDimN;
+void main(){
+  vec2 p = vUv*uRes;
+  for (int i = 0; i < 4; i++) { if (i >= uDimN) break; starK *= mix(.05, 1., smoothstep(1., 2.6, length(p - uDim[i].xy)/uDim[i].z)); }
+  o = vec4(sky(p + uOff), 1.);
+}`;
 
 const SHIP_VS = `#version 300 es
 in vec2 aPos; uniform vec2 uRes, uCenter; uniform float uHalf, uAngle;
@@ -697,7 +705,7 @@ ${WORLD_POS}
 out vec2 vQ; flat out vec4 vA; flat out vec4 vB;
 void main(){
   float px = 1./uScale, g = min(iB.y, 6.), base = max(iA.z, px*3.);
-  vec2 hs = iA.w > 1.5 ? vec2(iA.z) : g > .2 ? vec2(base + px*(20. + 110.*sqrt(g)), base + px*(14. + 40.*sqrt(g))) : vec2(base);
+  vec2 hs = iA.w > 1.5 ? vec2(iA.z) : g > .2 ? vec2(base + px*(10. + 45.*sqrt(g)), base + px*(8. + 14.*sqrt(g))) : vec2(base);
   vQ = aPos*hs; vA = iA; vB = iB;
   gl_Position = clipOf(iA.xy + vQ);
 }`;
@@ -709,7 +717,7 @@ void main(){
   vec2 q = vQ; float d2 = dot(q, q);
   if (vA.w > 1.5) {
     float r = sqrt(d2)/size, a = (1. - smoothstep(.85, 1., r))*(.55 + .45*smoothstep(.55, .97, r));
-    o = vec4(mix(vec3(.35, .65, 1.), vec3(1., .55, .3), seed)*uSunCol*a*lit*.07, 0.); return;
+    o = vec4(mix(vec3(.35, .65, 1.), vec3(1., .55, .3), seed)*uSunCol*a*lit*.035, 0.); return;
   }
   float pt = exp(-d2/(px*px*.5)), halo = exp(-d2/(px*px*4.))*.12, k = clamp(size/px, .35, 1.);
   vec3 col, tint;
@@ -730,8 +738,8 @@ void main(){
   }
   if (g > .002) {
     vec2 a = abs(q)/px; float sg = sqrt(g), big = smoothstep(.2, 1., g);
-    float sp = exp(-a.y*1.3)*exp(-a.x/(3. + 9.*sg)) + exp(-a.x*1.3)*exp(-a.y/(3. + 9.*sg));
-    float st = exp(-a.y*2.2)*exp(-a.x/(8. + 28.*sg))*.3;
+    float sp = (exp(-a.y*2.2)*exp(-a.x/(1.5 + 3.*sg)) + exp(-a.x*2.2)*exp(-a.y/(1.5 + 3.*sg)))*.7;
+    float st = exp(-a.y*3.)*exp(-a.x/(4. + 10.*sg))*.2;
     col += mix(vec3(1.), tint, .6)*uSunCol*g*(exp(-d2/(px*px*.6))*(1.5 + 2.5*big) + (sp + st)*big);  // a twinkle stays a point; a flare blooms
   }
   o = vec4(col, 0.);
