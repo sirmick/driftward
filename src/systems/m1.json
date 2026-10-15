@@ -45,7 +45,14 @@
           "repair"
         ],
         "description": "Shafts sunk into a world too close to its star. The day side cooks; the crews live and work on the night side, in tunnels that follow the ore. Ore goes up the lift to waiting tugs; food, water and spare parts come down."
-      }
+      },
+      "environs": [
+        {
+          "archetype": "forge",
+          "brand": "ironhulls",
+          "count": 2
+        }
+      ]
     },
     {
       "id": "halde",
@@ -82,7 +89,19 @@
           "repair"
         ],
         "description": "The system's only real town: terraces of habitat blocks along a cold coast, a landing field cut into the cliffs above them. Most of Brannock's people live here, and most of its money changes hands in the market halls by the field."
-      }
+      },
+      "environs": [
+        {
+          "archetype": "ring",
+          "brand": "federation",
+          "count": 2
+        },
+        {
+          "archetype": "port",
+          "brand": "ironhulls",
+          "count": 1
+        }
+      ]
     },
     {
       "id": "vast",
@@ -105,7 +124,19 @@
         "air": 1.2,
         "seed": 4.1,
         "lightning": 1
-      }
+      },
+      "environs": [
+        {
+          "archetype": "refinery",
+          "brand": "ironhulls",
+          "count": 2
+        },
+        {
+          "archetype": "relay",
+          "brand": "federation",
+          "count": 1
+        }
+      ]
     },
     {
       "id": "tallow",

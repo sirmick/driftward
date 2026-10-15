@@ -321,6 +321,49 @@
               }
             }
           },
+          "environs": {
+            "description": "Environmental stations round this world: forges, container ports, habitats and the like, each a station you can see but not land at, with its own traffic (traffic.json's environs: which ships fly to and from each archetype, how often). Each entry is a type, its owner and how many. A system holds at most 24 in all.",
+            "type": "array",
+            "maxItems": 4,
+            "default": [],
+            "items": {
+              "type": "object",
+              "required": [
+                "archetype"
+              ],
+              "properties": {
+                "archetype": {
+                  "enum": [
+                    "ring",
+                    "port",
+                    "forge",
+                    "refinery",
+                    "shipyard",
+                    "relay"
+                  ],
+                  "default": "port",
+                  "description": "The station type (a catalog archetype); its traffic comes from traffic.json's environs."
+                },
+                "brand": {
+                  "enum": [
+                    "federation",
+                    "prism",
+                    "ironhulls",
+                    "bloom"
+                  ],
+                  "default": "ironhulls",
+                  "description": "The faction that built and runs it: its look, and the lines its traffic flies where traffic.json says own.<line>."
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4,
+                  "default": 1,
+                  "description": "How many of this type round the world; sizes and places vary."
+                }
+              }
+            }
+          },
           "port": {
             "description": "Present if the body has a port the player can land at.",
             "type": "object",

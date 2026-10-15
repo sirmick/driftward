@@ -62,7 +62,14 @@ function clampToSchema(schema, value, path, notes) {
 // stations around their parent), parents before children, with what the core and the renderer need. The game
 // re-places bodies with the core's own trig (World::place_body) so a layout is bit-identical across browsers. Returns { system, bodies, notes };
 // system is null if the file is unusable.
-function loadSystem(raw, schema) {
+// Environmental stations (a body's environs) become station bodies after every other, each placed round its world
+// from a hash of its id: spread evenly round it, clear of its surface by 1.6 of its own size plus a quarter to three
+// quarters of the world's radius, sizes 0.8 to 1.2 times the archetype's
+// (opts.stationRadius(archetype), metres; 400 without one). At most MAX_ENVIRONS in a system; the rest are dropped
+// with a note. Their bake seeds come in two variants per archetype and owner, so they share bakes.
+const MAX_ENVIRONS = 24;
+function loadSystem(raw, schema, opts) {
+  opts = opts || {};
   const notes = [];
   const sys = clampToSchema(schema, raw, '$', notes);
   if (!sys || notes.some(n => n.fatal)) return { system: null, bodies: [], notes };
@@ -92,6 +99,27 @@ function loadSystem(raw, schema) {
     }
     todo = next;
   }
+  // environmental stations round their worlds
+  const unit = text => { let h = 0x811c9dc5; for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193) >>> 0; return h / 4294967296; };
+  let nEnv = 0;
+  for (const w of bodies.slice()) {
+    const list = (sys.bodies.find(o => o.id === w.id) || {}).environs || [];
+    const all = list.flatMap(e => Array.from({ length: e.count }, (_, k) => ({ e, k })));
+    const a0 = unit(w.id + ':environs') * 360;
+    all.forEach(({ e, k }, i) => {
+      const id = `${w.id}-${e.archetype}-${k + 1}`;
+      if (nEnv >= MAX_ENVIRONS) { notes.push({ path: `$.bodies[${w.id}].environs`, msg: `more than ${MAX_ENVIRONS} environmental stations in the system; ${id} dropped`, fatal: false }); return; }
+      nEnv++;
+      const scale = 0.8 + 0.4 * unit(id + ':size'), r = (opts.stationRadius ? opts.stationRadius(e.archetype) : 400) * scale;
+      const orbit = { radius: w.r + r * 1.6 + w.r * (0.25 + 0.5 * unit(id + ':orbit')), angle: (a0 + 360 * i / all.length + (unit(id + ':angle') - 0.5) * 24 + 360) % 360 };
+      const a = orbit.angle * Math.PI / 180;
+      bodies.push({
+        id, name: `${w.name} ${e.archetype} ${k + 1}`, kind: 'station', parent: w.id, orbit,
+        x: w.x + Math.cos(a) * orbit.radius, y: w.y + Math.sin(a) * orbit.radius, r, g: 0,
+        station: { archetype: e.archetype, brand: e.brand, seed: `${e.archetype}-${e.brand}-${k % 2 + 1}` }, env: { archetype: e.archetype, brand: e.brand, scale }, port: null
+      });
+    });
+  }
   if (sys.start && !bodies.some(b => b.id === sys.start && b.port)) notes.push({ path: '$.start', msg: `${sys.start} is not a port body; starting at the first port`, fatal: false });
   return { system: sys, bodies, notes };
 }
@@ -117,4 +145,4 @@ function loadLore(raw, schema, system) {
   return { lore, ports, notes };
 }
 
-if (typeof module !== 'undefined') module.exports = { clampToSchema, loadSystem, loadLore };
+if (typeof module !== 'undefined') module.exports = { clampToSchema, loadSystem, loadLore, MAX_ENVIRONS };

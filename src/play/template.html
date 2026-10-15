@@ -89,11 +89,13 @@ button { font: inherit; color: inherit; }
    the port screen's gradient sits on top of it */
 #vista { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s; pointer-events: none; }
 #vista.on { opacity: 1; }
-/* big or high-DPI screens: the vista as a framed picture at about its own size, the live world behind it */
-body.vista-framed #vista { inset: auto; left: var(--vista-x); top: 50%; width: var(--vista-w); height: auto;
-  transform: translateY(-50%); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 30px 90px rgba(0,0,0,.7), 0 0 0 6px rgba(7,9,12,.55); }
-/* the card's shade stops at the card, so it doesn't dim the framed picture */
-body.vista-framed #port { background: linear-gradient(90deg, rgba(7,9,12,.88) 0px, rgba(7,9,12,.6) 420px, rgba(7,9,12,0) 500px); }
+/* big or high-DPI screens: the vista as a framed picture at about its own size, the live world around it, and the
+   port's controls inside the frame on its own shade (play.js frameVista sets the frame's place and size) */
+body.vista-framed.has-vista #vista { inset: auto; left: var(--vista-x); top: var(--vista-y); width: var(--vista-w); height: var(--vista-h);
+  border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 30px 90px rgba(0,0,0,.7), 0 0 0 6px rgba(7,9,12,.55); }
+body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(--vista-y); width: var(--vista-w); height: var(--vista-h);
+  padding: 28px 32px; border-radius: 10px; overflow: auto;
+  background: linear-gradient(90deg, rgba(7,9,12,.86) 0%, rgba(7,9,12,.6) 38%, rgba(7,9,12,.1) 72%, rgba(7,9,12,0) 100%); }
 .port-more { margin: -12px 0 20px; padding: 0; background: none; border: 0; cursor: pointer; color: var(--amber); font: 500 12px var(--f-mono); }
 .port-more:hover { text-decoration: underline; }
 .port-more span { color: var(--muted); }
@@ -353,6 +355,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 /*SCHEMA*/
 /*DEBUG*/
 /*SHIPYARD*/
+/*JITTER*/
 /*PLAY*/
 })();
 </script>

@@ -5,12 +5,16 @@ const { clampToSchema, loadSystem, loadLore } = require('../src/schema.js');
 const root = path.join(__dirname, '..');
 const schema = JSON.parse(fs.readFileSync(path.join(root, 'src', 'schema', 'system.schema.json'), 'utf8'));
 let bad = 0;
+const catalog = require('../src/gen.js').resolveCatalog(JSON.parse(fs.readFileSync(path.join(root, 'src', 'catalog.json'), 'utf8')));
+// environmental stations sized as the game sizes them (src/play/play.js)
+const layout = { stationRadius: id => { const a = catalog.stations.find(x => x.id === id); return a && a.diameter ? (a.diameter[0] + a.diameter[1]) / 4 : 400; } };
 
 for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.endsWith('.json'))) {
-  const { system, bodies, notes } = loadSystem(JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', f), 'utf8')), schema);
+  const { system, bodies, notes } = loadSystem(JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', f), 'utf8')), schema, layout);
   const ports = bodies.filter(b => b.port).map(b => b.port.name);
   // what the clamp can't see (loadSystem notes a bad parent or start): ids unique, every orbit clear of its parent and
-  // inside the jump zones (traffic's arrivals start there), services listed once
+  // inside the jump zones (traffic's arrivals start there), services listed once, environmental stations clear of
+  // every other body
   if (system) {
     const ids = new Set(), jump = (system.traffic || {}).jumpRadius ?? schema.properties.traffic.properties.jumpRadius.default;
     for (const b of system.bodies) {
@@ -24,6 +28,11 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
       if (R && R.density > 0 && R.outer < R.inner + 0.1) notes.push({ path: `${at}.look.rings`, msg: `outer edge ${R.outer} is not 0.1 beyond inner ${R.inner}`, fatal: false });
       const sv = (b.port && b.port.services) || [];
       if (new Set(sv).size !== sv.length) notes.push({ path: `${at}.port.services`, msg: 'a service listed twice', fatal: false });
+    }
+    for (const e of bodies.filter(b => b.env)) for (const o of bodies) {
+      if (o === e) continue;
+      const gap = Math.hypot(e.x - o.x, e.y - o.y) - e.r - o.r;
+      if (gap < 100) notes.push({ path: `$.bodies[${e.parent}].environs`, msg: `${e.id} is within ${Math.round(gap)} m of ${o.id}`, fatal: false });
     }
   }
   if (!system || notes.length) { bad++; console.log(`${f}: ${notes.length} problem(s)`); notes.forEach(n => console.log(`  ${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`)); }
@@ -52,13 +61,17 @@ else console.log(`economy.json: valid; ${ids.length} commodities, ${roles.length
 // traffic: every population tier has a weight; every system's traffic mix names catalog lines, classes those lines
 // build, and loiter ports that exist, with something in each stream it lists
 const traffic = JSON.parse(fs.readFileSync(path.join(root, 'src', 'traffic.json'), 'utf8'));
-const catalog = require('../src/gen.js').resolveCatalog(JSON.parse(fs.readFileSync(path.join(root, 'src', 'catalog.json'), 'utf8')));
 const tBad = [];
 const MAX_MIX = +fs.readFileSync(path.join(root, 'core', 'src', 'traffic.rs'), 'utf8').match(/pub const MAX_MIX: usize = (\d+);/)[1];
+// every archetype's environs traffic: a rate, a jump share in 0..1, and a mix
+for (const [a, E] of Object.entries(traffic.environs || {})) {
+  if (!catalog.stations.some(s => s.id === a)) tBad.push(`traffic.json environs: ${a} is not a catalog station`);
+  if (!(E.perMinute > 0) || !(E.jump >= 0 && E.jump <= 1) || !(E.mix || []).length) tBad.push(`traffic.json environs.${a}: needs perMinute > 0, jump in 0..1 and a mix`);
+}
 for (const tier of schema.properties.bodies.items.properties.port.properties.population.enum) if (!(traffic.population[tier] > 0)) tBad.push(`traffic.json: no weight for population ${tier}`);
 let mixes = 0;
 for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.endsWith('.json'))) {
-  const { system, bodies } = loadSystem(JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', f), 'utf8')), schema);
+  const { system, bodies } = loadSystem(JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', f), 'utf8')), schema, layout);
   const T = (system && system.traffic) || {};
   const check = (where, e) => {
     const B = catalog.brands.find(b => b.id === e.line);
@@ -71,8 +84,17 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
   (T.local || []).forEach(e => check('local', e));
   (T.through || []).forEach(e => check('through', e));
   (T.loiter || []).forEach(e => { check('loiter', e); if (!bodies.some(b => b.id === e.port && b.port)) tBad.push(`${f} loiter: no port ${e.port}`); });
+  // environmental stations: their archetype has traffic, and each of its lines (own.<line> as each owner's) is
+  // flown by the classes it names; one group of rows per archetype and owner
+  const envGroups = new Map();
+  for (const b of bodies.filter(b => b.env)) {
+    const E = (traffic.environs || {})[b.env.archetype], gk = b.env.archetype + '|' + b.env.brand;
+    if (!E) { tBad.push(`${f} ${b.id}: traffic.json has no environs entry for ${b.env.archetype}`); continue; }
+    if (!envGroups.has(gk)) envGroups.set(gk, E.mix.map(e => Object.assign({}, e, { line: e.line.replace(/^own\./, b.env.brand + '.') })));
+  }
+  for (const [gk, mix] of envGroups) mix.forEach(e => check(`environs ${gk}`, e));
   // the page writes one core mix row per entry and class (writeTraffic in src/play/play.js); rows past MAX_MIX are lost
-  const rows = [...(T.local || []), ...(T.through || []), ...(T.loiter || [])].reduce((n, e) => n + Object.values(e.classes || {}).filter(w => w > 0).length, 0);
+  const rows = [...(T.local || []), ...(T.through || []), ...(T.loiter || []), ...[...envGroups.values()].flat()].reduce((n, e) => n + Object.values(e.classes || {}).filter(w => w > 0).length, 0);
   if (rows > MAX_MIX) tBad.push(`${f}: traffic mix needs ${rows} core rows; the core holds ${MAX_MIX}`);
 }
 if (tBad.length) { bad += tBad.length; tBad.forEach(m => console.log(m)); }

@@ -1,9 +1,167 @@
 {
-  "description": "Each port population tier's weight in the traffic models: the gravity model between ports (local traffic) and how through traffic picks its ports. Who flies is each system's traffic mix (the system file); rates, shares, speeds and distances are core params (core/src/world.rs).",
+  "description": "Each port population tier's weight in the traffic models: the gravity model between ports (local traffic) and how through traffic picks its ports. Who flies is each system's traffic mix (the system file); rates, shares, speeds and distances are core params (core/src/world.rs). environs: the traffic of each environmental station archetype: launches per minute per station (half are ships leaving, half arriving to dock), the share of trips to or from a jump zone (the rest pair with a port, by population), and the mix: lines with a share and weights by class. A line written own.<line> is the station owner's faction's line.",
   "population": {
     "outpost": 1,
     "colony": 3,
     "town": 10,
     "world": 30
+  },
+  "environs": {
+    "port": {
+      "perMinute": 1.6,
+      "jump": 0.6,
+      "mix": [
+        {
+          "line": "ironhulls.container-hauler",
+          "share": 0.35,
+          "classes": {
+            "c5": 1
+          }
+        },
+        {
+          "line": "federation.container-carrier",
+          "share": 0.3,
+          "classes": {
+            "c4": 1
+          }
+        },
+        {
+          "line": "prism.container-liner",
+          "share": 0.2,
+          "classes": {
+            "c4": 1
+          }
+        },
+        {
+          "line": "own.civilian",
+          "share": 0.15,
+          "classes": {
+            "c3": 2,
+            "c4": 1
+          }
+        }
+      ]
+    },
+    "forge": {
+      "perMinute": 1.2,
+      "jump": 0.15,
+      "mix": [
+        {
+          "line": "ironhulls.civilian",
+          "share": 0.75,
+          "classes": {
+            "c2": 1,
+            "c3": 3,
+            "c4": 2
+          }
+        },
+        {
+          "line": "own.civilian",
+          "share": 0.25,
+          "classes": {
+            "c3": 2,
+            "c4": 1
+          }
+        }
+      ]
+    },
+    "refinery": {
+      "perMinute": 1.2,
+      "jump": 0.3,
+      "mix": [
+        {
+          "line": "ironhulls.civilian",
+          "share": 0.5,
+          "classes": {
+            "c3": 2,
+            "c4": 2,
+            "c5": 1
+          }
+        },
+        {
+          "line": "own.civilian",
+          "share": 0.5,
+          "classes": {
+            "c3": 2,
+            "c4": 1
+          }
+        }
+      ]
+    },
+    "ring": {
+      "perMinute": 1.4,
+      "jump": 0.35,
+      "mix": [
+        {
+          "line": "own.civilian",
+          "share": 0.6,
+          "classes": {
+            "c1": 2,
+            "c2": 2,
+            "c3": 1
+          }
+        },
+        {
+          "line": "federation.civilian",
+          "share": 0.25,
+          "classes": {
+            "c2": 1,
+            "c3": 1
+          }
+        },
+        {
+          "line": "prism.civilian",
+          "share": 0.15,
+          "classes": {
+            "c2": 1,
+            "c3": 1
+          }
+        }
+      ]
+    },
+    "shipyard": {
+      "perMinute": 0.8,
+      "jump": 0.4,
+      "mix": [
+        {
+          "line": "own.military",
+          "share": 0.6,
+          "classes": {
+            "c1": 2,
+            "c2": 2,
+            "c3": 1
+          }
+        },
+        {
+          "line": "own.civilian",
+          "share": 0.4,
+          "classes": {
+            "c2": 1,
+            "c3": 2
+          }
+        }
+      ]
+    },
+    "relay": {
+      "perMinute": 0.4,
+      "jump": 0.5,
+      "mix": [
+        {
+          "line": "own.military",
+          "share": 0.7,
+          "classes": {
+            "c1": 3,
+            "c2": 1
+          }
+        },
+        {
+          "line": "own.civilian",
+          "share": 0.3,
+          "classes": {
+            "c1": 1
+          }
+        }
+      ]
+    }
   }
 }

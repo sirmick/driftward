@@ -50,7 +50,9 @@ with sync_playwright() as p:
     ev = pg.evaluate
     t = ev('__play.probe()')
     check(t['shell'] == 'title' and pg.is_visible('#title') and pg.is_disabled('#t-continue'), 'starts on the title (nothing to continue yet)')
-    pg.fill('#t-seed', '1'); pg.click('#t-new'); pg.wait_for_timeout(300)
+    pg.fill('#t-seed', '1'); pg.click('#t-new')
+    # the port screen fills in on the next frame, however long the first frames take (the start bakes)
+    pg.wait_for_function("__play.probe().mode === 2 && !document.getElementById('port').hidden && document.getElementById('port-name').textContent", timeout=60000)
     start = ev('__play.probe()')
     traffic0 = ev('__play.traffic()')
     econ0 = ev('__play.ECON')  # traffic as the game starts (checked below; the clock runs meanwhile)
@@ -124,7 +126,7 @@ with sync_playwright() as p:
       const left = [...ids].filter(h => P.sim.resolve(h) >= 0).length;
       return { seen, roles: [...roles], left, phases: P.traffic().map(t => t.phase) }; })()""")
     print('traffic counts every 5 s', tr['seen'], 'roles', tr['roles'])
-    check(min(tr['seen']) >= 10 and max(tr['seen']) <= cap and sorted(tr['roles']) == ['arrive', 'depart', 'local', 'loiter'], f"traffic stays between {min(tr['seen'])} and {max(tr['seen'])} ships: local, arriving, departing and loitering")
+    check(min(tr['seen']) >= 10 and max(tr['seen']) <= cap and sorted(tr['roles']) == ['arrive', 'depart', 'environ', 'local', 'loiter'], f"traffic stays between {min(tr['seen'])} and {max(tr['seen'])} ships: local, arriving, departing, loitering and environmental")
     check(tr['left'] < len(t0), f"ships land and are forgotten ({len(t0) - tr['left']} of the first {len(t0)} landed in two minutes)")
 
     # the mission board at the start port
@@ -230,9 +232,9 @@ with sync_playwright() as p:
     # scripted steps above start and end landed, so no frame saw them fly): launch, a frame or two, land
     ev("""(() => { const P = __play, C = P.CMD; P.newGame(9); P.command(C.buy, P.good('goods'), 2); P.command(C.launch); P.command(C.skip); P.advance(0.2, []);
       P.command(C.autopilot, P.probe().at); let t = 0; while (P.probe().auto >= 0 && t < 120) { P.advance(1, []); t++; } })()""")
-    pg.wait_for_timeout(500)
+    ev("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")  # a frame has seen it flying, however slow frames are
     ev("(() => { const P = __play, C = P.CMD; P.command(C.land); P.command(C.skip); P.advance(0.1, []); })()")
-    pg.wait_for_timeout(500)
+    pg.wait_for_function("localStorage.getItem('driftward.autosave.meta')", timeout=60000)  # and landed: the autosave
     meta = json.loads(ev("localStorage.getItem('driftward.autosave.meta')") or 'null')
     check(meta is not None and meta['day'] == 2 and meta['port'] == 'Halde Landing', f'landing autosaves: {meta}')
     ev('__play.showTitle()'); pg.wait_for_timeout(200)

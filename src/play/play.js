@@ -13,7 +13,8 @@ const { gl, compile, P, quad, draw, tex } = G;
 
 // ---------- the system: validated (clamped) against its schema, then laid out (src/schema.js) ----------
 const SYSTEM_SCHEMA = JSON.parse($('system-schema').textContent);
-const loaded = loadSystem(JSON.parse($('system').textContent), SYSTEM_SCHEMA);
+// environmental stations are sized from their archetype's diameter range (the middle of it, as a radius)
+const loaded = loadSystem(JSON.parse($('system').textContent), SYSTEM_SCHEMA, { stationRadius: id => { const a = catalog.stations.find(x => x.id === id); return a && a.diameter ? (a.diameter[0] + a.diameter[1]) / 4 : 400; } });
 loaded.notes.forEach(n => console.warn(`system ${n.path}: ${n.msg}`));
 if (!loaded.system) { $('glerr').textContent = 'The system file is unusable: ' + loaded.notes.filter(n => n.fatal).map(n => `${n.path} ${n.msg}`).join('; '); $('glerr').hidden = false; return; }
 const SYS = loaded.system, BODIES = loaded.bodies, STAR = BODIES[0];
@@ -99,9 +100,11 @@ function hullAnchors(s, m) {
 const STATIONS = BODIES.filter(b => b.kind === 'station').map(b => {
   // the schema's archetype and brand enums name catalog entries (checked by npm run check); loadSystem fills the rest
   const st = b.station, arch = catalog.stations.find(a => a.id === st.archetype), brand = ShipGen.brandOf(catalog, st.brand);
-  return Object.assign({}, b, { key: 'stn|' + b.id, req: { station: arch.id, brand: brand.id, seed: st.seed }, brand, spin: arch.spin || 0.01, s: null });
+  // keyed by what is baked, so environmental stations of one archetype, owner and seed share a bake; they draw at
+  // their own scale
+  return Object.assign({}, b, { key: `stn|${arch.id}|${brand.id}|${st.seed}`, req: { station: arch.id, brand: brand.id, seed: st.seed }, brand, spin: arch.spin || 0.01, scale: b.env ? b.env.scale : 1, s: null });
 });
-STATIONS.forEach(S => baker.enqueue(S.key, false, S.req));
+[...new Map(STATIONS.map(S => [S.key, S.req]))].forEach(([key, req]) => baker.enqueue(key, false, req));
 baker.pump();
 function stationReady(S) {
   if (S.s) return true;
@@ -164,16 +167,21 @@ function resize() {
 }
 // The port's painted vista fills the screen while that stretches it no more than VISTA_STRETCH times its own pixels
 // (real device pixels: a high-DPI screen counts double). Past that it would go soft, so it becomes a framed picture
-// at about its own size, right of the port card, with the live world you landed on filling the view behind it;
-// if there is no room for the frame there, it stays full screen.
-const VISTA_STRETCH = 1.25, VISTA_MIN_W = 640, PORT_CARD_W = 520;
+// in the middle of the screen at about its own size (but at least VISTA_MIN, so the port card and a panel fit in it
+// side by side), the port's controls inside it, and the live world you landed on filling the view around it. If
+// the screen has no room for that frame, the vista stays full screen.
+const VISTA_STRETCH = 1.25, VISTA_MIN = [1120, 630];
 function frameVista() {
   const img = $('vista'), nw = img.naturalWidth || 1600, nh = img.naturalHeight || 900, ddpr = window.devicePixelRatio || 1;
   const big = W * ddpr > nw * VISTA_STRETCH || H * ddpr > nh * VISTA_STRETCH;
-  const room = W - PORT_CARD_W - 48, w = Math.min(nw * VISTA_STRETCH / ddpr, room, (H - 140) * nw / nh);
-  const framed = big && w >= VISTA_MIN_W;
+  const room = [W - 96, H - stripH - 72], w = Math.min(Math.max(nw * VISTA_STRETCH / ddpr, VISTA_MIN[0]), room[0], room[1] * nw / nh), h = w * nh / nw;
+  const framed = big && w >= VISTA_MIN[0] && h >= VISTA_MIN[1];
   document.body.classList.toggle('vista-framed', framed);
-  if (framed) { img.style.setProperty('--vista-w', `${Math.round(w)}px`); img.style.setProperty('--vista-x', `${Math.round(PORT_CARD_W + (room - w) / 2)}px`); }
+  if (framed) {
+    const st = document.body.style;
+    st.setProperty('--vista-w', `${Math.round(w)}px`); st.setProperty('--vista-h', `${Math.round(h)}px`);
+    st.setProperty('--vista-x', `${Math.round((W - w) / 2)}px`); st.setProperty('--vista-y', `${Math.round((H - stripH - h) / 2)}px`);
+  }
 }
 window.addEventListener('resize', resize);
 resize();
@@ -221,6 +229,7 @@ window.addEventListener('keydown', e => {
     // pixels (see postProcess)
     if (e.code === 'KeyB' || e.code === 'KeyN') sceneStale = true;
     if (e.code === 'KeyB' && !inPort()) { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
+    if (e.code === 'KeyJ') toast(jitterToggle() ? 'Jitter probe: frame times, and motion jitter in pixels of a 1080p view (see src/play/jitter.js)' : 'Jitter probe off');
     if (e.code === 'KeyN') { nanView = 1 - nanView; toast(nanView ? 'NaN view: magenta = bad scene pixel, cyan = bad bloom, yellow = negative' : 'NaN view off'); }
     if (e.code === 'KeyL') landOrLaunch();
     if (e.code === 'Enter') skipSequence();
@@ -262,7 +271,7 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
 let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false;
-let pauseGame = () => {}, shellBack = () => {};
+let pauseGame = () => {}, shellBack = () => {}, jitterToggle = () => false;
 // Esc steps back: a sequence skips; in port, an open panel closes; in flight, the map closes, then the target
 // clears; otherwise the game pauses
 function onEscape() {
@@ -278,8 +287,8 @@ let showPanel = () => {};
 const NUM = new Intl.NumberFormat('en-US'), fmtCr = n => NUM.format(n); // one formatter: toLocaleString builds one per call, and the HUD formats every frame
 
 CORE_READY.then(CORE => {
-  // body capacity from the schema's cap on bodies, plus the star
-  const CFG = { maxShips: 96, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + 1, envN: 16, envW: 40000, seed: 1 };
+  // body capacity: the schema's cap on bodies, the star, and the most environmental stations a system holds
+  const CFG = { maxShips: 128, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + 1 + MAX_ENVIRONS, envN: 16, envW: 40000, seed: 1 };
   const sim = CORE.world(CFG);
   const SH = sim.ship, IN = CORE.IN;
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; });
@@ -299,7 +308,7 @@ CORE_READY.then(CORE => {
   const TRAFFIC = CORE.TRAFFIC, TCFG = SYS.traffic || {};
   const kindOf = (line, cls) => { const bi = catalog.brands.findIndex(b => b.id === line), zi = catalog.sizes.findIndex(z => z.id === cls); return bi < 0 || zi < 0 ? -1 : bi * nSizes + zi; };
   function writeTraffic() {
-    const M = sim.mix; let m = 0;
+    const M = sim.mix, B_ = sim.body; let m = 0;
     for (const k of ['stream', 'body', 'kind', 'weight', 'rate', 'dwell']) M[k].fill(0);
     const add = (stream, body, e, total) => {
       const cls = Object.entries(e.classes || {}).filter(([c, w]) => w > 0 && kindOf(e.line, c) >= 0), sum = cls.reduce((s, [, w]) => s + w, 0);
@@ -308,6 +317,20 @@ CORE_READY.then(CORE => {
     (TCFG.local || []).forEach(e => add(TRAFFIC.mix.local, -1, e, e.share));
     (TCFG.through || []).forEach(e => add(TRAFFIC.mix.through, -1, e, e.share));
     (TCFG.loiter || []).forEach(e => { const j = BODIES.findIndex(b => b.id === e.port && b.port); if (j > 0) add(TRAFFIC.mix.loiter, j, e, e.count); });
+    // environmental stations: one group per archetype and owner, its rows from traffic.json's environs (own.<line> is
+    // the owner faction's line); each station launches at its archetype's rate, a share of trips via the jump zones
+    const groups = new Map();
+    BODIES.forEach((b, j) => {
+      B_.env[j] = 0; B_.env_rate[j] = 0; B_.env_jump[j] = 0;
+      if (!b.env) return;
+      const E = (TRAFFIC_DATA.environs || {})[b.env.archetype]; if (!E) return;
+      const gk = b.env.archetype + '|' + b.env.brand;
+      if (!groups.has(gk)) {
+        const g = groups.size; groups.set(gk, g);
+        for (const e of E.mix) add(TRAFFIC.mix.env, g, Object.assign({}, e, { line: e.line.replace(/^own\./, b.env.brand + '.') }), e.share);
+      }
+      B_.env[j] = groups.get(gk) + 1; B_.env_rate[j] = E.perMinute / 60 * b.env.scale; B_.env_jump[j] = E.jump;
+    });
     if (TCFG.ships !== undefined) sim.param('traffic_ships', TCFG.ships);
     if (TCFG.throughShare !== undefined) sim.param('share_through', TCFG.throughShare);
     if (TCFG.jumpRadius !== undefined) sim.param('jump_radius', TCFG.jumpRadius);
@@ -487,6 +510,10 @@ CORE_READY.then(CORE => {
 
   // ---------- frame ----------
   let last = 0, camX = 0, camY = 0, fps = 60, fpsAcc = 0, fpsN = 0, lastMode = -1;
+  const JIT = makeJitter(CFG.maxShips); // motion smoothness, frame by frame (src/play/jitter.js; J shows it)
+  // a ship's motion state for the probe: 0 while a landing or launch sequence draws it, else 1 + phase + 4 x on rails
+  const jitState = i => { const ph = sim.traffic.phase[i]; return sim.traffic.role[i] && ph !== TRAFFIC.cruise ? 0 : 1 + ph + 4 * sim.ship.rail[i]; };
+  jitterToggle = () => JIT.toggle();
   const t0 = performance.now();
   function frame(now) {
     requestAnimationFrame(frame);
@@ -495,16 +522,20 @@ CORE_READY.then(CORE => {
     sim.checkViews();
     // bake the traffic hulls up front (behind the start port's screen), not when the first one flies into view
     for (const k of bakeKinds) typeReady(types[k]);
+    let ran = 0;
     if (!paused && !debug.isOpen()) { // paused (or debugging): the clock stops (the replay log is by tick, so a pause leaves no trace)
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
-      for (let n = sim.due(dt); n > 0; n--) sim.step();
+      ran = sim.due(dt);
+      for (let n = ran; n > 0; n--) sim.step();
     }
     sim.interpolate();
     const mode = sim.mode();
     if (mode !== lastMode) { onMode(mode, lastMode); lastMode = mode; }
     watchMissions();
-    const k = Math.min(1, dt * 3.5);
+    // the camera eases toward its target at the same rate whatever the frame rate: the exact exponential, so a long
+    // frame (a hitch, a dropped frame) moves it as far as the short frames it replaced would have, with no lurch
+    const k = 1 - Math.exp(-3.5 * dt);
     if (mode === MODE.landed) { const B = BODIES[sim.game.at[0]]; camX += (B.x - camX) * k; camY += (B.y - camY) * k; }
     else if (mode === MODE.flying) { const lead = 0.35; camX += (SH.rx[0] + SH.vx[0] * lead - camX) * k; camY += (SH.ry[0] + SH.vy[0] * lead - camY) * k; }
     else { const q = playerSeq().pose, lead = 0.35; camX += (q.x + q.vx * lead - camX) * k; camY += (q.y + q.vy * lead - camY) * k; } // following the curl, leading as in flight
@@ -514,7 +545,10 @@ CORE_READY.then(CORE => {
     // its last frame (pause shows it frozen behind the menu), and the GPU rests
     const covered = ($('vista').classList.contains('on') && !document.body.classList.contains('vista-framed')) || mapOn || debug.isOpen() || (paused && !titleUp());
     if (!covered || sceneStale) { render((now - t0) / 1000, camX, camY); sceneStale = false; }
+    if (mode === MODE.flying && !paused && !covered) JIT.record({ dt, ticks: ran, alpha: sim.alpha(), px: SH.rx[0], py: SH.ry[0], cx: camX, cy: camY, scale, h: canvas.height }, SH, sim.count(), jitState);
+    else JIT.reset();
     drawHUD();
+    hx.setTransform(dpr, 0, 0, dpr, 0, 0); JIT.draw(hx, 12, H - stripH - 222, 520, 210, now);
     drawMap();
   }
 
@@ -543,6 +577,7 @@ CORE_READY.then(CORE => {
   function showVista(id) {
     const img = $('vista'), src = id && ART.vistas[id];
     img.classList.remove('on');
+    document.body.classList.toggle('has-vista', !!src); // the framed layout is for a port with a painting
     if (!src) { img.removeAttribute('src'); return; }
     img.onload = () => { if (img.getAttribute('src') === src) { frameVista(); img.classList.add('on'); } };
     img.onerror = () => console.warn(`vista ${src} did not load; showing the procedural view`);
@@ -996,11 +1031,11 @@ CORE_READY.then(CORE => {
       } }
     // stations: one upload, then a draw each with the ship shader and their own bake
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    for (let k = 0; k < STATIONS.length; k++) { const S = STATIONS[k], o = k * 6; stInst[o] = S.x; stInst[o + 1] = S.y; stInst[o + 2] = t * S.spin; stInst[o + 3] = 0; stInst[o + 4] = 0; stInst[o + 5] = 1; }
+    for (let k = 0; k < STATIONS.length; k++) { const S = STATIONS[k], o = k * 6; stInst[o] = S.x; stInst[o + 1] = S.y; stInst[o + 2] = t * S.spin + k * 1.7; stInst[o + 3] = 0; stInst[o + 4] = 0; stInst[o + 5] = S.scale; }
     let stUp = false;
     for (let k = 0; k < STATIONS.length; k++) {
       const S = STATIONS[k];
-      if (!stationReady(S) || Math.abs(S.x - cx) > halfW + S.half || Math.abs(S.y - cy) > halfH + S.half) continue;
+      if (!stationReady(S) || Math.abs(S.x - cx) > halfW + S.half * S.scale || Math.abs(S.y - cy) > halfH + S.half * S.scale) continue;
       const u = FP.ship.u;
       if (!stUp) { setView(FP.ship, RW, RH, cx, cy); gl.bindVertexArray(VS.station.vao); upload(VS.station, stInst, STATIONS.length); gl.uniform1i(u.uLN, 0); stUp = true; }
       shipUniforms(u, sunFrom(S.x, S.y, sunAt), t);
@@ -1218,7 +1253,8 @@ CORE_READY.then(CORE => {
   // Every body, from the player's drawn (interpolated) position, with its mission marker.
   const navObjects = () => {
     const dest = new Set(activeMissions().map(k => MS.dest[k]));
-    return BODIES.map((b, j) => ({ j, name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x: b.x, y: b.y, r: b.r, kind: b.kind, port: !!b.port, mission: dest.has(j) }));
+    return BODIES.map((b, j) => ({ j, name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x: b.x, y: b.y, r: b.r, kind: b.kind, port: !!b.port, mission: dest.has(j), env: !!b.env }))
+      .filter(o => !o.env); // environmental stations are scenery: on the map and radar, not in the overlay
   };
   function navInfo(o) {
     const dx = o.x - SH.rx[0], dy = o.y - SH.ry[0], d = Math.hypot(dx, dy) || 1;
@@ -1395,7 +1431,7 @@ CORE_READY.then(CORE => {
   const fromStar = j => Math.hypot(BODIES[j].x - STAR.x, BODIES[j].y - STAR.y);
   const TOP = BODIES.map((_, j) => j).filter(j => j === 0 || BODIES[j].parent === STAR.id).sort((a, b) => fromStar(a) - fromStar(b));
   // a body's moons and stations, nearest first; the star's planets are top-level rows already, so it has none
-  const KIDS = TOP.map(p => BODIES.map((_, j) => j).filter(j => p !== 0 && BODIES[j].parent === BODIES[p].id)
+  const KIDS = TOP.map(p => BODIES.map((_, j) => j).filter(j => p !== 0 && BODIES[j].parent === BODIES[p].id && !BODIES[j].env)
     .sort((a, b) => Math.hypot(BODIES[a].x - BODIES[p].x, BODIES[a].y - BODIES[p].y) - Math.hypot(BODIES[b].x - BODIES[p].x, BODIES[b].y - BODIES[p].y)));
   const ICON = { star: '✹', planet: '●', moon: '•', station: '◇' };
   let expanded = -1, locRows = [], locAt = 0;
@@ -1493,7 +1529,7 @@ CORE_READY.then(CORE => {
     // orbits round each body's parent
     c.strokeStyle = 'rgba(138,149,164,.22)'; c.lineWidth = 1;
     for (const B of BODIES) {
-      if (!B.parent) continue;
+      if (!B.parent || B.env) continue;
       const P = BODIES.find(o => o.id === B.parent) || STAR, [px, py] = mapPos(P.x, P.y, v);
       c.beginPath(); c.arc(px, py, Math.hypot(B.x - P.x, B.y - P.y) * v.s, 0, 6.283); c.stroke();
     }
@@ -1513,11 +1549,12 @@ CORE_READY.then(CORE => {
     c.textAlign = 'center'; c.textBaseline = 'middle';
     BODIES.forEach((B, j) => {
       const [x, y] = mapPos(B.x, B.y, v), r = Math.max(B.kind === 'star' ? 7 : 3.5, B.r * v.s);
-      c.fillStyle = B.kind === 'star' ? '#f2b26b' : B.kind === 'station' ? '#c9d2dc' : '#6f8296';
+      c.fillStyle = B.kind === 'star' ? '#f2b26b' : B.env ? 'rgba(201,210,220,.55)' : B.kind === 'station' ? '#c9d2dc' : '#6f8296';
       if (B.kind === 'station') { c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillRect(-r, -r, 2 * r, 2 * r); c.restore(); }
       else { c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); }
       if (j === tb) { c.strokeStyle = TGT_COL; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 6, 0, 6.283); c.stroke(); }
       if (dest.has(j)) { c.strokeStyle = MIS_COL; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, r + 10, 0, 6.283); c.stroke(); }
+      if (B.env && j !== tb) return; // environmental stations: a marker, no label (unless targeted)
       c.font = '600 12px "IBM Plex Mono", ui-monospace, monospace';
       c.fillStyle = j === tb ? TGT_COL : dest.has(j) ? MIS_COL : B.port ? '#7fd08a' : '#9fb4c8';
       c.fillText(B.name.toUpperCase(), x, y - r - 12);
@@ -1570,6 +1607,7 @@ CORE_READY.then(CORE => {
     // commodity index by id, and its price where the player is landed
     good: id => GOODS.findIndex(c => c.id === id),
     price: id => sim.price(sim.game.at[0], GOODS.findIndex(c => c.id === id)),
+    jitter: () => JIT.report(), jitterClear: () => JIT.clear(),
     probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
       credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap() }),
     // hold keys for sec seconds of sim time (recorded like live input)

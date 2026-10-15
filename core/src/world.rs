@@ -66,7 +66,9 @@ soa! {
 soa! {
     /// Bodies (the star, planets, moons, stations): position, radius, well strength g (relative to the g_ref param),
     /// population weight (traffic flows: 0 for no one), kind (port.rs BODY_*), and whether it has a port to land at.
-    pub struct Bodies { x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8 }
+    /// An environmental station (no port, round a world) has env, its mix group plus one (traffic.rs MIX_ENV rows),
+    /// and launches ships at env_rate a second (next at env_next), env_jump of them to or from a jump zone.
+    pub struct Bodies { x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8, env: u8, env_rate: f64, env_next: f64, env_jump: f64 }
 }
 
 soa! {
@@ -186,7 +188,7 @@ params! {
     slack_min = 1.5;      "tightest deadline, as a multiple of route days (pays the most)"
     slack_max = 3.0;      "loosest deadline, as a multiple of route days"
     traffic_ships = 30.0; "ambient ships in flight at steady state, local and through (loiter adds its own)"
-    traffic_cap = 60.0;   "most ambient ships in flight at once"
+    traffic_cap = 90.0;   "most ambient ships in flight at once"
     share_through = 0.45; "through traffic's share of traffic_ships (arriving at and leaving by the jump zones)"
     share_shuttle = 0.3;  "shuttles' share of the local traffic"
     share_hauler = 0.5;   "haulers' share of the local traffic"
@@ -198,6 +200,7 @@ params! {
     loiter_orbit = 3.0;   "loitering ships circle their port at this many body radii"
     loiter_turns = 1.25;  "mean number of turns a loitering ship flies round its port before landing"
     loiter_cruise = 0.45; "loitering ships fly at this fraction of their top speed"
+    env_trip = 90.0;      "a typical environmental station trip, seconds (seeds the ships already under way at a new game)"
 }
 
 #[derive(Clone, Copy, Debug)]

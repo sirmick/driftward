@@ -34,12 +34,18 @@ pub const LOCAL: u8 = 1;
 pub const ARRIVE: u8 = 2;
 pub const DEPART: u8 = 3;
 pub const LOITER: u8 = 4;
+/// To or from an environmental station (a body with no port: forges, container ports, habitats round a world).
+pub const ENVIRON: u8 = 5;
 
 /// Mix row streams.
 pub const MIX_LOCAL: u8 = 1;
 pub const MIX_THROUGH: u8 = 2;
 pub const MIX_LOITER: u8 = 3;
-pub const MAX_MIX: usize = 48;
+/// Environmental station rows: `body` is the station group (bodies.env - 1), `weight` the row's share of its launches.
+pub const MIX_ENV: u8 = 4;
+pub const MAX_MIX: usize = 128;
+/// How far before and after a route's waypoint a railed ship starts and ends its turn, metres (less on short legs).
+const CORNER: f64 = 600.0;
 
 /// Jump zones: north, east, south and west of the star.
 pub const N_JUMP: usize = 4;
@@ -219,6 +225,36 @@ impl World {
         for l in 0..self.lanes.cap { self.lanes.next[l] = if self.lanes.rate[l] > 0.0 { now + self.gap(self.lanes.rate[l]) } else { f64::INFINITY }; }
         for l in 0..self.jlanes.cap { self.jlanes.next[l] = if self.jlanes.rate[l] > 0.0 { now + self.gap(self.jlanes.rate[l]) } else { f64::INFINITY }; }
         for m in 0..MAX_MIX { self.mix.next[m] = if self.mix.rate[m] > 0.0 { now + self.gap(self.mix.rate[m]) } else { f64::INFINITY }; }
+        for j in 0..self.n_bodies { self.bodies.env_next[j] = if self.bodies.env[j] != 0 && self.bodies.env_rate[j] > 0.0 { now + self.gap(self.bodies.env_rate[j]) } else { f64::INFINITY }; }
+    }
+
+    /// A ship to or from environmental station j: its type drawn from the station group's mix rows by weight; out
+    /// to, or in from, a jump zone (the station's env_jump share of trips) or a port (by population). None if the
+    /// group has no rows, there is no port to pair with, or there is no free slot.
+    /// The mix rows of environmental station group g, with weight, in row order.
+    fn env_rows(&self, g: i16) -> impl Iterator<Item = usize> + '_ {
+        (0..MAX_MIX).filter(move |&m| self.mix.stream[m] == MIX_ENV && self.mix.body[m] == g && self.mix.weight[m] > 0.0)
+    }
+    fn spawn_env(&mut self, j: usize) -> Option<usize> {
+        let g = self.bodies.env[j] as i16 - 1;
+        let total: f64 = self.env_rows(g).map(|m| self.mix.weight[m]).sum();
+        if total <= 0.0 { return None; }
+        let mut x = self.rng.next_f64() * total;
+        let mut row = None;
+        for m in self.env_rows(g) { x -= self.mix.weight[m]; row = Some(m); if x <= 0.0 { break; } }
+        let outbound = self.rng.next_f64() < 0.5;
+        let other = if self.rng.next_f64() < self.bodies.env_jump[j] {
+            End::Jump(((self.rng.next_f64() * N_JUMP as f64) as usize).min(N_JUMP - 1))
+        } else {
+            let pops: f64 = (0..self.n_bodies).filter(|&p| self.bodies.port[p] != 0).map(|p| self.bodies.pop[p]).sum();
+            if pops <= 0.0 { return None; }
+            let mut y = self.rng.next_f64() * pops;
+            let mut port = None;
+            for p in (0..self.n_bodies).filter(|&p| self.bodies.port[p] != 0) { y -= self.bodies.pop[p]; port = Some(p); if y <= 0.0 { break; } }
+            End::Body(port?)
+        };
+        let me = End::Body(j);
+        if outbound { self.spawn(ENVIRON, me, other, row) } else { self.spawn(ENVIRON, other, me, row) }
     }
 
     /// A Poisson process's gap to its next event at `rate` a second: exponential, -ln(u) / rate, u in (0, 1].
@@ -255,6 +291,19 @@ impl World {
             if self.mix.stream[m] == MIX_LOITER && self.mix.body[m] >= 0 {
                 let j = End::Body(self.mix.body[m] as usize);
                 if !self.seed_lane(LOITER, j, j, self.mix.weight[m], Some(m)) { return; }
+            }
+        }
+        // environmental stations: their launch rate times a typical trip, already under way
+        let trip = self.p(P::env_trip);
+        for j in 0..nb {
+            if self.bodies.env[j] == 0 || self.bodies.env_rate[j] <= 0.0 { continue; }
+            for _ in 0..self.poisson(self.bodies.env_rate[j] * trip) {
+                let Some(k) = self.spawn_env(j) else { break };
+                let t = &mut self.traffic;
+                t.phase[k] = T_CRUISE;
+                t.s[k] = self.rng.range(0.0, t.len[k]);
+                self.place_on_route(k);
+                self.slot_reset(k, false);
             }
         }
     }
@@ -358,15 +407,39 @@ impl World {
         let mut leg = self.traffic.leg[k] as usize;
         if leg + 1 >= n || self.route.s[base + leg] > s { leg = 0; }
         while leg + 2 < n && s > self.route.s[base + leg + 1] { leg += 1; }
-        let (p0, p1) = (self.pt(k, leg), self.pt(k, leg + 1));
-        let (dx, dy) = (p1.0 - p0.0, p1.1 - p0.1);
-        let d = hypot(dx, dy).max(1e-6);
-        let f = ((s - self.route.s[base + leg]) / d).min(1.0);
-        let cruise = self.traffic.cruise[k];
         self.traffic.leg[k] = leg as u8;
+        // corners are rounded: within `c` of an interior point the ship follows a quadratic curve from the point c
+        // before it to the point c after it, so its heading turns smoothly instead of snapping at the waypoint
+        let (x, y, dx, dy);
+        let corner = |j: usize| -> f64 { // the rounding distance at interior point j
+            let (a, b) = (self.route.s[base + j] - self.route.s[base + j - 1], self.route.s[base + j + 1] - self.route.s[base + j]);
+            CORNER.min(a * 0.45).min(b * 0.45)
+        };
+        let near = if leg > 0 && s - self.route.s[base + leg] < corner(leg) { Some(leg) }
+            else if leg + 2 < n && self.route.s[base + leg + 1] - s < corner(leg + 1) { Some(leg + 1) } else { None };
+        if let Some(j) = near {
+            let (c, sj) = (corner(j), self.route.s[base + j]);
+            let (pa, pj, pb) = (self.pt(k, j - 1), self.pt(k, j), self.pt(k, j + 1));
+            let (la, lb) = (hypot(pj.0 - pa.0, pj.1 - pa.1).max(1e-6), hypot(pb.0 - pj.0, pb.1 - pj.1).max(1e-6));
+            let a = (pj.0 - (pj.0 - pa.0) / la * c, pj.1 - (pj.1 - pa.1) / la * c);
+            let b = (pj.0 + (pb.0 - pj.0) / lb * c, pj.1 + (pb.1 - pj.1) / lb * c);
+            let t = ((s - (sj - c)) / (2.0 * c)).clamp(0.0, 1.0);
+            let u = 1.0 - t;
+            x = u * u * a.0 + 2.0 * u * t * pj.0 + t * t * b.0;
+            y = u * u * a.1 + 2.0 * u * t * pj.1 + t * t * b.1;
+            dx = u * (pj.0 - a.0) + t * (b.0 - pj.0);
+            dy = u * (pj.1 - a.1) + t * (b.1 - pj.1);
+        } else {
+            let (p0, p1) = (self.pt(k, leg), self.pt(k, leg + 1));
+            (dx, dy) = (p1.0 - p0.0, p1.1 - p0.1);
+            let f = ((s - self.route.s[base + leg]) / hypot(dx, dy).max(1e-6)).min(1.0);
+            (x, y) = (p0.0 + dx * f, p0.1 + dy * f);
+        }
+        let d = hypot(dx, dy).max(1e-6);
+        let cruise = self.traffic.cruise[k];
         let sh = &mut self.ships;
-        sh.x[k] = p0.0 + dx * f;
-        sh.y[k] = p0.1 + dy * f;
+        sh.x[k] = x;
+        sh.y[k] = y;
         sh.vx[k] = dx / d * cruise;
         sh.vy[k] = dy / d * cruise;
         sh.ang[k] = atan2(-dx, dy);
@@ -411,6 +484,13 @@ impl World {
                 self.mix.next[m] += self.gap(self.mix.rate[m]);
                 let j = End::Body(self.mix.body[m] as usize);
                 self.spawn(LOITER, j, j, Some(m));
+            }
+        }
+        // environmental stations: each launches at its own rate (half of them are ships arriving to dock instead)
+        for j in 0..nb {
+            if self.bodies.env[j] != 0 && self.bodies.env_rate[j] > 0.0 && self.bodies.env_next[j] <= now {
+                self.bodies.env_next[j] += self.gap(self.bodies.env_rate[j]);
+                self.spawn_env(j);
             }
         }
         let (near, far) = (self.p(P::traffic_near), self.p(P::traffic_near) * 1.25);
@@ -553,6 +633,30 @@ mod tests {
         w
     }
     fn count(w: &World, role: u8) -> usize { (0..w.count).filter(|&k| w.traffic.role[k] == role).count() }
+
+    #[test]
+    fn environmental_stations_launch_and_take_ships() {
+        let mut w = world(5);
+        // the station off to one side becomes an environmental station: no port, its own group's mix
+        let j = 3;
+        (w.bodies.port[j], w.bodies.pop[j], w.bodies.env[j], w.bodies.env_rate[j], w.bodies.env_jump[j]) = (0, 0.0, 1, 0.5, 0.4);
+        let m = (0..MAX_MIX).find(|&m| w.mix.stream[m] == 0).unwrap();
+        (w.mix.stream[m], w.mix.body[m], w.mix.kind[m], w.mix.weight[m]) = (MIX_ENV, 0, 0, 1.0);
+        w.plan_traffic();
+        let (mut out, mut inbound, mut jump) = (0, 0, 0);
+        for _ in 0..60 * 120 {
+            w.step();
+            for k in 0..w.count {
+                if w.traffic.role[k] != ENVIRON || w.traffic.age[k] > DT * 1.5 { continue; } // count each once, in its first tick
+                let (from, to) = (End::of(w.traffic.from[k]), End::of(w.traffic.to[k]));
+                if from == End::Body(j) { out += 1 } else if to == End::Body(j) { inbound += 1 } else { panic!("{from:?} -> {to:?}") }
+                if matches!(from, End::Jump(_)) || matches!(to, End::Jump(_)) { jump += 1 }
+                assert_eq!(w.mix.kind[w.traffic.mix[k] as usize], 0);
+            }
+        }
+        // about 60 launches in two minutes at 0.5 a second, half each way, some through the jump zones
+        assert!(out > 10 && inbound > 10 && jump > 5, "out {out} in {inbound} jump {jump}");
+    }
 
     #[test]
     fn routes_bend_round_the_star() {
