@@ -78,6 +78,9 @@ void main(){
     vec3 c = uMode==1 ? A.rgb : uMode==2 ? Nt.rgb : uMode==3 ? mix(vec3(.05,.07,.12), vec3(1.,.93,.78), Nt.a) : clamp(Et.rgb*2.,0.,1.);
     o = vec4(pow(c,vec3(2.2))*A.a, A.a); return;
   }
+  // the quad carries the shield margin: skip the shadow march and lights where there is no hull (after the
+  // fetches above, which need the whole quad for their mip derivatives)
+  if (A.a < 1./255.) discard;
   float c = cos(uAngle), s = sin(uAngle);
   vec3 n = normalize(vec3(Nt.xy*2.-1., Nt.z));
   vec3 N = normalize(vec3(c*n.x - s*n.y, s*n.x + c*n.y, n.z));

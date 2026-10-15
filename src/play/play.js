@@ -12,7 +12,8 @@ if (!G) { $('glerr').hidden = false; return; }
 const { gl, compile, P, quad, draw, tex } = G;
 
 // ---------- the system: validated (clamped) against its schema, then laid out (src/schema.js) ----------
-const loaded = loadSystem(JSON.parse($('system').textContent), JSON.parse($('system-schema').textContent));
+const SYSTEM_SCHEMA = JSON.parse($('system-schema').textContent);
+const loaded = loadSystem(JSON.parse($('system').textContent), SYSTEM_SCHEMA);
 loaded.notes.forEach(n => console.warn(`system ${n.path}: ${n.msg}`));
 if (!loaded.system) { $('glerr').textContent = 'The system file is unusable: ' + loaded.notes.filter(n => n.fatal).map(n => `${n.path} ${n.msg}`).join('; '); $('glerr').hidden = false; return; }
 const SYS = loaded.system, BODIES = loaded.bodies, STAR = BODIES[0];
@@ -33,8 +34,8 @@ const star = STARS[STAR.look] || STARS.sol;
 const SURFACE = { terran: 0, giant: 1, rock: 2 }, BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3 };
 // planets and moons, drawn by the planet shader
 const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
-  const L = b.look || {}, pal = L.palette || ['#5e5953', '#8a8178', '#c9c0b4'];
-  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere || '#9fb4c8')), seed: L.seed || 1, surface: SURFACE[L.surface] || 0, city: L.cityLights, air: L.air, storm: L.lightning });
+  const L = b.look, pal = L.palette; // every field filled by the schema clamp, defaults and all
+  return Object.assign({}, b, { L1: hexRGB(pal[0]), L2: hexRGB(pal[1]), L3: hexRGB(pal[2]), LA: lin(hexRGB(L.atmosphere)), seed: L.seed, surface: SURFACE[L.surface], city: L.cityLights, air: L.air, storm: L.lightning });
 });
 // light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
 function sunFrom(x, y) {
@@ -96,9 +97,9 @@ function hullAnchors(s, m) {
 }
 // stations, baked from their catalog archetype in an owning brand's style; drawn like ships, slowly spinning
 const STATIONS = BODIES.filter(b => b.kind === 'station').map(b => {
-  const st = b.station || {}, arch = catalog.stations.find(a => a.id === st.archetype) || catalog.stations[0];
-  const brand = ShipGen.brandOf(catalog, st.brand) || catalog.brands[0];
-  return Object.assign({}, b, { key: 'stn|' + b.id, req: { station: arch.id, brand: brand.id, seed: st.seed || b.id }, brand, spin: arch.spin || 0.01, s: null });
+  // the schema's archetype and brand enums name catalog entries (checked by npm run check); loadSystem fills the rest
+  const st = b.station, arch = catalog.stations.find(a => a.id === st.archetype), brand = ShipGen.brandOf(catalog, st.brand);
+  return Object.assign({}, b, { key: 'stn|' + b.id, req: { station: arch.id, brand: brand.id, seed: st.seed }, brand, spin: arch.spin || 0.01, s: null });
 });
 STATIONS.forEach(S => baker.enqueue(S.key, false, S.req));
 baker.pump();
@@ -144,7 +145,11 @@ function pointAt(V, first) {
 
 // ---------- layout ----------
 let W = 0, H = 0, dpr = 1, stripH = 0;
+// the scene is not redrawn while something covers it (see frame); a resize, a setting or a key that changes how it
+// draws marks it stale, so it is drawn once more underneath
+let sceneStale = true;
 function resize() {
+  sceneStale = true;
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
   stripH = document.querySelector('.strip').getBoundingClientRect().height;
@@ -168,7 +173,7 @@ const assist = () => assistMode === 0;
 function setNav(on) { navOn = on; $('b-nav').setAttribute('aria-pressed', String(on)); }
 // settings, kept in this browser; a new game starts from the assist level and overlay chosen here
 const SETTINGS = Object.assign({ bloom: 1, nav: 0, assist: 0, debug: 1 }, (() => { try { return JSON.parse(localStorage.getItem('driftward.settings') || '{}'); } catch (e) { return {}; } })());
-function applySettings() { bloomOn = !!SETTINGS.bloom; }
+function applySettings() { bloomOn = !!SETTINGS.bloom; sceneStale = true; }
 applySettings();
 // the shell's screens over the game: the title, the pause menu, settings (on top of either)
 const shellOpen = () => ['settings', 'pause', 'title'].find(id => !$(id).hidden) || null;
@@ -196,6 +201,7 @@ window.addEventListener('keydown', e => {
     if (e.code === 'KeyI' && !inPort()) setNav(!navOn);
     // debugging the flashing black squares: B toggles bloom (in flight; in port it is the bar), N paints bad scene
     // pixels (see postProcess)
+    if (e.code === 'KeyB' || e.code === 'KeyN') sceneStale = true;
     if (e.code === 'KeyB' && !inPort()) { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
     if (e.code === 'KeyN') { nanView = 1 - nanView; toast(nanView ? 'NaN view: magenta = bad scene pixel, cyan = bad bloom, yellow = negative' : 'NaN view off'); }
     if (e.code === 'KeyL') landOrLaunch();
@@ -254,14 +260,21 @@ let showPanel = () => {};
 const fmtCr = n => n.toLocaleString('en-US');
 
 CORE_READY.then(CORE => {
-  const sim = CORE.world({ maxShips: 96, maxTypes: 64, maxBodies: 8, envN: 16, envW: 40000, seed: 1 });
+  // body capacity from the schema's cap on bodies, plus the star
+  const CFG = { maxShips: 96, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + 1, envN: 16, envW: 40000, seed: 1 };
+  const sim = CORE.world(CFG);
   const SH = sim.ship, IN = CORE.IN;
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; });
   const CMD = CORE.CMD, MODE = CORE.MODE;
+  // bodies: the core places each on its orbit with its own trig (loadSystem lists parents first), and the page's
+  // copies take the core's positions, so routes, wells and the drawing agree in every browser
   BODIES.forEach((b, j) => {
-    const B = sim.body; B.x[j] = b.x; B.y[j] = b.y; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
+    const B = sim.body; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
+    if (j) sim.placeBody(j, BODIES.findIndex(p => p.id === b.parent), b.orbit.radius, b.orbit.angle);
+    b.x = B.x[j]; b.y = B.y[j];
     B.pop[j] = b.port ? TRAFFIC_DATA.population[b.port.population] || 1 : 0; // traffic's gravity model
   });
+  for (const o of [...WORLDS, ...STATIONS]) { const b = BODIES.find(b => b.id === o.id); o.x = b.x; o.y = b.y; }
   // traffic hulls: the owning culture's brand, a size class per role (src/traffic.json; validated by npm run check)
   // the traffic mix (the system file's traffic, validated against the catalog by npm run check): each entry's share
   // split over its classes by weight, one core mix row per line and class; loiter rows carry ships to keep up
@@ -479,7 +492,10 @@ CORE_READY.then(CORE => {
     else { const q = playerSeq().pose, lead = 0.35; camX += (q.x + q.vx * lead - camX) * k; camY += (q.y + q.vy * lead - camY) * k; } // following the curl, leading as in flight
     const yv = debug.yardView(); // the debug screen's Ships tab draws the shipyard instead of the game
     if (yv) { yard.render((now - t0) / 1000, yv.cells, yv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
-    render((now - t0) / 1000, camX, camY);
+    // nothing to see under the port's painted vista, the map, the debug screen or the pause menu: the canvas keeps
+    // its last frame (pause shows it frozen behind the menu), and the GPU rests
+    const covered = $('vista').classList.contains('on') || mapOn || debug.isOpen() || (paused && !titleUp());
+    if (!covered || sceneStale) { render((now - t0) / 1000, camX, camY); sceneStale = false; }
     drawHUD();
     drawMap();
   }
@@ -682,7 +698,7 @@ CORE_READY.then(CORE => {
   }
 
   // ---------- render ----------
-  const MAXS = 64;
+  const MAXS = CFG.maxShips;
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
   const typeCount = new Int32Array(types.length), typeStart = new Int32Array(types.length), typeFill = new Int32Array(types.length);
   const LP = new Float32Array(64), LC = new Float32Array(64);
@@ -880,7 +896,7 @@ CORE_READY.then(CORE => {
         for (let k = 0; k < n; k++) {
           const g = O[k * 8 + 5];
           if (g < 0.8 || Math.abs(O[k * 8] - cx) > halfW || Math.abs(O[k * 8 + 1] - cy) > halfH) continue;
-          if (best[0] < 0 || g > O[best[0] * 9 + 5]) { best[1] = best[0]; best[0] = k; } else if (best[1] < 0 || g > O[best[1] * 9 + 5]) best[1] = k;
+          if (best[0] < 0 || g > O[best[0] * 8 + 5]) { best[1] = best[0]; best[0] = k; } else if (best[1] < 0 || g > O[best[1] * 8 + 5]) best[1] = k;
         }
         for (const k of best) {
           if (k < 0) continue;

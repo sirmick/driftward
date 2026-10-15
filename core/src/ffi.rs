@@ -57,6 +57,13 @@ pub unsafe extern "C" fn dw_set_bodies(w: *mut World, n: u32) {
 }
 
 /// # Safety
+/// See `world`; `j` and `parent` must be below the body capacity.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_place_body(w: *mut World, j: u32, parent: u32, radius: f64, angle_deg: f64) {
+    unsafe { world(w) }.place_body(j as usize, parent as usize, radius, angle_deg);
+}
+
+/// # Safety
 /// See `world`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dw_due(w: *mut World, real_dt: f64) -> u32 { unsafe { world(w) }.due(real_dt) }

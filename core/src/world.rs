@@ -8,7 +8,7 @@ use crate::orbit::Orbit;
 use crate::traffic::{MAX_MIX, MAX_PTS, N_JUMP, N_ROLES};
 use crate::player::{self, Player};
 use crate::snapshot;
-use crate::math::wrap;
+use crate::math::{sin_cos, wrap, PI};
 use crate::rng::Rng;
 
 /// Fixed simulation step: 60 Hz.
@@ -334,6 +334,15 @@ impl World {
     /// Drop any partial tick owed (after a load or a clear) so the next frame starts clean.
     pub fn reset_clock(&mut self) { self.acc = 0.0; }
 
+    /// Place body j on its orbit: `radius` from body `parent` (place the parent first) at `angle_deg` degrees, with
+    /// the core's own trig, so a system lays out bit for bit the same in every browser and natively. Its x and y
+    /// are all it writes; the orbit itself is content, not state.
+    pub fn place_body(&mut self, j: usize, parent: usize, radius: f64, angle_deg: f64) {
+        let (s, c) = sin_cos(angle_deg * PI / 180.0);
+        self.bodies.x[j] = self.bodies.x[parent] + c * radius;
+        self.bodies.y[j] = self.bodies.y[parent] + s * radius;
+    }
+
     // ---------- clock ----------
 
     /// Feed real elapsed seconds; returns how many fixed ticks are due now.
@@ -472,6 +481,14 @@ mod tests {
         assert_eq!(w.due(10.0), MAX_TICKS_PER_FRAME); // a stall runs the cap, then drops the backlog
         assert!(w.alpha() < 1.0);
         assert_eq!(w.due(0.0), 0);
+    }
+
+    #[test]
+    fn bodies_place_on_their_parents_orbits() {
+        let mut w = world();
+        w.bodies.x[0] = 100.0;
+        w.place_body(1, 0, 50.0, 90.0);
+        assert!((w.bodies.x[1] - 100.0).abs() < 1e-9 && (w.bodies.y[1] - 50.0).abs() < 1e-9, "{} {}", w.bodies.x[1], w.bodies.y[1]);
     }
 
     #[test]

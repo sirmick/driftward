@@ -37,6 +37,7 @@ else console.log(`economy.json: valid; ${ids.length} commodities, ${roles.length
 const traffic = JSON.parse(fs.readFileSync(path.join(root, 'src', 'traffic.json'), 'utf8'));
 const catalog = require('../src/gen.js').resolveCatalog(JSON.parse(fs.readFileSync(path.join(root, 'src', 'catalog.json'), 'utf8')));
 const tBad = [];
+const MAX_MIX = +fs.readFileSync(path.join(root, 'core', 'src', 'traffic.rs'), 'utf8').match(/pub const MAX_MIX: usize = (\d+);/)[1];
 for (const tier of schema.properties.bodies.items.properties.port.properties.population.enum) if (!(traffic.population[tier] > 0)) tBad.push(`traffic.json: no weight for population ${tier}`);
 let mixes = 0;
 for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.endsWith('.json'))) {
@@ -53,9 +54,24 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
   (T.local || []).forEach(e => check('local', e));
   (T.through || []).forEach(e => check('through', e));
   (T.loiter || []).forEach(e => { check('loiter', e); if (!bodies.some(b => b.id === e.port && b.port)) tBad.push(`${f} loiter: no port ${e.port}`); });
+  // the page writes one core mix row per entry and class (writeTraffic in src/play/play.js); rows past MAX_MIX are lost
+  const rows = [...(T.local || []), ...(T.through || []), ...(T.loiter || [])].reduce((n, e) => n + Object.values(e.classes || {}).filter(w => w > 0).length, 0);
+  if (rows > MAX_MIX) tBad.push(`${f}: traffic mix needs ${rows} core rows; the core holds ${MAX_MIX}`);
 }
 if (tBad.length) { bad += tBad.length; tBad.forEach(m => console.log(m)); }
 else console.log(`traffic: valid; population weights, ${mixes} mix entries`);
+
+// the schema's station enums name catalog entries: every archetype one of the catalog's stations, each of them
+// offered, and every brand one the catalog resolves (src/play/play.js builds stations from them unchecked)
+{
+  const st = schema.properties.bodies.items.properties.station.properties, sBad = [];
+  const archs = st.archetype.enum, catArchs = catalog.stations.map(a => a.id);
+  for (const a of archs) if (!catArchs.includes(a)) sBad.push(`station archetype ${a} is not in the catalog`);
+  for (const a of catArchs) if (!archs.includes(a)) sBad.push(`catalog station ${a} is missing from the schema's archetype enum`);
+  for (const b of st.brand.enum) if (!require('../src/gen.js').brandOf(catalog, b)) sBad.push(`station brand ${b} is not a catalog faction or line`);
+  if (sBad.length) { bad += sBad.length; sBad.forEach(m => console.log(`system.schema.json: ${m}`)); }
+  else console.log(`stations: schema enums match the catalog; ${archs.length} archetypes, ${st.brand.enum.length} brands`);
+}
 
 // lore (src/lore/<system id>.json, from tools/gen-content.js): valid against its schema and its system, a port entry
 // for every port, and every portrait and vista in art/<id>/ naming a person or port the lore has

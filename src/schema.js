@@ -59,7 +59,8 @@ function clampToSchema(schema, value, path, notes) {
 }
 
 // A star system, validated and laid out: the star at the origin, every body placed by its orbit (moons and
-// stations around their parent), with what the core and the renderer need. Returns { system, bodies, notes };
+// stations around their parent), parents before children, with what the core and the renderer need. The game
+// re-places bodies with the core's own trig (World::place_body) so a layout is bit-identical across browsers. Returns { system, bodies, notes };
 // system is null if the file is unusable.
 function loadSystem(raw, schema) {
   const notes = [];
@@ -67,6 +68,10 @@ function loadSystem(raw, schema) {
   if (!sys || notes.some(n => n.fatal)) return { system: null, bodies: [], notes };
   const STAR_LOOK = { 'red-dwarf': 'red', orange: 'orange', yellow: 'sol', white: 'white', 'blue-giant': 'blue' };
   const placed = new Map(), bodies = [];
+  // a station body's build, its defaults from the schema whether or not the file has a station block; the seed
+  // defaults to the body's id
+  const stationSchema = schema.properties.bodies.items.properties.station;
+  const stationOf = b => { const st = clampToSchema(stationSchema, b.station || {}, `$.bodies[${b.id}].station`, notes); if (!st.seed) st.seed = b.id; return st; };
   // the star is body 0
   bodies.push({ id: 'star', name: sys.star.name, kind: 'star', x: 0, y: 0, r: sys.star.radius, g: sys.star.gravity, starClass: sys.star.class, look: STAR_LOOK[sys.star.class] });
   placed.set('', bodies[0]);
@@ -79,9 +84,9 @@ function loadSystem(raw, schema) {
       if (!parent) { if (sys.bodies.some(o => o.id === b.parent)) next.push(b); else notes.push({ path: `$.bodies[${b.id}]`, msg: `parent ${b.parent} not found; orbiting the star`, fatal: false }), next.push(Object.assign({}, b, { parent: '' })); continue; }
       const a = b.orbit.angle * Math.PI / 180;
       const body = {
-        id: b.id, name: b.name, kind: b.kind, parent: parent.id,
+        id: b.id, name: b.name, kind: b.kind, parent: parent.id, orbit: b.orbit,
         x: parent.x + Math.cos(a) * b.orbit.radius, y: parent.y + Math.sin(a) * b.orbit.radius, r: b.radius, g: b.gravity,
-        look: b.look, station: b.station, port: b.port || null
+        look: b.look, station: b.kind === 'station' ? stationOf(b) : undefined, port: b.port || null
       };
       bodies.push(body); placed.set(b.id, body);
     }

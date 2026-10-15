@@ -125,27 +125,28 @@ impl World {
         Some((cx + nx / l * clear * 1.15, cy + ny / l * clear * 1.15))
     }
 
-    /// The mix rows of a stream, and their summed weight.
-    fn mix_rows(&self, stream: u8) -> (Vec<usize>, f64) {
-        let rows: Vec<usize> = (0..MAX_MIX).filter(|&m| self.mix.stream[m] == stream && self.mix.weight[m] > 0.0).collect();
-        let total = rows.iter().map(|&m| self.mix.weight[m]).sum();
-        (rows, total)
+    /// The mix rows of a stream (those with weight), in row order. Iterates in place: the tick never allocates.
+    fn mix_rows(&self, stream: u8) -> impl Iterator<Item = usize> + '_ {
+        (0..MAX_MIX).filter(move |&m| self.mix.stream[m] == stream && self.mix.weight[m] > 0.0)
     }
+    /// A stream's summed mix weight.
+    fn mix_total(&self, stream: u8) -> f64 { self.mix_rows(stream).map(|m| self.mix.weight[m]).sum() }
     /// A stream's cruising speed for planning dwell times: the weighted harmonic mean, since a route's mean time is
     /// its length times the mean of 1 / speed (slow hulls spend longer on it, so they count for more).
     fn mean_cruise(&self, stream: u8) -> f64 {
-        let (rows, total) = self.mix_rows(stream);
+        let total = self.mix_total(stream);
         if total <= 0.0 { return 1.0; }
-        let slowness: f64 = rows.iter().map(|&m| self.mix.weight[m] / self.types.vmax[self.mix.kind[m] as usize].max(1.0)).sum::<f64>() / total;
+        let slowness: f64 = self.mix_rows(stream).map(|m| self.mix.weight[m] / self.types.vmax[self.mix.kind[m] as usize].max(1.0)).sum::<f64>() / total;
         self.p(P::traffic_cruise) / slowness
     }
     /// Draw a mix row of a stream by weight.
     fn pick_mix(&mut self, stream: u8) -> Option<usize> {
-        let (rows, total) = self.mix_rows(stream);
-        if rows.is_empty() { return None; }
+        let total = self.mix_total(stream);
+        if total <= 0.0 { return None; }
         let mut x = self.rng.next_f64() * total;
-        for &m in &rows { x -= self.mix.weight[m]; if x <= 0.0 { return Some(m); } }
-        rows.last().copied()
+        let mut last = None;
+        for m in self.mix_rows(stream) { x -= self.mix.weight[m]; last = Some(m); if x <= 0.0 { break; } }
+        last
     }
     fn route_len(pts: &[(f64, f64); 3]) -> f64 { hypot(pts[1].0 - pts[0].0, pts[1].1 - pts[0].1) + hypot(pts[2].0 - pts[1].0, pts[2].1 - pts[1].1) }
 
@@ -156,17 +157,16 @@ impl World {
         self.lanes.clear();
         self.jlanes.clear();
         let nb = self.n_bodies;
-        let ports: Vec<usize> = (0..nb).filter(|&j| self.bodies.port[j] != 0).collect();
         let (local_ships, through_ships) = (self.p(P::traffic_ships) * (1.0 - self.p(P::share_through)), self.p(P::traffic_ships) * self.p(P::share_through));
         // local: per role, a gravity model over the routes, scaled to the role's share of the local ships
-        if self.mix_rows(MIX_LOCAL).1 > 0.0 {
+        if self.mix_total(MIX_LOCAL) > 0.0 {
             let cruise = self.mean_cruise(MIX_LOCAL);
             let shares = [self.p(P::share_shuttle), self.p(P::share_hauler), self.p(P::share_liner)];
             for (role, share) in shares.into_iter().enumerate() {
                 let mut total = 0.0; // sum of weight x dwell, to scale the rates
-                for &i in &ports {
-                    for &j in &ports {
-                        if i == j { continue; }
+                for i in 0..nb {
+                    for j in 0..nb {
+                        if i == j || self.bodies.port[i] == 0 || self.bodies.port[j] == 0 { continue; }
                         let len = Self::route_len(&self.route(i, j));
                         let km = (hypot(self.bodies.x[j] - self.bodies.x[i], self.bodies.y[j] - self.bodies.y[i]) / 1000.0).max(0.1);
                         let pp = self.bodies.pop[i] * self.bodies.pop[j];
@@ -182,16 +182,16 @@ impl World {
                     }
                 }
                 let k = if total > 0.0 { local_ships * share / total } else { 0.0 };
-                for &i in &ports { for &j in &ports { if i != j { let l = self.lane(i, j, role); self.lanes.rate[l] *= k; } } }
+                for i in 0..nb { for j in 0..nb { if i != j && self.bodies.port[i] != 0 && self.bodies.port[j] != 0 { let l = self.lane(i, j, role); self.lanes.rate[l] *= k; } } }
             }
         }
         // through: arrivals at each zone bound for each port, and departures, both by the port's population
-        if self.mix_rows(MIX_THROUGH).1 > 0.0 {
+        if self.mix_total(MIX_THROUGH) > 0.0 {
             let cruise = self.mean_cruise(MIX_THROUGH);
             let mut total = 0.0;
             for dir in 0..2 {
                 for z in 0..N_JUMP {
-                    for &j in &ports {
+                    for j in (0..nb).filter(|&j| self.bodies.port[j] != 0) {
                         let pts = if dir == 0 { self.route_ends(End::Jump(z), End::Body(j)) } else { self.route_ends(End::Body(j), End::Jump(z)) };
                         let l = self.jlane(dir, z, j);
                         self.jlanes.rate[l] = self.bodies.pop[j];
@@ -234,33 +234,34 @@ impl World {
     /// dwell), spread along their routes, already cruising. Call after `plan_traffic` and after the player's slot.
     pub fn seed_traffic(&mut self) {
         let nb = self.n_bodies;
-        let mut want: Vec<(u8, End, End, f64, Option<usize>)> = Vec::new(); // stream, from, to, mean, loiter row
         for i in 0..nb { for j in 0..nb { for role in 0..N_ROLES {
             let l = self.lane(i, j, role);
-            want.push((LOCAL, End::Body(i), End::Body(j), self.lanes.rate[l] * self.lanes.dwell[l], None));
+            if !self.seed_lane(LOCAL, End::Body(i), End::Body(j), self.lanes.rate[l] * self.lanes.dwell[l], None) { return; }
         } } }
         for z in 0..N_JUMP { for j in 0..nb {
             let (a, d) = (self.jlane(0, z, j), self.jlane(1, z, j));
-            want.push((ARRIVE, End::Jump(z), End::Body(j), self.jlanes.rate[a] * self.jlanes.dwell[a], None));
-            want.push((DEPART, End::Body(j), End::Jump(z), self.jlanes.rate[d] * self.jlanes.dwell[d], None));
+            if !self.seed_lane(ARRIVE, End::Jump(z), End::Body(j), self.jlanes.rate[a] * self.jlanes.dwell[a], None) { return; }
+            if !self.seed_lane(DEPART, End::Body(j), End::Jump(z), self.jlanes.rate[d] * self.jlanes.dwell[d], None) { return; }
         } }
         for m in 0..MAX_MIX {
             if self.mix.stream[m] == MIX_LOITER && self.mix.body[m] >= 0 {
                 let j = End::Body(self.mix.body[m] as usize);
-                want.push((LOITER, j, j, self.mix.weight[m], Some(m)));
+                if !self.seed_lane(LOITER, j, j, self.mix.weight[m], Some(m)) { return; }
             }
         }
-        for (stream, from, to, mean, row) in want {
-            if mean <= 0.0 { continue; }
-            for _ in 0..self.poisson(mean) {
-                let Some(k) = self.spawn(stream, from, to, row) else { return };
-                let t = &mut self.traffic;
-                t.phase[k] = T_CRUISE;
-                t.s[k] = self.rng.range(0.0, t.len[k]);
-                self.place_on_route(k);
-                self.slot_reset(k, false);
-            }
+    }
+    /// Seed one lane or loiter row with a Poisson number of ships about `mean`; false once there is no slot left.
+    fn seed_lane(&mut self, stream: u8, from: End, to: End, mean: f64, row: Option<usize>) -> bool {
+        if mean <= 0.0 { return true; }
+        for _ in 0..self.poisson(mean) {
+            let Some(k) = self.spawn(stream, from, to, row) else { return false };
+            let t = &mut self.traffic;
+            t.phase[k] = T_CRUISE;
+            t.s[k] = self.rng.range(0.0, t.len[k]);
+            self.place_on_route(k);
+            self.slot_reset(k, false);
         }
+        true
     }
 
     fn poisson(&mut self, mean: f64) -> u32 {
@@ -284,7 +285,8 @@ impl World {
     /// Write slot k's route: from `from` to `to` (a loiter when they are the same body); returns the point count.
     fn build_route(&mut self, k: usize, from: End, to: End) -> usize {
         let base = k * crate::traffic::MAX_PTS;
-        let mut pts: Vec<(f64, f64)> = Vec::with_capacity(MAX_PTS);
+        let mut pts = [(0.0, 0.0); MAX_PTS];
+        let n_pts;
         if let (End::Body(j), true) = (from, from == to) {
             // a loiter: out to the orbit, round it, back in
             let (cx, cy, r) = (self.bodies.x[j], self.bodies.y[j], self.bodies.r[j]);
@@ -292,18 +294,20 @@ impl World {
             let (a0, dir) = (self.rng.range(0.0, TAU), if self.rng.next_f64() < 0.5 { 1.0 } else { -1.0 });
             let sweep = TAU * self.p(P::loiter_turns) * self.rng.range(0.6, 1.4);
             let n = MAX_PTS - 2;
-            let ring: Vec<(f64, f64)> = (0..n).map(|i| { let a = a0 + dir * sweep * i as f64 / (n - 1) as f64; (cx + cos(a) * orbit, cy + sin(a) * orbit) }).collect();
-            pts.push(self.end_point(from, ring[0]));
-            pts.extend(ring.iter().copied());
-            pts.push(self.end_point(to, ring[n - 1]));
+            for i in 0..n { let a = a0 + dir * sweep * i as f64 / (n - 1) as f64; pts[i + 1] = (cx + cos(a) * orbit, cy + sin(a) * orbit); }
+            pts[0] = self.end_point(from, pts[1]);
+            pts[n + 1] = self.end_point(to, pts[n]);
+            n_pts = MAX_PTS;
         } else {
             let [mut a, w, mut e] = self.route_ends(from, to);
             // jump zones are wide: arrive and leave anywhere in them
             let spread = self.p(P::jump_spread);
             if let End::Jump(_) = from { let (r, t) = (spread * self.rng.next_f64().sqrt(), self.rng.range(0.0, TAU)); a = (a.0 + cos(t) * r, a.1 + sin(t) * r); }
             if let End::Jump(_) = to { let (r, t) = (spread * self.rng.next_f64().sqrt(), self.rng.range(0.0, TAU)); e = (e.0 + cos(t) * r, e.1 + sin(t) * r); }
-            pts.extend([a, w, e]);
+            pts[..3].copy_from_slice(&[a, w, e]);
+            n_pts = 3;
         }
+        let pts = &pts[..n_pts];
         let mut len = 0.0;
         for (i, p) in pts.iter().enumerate() {
             self.route.x[base + i] = p.0; self.route.y[base + i] = p.1;

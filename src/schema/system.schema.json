@@ -94,8 +94,9 @@
     },
     "bodies": {
       "type": "array",
+      "description": "Planets, moons and stations; the star is not one of them. At most 7: the game's core holds 8 bodies with the star.",
       "minItems": 1,
-      "maxItems": 15,
+      "maxItems": 7,
       "items": {
         "type": "object",
         "required": [
@@ -232,7 +233,7 @@
             }
           },
           "station": {
-            "description": "How a station is built: a catalog archetype in an owning brand's style.",
+            "description": "How a station is built: a catalog archetype in an owning brand's style. Used only on a station body, which gets the defaults if it has none.",
             "type": "object",
             "properties": {
               "archetype": {
@@ -259,7 +260,8 @@
               "seed": {
                 "type": "string",
                 "maxLength": 40,
-                "default": "station-1"
+                "default": "",
+                "description": "Picks the station's layout within its archetype; empty uses the body's id, so no two stations share one."
               }
             }
           },

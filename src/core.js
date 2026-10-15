@@ -38,6 +38,7 @@ const CORE_READY = (async () => {
       setCount: n => X.dw_set_count(w, n),
       count: () => X.dw_count(w),
       setBodies: n => X.dw_set_bodies(w, n),
+      placeBody: (j, parent, radius, angleDeg) => X.dw_place_body(w, j, parent, radius, angleDeg), // x, y by the core's trig
       due: realDt => X.dw_due(w, realDt), // fixed ticks owed for this much real time
       step: () => X.dw_step(w),
       interpolate: () => X.dw_interpolate(w), // writes ship.rx/ry/ra for this frame
