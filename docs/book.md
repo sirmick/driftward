@@ -16,7 +16,7 @@ Chapter status:
 |  | Facilities | Agreed |
 | III. Simulation | Economy; Population and colonies | Agreed |
 |  | Conflict; Faction AI; Traffic; Reputation and allegiance | Agreed |
-| IV. Play | Flight, sensors and environment; Jumping and interdiction; Docking and landing; Outfitting; Energy and heat; Weapons; Shields; Damage and repair; Boarding and capture; Fleets and doctrine; Law, notoriety and scanning; Mining; Exploration and the Drift; Death, saving and insurance | Agreed |
+| IV. Play | Flight, sensors and environment; Jumping and interdiction; Docking and landing; Ships; Outfitting; Energy and heat; Weapons; Shields; Damage and repair; Boarding and capture; Fleets and doctrine; Law, notoriety and scanning; Mining; Exploration and the Drift; Death, saving and insurance | Agreed |
 |  | Missions | Agreed |
 |  | Player systems | Draft |
 |  | Progression; Interface and art | Draft |
@@ -352,7 +352,7 @@ Traffic is a projection of a system's sim state onto ships, and what happens to 
 * \[M1\] Arrival rate: per role, λ \= flow ÷ ship capacity for haulers, and the equivalent for other roles. Arrivals are a Poisson process at jump points and from station undocking.  
 * \[M1\] Steady state on entry: the system starts with N \= λ × dwell time ships per role, placed at random points along their routes, so traffic looks mid-flow.  
 * \[M1\] Budget: a cap on concurrent ships (about 40–60 to start). Roles share it by rate; when the cap binds, each ship represents more tonnage rather than more ships appearing.  
-* \[M3\] Ship mix: role → owning faction → doctrine → size class, weighted by ring and system wealth. Hulls come from the faction's style plus a seed and are cached.
+* \[M3\] Ship mix: role → owning faction → line → doctrine → size class, weighted by ring and system wealth. Haulers, shuttles, liners and miners come from civilian lines; patrols and task forces from military lines (see Ships). Hulls are generated from the faction style, line, size class and a seed, and cached.
 
 ### **Roles**
 
@@ -566,6 +566,30 @@ Ports are safe harbor once you are down; the risk lives in the approach and the 
 * \[M1\] NPC haulers, liners and patrols land, dock and launch by the same rules and with the same animation.  
 * \[M2\] Ships launch slowly from a known point, so ports can be camped. The counterweight is patrol density: heavy near lawful stations, absent in lawless space. There is no invulnerability window.
 
+## **Ships**
+
+How hulls are made and what sets them apart. Every hull is generated; none is drawn by hand.
+
+* \[M0\] Generation: faction style \+ line \+ size class \+ seed → a part list → a baked sprite and its distance field (used for hits, shields and the landing sheath). The same inputs give the same hull, so hulls are cached, not stored.  
+* \[M1\] Faction style: what every hull of a faction shares, whatever its line: the part grammar, materials, weathering, plume and shield look, following the faction's design language (see the appendix). A style's rules hold across all its lines: the miners' hulls are always rusted and welded.  
+* \[M1\] Lines: each faction builds its hulls in lines. A faction with civilians has at least one civilian line beside its military line. A line overrides what differs from the style: palette, material, part mix, loadout, flight stats and hold.  
+* \[M1\] Size classes: five, by length, shared by every line, so a civilian hull is about the size of the military hull in its class. Classes are neutral; each line names its own (a navy's class III is its destroyer, the miners' class III a hauler). Class V hulls are capital ships, whatever their line.
+
+| Class | Length |
+| :---- | :---- |
+| I | 18 m |
+| II | 34 m |
+| III | 60 m |
+| IV | 100 m |
+| V | 160 m |
+
+* \[M1\] Line stats: a size class sets base acceleration, turn, top speed, hull, shields and hold; a line multiplies them. Civilian lines carry cargo and passengers: large holds, light or no armament, weaker shields, slower handling. Military lines carry little cargo.  
+* \[M1\] Shared hulls: a line may build on another line's hulls, so the same seed gives the same vessel outfitted differently. The miners' war line is their cargo and ore haulers with weapons and armor welded on. Lines that do not share hulls share only the faction style (the AI corpo's black warships and white liners).  
+* \[M2\] Mounts by line: the line's loadout decides what goes on a hull's mount points: cargo pods, ore hoppers, tow gear and passenger modules on a civilian hull; turrets, gun ports and armor on a military one. So the same hull has different outfit space and mounts in each line (see Outfitting).  
+* \[M3\] Specialist hulls: the heavies (bulk freighter, agri ship, mining tug, colony ship, fleet carrier, survey vessel) belong to a faction's line and are built in its style.  
+* \[M3\] Factions without lines of their own: pirates fly captured and kitbashed hulls, run dark; rebels fly other factions' civilian hulls, converted. Exterminators build only for war. See the appendix.  
+* \[M6\] Profile: identification shows a hull's faction and line, which feed scanning and insurance (see Law, notoriety and scanning; Death, saving and insurance).
+
 ## **Outfitting**
 
 * \[M2\] Hull capacities: outfit space, weapon space, engine space, gun ports and turret mounts. Counts and mount positions come from the generated hull's parts.  
@@ -605,7 +629,7 @@ Endless Sky's model: every outfit is a set of per-tick energy and heat terms, an
 
 * \[M2\] Multicannons: rapid kinetic turrets used for both point defense and offense, with a spread cone and engagement arcs that the ship's own hull can block. Modes per turret group: defense (missiles, then fighters, then ships), offense, and hold fire. Aim leads the target; the spread keeps hits statistical.  
 * \[M2\] Torpedoes and missiles: slow, guided and heavy-hitting, with their own hit points so multicannons can shoot them down. Decoys and jammers shift the odds. Expensive and limited. The core tactical loop is saturating enemy point-defense coverage versus out-defending their salvos.  
-* \[M2\] Railguns: near-hitscan slug, one shot every 1–2 seconds after a visible charge. Heavy hull damage; the slug penetrates fighters and missiles in its path. Recoil is applied as an impulse to the firing ship. Spinal mounts fire forward only; turreted rails appear on frigates and up. Capacitor-fed, with a high energy and heat cost.  
+* \[M2\] Railguns: near-hitscan slug, one shot every 1–2 seconds after a visible charge. Heavy hull damage; the slug penetrates fighters and missiles in its path. Recoil is applied as an impulse to the firing ship. Spinal mounts fire forward only; turreted rails appear on class III hulls and up. Capacitor-fed, with a high energy and heat cost.  
 * \[M2\] Beams: continuous ray dealing damage per second; needs dwell time. Strong against shields, weak against hull. Heat-limited, with an overheat lockout.  
 * \[M2\] Ion cannon: slow bolt that drains shields and the target's energy, which can stall its weapons and regen. Almost no hull damage.  
 * \[M2\] Arc projector: short-range lightning that chains to nearby ships, fighters and missiles. Spikes shield damage and briefly stops regen. Strong against formations and fighter screens; weak against single targets at range and unshielded hulls.  
@@ -688,7 +712,7 @@ What happens after a ship is disabled.
 
 ## **Fleets and doctrine**
 
-* \[M3\] Size-class roles: fighter (fixed guns, a pair of missiles); corvette (1–2 multicannons, a small rail); frigate (turreted multicannons, torpedo rack, turret rails); cruiser (multicannon grid, beam batteries, torpedo salvos); capital (spinal rail, dense multicannon grid, launch bays). Large ships are dangerous through coverage, not just hit points.  
+* \[M3\] Size-class roles, for military lines: class I (fixed guns, a pair of missiles); class II (1–2 multicannons, a small rail); class III (turreted multicannons, torpedo rack, turret rails); class IV (multicannon grid, beam batteries, torpedo salvos); class V, capital (spinal rail, dense multicannon grid, launch bays). Large ships are dangerous through coverage, not just hit points.  
 * \[M3\] Doctrine sets each faction's loadout mix, used for NPC fits and encounter generation: navy (multicannons, rails, torpedoes); AI corpo (beams, ion, strong shields); miners and pirates (mining lasers, mass drivers, salvaged multicannons); rebels (missile swarms to saturate defenses); hive and AI zone (to be designed).  
 * \[M6\] Escorts and wingmen follow fleet orders as in Endless Sky. Hired escorts cost upkeep.  
 * \[M9\] Refit pressure: exterminator waves push players and NPC fleets toward rails, torpedoes and multicannons, which raises regional munitions demand.
@@ -713,7 +737,7 @@ Law belongs to the system owner, scans are a sensor action, and notoriety is eac
 
 ### **Profile**
 
-* \[M6\] Some hulls invite scans: miner-built (Rustline-style) hulls are scanned roughly twice as often in navy space, given the miners' ties to pirates. Corporate hulls are scanned less in the inner ring.  
+* \[M6\] Some hulls invite scans: miner-built hulls of either line are scanned roughly twice as often in navy space, given the miners' ties to pirates. Corporate hulls are scanned less in the inner ring.  
 * \[M6\] Standing: good reputation with the system owner lowers scan odds; notoriety raises them.
 
 ### **Clandestine hold**
@@ -860,14 +884,14 @@ Every Drift system moves through stages:
 * \[M1\] Autosave on landing, as in EV. Tenders and derelict ports count as landings. The save holds the whole simulation, galaxy included (columnar arrays, a few MB).  
 * \[M1\] Death reloads the last landing save. Everything since is lost: time, cargo, credits and mission progress.  
 * \[M1\] No rerolls: the RNG is seeded, so repeating the same inputs after a reload gives the same outcome. Only different choices change results.  
-* \[M9\] Ironman (optional run flag): one save that is never rolled back. Death costs the ship and the player continues from an escape pod at the last port; if broke, the lender offers a used fighter against new debt. Shown on the player's record.
+* \[M9\] Ironman (optional run flag): one save that is never rolled back. Death costs the ship and the player continues from an escape pod at the last port; if broke, the lender offers a used class II hull against new debt. Shown on the player's record.
 
 ### **Insurance**
 
 Insurance covers what is lost while the player survives: escorts, the player's freighters on assigned routes, tenders, outposts and fleet cargo.
 
 * \[M6\] Underwriters: the corpo underwriter in inner and corporate space, a miners' mutual in the outer ring, none in pirate space.  
-* \[M6\] Premium: per jump per insured asset, value × rate. The rate is about 0.2% in the core, 1% in the fringe (depth 1–2) and 3% in the wild (depth 3–4); nothing is offered past depth 4\. Surcharges for notoriety, recent claims and Rustline-profile hulls.  
+* \[M6\] Premium: per jump per insured asset, value × rate. The rate is about 0.2% in the core, 1% in the fringe (depth 1–2) and 3% in the wild (depth 3–4); nothing is offered past depth 4\. Surcharges for notoriety, recent claims and miner-built hulls.  
 * \[M6\] Cover: hull and fitted outfits. Cargo needs a rider. Illegal cargo and clandestine holds are never covered.  
 * \[M6\] Deductible: 15% of value, plus 5% per claim in the last \~50 jumps, capped at 40%.  
 * \[M6\] Claim: the same hull and fit are delivered to a port in the underwriter's territory after a few days of strategic time. Captured ships cannot be insured until registered at a shipyard.  
@@ -967,7 +991,7 @@ Sim sources and the offers they spawn:
 
 ## **Progression**
 
-* \[M1\] Start: a used fighter and a debt to a lender.  
+* \[M1\] Start: a used class II civilian hull from the owning faction's line (in M1, the miners') and a debt to a lender.  
 * \[M6\] Mid game: better hulls, faction ranks, a small fleet.  
 * \[M8\] Late game: deep Drift charting, outposts, faction-level influence.  
 * \[M9\] Spine: light and optional: about five authored beats, gated by rank and Drift depth and built on the arc machinery above; the LLM fills everything between beats and the sandbox carries the rest.
@@ -999,7 +1023,7 @@ Sim sources and the offers they spawn:
 
 * \[M1\] An Ironhull-owned mid-ring industrial system with six bodies: the star, three planets, one moon and one station. Four are ports, giving 12 directed routes.  
 * \[M1\] Two ways to earn: buying and selling commodities on each port's market, at fixed prices that vary with the port's role; and delivery missions from the mission board, carrying cargo to a named port in the system.  
-* \[M1\] Traffic: flows between ports from a gravity model (population × population ÷ distance, weighted by how well the ports' roles complement each other), spawned as described in Traffic. One culture (Ironhull) and one hull family in three sizes (shuttle, hauler, liner); about 10–20 ships to start. M5 replaces the static flows with ones derived from the economy.
+* \[M1\] Traffic: flows between ports from a gravity model (population × population ÷ distance, weighted by how well the ports' roles complement each other), spawned as described in Traffic. One culture (Ironhull), flying its civilian line: shuttles, haulers and liners from the line's class I, III and IV hulls; about 10–20 ships to start. M5 replaces the static flows with ones derived from the economy.
 
 # **Part V: Building it**
 
@@ -1078,7 +1102,7 @@ Each milestone adds to the one before and ends with an exit test:
 | M0 Flight lab (exists) | One sector | Flight physics and assist, nebula and radiation, sensors, NPC combat, procedural ships, stations, planets and suns | Remaining: the three-level assist and full-off rotation |
 | M1 Trade and delivery | One system | Game shell (space, landing, port screens, takeoff with the plasma sheath); sim core skeleton as a Rust/WASM crate with the M0 flight physics ported in (typed-array columns, fixed-step deterministic loop, seeded RNG, save on landing); the system loaded from its schema; cargo hold, credits, the three-level assist; trading commodities on each port's market, and one mission type from the mission board (deliver cargo to a named port in the system); ambient liners and haulers | A market trade and a delivery mission both complete end to end; save, reload and replay of the same inputs give the same result, tested headless |
 | M2 Combat | One system | Weapons (multicannons, beams, rails), energy and heat, shields, hull and systems damage, field and landed repair, outfitting and a shipyard, pirates, bounty and defend missions, disabling | The player outfits for a fight and wins a bounty |
-| M3 Assets and set pieces | One system plus a sandbox spawner | Faction asset build-out: full hull rosters per faction (every class and the heavies), station styles, shield colors, weapon and plume looks, the alien visual languages (hive, AI zone, exterminators). In-system mechanics with graphics: boarding and capture, mining (lasers, charges, tractor beam and limpets), capital landers, drag-field projectors, scans, derelicts and wrecks, escape pods, cargo canisters, jump-in and jump-out effects | Every faction's roster can be spawned and fought; each mechanic works in one system; all assets come through schemas |
+| M3 Assets and set pieces | One system plus a sandbox spawner | Faction asset build-out: full hull rosters per faction (every line in every size class, and the heavies), station styles, shield colors, weapon and plume looks, the alien visual languages (hive, AI zone, exterminators). In-system mechanics with graphics: boarding and capture, mining (lasers, charges, tractor beam and limpets), capital landers, drag-field projectors, scans, derelicts and wrecks, escape pods, cargo canisters, jump-in and jump-out effects | Every faction's roster can be spawned and fought; each mechanic works in one system; all assets come through schemas |
 | M4 Several systems | 5–10 systems | Jump zones, the galaxy map, fuel, days per lane, interdiction, intel snapshots, missions between systems; fixed prices | Cross-system cargo and bounty runs work, and interdictions happen at jump zones |
 | M5 Economy | The same cluster | Stocks, supply and demand, lane flows, traffic from flows, trading, mining as an input; LLM-authored systems | Profitable trade routes emerge from the sim |
 | M6 Law and standing | 10–20 systems with fixed owners | Law, notoriety, scans and the transponder, the clandestine hold, standing, merit and ranks 1–3 with the oath, escorts, insurance, crew, player freighters, mission threads | A smuggling run and a navy career both work, and notoriety and standing change how each faction treats the player |
@@ -1098,7 +1122,7 @@ Each milestone adds to the one before and ends with an exit test:
 * About 500 years in the future.  
 * Eight factions: the Federation (navy), Prism (AI corpo), the Ironhulls (miners), the Blackhulls (pirates, aligned with the Ironhulls), Freeflag (rebels, sympathetic), the Bloom (organic alien hive), the Glass (AI zone) and the Shadow (xenophobic alien exterminators modeled on MorningLightMountain in Pandora's Star). Mechanism chapters refer to them by role.  
 * Three rings: inner (prosperous), middle (industrial, hard), outer (poor and lawless).  
-* Ship and port styles follow each faction's design language (see Faction names below). Shadow, Glass and Blackhull kitbash styles are still to be designed.
+* Ship and port styles follow each faction's design language, and its ships come in the lines below (see Ships). Shadow, Glass and Blackhull kitbash styles are still to be designed.
 
 Faction names:
 
@@ -1112,4 +1136,17 @@ Faction names:
 | Hive | The Bloom | a bloomling / bloomlings | Bloom-grown | weeds, the rot | Grown and chitinous, bioluminescent, membranes |
 | AI zone | The Glass | none; converted systems are glassed | Glass | the mirror | Geometric, fractal, alien precision; no human scale |
 | Exterminators | The Shadow | a shade / shades | Shadow | the dark; shadowfall (an incursion) | Massive, brutal, uniform; built only for war |
+
+Ship lines:
+
+| Faction | Military line | Civilian line | Notes |
+| :---- | :---- | :---- | :---- |
+| Federation | Grey and white, heraldic markings, symmetrical, armored | Civil-service haulers and liners: the same grey and white, plainer, unarmored | Separate hulls |
+| Prism | Gloss black, seamless | White and glass, very sleek: long tapers, smooth skins, almost nothing sticking out | Separate hulls; one style |
+| Ironhulls | The cargo and ore haulers refitted for war: weapons and armor welded on | Cargo and ore haulers | Shared hulls; always rusted, welded and patched, sodium-lamp orange |
+| Blackhulls | None of their own | None of their own | Captured and kitbashed hulls, Ironhull first, run dark; trophies, mismatched paint |
+| Freeflag | None of their own | None of their own | Other factions' civilian hulls, converted; flags and slogans |
+| The Bloom | Grown warforms | A worker line (seeders, harvesters), to be designed | Grown, chitinous, bioluminescent |
+| The Glass | To be designed | Probably none | |
+| The Shadow | Built only for war | None | |
 
