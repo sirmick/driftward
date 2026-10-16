@@ -90,7 +90,7 @@ try { PLAN = (function () {
       const w = worlds[c.planet]; if (!w) continue;
       const fill = state.planetFocus >= 0 ? 0.5 : 0.47, Rp = c.cell * fill / w.pu.ext * dpr;
       gl.uniform2f(u.uC, c.cx * dpr, (H - c.cy) * dpr); gl.uniform1f(u.uR, Rp); gl.uniform1f(u.uPx, 1 / Rp);
-      bindPlanet(gl, u, w.pu);
+      bindPlanet(gl, u, w.pu); planetClock(gl, u, t * 40, w.pu.seed);
       draw();
     }
     gl.disable(gl.BLEND);

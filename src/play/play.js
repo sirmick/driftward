@@ -514,6 +514,16 @@ CORE_READY.then(CORE => {
   // a ship's motion state for the probe: 0 while a landing or launch sequence draws it, else 1 + phase + 4 x on rails
   const jitState = i => { const ph = sim.traffic.phase[i]; return sim.traffic.role[i] && ph !== TRAFFIC.cruise ? 0 : 1 + ph + 4 * sim.ship.rail[i]; };
   jitterToggle = () => JIT.toggle();
+  // the GPU's time for the scene, where the browser can time it (Chrome on most desktops): queries read back a few
+  // frames later without waiting, for the probe
+  const TQ = gl.getExtension('EXT_disjoint_timer_query_webgl2'), tqFree = [], tqLive = [];
+  const gpuBegin = () => { if (!TQ || tqLive.length > 6) return null; const q = tqFree.pop() || gl.createQuery(); gl.beginQuery(TQ.TIME_ELAPSED_EXT, q); return q; };
+  const gpuEnd = q => { if (q) { gl.endQuery(TQ.TIME_ELAPSED_EXT); tqLive.push(q); } };
+  function gpuPoll() {
+    if (!TQ) return;
+    if (gl.getParameter(TQ.GPU_DISJOINT_EXT)) { tqFree.push(...tqLive.splice(0)); return; } // the timer was disturbed: drop them
+    while (tqLive.length && gl.getQueryParameter(tqLive[0], gl.QUERY_RESULT_AVAILABLE)) { const q = tqLive.shift(); JIT.gpu(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6); tqFree.push(q); }
+  }
   const t0 = performance.now();
   function frame(now) {
     requestAnimationFrame(frame);
@@ -544,7 +554,8 @@ CORE_READY.then(CORE => {
     // nothing to see under the port's painted vista, the map, the debug screen or the pause menu: the canvas keeps
     // its last frame (pause shows it frozen behind the menu), and the GPU rests
     const covered = ($('vista').classList.contains('on') && !document.body.classList.contains('vista-framed')) || mapOn || debug.isOpen() || (paused && !titleUp());
-    if (!covered || sceneStale) { render((now - t0) / 1000, camX, camY); sceneStale = false; }
+    gpuPoll();
+    if (!covered || sceneStale) { const q = gpuBegin(); render((now - t0) / 1000, camX, camY); gpuEnd(q); sceneStale = false; }
     if (mode === MODE.flying && !paused && !covered) JIT.record({ dt, ticks: ran, alpha: sim.alpha(), px: SH.rx[0], py: SH.ry[0], cx: camX, cy: camY, scale, h: canvas.height }, SH, sim.count(), jitState);
     else JIT.reset();
     drawHUD();
@@ -996,7 +1007,7 @@ CORE_READY.then(CORE => {
         if (Math.abs(p.x - cx) > halfW + p.r * p.ext || Math.abs(p.y - cy) > halfH + p.r * p.ext) continue;
         gl.uniform3fv(u.uSun, sunFrom(p.x, p.y, sunAt));
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
-        bindPlanet(gl, u, p.pu);
+        bindPlanet(gl, u, p.pu); planetClock(gl, u, t, p.pu.seed);
         draw();
       } }
     // orbiters: the core places them and keeps only what can be seen; then lens ghosts for the brightest flares, along
@@ -1601,6 +1612,7 @@ CORE_READY.then(CORE => {
     traffic: () => { const out = []; for (let i = 0; i < sim.count(); i++) if (TR.role[i]) out.push({ i, role: TRAFFIC.streams[TR.role[i] - 1], line: types[SH.kind[i]].brand.id, cls: catalog.sizes[types[SH.kind[i]].zi].id, phase: TR.phase[i], from: TR.from[i], to: TR.to[i], rail: SH.rail[i], x: SH.x[i], y: SH.y[i], v: Math.hypot(SH.vx[i], SH.vy[i]) }); return out; },
     // dev: put the (flying) player at rest over body j; a logged command, so replays still match
     teleport: j => command(CMD.teleport, j),
+    setZoom: z => { setZoom(z); return zoom; }, // the view's zoom, 0.25 to 4 (the wheel's range)
     // this port's offers and the player's active missions, as plain objects
     offers: () => { const at = sim.game.at[0], out = []; for (let k = 0; k < NO; k++) { const o = at * NO + k; if (OF.live[o]) out.push({ k, dest: OF.dest[o], good: OF.good[o], tons: OF.tons[o], pay: OF.pay[o], days: OF.days[o] }); } return out; },
     missions: () => Array.from(MS.state, (state, k) => ({ k, state, dest: MS.dest[k], tons: MS.tons[k], pay: MS.pay[k], due: MS.due[k] })),

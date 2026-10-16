@@ -56,7 +56,7 @@ window.shot = (w, cam, scale, t) => {
   gl.uniform2f(u.uRes, RW, RH); gl.uniform2f(u.uCam, cam[0], cam[1]); gl.uniform1f(u.uScale, scale);
   gl.uniform3fv(u.uSunCol, lin(star.col)); gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
   gl.uniform3fv(u.uSun, w.sun); gl.uniform2f(u.uC, 0, 0); gl.uniform1f(u.uR, w.r); gl.uniform1f(u.uPx, 1 / (w.r * scale));
-  bindPlanet(gl, u, planetUniforms(clampToSchema(LOOK, w.look, '$.look', [])));
+  const pu = planetUniforms(clampToSchema(LOOK, w.look, '$.look', [])); bindPlanet(gl, u, pu); planetClock(gl, u, t, pu.seed);
   G.draw();
   gl.disable(gl.BLEND);
   G.postProcess(1, 0);

@@ -33,6 +33,13 @@ function bindPlanet(gl, u, pu) {
   gl.uniform3fv(u.uAxis, pu.axis); gl.uniform3fv(u.uRing, pu.ring); gl.uniform3fv(u.uRingA, pu.ringA); gl.uniform3fv(u.uRingB, pu.ringB); gl.uniform1f(u.uExt, pu.ext);
 }
 
+// a planet's spin and its clouds' drift at time t (seconds, the shader's uTime), as (cos, sin) worked out here in
+// doubles: the shader's own trig on a growing angle is too coarse at close zoom
+function planetClock(gl, u, t, seed) {
+  const a = (t * 0.004 + seed) % (2 * Math.PI), d = (t * 0.002) % (2 * Math.PI);
+  gl.uniform2f(u.uSpin, Math.cos(a), Math.sin(a)); gl.uniform2f(u.uDrift, Math.cos(d), Math.sin(d));
+}
+
 const PATTERNS = { hex: 0, grid: 1, flow: 2, ragged: 3 };
 const brandCache = new Map();
 function brandRender(b) {

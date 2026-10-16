@@ -7,7 +7,9 @@ probe (src/play/jitter.js) scores every frame. Jitter is a change of apparent sp
 1080p view (whatever the window here; a 4K screen sees twice these):
 steady motion scores 0 at any rate, so anything above about half a pixel is a pose landing early or late.
 Needs Playwright for Python (on the dev box: ~/.venvs/web/bin/python tools/jitter.py).
-Usage: jitter.py [play.html] [--seconds S] [--size WxH] [--live]
+Usage: jitter.py [play.html] [--seconds S] [--size WxH] [--over BODY] [--zoom Z] [--live]
+  --over  fly over this body (an id from the system file: teleported there at rest), inside its gravity well
+  --zoom  the view's zoom, 0.25 to 4 (4 is the closest; default 1)
   --size  the window (default 640x400; the numbers are scaled to a 1080p view either way, and smaller draws faster)
   --live  real requestAnimationFrame instead (the browser's own pacing; headless Chromium is slow, so read the
           frame times with that in mind)
@@ -17,7 +19,9 @@ from playwright.sync_api import sync_playwright
 
 root = pathlib.Path(__file__).resolve().parent.parent
 argv = sys.argv[1:]
-args = [a for k, a in enumerate(argv) if not a.startswith('--') and (k == 0 or argv[k - 1] not in ('--seconds', '--size'))]
+args = [a for k, a in enumerate(argv) if not a.startswith('--') and (k == 0 or argv[k - 1] not in ('--seconds', '--size', '--over', '--zoom'))]
+opt = lambda name, d: sys.argv[sys.argv.index(name) + 1] if name in sys.argv else d
+OVER, ZOOM = opt('--over', None), float(opt('--zoom', '1'))
 page_path = pathlib.Path(args[0] if args else root / 'play.html').resolve()
 live = '--live' in sys.argv
 seconds = float(sys.argv[sys.argv.index('--seconds') + 1]) if '--seconds' in sys.argv else 2.0
@@ -59,10 +63,12 @@ with sync_playwright() as p:
         for _ in range(120):
             pump(16.667)
             if pg.evaluate(f'{P}.probe().mode === {P}.MODE.flying'): break
-        for _ in range(30): pump(16.667)  # settle the camera
+        if OVER: pg.evaluate(f'{P}.teleport({P}.BODIES.findIndex(b => b.id === {json.dumps(OVER)}))')
+        pg.evaluate(f'{P}.setZoom({ZOOM})')
+        for _ in range(90): pump(16.667)  # settle the camera and the zoom
         pg.evaluate(f'{P}.jitterClear()')
         rng, step, n = random.Random(hz), 1000.0 / hz, int(seconds * hz)
-        phase = [(0.0, ['KeyW']), (0.35, ['KeyW', 'KeyA']), (0.7, ['KeyW', 'ShiftLeft'])]
+        phase = [(0.0, []), (0.2, ['KeyW']), (0.45, ['KeyW', 'KeyA']), (0.75, ['KeyW', 'ShiftLeft'])] # hold still, then thrust, turn, burn
         held = []
         for k in range(n):
             want = next(keys for at, keys in reversed(phase) if k >= at * n)

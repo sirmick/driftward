@@ -373,6 +373,9 @@ const PLANET_FS = `#version 300 es
 precision highp float; in vec2 vQ; out vec4 o;
 uniform vec3 uSun, uSunCol, uAmb, uC1, uC2, uC3, uAtm; uniform float uSeed, uTime, uPx, uCity, uAir, uStorm; uniform int uKind;
 uniform vec3 uAxis, uRing, uRingA, uRingB;
+// the spin and the clouds' drift as (cos, sin), worked out on the CPU in doubles (look.js planetClock): GPU trig on a
+// growing time loses precision, which shows as the surface shimmering at close zoom. Unset, computed here as before.
+uniform vec2 uSpin, uDrift;
 uvec3 pcg3(uvec3 v){ v = v*1664525u + 1013904223u; v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; v ^= v >> 16u;
   v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y; return v; }
 float h3(ivec3 i){ return float(pcg3(uvec3(i)).x) * (1./4294967295.); }
@@ -570,7 +573,8 @@ void main(){
   vec3 ins; air(vQ, r, true, z, ins, Tv);
   ins *= E*3.14159;
   // planet space: the view-space sphere point in the planet's frame, spun about the pole
-  float ca = cos(uTime*.004+uSeed), sa = sin(uTime*.004+uSeed);
+  vec2 sc = dot(uSpin, uSpin) > .5 ? uSpin : vec2(cos(uTime*.004+uSeed), sin(uTime*.004+uSeed));
+  float ca = sc.x, sa = sc.y;
   vec3 Nf = vec3(dot(PU, N), dot(PA, N), dot(PV, N)), Lf = vec3(dot(PU, L), dot(PA, L), dot(PV, L));
   vec3 R = vec3(Nf.x*ca+Nf.z*sa, Nf.y, -Nf.x*sa+Nf.z*ca);
   vec3 Lp = vec3(Lf.x*ca+Lf.z*sa, Lf.y, -Lf.x*sa+Lf.z*ca); // the sun, in planet space
@@ -687,7 +691,8 @@ void main(){
     }
     // clouds in climate belts, two cyclones (turning opposite ways either side of the equator), drifting faster
     // than the ground
-    vec3 Rc = vec3(R.x*cos(uTime*.002) - R.z*sin(uTime*.002), R.y, R.x*sin(uTime*.002) + R.z*cos(uTime*.002));
+    vec2 dr = dot(uDrift, uDrift) > .5 ? uDrift : vec2(cos(uTime*.002), sin(uTime*.002));
+    vec3 Rc = vec3(R.x*dr.x - R.z*dr.y, R.y, R.x*dr.y + R.z*dr.x);
     Rc = swirl(Rc, normalize(vec3(cos(uSeed*5.), .5 + .15*sin(uSeed*2.), sin(uSeed*5.))), 3.2, .03, 0.);
     Rc = swirl(Rc, normalize(vec3(cos(uSeed*2.3 + 2.), -.62, sin(uSeed*2.3 + 2.))), -2.8, .025, 0.);
     float cOct = min(lod(3.), 11.), cp; vec3 cg;
