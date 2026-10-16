@@ -99,5 +99,5 @@ function makeJitter(maxShips, N = 1200) {
       .forEach((t, k) => c.fillText(t, x + 8, y + 15 + k * 14));
     c.restore();
   }
-  return { record, reset, report, draw, gpu: ms => { gpuNow = ms; }, toggle: () => { shown = !shown; return shown; }, clear: () => { n = 0; head = 0; reset(); } };
+  return { record, reset, report, draw, gpu: ms => { gpuNow = ms; }, get shown() { return shown; }, toggle: () => { shown = !shown; return shown; }, clear: () => { n = 0; head = 0; reset(); } };
 }

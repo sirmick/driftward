@@ -1620,6 +1620,23 @@ CORE_READY.then(CORE => {
     good: id => GOODS.findIndex(c => c.id === id),
     price: id => sim.price(sim.game.at[0], GOODS.findIndex(c => c.id === id)),
     jitter: () => JIT.report(), jitterClear: () => JIT.clear(),
+    // the game's part of a dev state report (tools/dev-client.js): what is happening now, the jitter probe, the
+    // traffic, the settings, and a replay that reruns the session to this tick (save.bin + inputs.txt)
+    report: () => {
+      const r = exportReplay(), tr = {};
+      for (let i = 0; i < sim.count(); i++) if (TR.role[i]) { const k = TRAFFIC.streams[TR.role[i] - 1]; tr[k] = (tr[k] || 0) + 1; }
+      const modeName = Object.keys(MODE).find(k => MODE[k] === sim.mode());
+      return {
+        game: { probe: window.__play.probe(), mode: modeName, zoom, viewScale, assist: assistMode, bloom: bloomOn, fps: Math.round(fps * 10) / 10,
+          camera: [camX, camY], canvas: [canvas.width, canvas.height], settings: SETTINGS, traffic: tr, shipsLive: sim.count(),
+          // the page's own UI (HTML, which the screenshot can't show): what is open
+          ui: { port: !$('port').hidden ? $('port-name').textContent : null, panel: panelOpen(), map: mapOn, debug: debug.isOpen(), shell: shellOpen(),
+            vista: $('vista').classList.contains('on') ? (document.body.classList.contains('vista-framed') ? 'framed' : 'full screen') : null, nav: navOn, jitterOverlay: !!JIT.shown,
+            target: navTarget ? targetName(navTarget) : null },
+          jitter: JIT.report(), replay: { ticks: r.ticks, tick: r.tick, hash: r.hash } },
+        save: b64(r.save), inputs: r.log
+      };
+    },
     probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
       credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap() }),
     // hold keys for sec seconds of sim time (recorded like live input)
