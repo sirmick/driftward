@@ -23,6 +23,7 @@
 //   --no-ref paint without the style reference (when an image copies the reference's layout, not just its style)
 //   --keep-people  with lore: keep the current lore's people (id, name, role, look: their portraits are painted), at
 //            the same ports; the model rewrites who they are and what they say, and everything else
+// Replaced images are never deleted: they move to art/<id>/old/ with their log entries (setAside).
 // The key: OPENROUTER_API_KEY, else openrouter.token here (gitignored), else ~/openrouter.token. Images are
 // converted to WebP with Python's Pillow; the raw PNGs stay in art/<id>/raw/ (gitignored).
 'use strict';
@@ -334,6 +335,22 @@ function toWebp(rawFile, outFile, w, h, quality) {
 }
 const ART = { vista: { aspect: '16:9', w: 1600, h: 900, q: 80 }, portrait: { aspect: '4:5', w: 512, h: 640, q: 82 } };
 
+// Art is never lost: an image about to be replaced moves to art/<id>/old/ (and its raw PNG to raw/old/) as
+// <name>.<date it was made>.webp, numbered if that is taken, with its log entry under old/<that name>
+function setAside(name, log) {
+  const cur = path.join(artDir, name + '.webp');
+  if (!fs.existsSync(cur)) return;
+  const rec = log[name + '.webp'] || {}, date = rec.date || new Date(fs.statSync(cur).mtimeMs).toISOString().slice(0, 10);
+  const oldDir = path.join(artDir, 'old'), rawOld = path.join(artDir, 'raw', 'old');
+  fs.mkdirSync(oldDir, { recursive: true }); fs.mkdirSync(rawOld, { recursive: true });
+  let base = `${name}.${date}`;
+  for (let n = 2; fs.existsSync(path.join(oldDir, base + '.webp')); n++) base = `${name}.${date}-${n}`;
+  fs.renameSync(cur, path.join(oldDir, base + '.webp'));
+  const raw = path.join(artDir, 'raw', name + '.png');
+  if (fs.existsSync(raw)) fs.renameSync(raw, path.join(rawOld, base + '.png'));
+  if (log[name + '.webp']) { log['old/' + base + '.webp'] = log[name + '.webp']; delete log[name + '.webp']; }
+  console.log(`  set aside the old ${name}.webp as old/${base}.webp`);
+}
 async function genArt(lore) {
   if (!lore) {
     if (!fs.existsSync(loreFile)) { console.error(`art: no ${path.relative(root, loreFile)}; run lore first`); process.exit(1); }
@@ -357,6 +374,7 @@ async function genArt(lore) {
     const t = Date.now(), seed = seedOf(job.name);
     const { png, cost, provider, servedModel } = await image(job.kind, prompt, spec.aspect, seed, ref && fs.existsSync(ref) ? fs.readFileSync(ref) : null);
     const rawFile = path.join(rawDir, job.name + '.png'), outFile = path.join(artDir, job.name + '.webp');
+    setAside(job.name, log);
     fs.writeFileSync(rawFile, png);
     toWebp(rawFile, outFile, spec.w, spec.h, spec.q);
     log[job.name + '.webp'] = { prompt, model: IMAGE[job.kind].model, provider, servedModel, size: IMAGE[job.kind].size || undefined, seed, reference: ref ? refJob.name + '.webp' : null, cost, seconds: Math.round((Date.now() - t) / 1000), date: new Date().toISOString().slice(0, 10) };
