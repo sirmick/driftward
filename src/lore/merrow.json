@@ -1,0 +1,192 @@
+{
+  "system": "merrow",
+  "history": [
+    "Merrow was settled early in the Rush, because it was the one world near the March with open water, breathable air and soil that would take a plough. The first colonists were contract farmers shipped out by the companies of the day. The navy came a generation later to guard the harvest, and it never left. The Federation still runs Merrow the way it runs a depot: the granaries are numbered, the river quays carry heraldic crests, and the harvest boards keep a ledger older than most of the cities. Glean and Thresh, the two small moons, were fitted out in the Hundred-and-Fifty years after the first landings. Glean got greenhouse domes for what the weather would not allow below, and Thresh got cranes, stacks and a long tug-yard.",
+    "Through the Charter Strikes the lanes closed, and Merrow's food kept the March from starving while the ore stopped. Nobody on Merrow was ever allowed to forget it, and nobody did. Since then the world has grown fat, settled and a little smug, and has fed Brannock's arcologies, Ostry's ice towns, Calder's navy and Serein's white towers without much thanks. Its people say the March eats on Merrow's say-so. The Ironhulls say the Federation takes its cut off the top of every sack.",
+    "The last few years have been harder. The levy for the war has gone up twice, and the navy's harvest officers now count silos as closely as they count crops. Evacuees from the Shadow front come in through Thresh in numbers the old warehouses were never built for. News of the Glass reaches Merrow late and thin, by way of Ostry tug crews and Calder gossip, and the official line about a resonance quarantine is repeated in the farm towns with the same tired, careful face as everywhere else. Merrow has food, and for the first time in living memory it is not sure that is enough."
+  ],
+  "culture": "Merrow people are plain-spoken, early-rising and proud of their hands. They judge strangers by whether they know what a good loaf is, and they talk about weather the way other systems talk about money. Federal rule is simply the way things are: the navy is the landlord, the harvest board is the church, and a crest on a gate is respectable. They are generous to evacuees in practice and wary in conversation, since the camps eat from the same stores. Ironhull crews are called ore-eaters, mostly with affection. Prism associates are treated as polite weather. Anyone who complains about the levy does so at home, with the door shut and the radio on.",
+  "artBible": {
+    "palette": [
+      "#7d9a52",
+      "#3f6f9c",
+      "#c8ccd2",
+      "#e6c766",
+      "#5b616a",
+      "#8e8a5a"
+    ],
+    "lighting": "Warm, low yellow sunlight over wet land, soft cloud shadow rolling across fields, hard pale light on grey stonework. Dusk brings warm window lights and distant lightning. Moons are lit flat and ashen under a black sky, with the blue-and-white arc of Merrow hanging over them.",
+    "architecture": "Monumental and symmetrical: long granary blocks like barracks, farm domes laid out in strict grids, river quays with stepped stone wharves, processing cities built in ranks along the rivers. Heraldic crests and numbered bays mark every gate. On the moons, domes and container stacks sit in disciplined rows on bare rock.",
+    "materials": "Poured grey concrete, pale composite panels, glazed dome lattices, painted steel cranes, white-stencilled numbers on grey. Soil, straw, grain dust and river mud blur the edges of every clean surface.",
+    "mood": "Comfortable and orderly, a little complacent, with a new undercurrent of strain: full storehouses and crowded warehouses, tired officers, a lot of people waiting patiently.",
+    "design": "Federation design: disciplined, symmetrical, armoured. Grey and white with heraldic markings, numbered bays and crests, heavy plain geometry. Even farm sheds look like fortifications, and uniforms and work coats alike carry insignia and rank stripes."
+  },
+  "ports": [
+    {
+      "body": "merrow",
+      "description": [
+        "Merrow Fields is the whole world, and it feels like it. Fields run to the horizon in green and olive bands, farm domes stand in neat grids on the uplands, and the food-processing cities line the rivers, shipping everything out through the quays. Granaries stand in long grey ranks with a crest over each door and a number on each roof. Open-air farming is a point of local pride, because nowhere else in the March does food grow under sky.",
+        "The port is a federal one: a landing field of white-lined pads beside the harvest board's offices, with customs sheds that have never been hurried. Food is cheap here, as you would expect, and the whole place smells of it. Chemicals, components and consumer goods are dear, since farm towns want them and don't make them. Water and medicine pass through. Nobody here buys or sells ore, metals, fuel or alloys, and they will tell you so.",
+        "It is comfortable, and it knows it. Lately that comfort is carrying weight: evacuee families billeted in farm towns, the levy clerks coming round more often, and the quiet in the bars when someone mentions the front."
+      ],
+      "places": [
+        {
+          "name": "The Long Granary",
+          "text": "A grey granary block beside the landing field, so long that the far end is lost in haze. Numbered bays, crested doors and a harvest board clerk at every one."
+        },
+        {
+          "name": "Weir Landing",
+          "text": "A stepped stone quay on the river where barges unload to the processing cities. The market stalls there sell bread, cheese and small hard apples, and the arguing is part of the trade."
+        },
+        {
+          "name": "The Sheaf and Sextant",
+          "text": "The spaceport bar, low and warm, with a harvest-board crest over the door and pilots' business cards pinned to the beams. The beer is local and the stew is better."
+        },
+        {
+          "name": "The Tally Room",
+          "text": "The levy office, an austere hall of long desks and brass scales. Farmers queue in their good coats and nobody raises their voice."
+        }
+      ],
+      "people": [
+        {
+          "id": "agnes-hobday",
+          "name": "Agnes Hobday",
+          "role": "grain factor",
+          "text": "A river-barge factor who has sold Merrow's harvest to every system in the March. She knows what each hold wants and what each master will pay for it, and she is wary of anyone who asks about the evacuees.",
+          "line": "Food's cheap here and it'll stay cheap while I can help it. What we're short of is components and chemicals. Bring me those and I'll feed your hold.",
+          "look": "A broad woman in her sixties with a sunburnt face and iron-grey plait, wearing a canvas coat with a harvest-board badge. A grain-weigher's brass gauge hangs from her belt, polished by constant use."
+        },
+        {
+          "id": "idris-kell",
+          "name": "Lt Idris Kell",
+          "role": "harvest requisition officer",
+          "text": "A young federal officer posted to the Tally Room because the older ones went to the front. He is conscientious, tired and a little frightened of the numbers he is asked to find.",
+          "line": "Everything you carry gets logged. Nothing personal. Just look as if you're glad to be counted, and we'll both be home for supper.",
+          "look": "Early twenties, narrow-faced and clean-shaven, in a pressed grey tunic with white heraldic piping. His boots are mud-stained to the ankle and his eyes are red-rimmed."
+        },
+        {
+          "id": "mirek-dolan",
+          "name": "Mirek Dolan",
+          "role": "evacuee, former picket cook",
+          "text": "He cooked for a survey picket near the front until it was withdrawn. Now he works a farm-town kitchen for his keep and talks little about what he saw.",
+          "line": "The bread's good here. I keep thinking I should be paying attention to something, and then I eat the bread.",
+          "look": "Forties, gaunt and stooped, with cropped greying hair. Wears a donated farm coat a size too large and keeps a navy-issue mess spoon tucked in the pocket."
+        }
+      ],
+      "rumors": [
+        "Upland farmers say a field near the eastern domes won't take seed since the first evacuee ship came in. The soil tests are fine, and the farmers have started leaving it fallow with a fence round it.",
+        "Harvest officers have been counting silos in a way that isn't how you count a harvest. Farm folk say that's what you do before a long siege.",
+        "Storms off the sea come in from the direction of the jump lane lately, and the old fishers say they have a different smell. The harvest board says weather has no direction."
+      ],
+      "vista": "Seen from the landing field at late afternoon: white-lined pads in the foreground, then a long grey granary with a crest above its doors and a number on its roof. Beyond it lie green lowlands and rows of farm domes climbing olive highlands with snow on the peaks, under drifting white cloud and a pale blue sky. The yellow star sits low and warm, a river catches the light, and the first window lights glow at dusk."
+    },
+    {
+      "body": "glean",
+      "description": [
+        "Glean Domes sits on a bare, ashen moon under a black sky, rows of greenhouse domes laid out like a barracks on grey plain and crater floor. Inside the glass the air is wet and green, and outside there is nothing but dust and the glitter of orbital debris, which rings the moon in a thin haze. The blue-and-white curve of Merrow hangs overhead.",
+        "The domes grow what the weather below won't allow: seed stock, medicinal crops, and the fresh produce that inspectors and evacuee camps will pay well for. Food is cheap here, grown within sight of the dock, while chemicals, components and consumer goods are dear, since a greenhouse has more need of them than a moon has supply. Water and medicine pass through. Ore, metals, fuel and alloys are never traded and nobody keeps them in stock.",
+        "Everything is symmetrical, grey-and-white painted, numbered and crested, because the navy built it. Under the crests the staff are growers: patient, practical and wary of anyone who treads soil into the aisles."
+      ],
+      "places": [
+        {
+          "name": "Dome Nine",
+          "text": "The oldest dome, where medicinal herbs are grown in long benches under white light. The air smells of mint and iodine, and the staff wear cotton overshoes."
+        },
+        {
+          "name": "The Seed Hall",
+          "text": "A cold, grey-vaulted vault of labelled drawers holding seed stock for every farm in the March. The ledger lives on paper, as a backup against failure."
+        },
+        {
+          "name": "The Dust Bar",
+          "text": "A lamp-lit room on the dockside with a view of the debris haze through a thick pane. Growers and tug pilots drink here and complain about each other."
+        }
+      ],
+      "people": [
+        {
+          "id": "ottoline-brack",
+          "name": "Ottoline Brack",
+          "role": "seed keeper",
+          "text": "She has kept the Seed Hall for most of her working life and trusts the ledgers more than the people who borrow from them. She is courteous, exact and slow to lend.",
+          "line": "Food's cheap here because we grow it ourselves. What we're short of is chemicals, components and anything with a motor. If you carry those, sit down.",
+          "look": "Sixty, small and upright, with silver hair cut short and thick glasses. She wears a white lab coat with a grey crest on the breast and carries a pencil behind each ear."
+        },
+        {
+          "id": "hob-cassel",
+          "name": "Hob Cassel",
+          "role": "debris tug pilot",
+          "text": "He works the haze, towing larger pieces out of the lanes and logging the rest. He has opinions about where the glitter comes from and keeps them to himself unless asked twice.",
+          "line": "The haze thickens every season. Don't ask me why. I clear what I can and I keep my eyes off what I can't.",
+          "look": "Late forties, stocky, with a weathered, tanned face and a cap pulled low. His tug-suit gloves are tucked into his belt, patched at the thumbs with grey sealant."
+        },
+        {
+          "id": "imre-salk",
+          "name": "Dr Imre Salk",
+          "role": "horticulturist",
+          "text": "A medical botanist who grows the herbs for the March's clinics and has begun to think about who will be treated with them. He is gentle, distracted and unexpectedly funny.",
+          "line": "Medicine passes through here, and so does a lot of gossip. The herbs are honest at least.",
+          "look": "Fifties, tall and thin with a stoop, wearing a stained white coat, one sleeve rolled. A sprig of mint is tucked behind his ear."
+        }
+      ],
+      "rumors": [
+        "Growers swear a bloomling once visited and stood in the tomato dome all night, and left without a word. The Seed Hall locked its drawers afterwards, and nobody says what for.",
+        "When Hollin crosses the sun, the debris haze flickers in a rhythm the tug crews don't like. They say it's only light.",
+        "Crates of fresh produce go out on the night shuttle to a ship that isn't on the roster. The dock clerks sign for it and look away."
+      ],
+      "vista": "From the landing apron, grey and numbered, a black sky hangs over ashen plains and crater floors, with tan ridges on the horizon. In the foreground, rows of glazed greenhouse domes glow soft green under white lamps, each with a grey crest. The glittering haze of debris stretches across the sky, and the blue-and-white curve of Merrow hangs huge above the rim, lit by the yellow star."
+    },
+    {
+      "body": "thresh",
+      "description": [
+        "Thresh Dock is a shipping moon: bare ashen rock under a black sky, with container stacks standing in ranks, cranes walking the quays and tugs coming and going through a glitter of orbital debris. It loads Merrow's food for every system in the March, and the cranes work in shifts that never quite stop. The blue-and-white curve of Merrow rides overhead, close enough that the dockhands check it for weather.",
+        "The evacuee ships come in here too. Their passengers wait in the warehouses on cots and folding tables, while clerks with grey sashes check lists against faces. There is no cheap thing or dear thing at Thresh, because it trades everything: food, water, ore, metals, fuel, chemicals, alloys, components, consumer goods and medicine, in whatever mix the ships bring.",
+        "Everything is federal and numbered. Stack rows, quay bays and warehouse doors carry crests and stencilled codes, and the discipline is thick enough to touch. Beneath it live the loaders, tug crews and evacuees, who have all learned to sleep in noise."
+      ],
+      "places": [
+        {
+          "name": "Stack Row Nine",
+          "text": "A long avenue of container stacks, each tier stencilled and sealed. The loaders walk it in pairs, and the cranes above move box after box in grey silence."
+        },
+        {
+          "name": "The Warehouse Quarter",
+          "text": "A district of vast bonded warehouses now full of evacuees. Washing lines run between the rafters, and clerks with clipboards move among cots."
+        },
+        {
+          "name": "The Gantry Bar",
+          "text": "A noisy bar on the highest quay where loaders, pilots and brokers trade news, deals and complaints. The window looks straight onto the cranes."
+        }
+      ],
+      "people": [
+        {
+          "id": "barty-nunn",
+          "name": "Barty Nunn",
+          "role": "crane foreman",
+          "text": "He runs the day shift on the main quay and takes pride in a clean board. He has watched the evacuee ships get bigger and says nothing about it.",
+          "line": "We take everything in and ship everything out. What I can't do is make the warehouses any bigger.",
+          "look": "Fifties, heavy-shouldered, with a red face and a short grey beard. Wears an orange high-vis vest over a grey jumpsuit, a worn crest on the sleeve and a whistle on a cord."
+        },
+        {
+          "id": "halina-obuya",
+          "name": "Halina Obuya",
+          "role": "evacuee warehouse coordinator",
+          "text": "An evacuee herself, she took over the roll of one warehouse when the clerks were overwhelmed. She knows every name on it and who needs what.",
+          "line": "If you're carrying blankets, stoves or tea, you'll be loved. Medicine passes through here, and we count every box.",
+          "look": "Mid-thirties, thin and tired, with a long dark braid and sharp eyes. Wears a patched navy-surplus coat and carries a clipboard stuffed with handwritten lists."
+        },
+        {
+          "id": "cass-rennick",
+          "name": "Cass Rennick",
+          "role": "freight broker",
+          "text": "A quick, cheerful broker who finds loads for pilots and takes a commission for the finding. Honest enough, if you read the paper.",
+          "line": "Thresh trades in everything, friend. Tell me what you carry and where it's going, and I'll find someone who wants it.",
+          "look": "Forties, wiry, with a close crop of dark hair and a gold tooth. Wears a bright scarf over a grey federal-issue coat, and keeps a stub of pencil behind one ear."
+        }
+      ],
+      "rumors": [
+        "Loaders in the Warehouse Quarter say one bay in the far row stays warm all night, though no one is assigned to it and the heating there was cut.",
+        "Some evacuee ships are said to carry more people than the manifest says, and the clerks have been told not to count twice.",
+        "Tug crews say the station-rings above Merrow have lights on that haven't been lit in years. They aren't open to visiting ships, and nobody can say who is aboard."
+      ],
+      "vista": "From the quay, grey container stacks stand in numbered ranks, each tier stencilled with a white crest, and painted steel cranes tower over them. Tugs sit in rows on the dark ashen plain beyond, and the black sky is hazed with a glittering ring of debris. The blue-and-white curve of Merrow hangs huge above the crater rim, lit by yellow starlight, and a column of evacuees walks toward the warehouses."
+    }
+  ]
+}

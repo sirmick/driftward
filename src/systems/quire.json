@@ -129,7 +129,10 @@
         "cobalt",
         "silicate"
       ],
-      "seed": 9
+      "seed": 9,
+      "sizes": "boulders",
+      "clumping": 0.85,
+      "profile": "core"
     }
   ],
   "traffic": {

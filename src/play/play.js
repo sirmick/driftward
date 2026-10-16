@@ -117,13 +117,15 @@ const stationsOf = bodies => bodies.filter(b => b.kind === 'station').map(b => {
   return Object.assign({}, b, { key: `stn|${arch.id}|${brand.id}|${st.seed}`, req: { station: arch.id, brand: brand.id, seed: st.seed }, brand, spin: arch.spin || 0.01, scale: b.env ? b.env.scale : 1, s: null });
 });
 // The page's view of system k: its bodies, the worlds and stations to draw (made once per system; their positions are
-// the core's, copied in when the system is laid out), its star, lore and art. Its stations start baking.
-function setSystem(k) {
+// the core's, copied in when the system is laid out), its star, lore and art. Its stations start baking, unless it is
+// only being laid out (bake false: every system is, at startup).
+function setSystem(k, bake = true) {
   const S = SYSTEMS[k];
   sysK = k; SYS = S.loaded.system; BODIES = S.loaded.bodies; STAR = BODIES[0]; LORE = S.lore; ART = S.art;
   star = STARS[STAR.look] || STARS.sol;
   WORLDS = S.worlds || (S.worlds = worldsOf(BODIES));
   STATIONS = S.stations || (S.stations = stationsOf(BODIES));
+  if (!bake) return;
   [...new Map(STATIONS.map(T => [T.key, T.req]))].forEach(([key, req]) => { if (!baker.ships.get(key)) baker.enqueue(key, false, req); });
   baker.pump();
 }
@@ -327,10 +329,14 @@ CORE_READY.then(CORE => {
   // Asteroid belts and fields: their rocks (src/rocks.js), placed once from each one's seed round where the core put
   // it. Scenery: not in the sim (ships fly through them), so the page owns them. Density 1 is a rock per 22,000 m²;
   // a belt's rocks thin toward its edges and gather in clumps along it, a field's toward its rim. Sizes follow a power
-  // law, 15 to 500 m: mostly small (half under 23 m), one in a hundred over 200 m, so a belt is open space with rocks
-  // in it, a tenth of it covered, rather than a wall (the lab's 3 km rocks would cover it). The types are the belt's, the
-  // first commonest. Sorted by size, so a cell's rocks draw small first and big ones sit on top.
+  // law (ROCK_SIZES, by the belt's sizes; mixed is 15 to 500 m, half under 23 m, one in a hundred over 200 m), so a belt
+  // is open space with rocks in it rather than a wall (the lab's 3 km rocks would cover it). Its clumping and profile
+  // shape it along and across the ring. The types are the belt's, the first commonest. Sorted by size, so a cell's rocks
+  // draw small first and big ones sit on top.
   const ROCK_CELL = 2000, MAX_ROCKS = 24000;
+  // a belt's sizes (the schema's belts.sizes): a power law from min to max metres, steeper (k) for fewer big rocks,
+  // and a count factor so the three cover about as much of a belt at one density
+  const ROCK_SIZES = { gravel: { min: 8, max: 120, k: 2.0, count: 2.5 }, mixed: { min: 15, max: 500, k: 1.7, count: 1 }, boulders: { min: 40, max: 900, k: 1.35, count: 0.3 } };
   let ROCKS = [], rockGrid = new Map(), rockReach = 0; // the current system's
   function rocksOf(S) {
     if (S.rocks) return S.rocks;
@@ -338,15 +344,22 @@ CORE_READY.then(CORE => {
     let rockReach = 0;
     for (const B of S.loaded.bodies) {
       if (B.kind !== 'belt' && B.kind !== 'field') continue;
-      const K = B.belt, r = rockRng(`${B.id}:${K.seed}`), belt = B.kind === 'belt', half = K.width / 2;
-      const n = Math.min(MAX_ROCKS - ROCKS.length, Math.round((belt ? 2 * Math.PI * B.r * K.width : Math.PI * B.r * B.r) * K.density / 22000));
+      const K = B.belt, r = rockRng(`${B.id}:${K.seed}`), belt = B.kind === 'belt', half = K.width / 2, SZ = ROCK_SIZES[K.sizes] || ROCK_SIZES.mixed;
+      const n = Math.min(MAX_ROCKS - ROCKS.length, Math.round((belt ? 2 * Math.PI * B.r * K.width : Math.PI * B.r * B.r) * K.density / 22000 * SZ.count));
       const ph = [r() * 6.283, r() * 6.283, r() * 6.283], wt = K.rocks.map((_, i) => [6, 3, 1][i]), wsum = wt.reduce((a, b) => a + b, 0);
+      // clumps along the ring at the belt's own frequencies (2 to 5 big knots, 7 to 15 small), as strong as its clumping
+      const f1 = 2 + Math.floor(r() * 4), f2 = 7 + Math.floor(r() * 9), cl = K.clumping == null ? 0.5 : K.clumping;
+      // banded: three or four ringlets at the belt's own spacing
+      const bands = Array.from({ length: 3 + Math.floor(r() * 2) }, () => -0.85 + 1.7 * r());
       for (let k = 0, tries = 0; k < n && tries < n * 4; tries++) {
         let x, y;
         if (belt) {
-          const a = r() * 6.283, clump = 0.5 + 0.3 * Math.sin(3 * a + ph[0]) + 0.2 * Math.sin(11 * a + ph[1]);
-          if (r() > 0.25 + 0.75 * clump) continue;
-          const d = B.r + (r() + r() - 1) * half;
+          const a = r() * 6.283, clump = 0.5 + 0.3 * Math.sin(f1 * a + ph[0]) + 0.2 * Math.sin(f2 * a + ph[1]);
+          if (r() > 1 - cl + cl * clump) continue;
+          const u = K.profile === 'core' ? (r() + r() + r() + r() - 2) / 2 * (r() < 0.75 ? 0.45 : 1)            // a dense core in thin skirts
+            : K.profile === 'banded' ? Math.max(-1, Math.min(1, bands[Math.floor(r() * bands.length)] + (r() + r() - 1) * 0.07)) // ringlets
+            : r() + r() - 1;                                                                                       // soft: thickest mid-belt
+          const d = B.r + u * half;
           x = B.x + Math.cos(a) * d; y = B.y + Math.sin(a) * d;
         } else {
           const a = r() * 6.283, d = B.r * Math.pow(r(), 0.7);
@@ -354,7 +367,7 @@ CORE_READY.then(CORE => {
         }
         let pick = r() * wsum, ti = 0; while (ti < wt.length - 1 && (pick -= wt[ti]) > 0) ti++;
         const rock = makeRock(K.rocks[ti], k, r);
-        rock.size = 15 * Math.pow(1 - r() * (1 - Math.pow(15 / 500, 1.7)), -1 / 1.7);
+        rock.size = SZ.min * Math.pow(1 - r() * (1 - Math.pow(SZ.min / SZ.max, SZ.k)), -1 / SZ.k);
         const m = rock.size / 2, reach = m * rockExt(rock);
         ROCKS.push({ a: rock, x, y, m, reach, seed: r() });
         rockReach = Math.max(rockReach, reach);
@@ -415,12 +428,13 @@ CORE_READY.then(CORE => {
   // a port the more traffic; look.debris scales a world's share
   function orbitersFor() {
     sim.orbitClear();
-    const TRAFFIC_N = { outpost: 120, colony: 350, town: 900, world: 2000 }, DEBRIS_N = { rock: 9000, terran: 2500, giant: 3000 };
+    // (a quarter of the first counts: enough to glitter, not a swarm); the ferries round the stations are below, unchanged
+    const TRAFFIC_N = { outpost: 30, colony: 90, town: 225, world: 500 }, DEBRIS_N = { rock: 2250, terran: 625, giant: 750 };
     BODIES.forEach((b, j) => {
       if (b.kind !== 'planet' && b.kind !== 'moon') return;
       const L = b.look || {}, k = Math.min(1.6, Math.max(0.4, b.r / 1200));
-      sim.orbitAdd(j, 0, Math.round((DEBRIS_N[L.surface] || 1000) * k * L.debris), 1009 * j + 17);
-      if (b.port) sim.orbitAdd(j, 1, Math.round((TRAFFIC_N[b.port.population] || 160) * L.orbitTraffic), 2027 * j + 5);
+      sim.orbitAdd(j, 0, Math.round((DEBRIS_N[L.surface] || 250) * k * L.debris), 1009 * j + 17);
+      if (b.port) sim.orbitAdd(j, 1, Math.round((TRAFFIC_N[b.port.population] || 40) * L.orbitTraffic), 2027 * j + 5);
     });
     // ferries: specks coming and going between a world and its environmental stations, and between stations whose
     // route clears the world, a few to a route
@@ -443,7 +457,7 @@ CORE_READY.then(CORE => {
   // bodies: the core places each on its orbit with its own trig (loadSystem lists parents first), and the page's
   // copies take the core's positions, so routes, wells and the drawing agree in every browser
   function layoutSystem(k) {
-    setSystem(k);
+    setSystem(k, false);
     sim.setBodies(BODIES.length);
     BODIES.forEach((b, j) => {
       const B = sim.body; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;

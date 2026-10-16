@@ -544,6 +544,31 @@
               "carbon"
             ]
           },
+          "sizes": {
+            "description": "The rocks' sizes: gravel (mostly small, nothing past a hundred metres or so), mixed (small ones commonest, a few hundred-metre rocks), or boulders (fewer, bigger: some near a kilometre).",
+            "enum": [
+              "gravel",
+              "mixed",
+              "boulders"
+            ],
+            "default": "mixed"
+          },
+          "clumping": {
+            "description": "A belt's rocks along its ring: 0 an even ring, 1 knots of rock with thin stretches between.",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.5
+          },
+          "profile": {
+            "description": "A belt's rocks across its width: soft (thickest in the middle, thinning to the edges), core (a dense narrow core in thin skirts), or banded (ringlets with gaps between).",
+            "enum": [
+              "soft",
+              "core",
+              "banded"
+            ],
+            "default": "soft"
+          },
           "seed": {
             "type": "number",
             "minimum": 0,

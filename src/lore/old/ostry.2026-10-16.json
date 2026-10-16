@@ -1,0 +1,144 @@
+{
+  "system": "ostry",
+  "history": [
+    "Ostry was settled early in the Rush, when the haulers working the middle ring found that a dim red star with a banded gas giant and a moon made of ice was worth more than it looked. Water and fuel were the whole case for it. Crews cut shafts into Rime and bolted habitat modules into them, and tugs went up to the skimmers over Gaunt. Nobody ever planned the place. The towns grew downward wherever the ice would take a weld, and they still look it.",
+    "In the Charter Strikes Ostry went dark with the rest of the Compact. Its crews held out longer than most, mainly because they were used to being cold and short. Since then the system has been poor, tight-knit and quietly generous to Blackhulls, who can always find a berth and a drink. The Compact pretends not to know. Ostry pretends it doesn't need pretending.",
+    "In 2524 the lane to Varrow closed, and Ostry was the last stop before it. Varrow's people came through here, in ships that barely held air and with stories that did not match the Federation's notice. Most were sent on to Halde, but some stayed. The Federation keeps a quarantine picket at the jump zone, supplied from Calder, and the picket's crews talk in Ostry's bars more freely than their officers would like. Ostry's people watch the picket the way you watch a dog that has bitten someone."
+  ],
+  "culture": "People here are quiet, thrifty and practised at the cold. They keep their coats on indoors and judge a stranger by how they treat the lamps, the air and the door seals. Everything except water and fuel has to be brought in, so waste is a character flaw, and fixing something is praise. Outsiders are tolerated and charged accordingly; Federation uniforms get politeness with nothing behind it. Anyone out of Varrow gets a bowl and a seat before anyone asks a question, and the questions come later and are not about the lane. Old-timers say 'thin' for trouble and 'thick' for safe. Gallows humour is a form of manners.",
+  "artBible": {
+    "palette": [
+      "#d9822b",
+      "#8fc4e0",
+      "#4a5560",
+      "#8a4b2a",
+      "#1f3a5c",
+      "#7a2a22"
+    ],
+    "lighting": "A dim red sun gives almost nothing, so everything is lit by sodium-orange lamps against cold blue ice. Gaunt's lightning flickers at the horizon and in the windows. Shadows are deep and warm-edged. Frost glitters in the lamp beams.",
+    "architecture": "Habitat modules welded and bolted into shafts cut in the ice, stacked in untidy tiers, with covered stairways, pipe runs and cable bundles along every wall. Landing fields are scraped flat ice with lamp masts. Orbital stations are tanks, scoops and rings bolted to a frame, patched in mismatched plates.",
+    "materials": "Rust-streaked steel plate, bead-welds, frost-furred pipework, sodium lamp glass, ice cut to square faces, tarpaulin, rubber seals, scorched ceramic, hand-painted stencil lettering worn thin.",
+    "mood": "Cold, tight and stubborn, with a lamplit warmth in small rooms. Poor but not beaten, and watchful about the lane that closed.",
+    "design": "Ironhull: welded, modular, rusted and patched. Every addition is bolted to the last, sodium-orange lamps mark anything worth walking toward, and hab rings are fixed to rock or ice rather than built free. Nothing is decorative unless it also holds something up."
+  },
+  "ports": [
+    {
+      "body": "rime",
+      "description": [
+        "Rime Town is a set of towns cut down into the ice of a moon of Gaunt. From the landing field you see only lamp masts, shaft heads with their heavy doors, and the glitter of the debris ring overhead. The towns are below: tiers of welded modules bolted into the ice walls, linked by stairs, lifts and pipe runs that frost over in the cold corners. The red sun gives almost nothing, so the lamps never go off, and the ice takes on their orange all the way down.",
+        "Water goes out of here to the whole March, and Rime Town does not feel rich for it. Everything else has to come in. Food, components and consumer goods are all dear on Rime, and people will tell you so before you have taken your gloves off. Chemicals and fuel move through the market too, but ore, metals and alloys are not wanted here, and the market has no medicine to offer. People who need a clinic go without or go elsewhere.",
+        "Since the Varrow lane closed, Rime has been a place of passage. Families out of Varrow came through on their way to Halde, and some stayed in spare modules and cousins' rooms. They show up in the stairwells as quiet people who don't want to talk about home. The town has made room for them, which is more than it can say for most things."
+      ],
+      "places": [
+        {
+          "name": "The Lamp Hall",
+          "text": "A wide module at the foot of the main stair where the town eats, argues and gets its news. It has a long stove, benches welded to the floor, and a wall of notices for berths, spare parts and lost gloves."
+        },
+        {
+          "name": "Cutter's Stair",
+          "text": "The oldest descent into the ice, cut by hand and since sheathed in steel. Ice-cutters start their shifts here. Names are scratched into the rail, and a few have been scratched out."
+        },
+        {
+          "name": "The Landing Field",
+          "text": "Scraped flat ice under lamp masts, with shaft doors at one edge and a squat repair shed at the other. Frost forms on a hull within minutes of landing, and the ground crews knock it off with mallets."
+        },
+        {
+          "name": "Thaw Row",
+          "text": "A tier of lamplit stalls and back-rooms where people sell repaired things and swap what they can't afford new. It is called Thaw Row because it is the one warm corridor in the town."
+        }
+      ],
+      "people": [
+        {
+          "id": "odalys-harn",
+          "name": "Odalys Harn",
+          "role": "ice-cutter foreman",
+          "text": "Runs a cutting crew on the deep faces and has done for twenty years. She speaks well of the work and poorly of the pay, and she watches the Federation picket's traffic from the field as a matter of habit.",
+          "line": "Water's cheap here, friend, because it's all we've got. Everything you drink with it, you'll pay for.",
+          "look": "A broad woman in her fifties with a weathered, windburned face, grey-streaked black hair cropped short, and a quilted orange-stained coat patched at both elbows. A hand-forged ice pick hangs at her belt, its handle wrapped in tape."
+        },
+        {
+          "id": "teodor-quill",
+          "name": "Teodor Quill",
+          "role": "Varrow refugee, former hauler engineer",
+          "text": "Came through from Varrow with his daughter and a tool roll. He fixes pumps for bed and board and will not say what he saw in his last days there. He talks a lot about other things.",
+          "line": "I'll look at your seals, if you like. Never mind where I'm from. Ask me about the seals.",
+          "look": "A gaunt man of about fifty with deep-set grey eyes, stubble gone white, and a borrowed coat a size too large. His hands are scarred from welding, and a child's hair ribbon is tied round his tool roll."
+        },
+        {
+          "id": "mabyn-rusk",
+          "name": "Mabyn Rusk",
+          "role": "keeper of the Lamp Hall",
+          "text": "Keeps the stove lit and the stew going and hears everything, including from picket crews who think the Lamp Hall is anonymous. She is fair, unhurried and not discreet by accident.",
+          "line": "Sit, sit. The stew's what it is. The news is better, and the news is free.",
+          "look": "A short, round woman in her sixties with ruddy cheeks, a grey plait over one shoulder, and a stained apron over a thick knitted jumper. A brass sodium-lamp key hangs round her neck on a leather cord."
+        }
+      ],
+      "rumors": [
+        "The picket at the Varrow jump zone changes crews more than it should, and the new ones look at the lane before they look at their orders.",
+        "Somebody saw a ship on the lane out of Varrow flying in perfect step with nothing, then gone. The picket says it was a sensor ghost. Nobody in the Lamp Hall has believed the picket since.",
+        "There are quiet berths in the Rubble where a ship can sit out an inspection, if it knows the right boulder. The old-timers say the right boulder moves.",
+        "The deep faces are cut in a way the old crews never taught, and one gang swears they heard the ice answering. Odalys Harn says it's the pumps."
+      ],
+      "vista": "A scraped flat ice landing field under orange sodium lamp masts, frost glittering in the beams. Heavy steel shaft doors and welded modules sit at the edge, with a repair shed and tarpaulined cargo stacks. Beyond, sky blue ice plains and crater floors rise to pale ridges rimmed with off-white frost, under a thin pale blue haze. Overhead a glittering ring of debris arcs across the sky, with huge banded Gaunt in slate grey and deep blue, lightning flickering in its storms, and a small dim red sun low on the horizon."
+    },
+    {
+      "body": "skim",
+      "description": [
+        "Ostry Skim hangs low over Gaunt, a refinery station that is mostly scoops, pumps and tanks, with a living quarter bolted on as though someone remembered late. Skimmers drop into the cloud tops and come back up with their holds full, and the fuel goes into tanks as big as hulls. The whole frame hums. Lightning flickers in the cloud below and the station's orange lamps ripple in the windows.",
+        "Fuel and chemicals are cheap here, which is the point of the place. Food and components are dear, and the galley staff have stopped apologising. Water and consumer goods pass through, but ore, metals, alloys and medicine are not wanted, and the market has no dealings in them. Crews work long shifts and drink in the same two rooms, which is how the station keeps its secrets, since there is nowhere else to say anything.",
+        "It is also where Blackhulls drink, and nobody admits to knowing them. They sit at the back with their collars up. The skimmer crews pour for them, take their coin, and give them the name of whatever ship they say they're from. The Federation picket is supplied from Calder and could look harder at the Skim. It has not, so far."
+      ],
+      "places": [
+        {
+          "name": "The Scoop Deck",
+          "text": "The working floor, where skimmer cradles are hauled in, hosed down and refitted. It smells of hot metal and chemicals. A painted line on the deck marks where visitors must stop."
+        },
+        {
+          "name": "The Back Room",
+          "text": "A bar at the end of the quarter, with a low ceiling and a sodium lamp on a cable. It has more rules than a customs house, all of them unwritten. Everyone knows where to sit."
+        },
+        {
+          "name": "Tank Gallery",
+          "text": "A railed walkway along the fuel tanks, with a long window onto Gaunt's clouds. Off-shift crews come here to watch the lightning and not talk."
+        },
+        {
+          "name": "The Patch Shop",
+          "text": "A repair bay run by a crew who will weld anything to anything. The walls are lined with offcuts labelled in grease pencil."
+        }
+      ],
+      "people": [
+        {
+          "id": "ines-corvane",
+          "name": "Ines Corvane",
+          "role": "skimmer pilot and shift lead",
+          "text": "Drops a scoop into Gaunt's clouds more often than anyone else on the station and has the nerves to prove it. She distrusts anyone who talks about storms as though they were scenery.",
+          "line": "The cloud doesn't care what you're carrying. Fuel's cheap up here, but I've paid for every drop.",
+          "look": "A wiry woman in her late thirties with a narrow, tanned face, a burn scar along one jaw, and black hair tied back with wire. She wears a grease-dark orange flight suit with the sleeves rolled and a dented respirator at her neck."
+        },
+        {
+          "id": "pell-asher",
+          "name": "Pell Asher",
+          "role": "trader of uncertain loyalty",
+          "text": "Says he buys and sells whatever a station will let him. He is polite to everyone, especially to the table at the back, and has never been seen to arrive.",
+          "line": "I'm just a man with a hold and a sense of what's wanted. Some days that's chemicals. Some days it's silence.",
+          "look": "A lean man in his forties with a pleasant, forgettable face, thinning sandy hair, and a patched grey coat with good boots underneath. A small brass ring on a cord round his wrist suggests more than he says."
+        },
+        {
+          "id": "hester-voll",
+          "name": "Hester Voll",
+          "role": "picket rating on leave",
+          "text": "A young Federation petty officer from the Varrow picket, off shift and out of uniform, who does not like what she watches on the lane. She talks to the wall of the bar rather than to anyone, which is how she talks to strangers.",
+          "line": "Don't ask me what's out there. I just log it. They stopped telling us what to log.",
+          "look": "A pale young woman of about twenty-four with tired green eyes, short dark hair, and a civilian jacket that doesn't fit her stance. Her regulation boots are polished despite everything."
+        }
+      ],
+      "rumors": [
+        "Blackhulls pay in fuel, not coin, at the Back Room, and the station pretends to see only the fuel.",
+        "One of the two refineries not open to ships is being kept for something nobody will name. The crews say it's lights-out and spares only.",
+        "Skimmers have started coming up from the cloud tops with odd readings, and the shift leads aren't logging them. Ines Corvane says it's the weather.",
+        "Something large sits in the Rubble beyond Gaunt, big as a station and quiet as a wreck. The Federation's charts call it a rock. The tug crews call it company."
+      ],
+      "vista": "A dock on the skimmer station, its steel gantry walkways, welded tanks and pump housings lit by sodium-orange lamps and streaked with rust. Beyond the window banded Gaunt fills the sky, slate grey and deep sea blue with pale storms and lightning flickering in them. Skimmer cradles and scoop arms hang over the cloud tops while fuel tanks glint in the dim red light of the distant sun. In the far distance a thin ring of drifting rock catches the light."
+    }
+  ]
+}

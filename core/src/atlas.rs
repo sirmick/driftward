@@ -10,7 +10,7 @@
 
 use crate::cols::soa;
 use crate::market::MAX_GOODS;
-use crate::port::{MODE_DESCENDING, MODE_FLYING, MODE_LAUNCHING, NO_SUCH_BODY, OK, WRONG_MODE};
+use crate::port::{BODY_BELT, MODE_DESCENDING, MODE_FLYING, MODE_LAUNCHING, NO_SUCH_BODY, OK, WRONG_MODE};
 use crate::traffic::MAX_MIX;
 use crate::world::{World, P};
 
@@ -106,6 +106,13 @@ impl World {
         true
     }
 
+    /// Where a jump or teleport to body `b` puts the player: over it, a little south of its centre; for a belt, on its
+    /// ring, due south of its parent (a belt's centre is its parent's).
+    pub fn arrival(&self, b: usize) -> (f64, f64) {
+        let (x, y, r) = (self.bodies.x[b], self.bodies.y[b], self.bodies.r[b]);
+        if self.bodies.kind[b] == BODY_BELT { (x, y - r) } else { (x, y - r * 0.3) }
+    }
+
     /// The debug jump: to system `k`, at rest over its body `b`, flying. Not during a landing or launch.
     pub fn jump_to(&mut self, k: i32, b: i32) -> i32 {
         let mode = self.mode();
@@ -126,10 +133,10 @@ impl World {
         self.plan_traffic();
         self.seed_traffic();
         // the player, flying, at rest over the body (as CMD_TELEPORT puts them)
+        let at = self.arrival(b);
         let s = &mut self.ships;
         s.alive[i] = 1;
-        s.x[i] = self.bodies.x[b];
-        s.y[i] = self.bodies.y[b] - self.bodies.r[b] * 0.3;
+        (s.x[i], s.y[i]) = at;
         s.vx[i] = 0.0; s.vy[i] = 0.0; s.av[i] = 0.0;
         self.slot_reset(i, false);
         self.game.mode[0] = MODE_FLYING;
@@ -194,6 +201,9 @@ mod tests {
         for _ in 0..600 { w.step(); }
         assert_eq!(w.missions.state[0], M_DELIVERED);
         assert_eq!(w.command(CMD_JUMP, 2, 0), NO_SUCH_BODY);
+        // a belt's arrival is on its ring
+        w.bodies.kind[2] = BODY_BELT;
+        assert_eq!(w.arrival(2), (w.bodies.x[2], w.bodies.y[2] - w.bodies.r[2]));
         assert_eq!(w.command(CMD_JUMP, 1, 3), NO_SUCH_BODY);
     }
 

@@ -1,0 +1,152 @@
+{
+  "system": "serein",
+  "history": [
+    "Serein was one of the first worlds the Rush reached in this corner of the March, and one of the few anyone thought worth the cost of fixing. It had water, a sky that could be made breathable, and a yellow star that kept to its manners. Halcyon Dynamics bought the claim early and spent the better part of a century terraforming it: seeding the lowlands, steering the weather, and leasing the towers to people who wanted to be near the company. The inner rock, Vell, was stripped and left. Aubade, the gas giant, was given refineries.",
+    "When Halcyon became Prism in 2410, Serein was already its office for the March, and it has stayed that. Nothing here was ever conquered or contested. Prism arrived with a contract, and the contract is still in force. The orbital clinics grew up in the decades after, and with them the credit houses. Serein now holds the debts of half the Ironhull crews in the March, and nobody on the planet raises their voice about it.",
+    "The last few years have been quiet in the way a held breath is quiet. In 2524, when the foundry system and its research world went silent, Prism's statement about the quarantine and the precautionary recall of certain cores was issued from Serein. The associates still repeat it word for word, down to the pauses. Rotations of staff to and from Quire have thickened the traffic, and Varrow's families come through in numbers the clinics' waiting lists did not plan for."
+  ],
+  "culture": "People on Serein are polite the way a good lock is smooth. Associates speak softly, use your name early and often, and never seem to hurry, which is how you know the file is already open. The people who serve them, the cleaners, gardeners, couriers and dispensers, speak a clipped, careful version of the same manner, and save their real talk for the service stairs. Debt is discussed as 'a relationship'. Outsiders are welcomed, measured and remembered, and Ironhull crews, who tend to be in arrears, walk the white streets as if the floors might be docked against them. Nobody asks about 2524. If you ask, they offer you the statement, and they offer it kindly.",
+  "artBible": {
+    "palette": [
+      "#f4f6f5",
+      "#bcd8e8",
+      "#7fa7c4",
+      "#8a9a5b",
+      "#e8b98a",
+      "#d9c9a8"
+    ],
+    "lighting": "Soft, even, shadowless daylight under a yellow star filtered by pale blue sky; interiors lit from the surfaces themselves, with no visible source. Dusk turns warm gold and the settlements glow amber.",
+    "architecture": "Tall white towers with unbroken curved faces and no visible joins, set in terraced managed gardens; skybridges like drawn lines; orbital rings with long, uninterrupted windows.",
+    "materials": "Pale ceramic, frosted glass, polished white composite, clipped lawn and trained hedge; everything wiped, nothing scuffed. Scent diffusers, soft fabrics in cream and grey.",
+    "mood": "Serene, expensive, faintly watched; calm so complete that it presses on the ears.",
+    "design": "Prism's language is seamless: white, glass and light, with no visible fastenings, no ornament and no clutter. Uniforms and fittings are cut to match, and the calm is exact enough to unsettle."
+  },
+  "ports": [
+    {
+      "body": "serein",
+      "description": [
+        "Serein Concourse is what Prism looks like when it is not hiding anything. White towers rise out of managed gardens, every hedge cut to the same hand, every path swept before anyone has walked on it. The streets are quiet because the traffic runs below them. Prism's offices for the March are here, with its clinics, its credit houses and the people who hold the debts of half the Ironhull crews in the system's neighbours. Visitors are welcomed, measured and remembered.",
+        "The landing field sits on a pale terrace above the lowlands and is run like a reception desk. Greeters meet every ship by name, which is slightly worse than being met by a customs officer. Medicine is cheap here and everyone will tell you so, kindly. Chemicals and components are dear, because the Concourse makes its own medicine and has little patience for anyone else's workshops. There is no market for water, ore, metals, fuel or alloys; the Concourse does not buy what it can have delivered without being asked.",
+        "The bar, such as it is, serves in a glass hall with chairs designed for conversation at low volume. Missions come through the associates' desks and the brokers who work the edges of them. You can find work here, or a loan, or both. You will not find a place where the ledger is not open."
+      ],
+      "places": [
+        {
+          "name": "The Statement Hall",
+          "text": "A glass atrium where Prism's notice on the 2524 quarantine is displayed and, on request, read aloud by an associate. Visitors find the wording smooth enough to slide off."
+        },
+        {
+          "name": "Arrears Row",
+          "text": "A white colonnade of credit desks where Ironhull crews come to talk to the people who hold their paper. The benches are comfortable, which people take as a bad sign."
+        },
+        {
+          "name": "The Terraces",
+          "text": "Tiered gardens above the landing field, open to visitors. The hedges are trimmed daily and the fountains are tuned. Locals use the lowest terrace for smoking and the quiet kind of argument."
+        },
+        {
+          "name": "The Glass Room",
+          "text": "The Concourse bar: long, bright and hushed, with seats that tilt you toward your companion. The drinks are good, and every glass is somehow already cold."
+        }
+      ],
+      "people": [
+        {
+          "id": "ilse-maurant",
+          "name": "Ilse Maurant",
+          "role": "Prism debt associate",
+          "text": "A counsellor at Arrears Row who has handled Ironhull accounts for eleven years. She is helpful and unhurried, and she remembers everyone's family names.",
+          "line": "Do sit. There's no rush at all. Most of my clients say that's the worst part, but I find it helps.",
+          "look": "Woman in her forties, sleek dark hair cut at the jaw, pale skin, even features that give nothing away. Cream seamless jacket with no visible seams or buttons, a thin silver lapel line. A small old-fashioned paper clip is pinned behind her ear."
+        },
+        {
+          "id": "tobias-wren",
+          "name": "Tobias Wren",
+          "role": "Ironhull deckhand, in arrears",
+          "text": "A hauler's second hand off a Brannock ore run, waiting on a rescheduling meeting for a debt his captain signed. He has been waiting a good while and has learned the hall's chairs.",
+          "line": "They don't shout. That's the thing about Prism. You'd feel better if somebody shouted.",
+          "look": "Broad man in his thirties, weathered brown skin, a grey ruster coverall freshly pressed but patched at both knees. Hands scarred from hull work. A plain steel ring on a cord around his neck."
+        },
+        {
+          "id": "nell-ostrander",
+          "name": "Nell Ostrander",
+          "role": "Terrace gardener",
+          "text": "One of the people who keep the managed gardens managed. She has been up at dawn on the Terraces for thirty years and has heard every conversation the hedges have heard.",
+          "line": "They tell you the gardens grow by themselves. Come at dawn and see who's kneeling in them.",
+          "look": "Wiry woman in her sixties, sun-lined face, cropped white hair under a pale grey cap. White garden overalls stained green at the knees, which is clearly against the rules. Soil under the fingernails."
+        }
+      ],
+      "rumors": [
+        "Pilots say Prism's recall of certain navigation cores was larger than the statement lets on, and that the associates here can't say why because nobody has told them.",
+        "A hauler captain swears the lights in one of the Concourse towers changed colour for a moment last winter, all at once, and that the staff were told it was a maintenance test.",
+        "Some Ironhull crews believe the arrears desks go easier on anyone who has family on Halde. Others say that's exactly what a debt desk would want you to think.",
+        "Gardeners claim that the lowest terrace has the one corner of the Concourse where the sensors don't reach, and that's why all the quiet arguments happen there."
+      ],
+      "vista": "From the pale landing terrace the white towers of the Concourse rise in curved, seamless faces above terraced gardens in olive and deep green. A sheet of frosted glass runs along the field's edge. Beyond the towers the lowlands drop toward deep blue seas, with snow on off-white highlands far off, under drifting white cloud and a pale sky blue sky. The yellow star sits warm and high, and a faint curve of the orbital clinics glints near the horizon. At dusk, windows turn amber."
+    },
+    {
+      "body": "halo",
+      "description": [
+        "Halo Clinics is a ring turning slowly above Serein, soft-lit and scented, where Prism mends the people who can pay and some who can't, against their future earnings. The corridors curve gently upward in both directions and never quite end. The light is the colour of a held candle. The air is scented with something that was chosen to calm you. The waiting list is long.",
+        "Medicine is cheap here, and the whole ring exists around that fact; almost everything else is bought in. Chemicals and components are dear, because the clinics run on supplies they have to bring up the well, and they trade in consumer goods and food for the staff and the patients. Water, ore, metals, fuel and alloys do not trade here. Ships that dock are refuelled and repaired by the ring's own tenders and are asked, politely, not to ask for more.",
+        "Patients, relatives and associates share the bar, which looks out on the curve of Serein below. People come from Quire on rotation, from Brannock in arrears, and lately from Ostry with Varrow's families, who sit in the waiting lounges with their bags still packed. The clinics treat them all. What the clinics do with the paperwork afterwards is another department."
+      ],
+      "places": [
+        {
+          "name": "The Long Lounge",
+          "text": "A curved waiting hall that runs a quarter of the ring, lined with pale chairs and one wall of window. It is always warm, and always full of people watching Serein turn."
+        },
+        {
+          "name": "Intake Atrium",
+          "text": "The reception space where every arrival is registered, scanned, and given a thin white wristband. Staff greet each person by name before they have said it."
+        },
+        {
+          "name": "The Quiet Bar",
+          "text": "A low bar at the ring's inner edge with a view of the planet. Patients' families drink there when the news is bad, and associates when it's worse."
+        },
+        {
+          "name": "Tender Bay",
+          "text": "The ring's repair and refuelling berths, scrubbed to a gleam. The mechanics work in white and are very good, and slightly apologetic."
+        }
+      ],
+      "people": [
+        {
+          "id": "dr-amadi-oyelaran",
+          "name": "Dr Amadi Oyelaran",
+          "role": "Triage physician",
+          "text": "A clinic doctor who sorts the ring's intake by urgency and, he admits, by account. He is tired in the way people are who have stopped complaining.",
+          "line": "I treat what comes through the door. What it costs is another floor's job. I try to keep it that way.",
+          "look": "Tall man in his fifties, deep-set eyes with grey shadows under them, close grey beard. White clinic tunic buttoned to the throat, a stylus tucked behind one ear. A faded wristband from his own treatment never quite removed."
+        },
+        {
+          "id": "marit-sollenne",
+          "name": "Marit Sollenne",
+          "role": "Quire foundry worker on rotation",
+          "text": "A fixed-contract technician from Quire sent here for medical review after a rotation. She says little about the foundry and nothing about the sister plant.",
+          "line": "They told me it's a routine review. Fine. I'd like to know why it's the fourth one.",
+          "look": "Woman in her thirties, narrow face, cropped brown hair and a tight jaw. Grey foundry-issue jacket with the badge removed, leaving a lighter patch. Burn scar across the back of one hand."
+        },
+        {
+          "id": "joss-pellam",
+          "name": "Joss Pellam",
+          "role": "waiting-list broker",
+          "text": "A fixer who trades in places on the clinics' waiting list, strictly within the rules, as he will tell you. He knows who moves up and who doesn't.",
+          "line": "Everyone gets seen eventually. I just help eventually arrive a little closer.",
+          "look": "Slim man in his forties, quick smile, pomaded black hair, an unremarkable white suit slightly too well pressed. A thin gold chain visible at the cuff. Eyes that count the room."
+        },
+        {
+          "id": "anneke-vos",
+          "name": "Anneke Vos",
+          "role": "Varrow evacuee",
+          "text": "A former crew-mate's wife from Varrow, here with two children and a stack of documents. She waits for treatment for her son and for news no one will give.",
+          "line": "Nobody here has said the word Varrow to me once. Not once, in all these weeks.",
+          "look": "Woman in her late thirties, drawn face, dark hair tied back with a strip of cloth. A patched grey Ironhull jacket two sizes too big, a child's mitten pinned to the collar."
+        }
+      ],
+      "rumors": [
+        "Patients on the Long Lounge say the ring's lights dim a fraction every night for exactly the same length of time, and some of them check.",
+        "Quire staff rotated through here talk about foundry shifts that end early, and about cores going off under escort without anyone from the plant seeing the loading.",
+        "A pilot who ferries Varrow families says the clinics have a separate waiting list for them, and nobody can find where it is kept.",
+        "Someone claims the closed habitat rings on Serein's orbit are not empty at all, and that the supply tenders go in lit and come out dark."
+      ],
+      "vista": "From the dock the long white curve of Halo Clinics rises overhead, soft-lit and seamless, with frosted windows glowing warm along the ring. Below hangs Serein: deep sea blue seas, olive lowlands and off-white highlands streaked with drifting white cloud, and a thin pale blue edge of atmosphere. Far off, the gas giant Aubade shows as a small peach-and-tan disc, and a faint glitter of debris marks the bare brown world Vell near the yellow star. The light is gentle and entirely shadowless."
+    }
+  ]
+}

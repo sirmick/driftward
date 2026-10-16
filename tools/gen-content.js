@@ -119,6 +119,8 @@ function bodyLooks(b) {
   const R = L.rings || {}, rings = R.density > 0 ? `; circled by ${R.density > 0.6 ? 'broad, bright' : 'thin, faint'} rings of ${names(R.colours || [])}, seen ${R.tilt > 75 ? 'nearly edge-on' : R.tilt < 35 ? 'nearly face-on' : 'at a slant'}` : '';
   if (L.surface === 'terran') return `a water world: ${c1} seas, ${c2} lowlands and ${c3} highlands with snow on the peaks, under drifting white cloud; its sky is ${atm || 'blue'}${L.cityLights ? ', and its settlements show warm lights at dusk' : ''}${storms}${rings}${junk}`;
   if (L.surface === 'giant') return `a gas giant banded ${c1} and ${c2}, streaked with ${c3} storms${storms}${rings}${junk}`;
+  // an ice world: the shader draws it as rock, but its port works ice, so its pale ground is ice and frost, not dust
+  if (b.port && b.port.role === 'ice') return `a frozen world of ice and frost with no open water: ${c1} ice in the crater floors and plains, ${c2} higher ground, ${c3} frost on the ridges and crater rims${atm && L.air > 0.05 ? `, under a thin ${atm} haze` : ', under a black sky'}${storms}${rings}${junk}`;
   const all = (L.palette || []).map(colourName), grey = all.every(n => /grey|charcoal|off-white/.test(n));
   return `${grey ? 'an ashen grey' : /^[aeiou]/.test(c2) ? `an ${c2}` : `a ${c2}`} world of bare rock and dust with no water and no plants: ${c1} plains and crater floors, ${c2} higher ground, ${c3} ridges and crater rims${atm && L.air > 0.05 ? `, under a thin ${atm} haze` : ', under a black sky'}${storms}${rings}${junk}`;
 }
@@ -241,10 +243,22 @@ function putBackKept(lore) {
   if (!KEPT) return;
   for (const p of lore.ports) for (const q of p.people) { const k = (KEPT.get(p.body) || []).find(k => k.id === q.id); if (k) Object.assign(q, { name: k.name, role: k.role, look: k.look }); }
 }
+// What the other systems' lore already uses (src/lore/<id>.json but this one's): its people's names and its rumors, so
+// a system gets people and stories of its own. A name part (first name or surname) used elsewhere is a problem.
+const OTHERS = fs.readdirSync(path.join(root, 'src', 'lore')).filter(f => /^[a-z0-9-]+\.json$/.test(f) && !f.endsWith('.log.json') && f !== `${SYS.id}.json`)
+  .map(f => JSON.parse(fs.readFileSync(path.join(root, 'src', 'lore', f), 'utf8'))).filter(l => l && l.ports);
+const otherNames = OTHERS.flatMap(l => l.ports.flatMap(p => p.people.map(q => q.name)));
+const otherParts = new Set(otherNames.flatMap(n => n.replace(/^(Dr|Lt|Lieutenant|Corporal|Captain|Sergeant)\.? /, '').split(/\s+/)).map(w => w.toLowerCase()));
+const othersText = () => OTHERS.length ? `\n\nOther systems' lore is already written. Give this system's people first names and surnames none of these use: ${otherNames.join(', ')}. And give it rumors of its own, not new versions of these:\n${OTHERS.flatMap(l => l.ports.flatMap(p => p.rumors)).map(r => '- ' + r).join('\n')}` : '';
+function nameProblems(lore) {
+  if (KEPT) return [];
+  return lore.ports.flatMap(p => p.people.flatMap(q => q.name.replace(/^(Dr|Lt|Lieutenant|Corporal|Captain|Sergeant)\.? /, '').split(/\s+/).filter(w => otherParts.has(w.toLowerCase()))
+    .map(w => `$.ports[${p.body}].people[${q.id}]: "${w}" (in ${q.name}) is already used by another system's people`)));
+}
 function lorePrompt(feedback) {
   return [
     { role: 'system', content: LORE_RULES + JSON.stringify(loreSchema) },
-    { role: 'user', content: (SETTING ? `The setting:\n${SETTING}\n\n` : '') + (REGION ? `The region:\n${REGION}\n\n` : '') + `The facts:\n${JSON.stringify(facts, null, 1)}\n\nWrite the lore for system "${SYS.id}", with one entry in "ports" for each of these bodies: ${facts.ports.join(', ')}.` + keptText() + (feedback ? `\n\nYour last answer had these problems; fix them:\n${feedback}` : '') }
+    { role: 'user', content: (SETTING ? `The setting:\n${SETTING}\n\n` : '') + (REGION ? `The region:\n${REGION}\n\n` : '') + `The facts:\n${JSON.stringify(facts, null, 1)}\n\nWrite the lore for system "${SYS.id}", with one entry in "ports" for each of these bodies: ${facts.ports.join(', ')}.` + keptText() + othersText() + (feedback ? `\n\nYour last answer had these problems; fix them:\n${feedback}` : '') }
   ];
 }
 function parseJSON(text) {
@@ -259,6 +273,19 @@ const LORE_PARAMS = { seed: seedOf('lore'), temperature: 0.8, max_tokens: 16000 
 function writeLoreLog(rec) {
   fs.mkdirSync(path.dirname(loreLogFile), { recursive: true });
   fs.writeFileSync(loreLogFile, JSON.stringify(Object.assign({ date: new Date().toISOString().slice(0, 10), model: TEXT_MODEL }, LORE_PARAMS, rec, { facts, messages: lorePrompt(rec.feedback) }), null, 1) + '\n');
+}
+// Lore is never lost either: the lore and its record about to be replaced move to src/lore/old/<id>.<date>.json and
+// <id>.<date>.log.json (numbered if taken)
+function setAsideLore() {
+  if (!fs.existsSync(loreFile)) return;
+  const oldDir = path.join(path.dirname(loreFile), 'old'), rec = fs.existsSync(loreLogFile) ? JSON.parse(fs.readFileSync(loreLogFile, 'utf8')) : {};
+  const date = rec.date || new Date(fs.statSync(loreFile).mtimeMs).toISOString().slice(0, 10);
+  fs.mkdirSync(oldDir, { recursive: true });
+  let base = `${SYS.id}.${date}`;
+  for (let n = 2; fs.existsSync(path.join(oldDir, base + '.json')); n++) base = `${SYS.id}.${date}-${n}`;
+  fs.renameSync(loreFile, path.join(oldDir, base + '.json'));
+  if (fs.existsSync(loreLogFile)) fs.renameSync(loreLogFile, path.join(oldDir, base + '.log.json'));
+  console.log(`  set aside the old lore as src/lore/old/${base}.json`);
 }
 async function genLore() {
   if (DRY) {
@@ -277,11 +304,12 @@ async function genLore() {
     const { lore, notes } = loadLore(raw, loreSchema, SYS);
     notes.forEach(n => console.log(`  ${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`));
     attempts.push({ cost, provider, problems: notes.map(n => `${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`) });
-    const kept = lore ? keptProblems(lore) : [];
+    const kept = lore ? [...keptProblems(lore), ...nameProblems(lore)] : [];
     if (kept.length) { kept.forEach(k => console.log(`  ${k}`)); attempts[attempts.length - 1].problems.push(...kept); }
     if (!lore || kept.length || notes.some(n => /no lore for port|dropped/.test(n.msg))) { feedback = [...notes.map(n => `${n.path}: ${n.msg}`), ...kept].join('\n'); console.log(`lore attempt ${attempt}: ${notes.length + kept.length} problem(s), retrying`); continue; }
     putBackKept(lore);
     fs.mkdirSync(path.dirname(loreFile), { recursive: true });
+    setAsideLore();
     fs.writeFileSync(loreFile, JSON.stringify(lore, null, 2) + '\n');
     writeLoreLog({ sent: true, ...served, cost: total, seconds: Math.round((Date.now() - t0) / 1000), attempts, feedback });
     console.log(`wrote ${path.relative(root, loreFile)}: ${lore.ports.length} ports, ${lore.ports.reduce((n, p) => n + p.people.length, 0)} people (${TEXT_MODEL} via ${served.provider || 'unknown provider'}, ${((Date.now() - t) / 1000).toFixed(0)} s, $${total.toFixed(3)})`);
@@ -292,27 +320,35 @@ async function genLore() {
 
 // ---------- art ----------
 const VISTA_STYLE = 'A painted vista for the landing screen of a space trading game: futuristic, painterly, a cinematic matte painting with visible brushwork, wide 16:9. No text, lettering, logos, UI, borders or frames.';
+// Each faction's art direction, in vistas and portraits alike: its systems look like its own (the art bible, from the
+// lore, gives one system's palette, light and materials within it)
+const FACTION_ART = {
+  ironhulls: 'Ironhull art direction: gritty industrial realism. Welded, rusted and patched metal, sodium-lamp orange against deep shadow, grime, steam and soot, everything built for work and mended rather than replaced.',
+  federation: 'Federation art direction: brutalism. Monumental raw-concrete masses, heavy slabs and deep-set windows, stark repeated geometry and hard shadows, grey and white with heraldic banners and crests; architecture built to dwarf the people in it, ordered, imposing and austere.',
+  prism: 'Prism art direction: slightly retro corporate futurism, like a 1970s or 1980s corporate brochure or airbrushed space art: smooth white curves, chrome trim and tinted glass, soft gradient skies, gentle pastel accent lights, a polished optimistic sheen that feels a little dated and a little too perfect.'
+};
+const factionArt = () => FACTION_ART[SYS.owner] || '';
 const PORTRAIT_STYLE = 'A character portrait in a painterly fantasy-realism style, the classic CRPG portrait look: head and shoulders, three-quarter view, looking at the viewer, dramatic soft key light, a dark, softly painted background. No text, lettering, borders or frames.';
 const bibleText = lore => { const a = lore.artBible; return `Art bible for the ${SYS.name} system. Palette: ${names(a.palette)}. Lighting: ${a.lighting} Architecture: ${a.architecture} Materials: ${a.materials} Mood: ${a.mood} Design language: ${a.design}`; };
 // how busy a port looks, by its population tier: a world of billions is a city to the horizon, not a field and a few towers
 const CROWD = { outpost: ' A small, sparse outpost.', colony: ' A working settlement of a few million.',
   town: ' A busy place of tens or hundreds of millions: built up all round the port, with ships coming and going.',
   world: ' One of the most crowded places in the region, home to billions: city to the horizon, towers and lights everywhere, the sky busy with ships.' };
-function vistaPrompt(lore, b, ref) {
+function vistaPrompt(lore, b, ref, cross) {
   const p = lore.ports.find(q => q.body === b.id), L = b.look || {}, parent = b.parent && b.parent !== 'star' ? byId(b.parent) : null;
   const role = b.port.role.replace('-', ' '), crowd = CROWD[b.port.population] || '';
   const where = b.kind === 'station'
     ? `${b.port.name}, the ${role} station of the system, ${STATION_WORDS[b.station.archetype]} in open space between the worlds.${crowd}`
     : `${b.port.name}, the ${role} port of ${b.name}${parent ? `, a moon of ${parent.name}` : ''}.${crowd} ${b.name} is ${bodyLooks(b)}.`;
   const sky = parent && parent.look ? ` ${parent.name}, ${bodyLooks(parent)}, hangs huge in the sky.` : '';
-  return [VISTA_STYLE, bibleText(lore), `The place: ${where}${sky} The light comes from ${STAR_WORDS[SYS.star.class]}.`, `The scene: ${p.vista}`,
-    'Composition: keep the left two fifths of the image darker and calmer, with no focal point there, because the port\'s text panel is drawn over it; the main interest sits right of centre.',
-    ref ? 'The attached image is this system\'s style reference for the painting only: match its brushwork, finish and treatment of light. Take nothing else from it: not its landscape, sea, cliffs, buildings, rings or layout. The ground, sky and colours come from the description above.' : ''].filter(Boolean).join('\n\n');
+  return [VISTA_STYLE, factionArt(), bibleText(lore), `The place: ${where}${sky} The light comes from ${STAR_WORDS[SYS.star.class]}.`, `The scene: ${p.vista}`,
+    'Composition: the left two fifths of the scene are naturally darker and calmer, in shadow, sky or empty ground, with no focal point there, because the port\'s text panel is drawn over it; the main interest sits right of centre. Paint that darkness as part of the scene itself: never a band, panel, overlay or straight vertical edge.',
+    ref ? `The attached image is ${cross ? 'the style reference for this faction\'s systems, from another of them' : 'this system\'s style reference'}, for the painting only: match its brushwork, finish and treatment of light${cross ? ', within this faction\'s art direction above' : ''}. Take nothing else from it: not its landscape, sea, cliffs, buildings, rings or layout. The ground, sky and colours come from the description above.` : ''].filter(Boolean).join('\n\n');
 }
-function portraitPrompt(lore, b, q, ref) {
-  return [PORTRAIT_STYLE, bibleText(lore), `${q.name}, ${q.role}, at ${b.port.name} (${b.name}). ${q.look}`, `Who they are: ${q.text}`, `Their people: ${lore.culture}`,
+function portraitPrompt(lore, b, q, ref, cross) {
+  return [PORTRAIT_STYLE, factionArt(), bibleText(lore), `${q.name}, ${q.role}, at ${b.port.name} (${b.name}). ${q.look}`, `Who they are: ${q.text}`, `Their people: ${lore.culture}`,
     'The background is the dim bar of the port, out of focus, in the system\'s palette.',
-    ref ? 'The attached image is the style reference for this system\'s portraits: match its painting style, framing, light and finish, but paint this person, not the reference\'s subject.' : ''].filter(Boolean).join('\n\n');
+    ref ? `The attached image is the style reference for ${cross ? 'this faction\'s portraits, from another of its systems' : 'this system\'s portraits'}: match its painting style, framing, light and finish, but paint this person, not the reference's subject.` : ''].filter(Boolean).join('\n\n');
 }
 async function image(kind, prompt, aspect, seed, refPng) {
   const { model: IMAGE_MODEL, size: IMAGE_SIZE } = IMAGE[kind];
@@ -365,19 +401,34 @@ async function genArt(lore) {
   // the jobs, in order: the start port's vista first (the reference), then the other ports'; then the portraits
   const start = ports.find(b => b.id === SYS.start) || ports[0];
   const vistaJobs = [start, ...ports.filter(b => b !== start)].filter(b => lore.ports.some(p => p.body === b.id))
-    .map(b => ({ kind: 'vista', id: b.id, name: `vista-${b.id}`, make: ref => vistaPrompt(lore, b, ref) }));
-  const portraitJobs = lore.ports.flatMap(p => p.people.map(q => ({ kind: 'portrait', id: q.id, name: `portrait-${q.id}`, make: ref => portraitPrompt(lore, byId(p.body), q, ref) })));
+    .map(b => ({ kind: 'vista', id: b.id, name: `vista-${b.id}`, make: (ref, cross) => vistaPrompt(lore, b, ref, cross) }));
+  const portraitJobs = lore.ports.flatMap(p => p.people.map(q => ({ kind: 'portrait', id: q.id, name: `portrait-${q.id}`, make: (ref, cross) => portraitPrompt(lore, byId(p.body), q, ref, cross) })));
+  // A faction's style reference: another system of the same owner's reference vista or portrait (the one painted with
+  // no reference of its own), if it has been painted here (its raw PNG). When there is one, every image of that kind in
+  // this system takes it, so a faction's systems share a look; otherwise the system's own first image is the reference.
+  const factionRef = kind => {
+    for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.endsWith('.json'))) {
+      const raw = readJSON(`src/systems/${f}`), d = path.join(root, 'art', raw.id), lg = path.join(d, 'log.json');
+      if (raw.id === SYS.id || raw.owner !== SYS.owner || !fs.existsSync(lg)) continue;
+      const e = Object.entries(JSON.parse(fs.readFileSync(lg, 'utf8'))).find(([k, v]) => k.startsWith(kind + '-') && v && !v.reference);
+      const png = e && path.join(d, 'raw', e[0].replace(/\.webp$/, '.png'));
+      if (png && fs.existsSync(png)) return { png, name: `${raw.id}/${e[0]}` };
+    }
+    return null;
+  };
+  const CROSS = NO_REF ? {} : { vista: factionRef('vista'), portrait: factionRef('portrait') };
   let total = 0, made = 0;
   const run = async (job, refJob) => {
-    const ref = refJob && job !== refJob && !NO_REF ? path.join(rawDir, refJob.name + '.png') : null, prompt = job.make(!!ref), spec = ART[job.kind];
-    if (DRY) { console.log(`--- ${job.name}${ref ? ` (reference ${refJob.name})` : ''}: ${IMAGE[job.kind].model}${IMAGE[job.kind].size ? ` at ${IMAGE[job.kind].size}` : ''} ---\n${prompt}\n`); return; }
+    const cross = CROSS[job.kind];
+    const ref = cross ? cross.png : refJob && job !== refJob && !NO_REF ? path.join(rawDir, refJob.name + '.png') : null, prompt = job.make(!!ref, !!cross), spec = ART[job.kind];
+    if (DRY) { console.log(`--- ${job.name}${ref ? ` (reference ${cross ? cross.name : refJob.name})` : ''}: ${IMAGE[job.kind].model}${IMAGE[job.kind].size ? ` at ${IMAGE[job.kind].size}` : ''} ---\n${prompt}\n`); return; }
     const t = Date.now(), seed = seedOf(job.name);
     const { png, cost, provider, servedModel } = await image(job.kind, prompt, spec.aspect, seed, ref && fs.existsSync(ref) ? fs.readFileSync(ref) : null);
     const rawFile = path.join(rawDir, job.name + '.png'), outFile = path.join(artDir, job.name + '.webp');
     setAside(job.name, log);
     fs.writeFileSync(rawFile, png);
     toWebp(rawFile, outFile, spec.w, spec.h, spec.q);
-    log[job.name + '.webp'] = { prompt, model: IMAGE[job.kind].model, provider, servedModel, size: IMAGE[job.kind].size || undefined, seed, reference: ref ? refJob.name + '.webp' : null, cost, seconds: Math.round((Date.now() - t) / 1000), date: new Date().toISOString().slice(0, 10) };
+    log[job.name + '.webp'] = { prompt, model: IMAGE[job.kind].model, provider, servedModel, size: IMAGE[job.kind].size || undefined, seed, reference: ref ? (cross ? cross.name : refJob.name + '.webp') : null, cost, seconds: Math.round((Date.now() - t) / 1000), date: new Date().toISOString().slice(0, 10) };
     total += cost; made++;
     console.log(`  ${path.relative(root, outFile)}  ${(fs.statSync(outFile).size / 1024).toFixed(0)} KB  $${cost.toFixed(3)}  ${((Date.now() - t) / 1000).toFixed(0)} s`);
   };

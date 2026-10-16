@@ -1,0 +1,150 @@
+{
+  "system": "quire",
+  "history": [
+    "Halcyon Dynamics chartered Quire in the first decades after the Valhalla Result. It wanted somewhere hot, metal-rich and empty to make the navigation cores that every jump drive needs. The inner world had no air, no water and nothing to protect, and a white star standing over it all day. The first foundries went up on the day side to use the heat, and the first workers lived under domes on the night side and were told the arrangement was temporary. When Halcyon became Prism in 2410, the foundries kept the same work, the same contracts and, as far as anyone could tell, the same walls.",
+    "For most of its life Quire was a quiet, productive, unloved place. It made the most valuable cargo in the March, and the March resented how little of it stayed. The system filled slowly with forges, habitat rings and a relay station on the lane inward, and with the debris that foundries shed: spoiled castings, cut-away frames and the odd lost tool. That debris is the glitter round the planet. The hands call it the haze and say it is the only part of Quire that anyone has ever called pretty.",
+    "In 2524 the sister plant went silent, and Quire has been nervous ever since. Prism announced a precautionary recall of certain cores and sent its sympathy. Staff are rotated out faster than they can be replaced, output has fallen, and every core now leaves under escort, so the March's own yards go short. Nobody on Quire says what the sister plant was, or what it made that this plant makes too. The associates say 'precautionary' the way other people say 'amen'."
+  ],
+  "culture": "Quire runs on fixed contracts, and people here think in terms of the term: how much is left, who has been rotated out, whether the next renewal will be offered. Associates speak softly and in full sentences, and they do not say 'sister plant' if 'the other site' will do. Everyone has a polite word for something frightening. A death is a 'completion', a closed lane is a 'hazard', and a rotation nobody will explain is a 'refresh'. Foundry hands are proud of the work and dry about the employer, and they give outsiders the same flat welcome. Ironhull haulers are tolerated because they bring metal and food, both dear here. Navy visitors are watched, and Freeflag sympathisers keep their opinions to the night domes.",
+  "artBible": {
+    "palette": [
+      "#b5532f",
+      "#3d3b3e",
+      "#efe9dc",
+      "#fbfbf8",
+      "#14161a",
+      "#8bb4d4"
+    ],
+    "lighting": "Hard white starlight on bare rock with no atmosphere to soften it: long black shadows, blown highlights on cream ridges, a black sky even at midday. Indoors, even, shadowless, slightly cool light with no visible source, and a faint glow from the foundry vents.",
+    "architecture": "Seamless white towers and low glassy halls on the day side, with no visible joins, doors or signs until you are standing at them. Night-side domes are clean and pale, ribbed with white struts. Stations are smooth lattices of white and glass, and security craft are gloss black.",
+    "materials": "White ceramic panel, poured glass, brushed alloy, black polymer. Dust coats everything outdoors in rust and ash, and every indoor surface has been wiped within the last few minutes.",
+    "mood": "Calm, clean and watched. Everything is orderly, polite and slightly too quiet, and the unease is under the surface and never shown.",
+    "design": "Prism's language: sleek, seamless, white and glass, with luxury that never looks lived in. Staff wear pale fitted uniforms with a single clean seam of colour, and security wears gloss black. Nothing visibly worn is allowed to stay visible."
+  },
+  "ports": [
+    {
+      "body": "quire",
+      "description": [
+        "Quire Foundry is the port in the middle of a very large machine. Foundries cover the whole day side of the world, white-walled and glass-faced, standing on ashen plains under a black sky. They run in sequence from smelting through casting and etching to the sealed clean halls where navigation cores are finished. Worker cities lie in domes on the night side, linked by long rail lines under the ridges. The landing field is a flat grey apron at the edge of it all, swept so often that the dust looks arranged.",
+        "The foundry makes alloys and components in bulk, and is glad to sell them. It is short of metals, chemicals and food, and pays well for all three. It has no use for water, ore, consumer goods or medicine at this port, and says so at the dock desk. Fuel changes hands as it does everywhere. Cores never come to the market at all. They leave through the guarded gates under escort, and the field crews say they have never seen one, which is probably true.",
+        "Visitors are not hurried, and not welcomed either. The mood on the field is a manners-first kind of watchfulness. The forges and habitat rings overhead are Prism's and closed to visiting ships. Hands at the bar say the glitter above gets into everything, and that so does the quiet."
+      ],
+      "places": [
+        {
+          "name": "The Pour Hall",
+          "text": "The foundry bar and canteen by the landing field. It is pale, spotless and loud only when a shift changes. The stew is hot, the chairs are bolted down, and the staff are polite to a fault."
+        },
+        {
+          "name": "Annealing Row",
+          "text": "A long street of low white halls where castings are cooled and checked. The air shimmers over the roofs and hands walk fast and keep their eyes down against the glare."
+        },
+        {
+          "name": "The Night Rail",
+          "text": "The line that runs under the ridges to the night-side domes. Every shift change fills the platform with pale uniforms, standing very still and waiting without talking."
+        },
+        {
+          "name": "Refresh Office",
+          "text": "A glass-fronted counter on the field where staff are rotated out. It is always open and always empty, and nobody lingers near it."
+        }
+      ],
+      "people": [
+        {
+          "id": "ilse-moraga",
+          "name": "Ilse Moraga",
+          "role": "core tester on fixed contract",
+          "text": "A tester who has watched her bench neighbours rotate out one by one. She says she is fine, and checks the door whenever she says it.",
+          "line": "You'll want alloys, they're the cheap thing here. Don't ask me what we make that's worth more. I only test it, and I'm told that is quite different.",
+          "look": "Woman in her late thirties, narrow face, dark hair cropped close, pale fitted uniform with a thin blue seam. Her fingertips are stained grey from handling castings, and she keeps turning a plain steel ring on one finger."
+        },
+        {
+          "id": "corwin-dace",
+          "name": "Corwin Dace",
+          "role": "furnace tender, ex-Ironhull",
+          "text": "Born on Brannock and signed to Quire for the pay, he tends the day-side furnaces and has stayed longer than he meant. He is warm with Ironhull crews and careful with everyone else.",
+          "line": "Bring metal and food and they'll love you. Bring questions and they'll still be polite, which is worse. Sit, sit, the stew's all right.",
+          "look": "Heavy man in his fifties, sunburned neck, broad scarred hands, grey-white overalls with the sleeves cut off at the elbow. He wears a battered Brannock miner's lamp on a cord round his neck, switched off."
+        },
+        {
+          "id": "perpetua-vane",
+          "name": "Perpetua Vane",
+          "role": "associate, field liaison",
+          "text": "Prism's liaison for visiting crews, who greets everyone by name before they have given it. She is helpful, tireless and nearly impossible to read.",
+          "line": "Welcome to Quire. Everything here is in order, thank you for asking. Is there anything at all we can make easier for you?",
+          "look": "Woman of about forty-five, immaculate silver-blonde hair, pale tailored suit with a single black seam, a flawless smile. Her eyes are very slightly slow to follow what she is looking at."
+        },
+        {
+          "id": "benedikt-soyer",
+          "name": "Benedikt Soyer",
+          "role": "retired escort pilot",
+          "text": "He flew core convoys inward for years, until the escorts changed. He now drinks at the Pour Hall and will tell you about the old way, if you stand him something.",
+          "line": "We used to know when we were leaving. Now they just tell you the convoy has gone, and you've been on it. Sit down, I'll tell you how it used to work.",
+          "look": "Lean man of sixty, deep lines round the eyes, shaved head, a faded grey flight jacket with the escort patch picked off. One cuff is stiff with old coolant stains."
+        }
+      ],
+      "rumors": [
+        "Testers say every core is run once more than the paperwork shows, alone, in a sealed bay, and the bay's log is kept by nobody they've ever met.",
+        "Night-dome folk say the staff who were rotated out never turn up on any Serein roll. Prism says they are resting, and the domes have stopped asking where.",
+        "Prospecting crews say a crater floor on the far side has been swept flat and white since the recall, and that nobody is rostered to go near it."
+      ],
+      "vista": "A flat ashen landing apron under a black sky, hard white sunlight throwing long black shadows. Beyond it stand tall white foundry towers, seamless and glass-faced, with heat shimmering above their vents. Rust-brown ridges and cream crater rims rise behind them. High overhead a glittering haze of debris arcs across the sky like a broken ring. A single armoured core carrier waits near the edge of the apron, ringed by gloss-black escort craft."
+    },
+    {
+      "body": "gate",
+      "description": [
+        "Quire Gate is a relay array and customs post on the lane inward, a lattice of white and glass with dishes and antennae folded round a central hub. Prism security runs it in gloss black, and the contrast with the white frame is deliberate. Everything inbound or outbound on the lane passes under its eye, and the clerks are quick, courteous and thorough in a way that makes honest crews feel guilty.",
+        "Escort convoys form up here for the run inward, and nobody is told when they leave. Crews wait in the lounge, bags packed, until a quiet message arrives. The Gate trades in food, consumer goods, fuel and medicine, and pays well for components. It has no use for water, ore, metals, chemicals or alloys, and the customs desk says so before you have finished unloading.",
+        "Through the viewing glass you can see Quire below, rust brown and haloed in glitter, and further out the loose ring of rock called the Assay, with the banded giant Tamsin beyond. The place is calm, and it is built so that nobody forgets who runs it."
+      ],
+      "places": [
+        {
+          "name": "The Slow Lounge",
+          "text": "The Gate's bar and waiting room, pale and soft-lit, with deep chairs and a viewing wall. Crews wait here for convoy calls and drink tea, because the beer is not very good."
+        },
+        {
+          "name": "Customs Hall",
+          "text": "A long white hall with glass booths, a black-clad officer at each. The queue moves smoothly and without any talk."
+        },
+        {
+          "name": "Convoy Apron",
+          "text": "A pressurised dock deck where escort hulls and core carriers are mustered under floodlight. Visiting crews are kept behind a clear panel and told, politely, not to look for long."
+        },
+        {
+          "name": "The Relay Walk",
+          "text": "A glass gallery round the array's hub, where the dishes turn slowly overhead. Staff come here to be alone and seldom stay long."
+        }
+      ],
+      "people": [
+        {
+          "id": "rhea-tolliver",
+          "name": "Rhea Tolliver",
+          "role": "customs clerk",
+          "text": "A clerk who has stamped more crates than she can count and has begun to dread the ones she is told to wave through. She is kind to crews, which is not encouraged.",
+          "line": "Your papers are in order, thank you. If you're holding anything for components, say so before the desk does. They're dear here, and it saves us both a conversation.",
+          "look": "Woman of about thirty, round-faced, dark curly hair under a pale cap, white uniform with a single black seam. A chipped enamel pin of a small yellow bird is hidden under her collar."
+        },
+        {
+          "id": "gaspar-imlay",
+          "name": "Gaspar Imlay",
+          "role": "tug captain, Assay pilot",
+          "text": "An independent who works the Assay under Prism licence, hauling survey gear and sampling crews among the boulders. He knows every rock by name and is not telling most of them.",
+          "line": "The Assay's loose, but it isn't empty. I call the big nickel one Grandmother. Don't tell Prism, they've got a number for her.",
+          "look": "Wiry man in his early fifties, weathered brown face, grey stubble, patched orange work jacket with tool loops. A blue cobalt-veined stone sits on a cord at his throat."
+        },
+        {
+          "id": "ode-pellam",
+          "name": "Ode Pellam",
+          "role": "Prism security sergeant",
+          "text": "A sergeant in gloss black who is exact, courteous and impossible to rattle. Crews bet on whether she ever blinks.",
+          "line": "Good day. Your convoy will be called when it is called. Please enjoy the lounge, and please keep to the lounge.",
+          "look": "Tall woman of about forty, strong jaw, hair cut flat under a black cap, gloss-black armoured uniform with no insignia. Her gloves are spotless and she never takes them off."
+        }
+      ],
+      "rumors": [
+        "Customs men say convoys leave to a schedule nobody has seen written, and that the pilots learn their departure from a small lamp in the lounge that never explains itself.",
+        "Assay tug crews say the loose boulders keep a gap round the lane inward as tidy as if they'd been told to, and that it wasn't always so.",
+        "A skipper swears a core came back to Quire for re-making with a maker's mark older than the foundry. He says the clerk who logged it was moved the next shift."
+      ],
+      "vista": "A white lattice of the relay array fills the foreground, with glass panels and folded dishes catching hard white starlight. Gloss-black security cutters sit against its pale frame. Below, Quire hangs rust brown against the black, wrapped in a thin glittering haze of debris. Further out a loose scatter of rock, the Assay, glints in blue and silver, and the tan and rust bands of Tamsin lie beyond."
+    }
+  ]
+}

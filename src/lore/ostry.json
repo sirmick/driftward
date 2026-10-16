@@ -1,0 +1,140 @@
+{
+  "system": "ostry",
+  "history": [
+    "Ostry was settled early in the Rush for the one thing a dim red dwarf has plenty of: ice. The first crews came for water and fuel to sell to the richer yards nearer the middle of the ring. They found Gaunt, a banded giant with lightning in its clouds, and Rime, a moon of Gaunt frozen to the bone, and they did what Ironhull crews always do. They bolted hab rings to what was there and welded on more when the first ones filled. When the surface proved too cold and too bare to live on, they cut downward. The towns on Rime are older than most of the cities in the Federation core, and they look it.",
+    "The system never got rich, and it learned to be proud of that. Ore went to Brannock, credit went to Serein, and Ostry sold the water and fuel every other yard needed and bought everything else at the price the seller named. In the Charter Strikes the skimmer crews were among the first to shut their scoops, and they have not forgotten who stood with them. Ostry has been closer to the Blackhulls than the Compact admits ever since. Blackhull ships take on fuel at the Skim, and no one writes down who they are.",
+    "Since 2524 Ostry has been the last stop before the closed lane to Varrow. Almost everyone who got out of that system came through here, hungry and silent, and the towns on Rime took them in until there was no room, then sent them on to Halde. The Federation keeps a quarantine picket at the jump zone. It never explains itself, and the picket crews are not talked to much. The shifts go on, and the lamps burn. Ostry's people have made a habit of not looking at the lane unless they must."
+  ],
+  "culture": "Ostry is cold, and people here measure everything against that. They greet you by asking whether you have been fed, and they mean it. Credit is kept short and favours are kept long. Nobody says Varrow aloud if they can say 'the other side' instead, and nobody asks a Varrow family what it saw. Strangers are given a seat near the stove and a close look. Navy uniforms get the same politeness a dog gets from someone who has been bitten, and Blackhulls are 'cousins' or 'nobody I know'. People swear by the lamps, by the ice and by the tanks. Ostry pays more for food than anyone in the March, and complains about it with great skill.",
+  "artBible": {
+    "palette": [
+      "#e8861f",
+      "#8a4a2b",
+      "#8fb8d6",
+      "#4a5560",
+      "#1f3a5c",
+      "#5a1f1a"
+    ],
+    "lighting": "A dim red sun that gives almost nothing. Real light comes from sodium lamps, orange and low, hung from cables and bolted to walls, with long shadows and hard pools of colour. Against the ice the lamps look warm and the shadows look blue. Gaunt's slate and sea-blue bulk throws a cold glow, and its lightning flickers across everything.",
+    "architecture": "Towns cut down into the ice in terraces and shafts, with welded hab modules bolted into the walls like barnacles. Hab rings are clamped to rock and ice. Stations are stacked tanks, pipe-gantries and scoop arms. Everything is modular, extended in whatever shape the last repair allowed, with stairs added after the fact and walkways hung over drops.",
+    "materials": "Rusted plate, weld seams, patched hull-steel, frost-furred pipe, sodium glass, coiled cable, ice-blue walls scored by cutters, and tarpaulin and sealant in mismatched colours. Everything is repaired, nothing is replaced, and everything wears a skin of frost or oil.",
+    "mood": "Cold, close and watchful. The mood is warm company in a hard place, with a held breath behind it, as people keep half an eye on a lane they would rather not name.",
+    "design": "Ironhull: welded, modular, rusted and patched, sodium-lamp orange, hab rings bolted to rock. Here it shows as lamp-orange plate against sky-blue ice, with spare modules welded on and every surface carrying a repair someone is proud of."
+  },
+  "ports": [
+    {
+      "body": "rime",
+      "description": [
+        "Rime Town is not one town but a run of them, cut down into the ice of a moon of Gaunt, one under another. The surface is a bare blue-white plain under a thin pale haze, and nothing lives there but landing lamps and the tops of airlocks. Life is below. Shafts drop between terraced streets lit orange by sodium lamps strung from the walls, because the red sun gives almost nothing. The walls sweat when a lamp is turned up and frost over when it is turned down, and everyone owns a scraper.",
+        "Water is what Rime has, and it goes out to the whole March in tanker after tanker. It is cheap here and nobody thinks about it. Everything else is dear. Food, components and the small goods of ordinary life come down the shafts by crate and are priced by people who remember going without. The market does not touch ore, metals, alloys or medicine at all, and the town says plainly that it has no use for them. Chemicals and fuel move through in small trade, mostly in the lamp-hours after shift.",
+        "Since the lane to Varrow closed, Rime has fed and housed more people than it was built for. Families sleep in disused cutting galleries, and old modules have been welded on to the ends of streets to make room. The town does not complain. It does keep a long memory of who gave it a hand and who sent a form."
+      ],
+      "places": [
+        {
+          "name": "The Long Cut",
+          "text": "The oldest shaft, a straight drop that cuts down through the layers of the ice. Every level opens off it, hung with ladders and lamps, and everyone ends up there sooner or later."
+        },
+        {
+          "name": "Meltwater Exchange",
+          "text": "A vaulted gallery of tanker clerks, pump-masters and brokers, where the town's one cheap good is argued over at a roar. The steam from the pumps keeps the place warm and stops anyone seeing across it."
+        },
+        {
+          "name": "The Lamp Hall",
+          "text": "A converted cutting gallery where Varrow families sleep, eat and wait. The lamps are kept lit all night, and nobody has asked them to explain why."
+        },
+        {
+          "name": "Stove & Scraper",
+          "text": "The port's bar, a welded drum of a room with a coal-black stove in the middle and a rack of scrapers by the door. Pilots drink here, and the ice-cutters tell them things for the price of a hot cup."
+        }
+      ],
+      "people": [
+        {
+          "id": "kerra-thole",
+          "name": "Kerra Thole",
+          "role": "ice-cutter foreman",
+          "text": "She runs a cutting crew on the lower galleries and has been underground longer than most pilots have been flying. She feeds her crew first, argues with the tanker clerks second and takes orders from nobody. She does not talk about Varrow, but she will take on any Varrow hand who can hold a cutter.",
+          "line": "Sit near the stove, pilot. If you've come for water, it's the one thing we've got. If it's anything else, bring your own and expect to pay for ours.",
+          "look": "A broad woman in her late fifties with a weathered round face, grey hair cropped short and white frost-scars across both cheeks. She wears a patched orange quilted coverall, heavy gloves hanging from her belt and a cutter's goggles pushed up on her forehead."
+        },
+        {
+          "id": "osk-brennard",
+          "name": "Osk Brennard",
+          "role": "Varrow refugee, former lamp-keeper",
+          "text": "He kept the lamps in a Varrow shaft town and came out through Ostry with a tool-roll and not much else. He now trims lamps in the Lamp Hall for his bed. He is polite, quiet and sleeps badly, and he watches the screens in the bar for a pattern.",
+          "line": "No, I won't tell you what I saw. I'll tell you I got out before the lamps changed. Buy me a cup and I'll talk about anything else.",
+          "look": "A thin man of about forty with sunken eyes, a close-cropped dark beard and a scar through one eyebrow. He wears a borrowed, too-large grey coat over rust-red overalls and carries a roll of small brass lamp tools tied with cord."
+        },
+        {
+          "id": "ruth-gannet",
+          "name": "Ruth Gannet",
+          "role": "water-rights clerk",
+          "text": "She keeps the tanker ledgers at Meltwater Exchange and knows who has loaded and who is waiting. Her tongue is dry and her memory is long, and she is quietly sure the Compact office forgets Ostry exists until the levy is due.",
+          "line": "Water goes out cheap and everything else comes in dear. That's Rime in one sentence. Put it on the wall if you like, but pay for the wall.",
+          "look": "A narrow, upright woman in her sixties with a sharp nose, pale grey eyes and silver hair pinned up. She wears a brown waxed coat with ledger-pens clipped to the lapel and fingerless gloves worn through at the thumbs."
+        }
+      ],
+      "rumors": [
+        "Cutters on the deep galleries say the ice below the Long Cut rings when nothing is working near it. They say it rings in the same note the lane buoys make, and that it has been doing so since the lane closed.",
+        "The debris ring round Rime is thicker on the Gaunt side every season. Tug crews say it is old wreckage working loose, and they have started leaving the bigger pieces alone.",
+        "A tanker pilot swears the picket's lamps at the jump zone go out for the length of a breath, all together, once a shift. The picket calls it a test.",
+        "Folk in the Lamp Hall say a Varrow child draws the same shaft town every day, with every window lit, though it was dark when she left."
+      ],
+      "vista": "From the landing field the moon's surface is a vast blue-white plain of sky blue ice, ridged with off-white frost along crater rims, under a thin pale blue haze. A glittering ring of debris arcs overhead. Rusted airlock hoods and lamp-masts stand on the ice, each throwing a pool of sodium orange, with welded cargo cradles and tanker berths strung between them. Gaunt fills much of the sky, a slate grey and deep sea blue giant banded with pale storms and flickering with lightning. The red sun hangs small and dim above the ridgeline."
+    },
+    {
+      "body": "skim",
+      "description": [
+        "Ostry Skim hangs low over Gaunt like something that has been left there on purpose. It is a refinery station of gantries, tanks and scoop arms, its hull a patchwork of rust-red plate and orange work-lamps. Skimmers drop from its cradles into the cloud tops, take on what Gaunt gives them and climb back, trailing frost. The tanks they feed are as big as hulls and look it, welded in rings around the central spine.",
+        "Fuel and chemicals are cheap here, the way a thing is cheap when you can see where it comes from. Food and components are dear, and everyone aboard has a complaint about it. Water and consumer goods trade steadily. Ore, metals, alloys and medicine do not come through at all, and the clerks do not stock them. The crews work long shifts and wear it in their faces. After shift they drink in the stations' bars, often beside Blackhulls whom nobody admits to knowing.",
+        "The Skim is a working place first. It is loud, hot near the scoops and cold everywhere else, and it smells of hot metal and chemical sweetness. It sells the fuel that moves the March, and the crews take a stubborn pride in that. They also watch the lane to Varrow, whose jump zone they can just see on a clear shift, and they do not say why."
+      ],
+      "places": [
+        {
+          "name": "Scoop Deck",
+          "text": "The cradle level where skimmers launch and return. It is loud, wet with condensate and lit orange. The crews call it the Mouth, and the new hands are told not to look down."
+        },
+        {
+          "name": "Tank Row",
+          "text": "A long catwalk between the great fuel tanks, hung with hand-painted shift marks and tally-chalk. Crews meet here to smoke, which is forbidden, and to argue, which is not."
+        },
+        {
+          "name": "The Slack Tether",
+          "text": "The station bar, built in a cut-down fuel drum, with a bar made from an old hatch. Blackhulls drink in the back booths and nobody asks their names."
+        }
+      ],
+      "people": [
+        {
+          "id": "davit-ruddock",
+          "name": "Davit Ruddock",
+          "role": "skimmer pilot",
+          "text": "He drops scoops into Gaunt's cloud tops for a living and has done it more times than he can count. He is calm, funny and a little deaf from the lightning. He is the one who tells new pilots which storms to leave alone.",
+          "line": "Fuel's cheap here because we make it. Food's dear because we can't. If you want a lesson about Ostry, that's it, and the cup's on you.",
+          "look": "A stocky man of about fifty with a sunburnt, lined face, thinning sandy hair and a hearing-aid clipped behind one ear. He wears a scorched orange flight-suit, lightning-burn marks on one sleeve, and a battered scoop-crew badge on his chest."
+        },
+        {
+          "id": "nan-fenwick",
+          "name": "Nan Fenwick",
+          "role": "bartender, the Slack Tether",
+          "text": "She runs the bar and the back booths, and knows more than she says about both. She asks no names and writes nothing down. She will let a stranger sit as long as the stranger buys and keeps quiet.",
+          "line": "Sit anywhere but the back booth. Those are spoken for, and I don't know by whom. That's how I like it.",
+          "look": "A small, wiry woman in her late forties with a deeply lined face, cropped dyed-red hair and sharp dark eyes. She wears a stained leather apron over a rust-orange shirt, and has a cracked wrench tucked in her belt as a bar-club."
+        },
+        {
+          "id": "jory-maddox",
+          "name": "Jory Maddox",
+          "role": "navy picket petty officer, off duty",
+          "text": "He is a young navy petty officer from the quarantine picket, sent to the Skim for fuel and a night's leave. He drinks too fast and says too little. He has asked twice about a posting to the Shadow front and will not say why.",
+          "line": "I'm not saying anything about the lane. Nobody on the picket will. Buy me a drink and I'll tell you about the weather instead, and it's bad.",
+          "look": "A pale young man of about twenty-five with tired eyes, close-cut brown hair and a rash of old shaving cuts. He wears a rumpled navy undress jacket with the collar open, and his hands are never still."
+        }
+      ],
+      "rumors": [
+        "Skimmer crews say the lightning on Gaunt's night side has started to strike in a pattern, and that it was random before the lane closed. The station's weather desk says it is random still.",
+        "A Blackhull captain was heard saying that the Rubble hides a rock as big as a station, and that it has a hatch on it nobody welded. The crews of the tugs that pass it have stopped giving it a name.",
+        "Scoop crews swear that the picket's lights stay on all night above the lane, bright enough to see through the cloud-tops. They also say the picket never seems to change shifts.",
+        "Somebody on the station is running a book on how long the picket will last before it asks to be relieved, and the odds are shortening."
+      ],
+      "vista": "From the dock the view runs down over the curve of Gaunt, a giant banded slate grey and deep sea blue, with pale storms and lightning flickering in the cloud tops. In the foreground, rust-red gantries, tank rings and scoop arms hang in orange work-lamp light, frosted with condensate. Skimmers trail pale vapour as they climb from the cloud. Far beyond, the Rubble drifts as a loose ring of dark rock and dirty ice, and the dim red sun is a small coal on the horizon."
+    }
+  ]
+}

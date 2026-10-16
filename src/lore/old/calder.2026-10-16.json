@@ -1,0 +1,200 @@
+{
+  "system": "calder",
+  "history": [
+    "Calder was settled early in the Rush, when a dry, cold world with thin air and no water was still worth the trouble because it sat on the right lane. The first domes went up beside a Federation survey depot. The depot grew into a station, the station into a base, and the base drew in contractors, victuallers, laundries and landlords. The cities are grey because the navy ordered them grey. They are crooked because nobody stayed to enforce the order.",
+    "After the Charter Strikes and the Ironhull Compact, Calder became the place where the bargain was kept. Every ore hauler going inward from the Seam is opened here, weighed, taxed and stamped, and the Compact's levy is paid into an office on the station. Ironhull crews call the process the long stop. The navy calls it customs. Both sides have done it for so long that it has the manners of a marriage.",
+    "The last years have thinned the place out. Ships and crews go out toward the Shadow front and do not come back, and the officers left behind are junior, overworked and short with everyone. Since the Varrow lane closed in 2524, the Calder picket has also supplied the quarantine watch at Ostry, and its crews talk. Calder knows more than the Federation says about what that picket is guarding, and says less than it knows."
+  ],
+  "culture": "Calder lives by the fleet. People here sort each other by who they work for: the navy, a contractor, or someone who sells to one or the other. They are brisk, well-drilled and tired. Time is kept in watches, queues are formed without being asked, and a stamped form is trusted over a handshake. They are polite to Ironhull crews in the way you are polite to a customer you must also search. Outsiders are measured by whether they have their papers and whether they complain; Ironhulls get the harder look and are quietly liked for it, because they pay and don't get sick on the thin air. Nobody discusses the front. Everybody knows someone posted to it. Gallows humour runs on the theme of the posting list.",
+  "artBible": {
+    "palette": [
+      "#8c9094",
+      "#e6e4dc",
+      "#c8a67a",
+      "#b6764c",
+      "#7497ad",
+      "#262a31"
+    ],
+    "lighting": "Hard white starlight on dry ground, with long clean shadows and little warmth. The thin sky reads pale blue-grey near the horizon. Interiors are lit by flat white strip lamps, with amber work lights in the older, crooked districts.",
+    "architecture": "Monumental and symmetrical: barracks blocks in strict rows, gate-arches, broad parade-straight avenues. Decades of contractor extensions have grown crooked off them, with tin-roofed lean-tos, stacked cabins and cable runs. Heraldic crests are stencilled big on every important wall.",
+    "materials": "Poured grey composite, painted armour plate, white enamel panels, stencilled steel, worn rubber matting, dust in every seam. The cheap civilian additions are corrugated sheet and patched plastic.",
+    "mood": "Disciplined, tired and overstretched. Order kept up by habit after the people to enforce it have left. Dry humour and a held breath.",
+    "design": "Federation naval: grey and white livery, bilateral symmetry, armoured silhouettes, heraldic chevrons, crests and hull numbers stencilled large. Everything is built to look as though it could be inspected at any moment."
+  },
+  "ports": [
+    {
+      "body": "calder",
+      "description": [
+        "Calder Down is what you get when a naval base is allowed to become a city. The navy's first streets still run dead straight from the old gate: barracks blocks, parade grounds, contractor towers with their company crests stencilled on the flanks. Everything built since leans off that grid in bolted extensions, cable-slung walkways and tin-roofed markets. The air is thin and cold, the sky a pale blue haze, and the ground a dry tan and ashen grey. The dust gets into everything, including the bread.",
+        "The dockside streets sell to anyone who works for the fleet, and that is nearly everyone. Consumer goods are cheap here: kettles, boots, bunk linen, bright plastic toys, trinkets stamped with the navy's chevrons. They arrive by the container load for a population that has a wage and a ration card and not much else to spend on. Food is dear, because nothing grows in this dust and it all comes in from Merrow. Cooks here take it personally.",
+        "The Down trades in medicine, water, fuel, metals and components, and buys little that is raw. Nobody wants ore or chemicals in the streets, and the customs inspectors would have something to say about it if they appeared. Work is posted at the muster boards and over the bar counters. A glittering ring of debris from old wrecks hangs in the sky at dusk, and the children are told it is lucky."
+      ],
+      "places": [
+        {
+          "name": "The Muster",
+          "text": "A wide paved square at the old gate where job boards, recruiters and contractors' clerks keep competing notices. It has the loudest gossip on the planet and the worst coffee."
+        },
+        {
+          "name": "Line Street",
+          "text": "The original navy avenue, still straight, now crowded with market stalls and pawnbrokers. Locals say it is the only honest road on Calder and that it is a bit wider than it needs to be."
+        },
+        {
+          "name": "Ration Hall Nine",
+          "text": "A long canteen under a contractor tower, where food is dear and the stew goes a long way. Ironhull crews waiting on inspection eat here because it is clean and nobody asks questions."
+        },
+        {
+          "name": "The Chevron",
+          "text": "A dockside bar with a stencilled crest above the door, filled with off-watch petty officers, contractors and haulers' mates. The bartender keeps a list of who owes what, and the whole list is honoured."
+        }
+      ],
+      "people": [
+        {
+          "id": "odalys-venn",
+          "name": "Odalys Venn",
+          "role": "ration hall cook",
+          "text": "Runs the kitchen at Ration Hall Nine and has fed three generations of the Down's contractors. She knows what everything costs because she buys it, and she has opinions about Merrow.",
+          "line": "Food's dear here. It always was. You want a hot meal that doesn't taste of dust, sit down and stop looking at the menu like it owes you something.",
+          "look": "A broad woman in her sixties with a lined brown face, grey hair under a net, forearms scarred by oven burns. She wears a stained white apron over a navy-grey contractor's coverall, and a battered ladle is tucked in her belt like a sidearm."
+        },
+        {
+          "id": "harl-tebbit",
+          "name": "Harl Tebbit",
+          "role": "petty officer, picket crew",
+          "text": "A petty officer on the Calder picket, on leave from the Ostry quarantine watch. He drinks quietly and does not say what he saw out there. The whole bar knows he saw it.",
+          "line": "Don't ask me about the lane. I'll tell you the watch is dull, and it is, and that's all I'll say. Buy me another and I'll say it again.",
+          "look": "A thin man in his thirties with a sunburn line from a helmet, pale grey eyes that don't settle, and his uniform jacket unbuttoned at the collar. His left sleeve carries a picket squadron patch re-stitched with mismatched thread."
+        },
+        {
+          "id": "imre-castellan",
+          "name": "Imre Castellan",
+          "role": "contractor's fixer",
+          "text": "Arranges cargo space, paperwork and the occasional blind eye for the contractors of the Down. Talkative, well-groomed, and always close to a door.",
+          "line": "Everyone on this planet works for the fleet or for someone the fleet pays. If you want work, I know who's short a pilot, and the answer is nearly everybody.",
+          "look": "A neat man in his forties with a trimmed beard going grey, a clean grey contractor jacket with a company crest on the breast, and rings on three fingers. He keeps a slate in one hand and glances at it whenever he is lying."
+        }
+      ],
+      "rumors": [
+        "The navy's picket at Ostry has stopped rotating its crews, because the ones who come back from the closed lane won't say what they saw. Some of them ask to be posted to the Shadow front instead.",
+        "Somebody on the Muster boards is hiring pilots for a run nobody will name, and the contractor has no ship. The old hands say it is a Prism errand, and they say it very quietly.",
+        "The debris haze round Calder is thicker than it was. Salvagers say that some of it is new, and the wrecks it came from aren't on any navy loss list."
+      ],
+      "vista": "A paved landing field on dry tan ground, the navy's grey blast walls and white stencilled crests along its edge. Behind them rise straight-ruled barracks blocks and contractor towers, with crooked tin extensions bolted to their flanks. Ashen grey plains and peach crater rims fade into a thin pale blue haze. The small white star burns hard overhead, and a faint glitter of orbital debris arcs across the sky. Dust blows low across the field."
+    },
+    {
+      "body": "station",
+      "description": [
+        "Calder Station is the navy's base for the March, and it looks the part: a grey and white hull built in perfect symmetry, with picket berths along the spine and heraldic chevrons painted the height of a house. The picket squadron is moored here between patrols, and there are fewer of them every month. The berths still stand ready for ships that have been sent to the front.",
+        "The customs halls take up most of the interior. Every Ironhull cargo going inward is opened, checked against the manifest and stamped, and the Compact's levy office sits at the end of the longest corridor, where the paying is done. The station is clean, loud and short-staffed. Junior officers run the desks, and everyone looks as if they have not slept. Food and medicine are dear here, hauled in from other worlds, and the galley staff are rationed as strictly as the crews.",
+        "The station trades in fuel, alloys and components, and sells little else. There is nothing cheap on its shelves; it is a place for official business, not bargains. Haulers wait in the holding lanes for their turn at the halls and are told it will not be long."
+      ],
+      "places": [
+        {
+          "name": "The Long Hall",
+          "text": "The main customs hall, a vast grey space where hauler crews stand in lines under a stencilled crest. Inspectors open crates on steel tables and stamp the manifests with a sound like a door closing."
+        },
+        {
+          "name": "Levy Office",
+          "text": "A quiet, polished office at the far end of the station where the Compact's payments are logged. It is the only room on the station with carpet, and the clerks apologise for the carpet."
+        },
+        {
+          "name": "Picket Berths",
+          "text": "The squadron's mooring spine, with its gaps where hulls used to sit. Crews walk past the empty slots without looking at them."
+        },
+        {
+          "name": "The Tally Bar",
+          "text": "A bar tucked beside the customs queue, where waiting haulers and off-watch inspectors drink in uneasy truce. The bartender swears he has never taken a side, and nobody believes him."
+        }
+      ],
+      "people": [
+        {
+          "id": "pell-osei",
+          "name": "Lieutenant Pell Osei",
+          "role": "junior customs officer",
+          "text": "A young lieutenant holding a desk in the Long Hall that used to need two officers. She is fair, exhausted, and very careful with every stamp, because she knows the posting list.",
+          "line": "I'm not trying to make your day longer. I'm trying to make sure it's the last time I open that crate. Sit down. Your turn is after the next one.",
+          "look": "A woman in her mid twenties with dark circles under sharp brown eyes, hair scraped back in a regulation knot, and a navy grey jacket with a lieutenant's chevron still stiff from the packet. A pen is clipped to her collar, chewed flat at the end."
+        },
+        {
+          "id": "mags-dunmore",
+          "name": "Mags Dunmore",
+          "role": "Ironhull hauler master",
+          "text": "Master of an ore hauler out of Brannock, waiting on customs and unhappy about it. She has paid the levy for twenty years and has learnt to be polite to every inspector. Politeness is not warmth.",
+          "line": "We pay the levy, we get opened, we get stamped. It's how it goes. I just wish they'd take it as seriously when we ask where our Varrow cousins are.",
+          "look": "A stocky woman in her fifties with a weathered face, close-cropped iron-grey hair and a hauler's patched coverall with her ship's name stitched over the pocket. A flat ironhull rivet hangs on a cord at her neck, polished bright by her thumb."
+        },
+        {
+          "id": "corporal-benn-akers",
+          "name": "Corporal Benn Akers",
+          "role": "berth quartermaster",
+          "text": "Keeps the picket berths in order and the stores accounted for. He has watched ship after ship leave for the front, and he counts them out each time, quietly.",
+          "line": "Empty berths are easier to keep clean. That's what I tell myself. Don't ask what I tell myself after the second drink.",
+          "look": "A heavy man in his forties with a shaved head, a square jaw and tired kind eyes, wearing a grey quartermaster's jacket with the cuffs turned back. A tally slate hangs from his belt on a chain, its screen worn smooth."
+        }
+      ],
+      "rumors": [
+        "The levy office has been quietly turning down offers to pay in advance. Nobody in the Compact can say why the Federation would refuse money, and the clerks won't say either.",
+        "Some of the picket ships posted to Ostry came back with their navigation logs wiped. The navy says it was a routine reset. The crews say it wasn't a reset anyone had ordered.",
+        "A Blackhull ship was seen in the holding lanes under a false transponder, and was waved through by an inspector who looked straight at it. Folk say the inspector is from Brannock originally."
+      ],
+      "vista": "Seen from the dock, a grey and white hull of exact bilateral symmetry stretches overhead, hull numbers and heraldic chevrons stencilled huge along its flanks. Picket ships lie moored along the spine with gaps between them. Through the great viewports the tan, dust-streaked curve of Calder fills the lower sky under a thin blue haze, with a glitter of orbital debris, and the white star throws hard clean light across the plating. Hauler lights queue in the holding lanes beyond."
+    },
+    {
+      "body": "larch",
+      "description": [
+        "Larch Depot is a bonded depot on a small airless moon of Weir, and it holds the cargo the system has not decided what to do with. Impounded, inspected and disputed freight waits here in racks and stacks under floodlights, each lot tagged with the paperwork that will one day release it. Some of it has waited a long time. The moon is bare ashen rock under a black sky, and the great banded face of Weir, tan and rust and streaked with cream, fills half the heavens. Lightning flickers on the dark limb.",
+        "Everything passes through eventually, and some of it never leaves. The depot trades in every kind of goods, with nothing cheap and nothing dear, because prices here are set by whoever's cargo is on the table. Food, water, ore, metals, fuel, chemicals, alloys, components, consumer goods and medicine all go through its bonded halls. The staff are customs clerks, tug crews and warehouse hands on contract, and the colony is small enough that everyone knows which lots are cursed.",
+        "Larch is quiet, and cold in the way that vacuum is cold. A glittering haze of orbital debris ringed round the moon catches the light of the white star. The clerks have a saying: the depot never loses anything, it only files it somewhere you can't reach."
+      ],
+      "places": [
+        {
+          "name": "Bond Row",
+          "text": "A long avenue of sealed warehouse bays, each stamped with a customs seal and a lot number. The seals are checked every watch, and most of them are older than the clerks."
+        },
+        {
+          "name": "The Unclaimed Yard",
+          "text": "An open pad, under floodlights, where cargo that no one has claimed for years is stacked in grey crates. It is the colony's unofficial museum, and the children dare each other to touch the oldest container."
+        },
+        {
+          "name": "Tally Office",
+          "text": "The depot's administrative hub, lit white and smelling of cold coffee, where lots are logged, released or held. The queue never shortens."
+        },
+        {
+          "name": "Lamp Bar",
+          "text": "A cramped bar on the edge of the colony, lit by a single orange lamp. Tug pilots and clerks drink here and trade stories about what is really in the sealed lots."
+        }
+      ],
+      "people": [
+        {
+          "id": "ivo-prentiss",
+          "name": "Ivo Prentiss",
+          "role": "impound clerk",
+          "text": "A senior clerk at the Tally Office who has handled every kind of dispute for decades. He knows where everything is, and is not always willing to say.",
+          "line": "It's not lost. It's filed. There's a difference, and the difference is about a decade. What are you looking for, and who's asking?",
+          "look": "A thin, stooped man in his sixties with a long pale face, rimless glasses and a faded grey clerk's jacket buttoned to the throat. Ink stains run along the side of his right hand, and a ring of keys hangs from his belt."
+        },
+        {
+          "id": "hessa-roke",
+          "name": "Hessa Roke",
+          "role": "tug pilot",
+          "text": "Hauls crates between the bays and the Unclaimed Yard in a battered depot tug. She has been moving the same cargo around the moon for years and has opinions about all of it.",
+          "line": "There's a container in the yard that hums when the lights go down. Nobody's claimed it. Nobody's opened it either. I park well away from it.",
+          "look": "A wiry woman in her late thirties with a sun-lamp tan, a crooked nose and short black hair under a knitted cap. She wears a padded orange tug jacket, scuffed at the elbows, and carries a magnetic wrench thrust through her belt like a sword."
+        },
+        {
+          "id": "joss-marlen",
+          "name": "Joss Marlen",
+          "role": "bonded warehouse hand",
+          "text": "A young warehouse hand on a fixed contract, with a sharp eye for what gets shifted at night. He wants out of Larch, and is not sure where he would go.",
+          "line": "Some lots go in and never come out. I'm not saying anyone's taking them. I'm saying I count the racks every shift and the numbers don't agree with the ledger.",
+          "look": "A lanky young man of about twenty with freckles, tired green eyes and a shock of red hair stuffed under a depot cap. He wears a grey warehouse coverall a size too big and a seal-checker's handset hangs from a lanyard."
+        }
+      ],
+      "rumors": [
+        "A lot of Varrow cargo was impounded here when the lane closed, and it sits sealed in a bay no clerk will open. Some Ironhull families have asked about it, and the Tally Office has told them the paperwork is incomplete.",
+        "Blackhull crews have been seen at Larch under borrowed names, buying lots that the navy had marked as scrap. What they take out of the Unclaimed Yard is not on any manifest.",
+        "Tug pilots say the debris ring round Larch has more ship-shaped pieces in it than it used to, and that a few of them seem to turn when you aren't watching."
+      ],
+      "vista": "A flat grey pad of bare dust and bonded cargo stacks under floodlights, ranked in tidy, silent rows beneath a black sky. Low warehouse bays stamped with customs seals line the edge of the landing field. Above, the giant face of Weir fills the heavens in bands of tan and rust and cream, lightning flickering on its dark limb, while a small hard white star sits at the edge. A faint glitter of orbital debris crosses the sky over the slate grey ridges."
+    }
+  ]
+}

@@ -136,9 +136,9 @@ impl World {
             CMD_TELEPORT => {
                 if mode != MODE_FLYING { return WRONG_MODE; }
                 let (Some(j), Ok(i)) = (usize::try_from(a).ok().filter(|&j| j < self.n_bodies), usize::try_from(self.game.player[0])) else { return NO_SUCH_BODY };
+                let at = self.arrival(j);
                 let s = &mut self.ships;
-                s.x[i] = self.bodies.x[j];
-                s.y[i] = self.bodies.y[j] - self.bodies.r[j] * 0.3;
+                (s.x[i], s.y[i]) = at;
                 s.vx[i] = 0.0; s.vy[i] = 0.0; s.av[i] = 0.0;
                 self.game.set[0] = 0.0;
                 self.slot_reset(i, false);

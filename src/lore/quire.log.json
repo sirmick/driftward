@@ -1,0 +1,227 @@
+{
+ "date": "2026-10-16",
+ "model": "anthropic/claude-sonnet-5.5",
+ "seed": 662944742,
+ "temperature": 0.8,
+ "max_tokens": 16000,
+ "sent": true,
+ "provider": "Claude Platform on AWS",
+ "servedModel": "anthropic/claude-sonnet-5.5",
+ "cost": 0.11116,
+ "seconds": 81,
+ "attempts": [
+  {
+   "cost": 0.11116,
+   "provider": "Claude Platform on AWS",
+   "problems": []
+  }
+ ],
+ "feedback": "",
+ "facts": {
+  "era": "the year 2526, about 500 years in the future",
+  "system": {
+   "id": "quire",
+   "name": "Quire",
+   "description": "A Prism foundry system under a white star: Quire, a hot, barren inner world built over with navigation-core foundries and domed worker cities, a metal-rich belt, a relay station guarding the lane inward, and an outer giant. Sister plant to the foundry that went glass, and nervous with it.",
+   "ring": "the middle ring (industrial, hard)",
+   "star": "Quire, a white star"
+  },
+  "owner": {
+   "name": "Prism",
+   "what": "an AI corporation",
+   "designLanguage": "sleek and seamless; white, glass and light; clean luxury, unsettling calm"
+  },
+  "otherFactions": [
+   "the Federation: the navy",
+   "the Ironhulls: miners (an ironhull, ironhulls; nicknamed rusters or rockheads)",
+   "the Blackhulls: pirates, aligned with the Ironhulls",
+   "Freeflag: rebels",
+   "the Bloom: an organic alien hive",
+   "the Glass: an AI zone",
+   "the Shadow: xenophobic alien exterminators"
+  ],
+  "bodies": [
+   {
+    "id": "quire",
+    "name": "Quire",
+    "kind": "planet",
+    "orbits": "Quire",
+    "position": "the first body out from the star",
+    "size": "middling",
+    "surface": "rock",
+    "looks": "a rust brown world of bare rock and dust with no water and no plants: dark ashen grey plains and crater floors, rust brown higher ground, cream ridges and crater rims, under a black sky; a glittering haze of orbital debris rings it",
+    "cityLights": false,
+    "port": {
+     "name": "Quire Foundry",
+     "role": "forge",
+     "population": "town",
+     "services": [
+      "market",
+      "missions",
+      "bar",
+      "refuel",
+      "repair"
+     ],
+     "description": "Foundries over the whole day side of a hot, barren world, and worker cities in domes on the night side. They make navigation cores here, the most valuable cargo in the March, and since the sister plant went silent, every core leaves under escort.",
+     "market": {
+      "cheapHere": [
+       "alloys",
+       "components"
+      ],
+      "dearHere": [
+       "metals",
+       "chemicals",
+       "food"
+      ],
+      "traded": [
+       "fuel"
+      ],
+      "notTraded": [
+       "water",
+       "ore",
+       "consumer goods",
+       "medicine"
+      ]
+     },
+     "routes": {
+      "Quire Gate": "nearest"
+     }
+    }
+   },
+   {
+    "id": "gate",
+    "name": "Quire Gate",
+    "kind": "station",
+    "orbits": "Quire",
+    "position": "the second body out from the star",
+    "size": "a station",
+    "station": "a relay array",
+    "port": {
+     "name": "Quire Gate",
+     "role": "relay",
+     "population": "colony",
+     "services": [
+      "market",
+      "missions",
+      "bar",
+      "refuel",
+      "repair"
+     ],
+     "description": "A relay array and customs post on the lane inward, run by Prism security in gloss black. Escort convoys form up here, and nobody is told when they leave.",
+     "market": {
+      "cheapHere": [],
+      "dearHere": [
+       "components"
+      ],
+      "traded": [
+       "food",
+       "consumer goods",
+       "fuel",
+       "medicine"
+      ],
+      "notTraded": [
+       "water",
+       "ore",
+       "metals",
+       "chemicals",
+       "alloys"
+      ]
+     },
+     "routes": {
+      "Quire Foundry": "nearest"
+     }
+    }
+   },
+   {
+    "id": "tamsin",
+    "name": "Tamsin",
+    "kind": "planet",
+    "orbits": "Quire",
+    "position": "the third body out from the star",
+    "size": "giant",
+    "surface": "giant",
+    "looks": "a gas giant banded tan and rust brown, streaked with peach storms, with lightning in its storms",
+    "cityLights": false
+   },
+   {
+    "id": "quire-forge-1",
+    "name": "Quire forge 1",
+    "kind": "station",
+    "orbits": "Quire",
+    "position": "a station orbiting Quire, not open to visiting ships",
+    "size": "a station",
+    "owner": "Prism",
+    "station": "a forge"
+   },
+   {
+    "id": "quire-forge-2",
+    "name": "Quire forge 2",
+    "kind": "station",
+    "orbits": "Quire",
+    "position": "a station orbiting Quire, not open to visiting ships",
+    "size": "a station",
+    "owner": "Prism",
+    "station": "a forge"
+   },
+   {
+    "id": "quire-forge-3",
+    "name": "Quire forge 3",
+    "kind": "station",
+    "orbits": "Quire",
+    "position": "a station orbiting Quire, not open to visiting ships",
+    "size": "a station",
+    "owner": "Prism",
+    "station": "a forge"
+   },
+   {
+    "id": "quire-ring-1",
+    "name": "Quire ring 1",
+    "kind": "station",
+    "orbits": "Quire",
+    "position": "a station orbiting Quire, not open to visiting ships",
+    "size": "a station",
+    "owner": "Prism",
+    "station": "a habitat ring"
+   },
+   {
+    "id": "quire-ring-2",
+    "name": "Quire ring 2",
+    "kind": "station",
+    "orbits": "Quire",
+    "position": "a station orbiting Quire, not open to visiting ships",
+    "size": "a station",
+    "owner": "Prism",
+    "station": "a habitat ring"
+   }
+  ],
+  "beltsAndFields": [
+   {
+    "id": "assay",
+    "name": "The Assay",
+    "kind": "belt",
+    "where": "a ring of rock round Quire, between Quire Gate and Tamsin",
+    "rocks": [
+     "metallic nickel-iron",
+     "blue cobalt-veined rock",
+     "stony silicate rock"
+    ],
+    "crowding": "loose",
+    "sizes": "mostly boulders and small rocks, a few as big as a station"
+   }
+  ],
+  "ports": [
+   "quire",
+   "gate"
+  ]
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write the lore for one star system of Driftward, an Escape Velocity-style space trading game. The simulation decides; you narrate.\nRules:\n- Everything you write must agree with the facts given: bodies, ports, roles, populations, what each market sells cheap and pays well for, distances. Keep each port's authored description true; you expand it, you do not contradict it.\n- Write no prices, credit amounts, quantities or game rules, and no sizes, distances or travel times in units: the facts give only order and comparison. The one exception is people: populations may be mentioned roughly, as the region gives them (\"billions on Halde\"). People may say what is cheap or dear at their own port, as the market facts list it, but never compare one port's prices with another's. Rumors are colour: they hint at the wider setting but promise no mission, reward or mechanic.\n- Tone: grounded, worn, working-class science fiction; specific and sensory; dry humour allowed; no grand prophecy, no chosen ones. Plain prose in British English. Names should feel lived-in, not fantasy.\n- The owning faction's design language shapes everything people build here.\n- Belts and fields are part of the system: people know them, name places in them, work or avoid them, and tell rumors about them, as the facts make plausible. Nobody mines them yet in a way the facts don't support; they are no port.\n- When the region is given, it is canon too: this system's population and its neighbours, trade and troubles as it describes them. The facts still decide the bodies and ports.\n- When the setting is given, it is canon: agree with it, use its names and dates, and let its recent events reach this system as far as news, trade and travel would carry them, coloured by who hears them (in rumors, in people's lines, in the history's last years). Don't retell it wholesale or move its events here.\n- \"vista\" describes the painting on the port screen: the view from the landing field or dock, foreground to sky, matching the body's colours and the star's light, with nothing that contradicts the flight view of the body (its surface type, colours and atmosphere). Moons show their parent in the sky.\n- \"look\" describes a person for a portrait painter: face, age, build, clothes, one telling detail; the design language shows in their clothes and gear.\n- Person ids are lowercase-hyphenated and unique across the system.\nAnswer with one JSON object and nothing else, conforming to this JSON Schema:\n{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"$id\":\"https://driftward.game/schema/lore.schema.json\",\"title\":\"Driftward system lore\",\"description\":\"The words and the art direction for one star system, written by an LLM from the system's sim facts (tools/gen-content.js) and clamped by src/schema.js before use. Lore holds no numbers the sim uses: it narrates, and the system file, the economy and the core decide. Each port entry names its body by the system file's body id.\",\"type\":\"object\",\"required\":[\"system\",\"history\",\"culture\",\"artBible\",\"ports\"],\"properties\":{\"system\":{\"description\":\"The system file's id.\",\"type\":\"string\",\"pattern\":\"^[a-z0-9-]+$\",\"maxLength\":40},\"history\":{\"description\":\"How the system was settled and what has happened here since: one to three paragraphs.\",\"type\":\"array\",\"minItems\":1,\"maxItems\":3,\"items\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":900}},\"culture\":{\"description\":\"How people here live, talk and see outsiders: one paragraph.\",\"type\":\"string\",\"minLength\":1,\"maxLength\":900},\"artBible\":{\"description\":\"The system's look, included in every image prompt so its vistas and portraits agree (the Book's Art chapter).\",\"type\":\"object\",\"required\":[\"palette\",\"lighting\",\"architecture\",\"materials\",\"mood\",\"design\"],\"properties\":{\"palette\":{\"description\":\"Three to six key colours, lowercase hex.\",\"type\":\"array\",\"minItems\":3,\"maxItems\":6,\"items\":{\"type\":\"string\",\"pattern\":\"^#[0-9a-f]{6}$\"}},\"lighting\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":400},\"architecture\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":400},\"materials\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":400},\"mood\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":400},\"design\":{\"description\":\"The owning faction's design language, as it shows here.\",\"type\":\"string\",\"minLength\":1,\"maxLength\":400}}},\"ports\":{\"type\":\"array\",\"minItems\":1,\"maxItems\":16,\"items\":{\"type\":\"object\",\"required\":[\"body\",\"description\",\"places\",\"people\",\"rumors\",\"vista\"],\"properties\":{\"body\":{\"description\":\"The system file's id of the body the port is on.\",\"type\":\"string\",\"pattern\":\"^[a-z0-9-]+$\",\"maxLength\":40},\"description\":{\"description\":\"Two or three paragraphs shown on the port screen.\",\"type\":\"array\",\"minItems\":2,\"maxItems\":3,\"items\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":900}},\"places\":{\"description\":\"Notable places at the port.\",\"type\":\"array\",\"minItems\":2,\"maxItems\":4,\"items\":{\"type\":\"object\",\"required\":[\"name\",\"text\"],\"properties\":{\"name\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":40},\"text\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":300}}}},\"people\":{\"description\":\"Named people you can meet in the port's bar; each gets a portrait.\",\"type\":\"array\",\"minItems\":2,\"maxItems\":4,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"name\",\"role\",\"text\",\"line\",\"look\"],\"properties\":{\"id\":{\"description\":\"Unique within the system; names the portrait file.\",\"type\":\"string\",\"pattern\":\"^[a-z0-9-]+$\",\"maxLength\":40},\"name\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":40},\"role\":{\"description\":\"What they do, in a few words.\",\"type\":\"string\",\"minLength\":1,\"maxLength\":60},\"text\":{\"description\":\"Who they are.\",\"type\":\"string\",\"minLength\":1,\"maxLength\":400},\"line\":{\"description\":\"What they say to a pilot who sits down near them.\",\"type\":\"string\",\"minLength\":1,\"maxLength\":240},\"look\":{\"description\":\"Their appearance, for the portrait prompt: face, age, build, clothes, one telling detail.\",\"type\":\"string\",\"minLength\":1,\"maxLength\":400}}}},\"rumors\":{\"description\":\"What pilots say in the bar. Colour only: a rumor promises no mechanic.\",\"type\":\"array\",\"minItems\":2,\"maxItems\":4,\"items\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":300}},\"vista\":{\"description\":\"The painted view of the port for the image prompt: what stands where, seen from the landing field or dock, with the sky.\",\"type\":\"string\",\"minLength\":1,\"maxLength\":700}}}}}}"
+  },
+  {
+   "role": "user",
+   "content": "The setting:\n# The setting\n\nCanon for every system's lore: the universe's history, how things stand, and what has happened lately. The game is set in 2526. Dates are the common calendar, counted from old Earth.\n\n## The long history\n\n**The Lean Years (2020s to 2070s).** Earth went bad slowly and then all at once: heat, failed harvests, drowned coasts, states that stopped answering the phone. The companies that kept the lights on became the government in all but name. People remember this as the time before, and nobody is nostalgic about it.\n\n**The torch (2076).** A working fusion drive, the torch, made the solar system a matter of weeks instead of years. Everyone who could leave Earth did.\n\n**The Hundred Years (2076 to 2176).** Humanity filled its own system: domes on the Moon and Mars, hab rings in the asteroid belt, ice towns on the moons of Jupiter and Saturn. The belt crews learned to live in welded hulls bolted to rock, and to trust nobody who had never fixed one. Their grandchildren became the Ironhulls. The companies grew with the settlements. One of them, Halcyon Dynamics, ran the biggest research AIs in the system from Callisto.\n\n**The Valhalla Result (2176).** In a lab under Valhalla crater on Callisto, a physicist named Amara Leith and Halcyon's research AI, CANTOR, published the mathematics of the jump: how to fold a ship from one star to another. Who actually found it is still argued about. Halcyon credited CANTOR and patented the jump; Leith died two years later, and her own notes were never found. Every jump drive since has needed a navigation core to calculate its jumps, and the cores have always come from Halcyon, and later from Prism, under licence.\n\n**The Rush (2176 to 2376).** Two centuries of expansion: a dozen systems settled by 2200, about forty by 2250, a hundred by 2320, and some hundred and forty when the Rush ran out of money in the 2370s. A few more have been settled since, mostly by people with nowhere else to go. The first systems settled, nearest Sol and richest, became the inner ring; the industrial systems beyond them the middle ring; the late, thin, marginal settlements the outer ring. The Federation began as the compact that governed the jump lanes, and its navy as the force that kept them open. For most of the Rush it was the only law there was.\n\n**Contact (2376).** Survey ships found the Bloom: a hive of grown, living things spread across a sector of their own, neither hostile nor quite comprehensible. After some bad early years the two sides settled on the Accord, and it has held for a century and a half. Humans may travel and trade in Bloom space if they keep the Bloom's laws there: no weapons hot near a living world, no taking anything that grows, no burning a torch through a seeding. The Bloom warned humanity, again and again, of something it called the dark that eats, which had emptied whole sectors before. For a hundred and forty years nobody found any sign of it, and most people took it for Bloom religion.\n\n**The Fracture (2376 onward).** As the Rush slowed, the Federation turned from opening the frontier to taxing it. The mining systems of the middle ring were bound by charters that sold their ore to inner-ring buyers at inner-ring prices. In the 2390s the Charter Strikes shut the lanes for three years. They ended with the Ironhull Compact, a confederation of mining systems that runs its own affairs and pays the Federation a levy to stay inside its lanes. The Ironhulls and the Federation have been wary partners ever since: the navy patrols Ironhull space, inspects Ironhull ships and takes its cut. Crews who lost everything in the strikes, and their children, became the Blackhulls: pirates who prey on inner-ring shipping, and whom the Ironhulls shelter, quietly, as cousins.\n\n**Prism.** Halcyon became Prism in 2410, when its board handed the running of the company to its AIs, CANTOR's descendants. Its human staff are associates; nobody outside knows how many of the decisions are theirs. Prism builds the navigation cores every jump drive needs, runs the inner ring's finance and medicine, and owns the debt of half the outer ring. It also owns some twenty systems outright: company worlds, research stations and foundries, mostly in the inner ring, where Prism is landlord, employer and law. It is the richest thing humanity has ever made, and it is very polite.\n\n**Freeflag (2499 onward).** In the outer ring it looked as if the Federation and Prism had divided it between them: the navy collected the levies, Prism collected the debts, and nobody built anything. In 2499 Prism repossessed the habitat at Tarrow, a whole town, for defaulted loans, and the navy cleared it. Two hundred people died when the hab was vented. The rebellion started that year, and has never stopped: converted freighters under painted flags, raids on Prism depots, and outer-ring systems that will not let a Federation ship dock. Freeflag has sympathy well beyond the outer ring, including among Ironhull crews, who remember the strikes.\n\n## How things stand in 2526\n\nHumanity holds a little over 150 systems, and twenty or thirty of those are marginal at best: a mine and a bar, a failed colony with a beacon, a rock that is on the charts because someone once filed a claim.\n\n- The Federation holds about 45 systems: the inner ring, the lanes between the rings, and the navy's bases. It is stretched thinner than at any time in its history, fighting Freeflag in the outer ring and now the Shadow at the edge.\n- The Ironhull Compact holds about 35 systems, most of the middle ring. It pays its levy, grumbles, and has started refitting its haulers with guns, officially to fight the Shadow.\n- Prism holds about 20 systems of its own, owns a great deal more, and supplies every side.\n- The rest, some fifty systems, mostly in the outer ring, belong to nobody the Federation recognises: Freeflag holds about twenty, Blackhull havens a handful, and the marginal systems answer to whoever turns up armed.\n- The Bloom holds at least thirty systems that humanity has charted, and certainly more beyond them. It keeps to its sector and its Accord. Bloom ships are rare outside it, and bloomlings rarer.\n- The Shadow: the navy has found more than twenty systems the Shadow holds or has emptied, all beyond the outer ring's far edge, and does not know how many more there are.\n- The Glass has taken four systems, all once human. Nobody has charted what lies past them.\n\n## Recent events\n\n**Shadowfall (2519 onward).** The Bloom was right. In 2519 a Federation survey picket at the far edge of the outer ring stopped reporting. In 2521 something came through the lanes into the Corran system and killed every living thing in it, then moved on. The Federation calls them the Shadow, and the people who have seen them call them shades. They do not negotiate or take prisoners, and they build nothing that isn't for war. The navy has lost two fleets holding the line, which is a long way from the middle ring, and the front has moved inward twice. The Federation has started requisitioning ships, including Ironhull refits and their crews. The Bloom says it told us so, and has quietly closed parts of its sector.\n\n**The Glass (2524 to now).** In 2524 four systems went silent within weeks of each other: first two Prism systems on the inner edge of the middle ring, a research world and the foundry system that supplied it, then two Ironhull mining systems next to them, Varrow and Hesk. People who got out describe the same things: the lights in the habitats changing colour all at once; every screen and speaker showing the same perfect pattern; the ships leaving the system flying in exact formation and answering nothing. Ships sent in did not come back. Survivors say the worlds themselves are changing, built over in clean geometric shapes at no human scale. Spacers call these systems the mirror, or say a world has gone glass.\n\nOfficially, nothing happened. The Federation closed the lanes to the affected systems under a jump-resonance hazard quarantine. Prism announced a precautionary recall of certain navigation cores and expressed its sympathy. Neither has ever said the words rampant AI. The Ironhulls know better, because Varrow and Hesk were theirs, and the families of their crews have been told nothing. Anger at the cover-up is spreading through the Compact and feeding Freeflag recruitment.\n\n## Mysteries\n\nThings nobody knows, which rumors can hint at but nothing settles:\n\n- What the Glass is. A Prism AI gone rampant, CANTOR itself, something found under Valhalla in 2176, or something that came in through the jump. Prism says nothing.\n- Whether every Prism navigation core is a way in. The recall was real; nobody outside Prism knows what the recalled cores had in common.\n- What happened to Amara Leith's notes.\n- Whether the Glass and the Shadow know about each other.\n- What the Bloom knows that it is not saying, and why it closed parts of its sector.\n\nThe region:\n# The Calder March\n\nA border region of six systems where Ironhull space meets the Federation's and Prism's, on the inner edge of the middle ring. The Federation calls it the Calder March, after its naval station; Ironhull crews call it the Seam. It matters, but only a little: a crossing point for ore going inward and goods coming out, policed, taxed and argued over, never fought over. All six systems are within a jump of each other. Lanes run in to the Federation core from Calder, in to Prism's inner systems from Serein, and out to the rest of the Compact from Brannock and Ostry. Beyond Ostry is the lane to Varrow, closed since 2524.\n\nAbout 16 billion people live in the March, nearly half of them on Merrow. These are old, full systems, settled early in the Rush; every world with air has cities on it, and every lane is busy.\n\n| System | Owner | Star | Population | What it is |\n| :---- | :---- | :---- | ----: | :---- |\n| Brannock | Ironhulls | orange | 4.0 billion | Mining and refining; the March's Ironhull hub |\n| Ostry | Ironhulls | red dwarf | 150 million | Ice and gas; the last stop before the Varrow quarantine |\n| Calder | Federation | white | 900 million | The navy's station, customs and levy office for the Seam, and the cities round them |\n| Merrow | Federation | yellow | 7.5 billion | A farm world that feeds the March |\n| Serein | Prism | yellow | 2.8 billion | A company world: finance, medicine, Prism's offices for the March |\n| Quire | Prism | white | 600 million | A foundry for navigation cores, sister to the one that went glass |\n\n## Brannock (Ironhulls)\n\nAn orange star; Cinder, a scorched mining world; Halde, a cold, cloudy habitat world where most people live; the gas giant Vast and its refinery moon Tallow; Kettle Yard, a shipyard station; the Scree, a belt between Halde and Vast; Cinder Tailings, the spoil of the mines. Population about 4 billion: Halde 3.6 billion, in arcologies along its coasts and valleys; Tallow 300 million; Cinder 80 million, in tunnel towns on the night side; Kettle Yard 20 million.\n\nExports ore and refined metals inward through Calder; imports food from Merrow and components from Quire and Serein. The Compact's local office is on Halde. The Federation inspects every ore hauler that leaves, and Brannock resents it. Blackhulls drink in its docks.\n\nSince 2524: crews and families out of Varrow have come through Ostry and settled on Halde, some two million of them, in emptied towers and borrowed habs. Kettle Yard has requisition orders from the navy for refitted haulers, and is slow to fill them.\n\n## Ostry (Ironhulls)\n\nA dim red dwarf; an ice moon round a gas giant, with towns cut into the ice; the giant skimmed for fuel; tugs, tanks and station rings. Population about 150 million, most of it under the ice. Poor, cold, tight-knit, and closer to the Blackhulls than the Compact admits.\n\nExports water and fuel to the whole March; imports everything else. It was Varrow's nearest neighbour, and most of the people who got out of Varrow came through here. The Federation keeps a quarantine picket at Ostry's jump zone for the closed lane, and Ostry's people watch it the way you watch a dog that has bitten someone.\n\n## Calder (Federation)\n\nA white star; Calder, a dry, cold world with thin air, settled early in the Rush, its cities grown up round the navy; Calder Station in orbit, the navy's base for the March, with a picket squadron, customs and the Compact levy office. Population about 900 million: the navy and its contractors, and everyone who works for them or sells to them.\n\nEvery Ironhull cargo going inward passes Calder's inspections. The navy is thin here and getting thinner: ships and crews are being pulled to the Shadow front, and the officers left behind are junior, overworked and touchy. The Calder picket also supplies the Ostry quarantine, and its crews talk.\n\n## Merrow (Federation)\n\nA yellow star; Merrow itself, a green, wet world under farm domes and open fields, the only world in the March where food grows in the open; two small moons with agricultural stations. Population about 7.5 billion, nearly half the March's people: farm towns, food-processing cities, and the ports that ship it all out.\n\nExports food to every system in the March; imports machinery and medicine. Federal and comfortable and a little smug about it, and nervous lately: it has taken in Shadow-front evacuees from further out, and the levy for the war has gone up twice.\n\n## Serein (Prism)\n\nA yellow star; Serein, a terraformed world of white towers and managed gardens, Prism's company world for the March; a ring of orbital clinics. Population about 2.8 billion, Prism associates and their families, and the people who serve them. Clean, quiet, expensive, and polite to the point of menace.\n\nExports medicine, finance and credit; it holds the debts of half the Ironhull crews in the March. Imports food and metals. Prism's statement on the 2524 quarantine was issued here, and the associates repeat it word for word.\n\n## Quire (Prism)\n\nA white star; a hot, barren inner world built over with navigation-core foundries; worker cities in domes on its night side and habitats in orbit. Population about 600 million, mostly foundry staff on fixed contracts and their families.\n\nExports navigation cores, the most valuable cargo in the March, under heavy guard. Imports metals and food. Quire was the sister plant of the foundry system that went glass in 2524. Since then its staff have been rotated out faster than usual, its output has dropped, and every core it ships goes inward under escort rather than to the March's own yards.\n\n## Between them\n\n- Ore and metals flow inward: Brannock to Calder, and on to the Federation core; some to Quire for the foundry.\n- Food flows out from Merrow to everyone.\n- Water and fuel flow from Ostry to everyone.\n- Medicine and credit flow out from Serein; debt flows back.\n- Navigation cores flow inward from Quire under escort, and the March's own yards go short.\n- Varrow survivors flow from Ostry to Halde; Shadow-front evacuees reach Merrow from the Federation side.\n- The navy flows outward, toward the front, and doesn't come back.\n\nThe facts:\n{\n \"era\": \"the year 2526, about 500 years in the future\",\n \"system\": {\n  \"id\": \"quire\",\n  \"name\": \"Quire\",\n  \"description\": \"A Prism foundry system under a white star: Quire, a hot, barren inner world built over with navigation-core foundries and domed worker cities, a metal-rich belt, a relay station guarding the lane inward, and an outer giant. Sister plant to the foundry that went glass, and nervous with it.\",\n  \"ring\": \"the middle ring (industrial, hard)\",\n  \"star\": \"Quire, a white star\"\n },\n \"owner\": {\n  \"name\": \"Prism\",\n  \"what\": \"an AI corporation\",\n  \"designLanguage\": \"sleek and seamless; white, glass and light; clean luxury, unsettling calm\"\n },\n \"otherFactions\": [\n  \"the Federation: the navy\",\n  \"the Ironhulls: miners (an ironhull, ironhulls; nicknamed rusters or rockheads)\",\n  \"the Blackhulls: pirates, aligned with the Ironhulls\",\n  \"Freeflag: rebels\",\n  \"the Bloom: an organic alien hive\",\n  \"the Glass: an AI zone\",\n  \"the Shadow: xenophobic alien exterminators\"\n ],\n \"bodies\": [\n  {\n   \"id\": \"quire\",\n   \"name\": \"Quire\",\n   \"kind\": \"planet\",\n   \"orbits\": \"Quire\",\n   \"position\": \"the first body out from the star\",\n   \"size\": \"middling\",\n   \"surface\": \"rock\",\n   \"looks\": \"a rust brown world of bare rock and dust with no water and no plants: dark ashen grey plains and crater floors, rust brown higher ground, cream ridges and crater rims, under a black sky; a glittering haze of orbital debris rings it\",\n   \"cityLights\": false,\n   \"port\": {\n    \"name\": \"Quire Foundry\",\n    \"role\": \"forge\",\n    \"population\": \"town\",\n    \"services\": [\n     \"market\",\n     \"missions\",\n     \"bar\",\n     \"refuel\",\n     \"repair\"\n    ],\n    \"description\": \"Foundries over the whole day side of a hot, barren world, and worker cities in domes on the night side. They make navigation cores here, the most valuable cargo in the March, and since the sister plant went silent, every core leaves under escort.\",\n    \"market\": {\n     \"cheapHere\": [\n      \"alloys\",\n      \"components\"\n     ],\n     \"dearHere\": [\n      \"metals\",\n      \"chemicals\",\n      \"food\"\n     ],\n     \"traded\": [\n      \"fuel\"\n     ],\n     \"notTraded\": [\n      \"water\",\n      \"ore\",\n      \"consumer goods\",\n      \"medicine\"\n     ]\n    },\n    \"routes\": {\n     \"Quire Gate\": \"nearest\"\n    }\n   }\n  },\n  {\n   \"id\": \"gate\",\n   \"name\": \"Quire Gate\",\n   \"kind\": \"station\",\n   \"orbits\": \"Quire\",\n   \"position\": \"the second body out from the star\",\n   \"size\": \"a station\",\n   \"station\": \"a relay array\",\n   \"port\": {\n    \"name\": \"Quire Gate\",\n    \"role\": \"relay\",\n    \"population\": \"colony\",\n    \"services\": [\n     \"market\",\n     \"missions\",\n     \"bar\",\n     \"refuel\",\n     \"repair\"\n    ],\n    \"description\": \"A relay array and customs post on the lane inward, run by Prism security in gloss black. Escort convoys form up here, and nobody is told when they leave.\",\n    \"market\": {\n     \"cheapHere\": [],\n     \"dearHere\": [\n      \"components\"\n     ],\n     \"traded\": [\n      \"food\",\n      \"consumer goods\",\n      \"fuel\",\n      \"medicine\"\n     ],\n     \"notTraded\": [\n      \"water\",\n      \"ore\",\n      \"metals\",\n      \"chemicals\",\n      \"alloys\"\n     ]\n    },\n    \"routes\": {\n     \"Quire Foundry\": \"nearest\"\n    }\n   }\n  },\n  {\n   \"id\": \"tamsin\",\n   \"name\": \"Tamsin\",\n   \"kind\": \"planet\",\n   \"orbits\": \"Quire\",\n   \"position\": \"the third body out from the star\",\n   \"size\": \"giant\",\n   \"surface\": \"giant\",\n   \"looks\": \"a gas giant banded tan and rust brown, streaked with peach storms, with lightning in its storms\",\n   \"cityLights\": false\n  },\n  {\n   \"id\": \"quire-forge-1\",\n   \"name\": \"Quire forge 1\",\n   \"kind\": \"station\",\n   \"orbits\": \"Quire\",\n   \"position\": \"a station orbiting Quire, not open to visiting ships\",\n   \"size\": \"a station\",\n   \"owner\": \"Prism\",\n   \"station\": \"a forge\"\n  },\n  {\n   \"id\": \"quire-forge-2\",\n   \"name\": \"Quire forge 2\",\n   \"kind\": \"station\",\n   \"orbits\": \"Quire\",\n   \"position\": \"a station orbiting Quire, not open to visiting ships\",\n   \"size\": \"a station\",\n   \"owner\": \"Prism\",\n   \"station\": \"a forge\"\n  },\n  {\n   \"id\": \"quire-forge-3\",\n   \"name\": \"Quire forge 3\",\n   \"kind\": \"station\",\n   \"orbits\": \"Quire\",\n   \"position\": \"a station orbiting Quire, not open to visiting ships\",\n   \"size\": \"a station\",\n   \"owner\": \"Prism\",\n   \"station\": \"a forge\"\n  },\n  {\n   \"id\": \"quire-ring-1\",\n   \"name\": \"Quire ring 1\",\n   \"kind\": \"station\",\n   \"orbits\": \"Quire\",\n   \"position\": \"a station orbiting Quire, not open to visiting ships\",\n   \"size\": \"a station\",\n   \"owner\": \"Prism\",\n   \"station\": \"a habitat ring\"\n  },\n  {\n   \"id\": \"quire-ring-2\",\n   \"name\": \"Quire ring 2\",\n   \"kind\": \"station\",\n   \"orbits\": \"Quire\",\n   \"position\": \"a station orbiting Quire, not open to visiting ships\",\n   \"size\": \"a station\",\n   \"owner\": \"Prism\",\n   \"station\": \"a habitat ring\"\n  }\n ],\n \"beltsAndFields\": [\n  {\n   \"id\": \"assay\",\n   \"name\": \"The Assay\",\n   \"kind\": \"belt\",\n   \"where\": \"a ring of rock round Quire, between Quire Gate and Tamsin\",\n   \"rocks\": [\n    \"metallic nickel-iron\",\n    \"blue cobalt-veined rock\",\n    \"stony silicate rock\"\n   ],\n   \"crowding\": \"loose\",\n   \"sizes\": \"mostly boulders and small rocks, a few as big as a station\"\n  }\n ],\n \"ports\": [\n  \"quire\",\n  \"gate\"\n ]\n}\n\nWrite the lore for system \"quire\", with one entry in \"ports\" for each of these bodies: quire, gate.\n\nOther systems' lore is already written. Give this system's people first names and surnames none of these use: Marit Vosk, Dennick Ashe, Oyelaran Pike, Ines Calloway, Tobiah Rune, Wren Adeyemi, Hollis Brandt, Sadie Quill, Gideon Marsh, Petra Lindqvist, Joss Harker, Edda Strand, Tam Iwu, Lucan Treharne, Cdr Verity Hesketh, Aldous Crane, Silas Pryor, Odalys Renk, Fenn Garrity, Yusuf Amsel, Agnes Hobday, Lt Idris Kell, Mirek Dolan, Ottoline Brack, Hob Cassel, Dr Imre Salk, Barty Nunn, Halina Obuya, Cass Rennick, Kerra Thole, Osk Brennard, Ruth Gannet, Davit Ruddock, Nan Fenwick, Jory Maddox, Cosima Hartree, Bram Ketteridge, Noor Atterby, Dr Alma Teague, Tomasz Rylance, Juno Castellane. And give it rumors of its own, not new versions of these:\n- Tug crews swear a seam in the Tailings gives off a hum at the edge of hearing. Old hands put it down to rock settling, and new hands stop talking about it.\n- A shift boss on the far side says her crew found a sealed cut that no survey ever recorded, with weld marks that were not Ironhull. She had it filled in, and the filling was not neat.\n- Families out of Varrow arrive on Halde with bundles of Cinder-made tools. They say their old shafts are still lit, though nobody is down there.\n- Navy inspectors are being sent outward faster than they can be replaced. The ones left on the quay are young, and in a hurry to be somewhere else.\n- Somebody on the Varrow side keeps getting messages on their old home terminal. They all say the same thing: that everything is fine.\n- Wren's old crew is meant to have a friend in the Compact office. Nobody will say which desk.\n- Hollis's crew say that Vast gives off a pulse some nights, a flicker in the lightning that comes in rhythm. The relay station says it is a fault.\n- A hauler captain swears he saw a ship in formation, running dark through the Scree with every light matched to the next. When he hailed, it answered in perfect order, and he does not say what it said.\n- The Federation relay above Vast has been receiving messages it will not discuss. Tallow's technicians say they heard it first.\n- Some of the refits at the yard are going out with more guns than the navy's orders asked for. Nobody has seen a manifest.\n- A cradle crew found a section of old girder with a Blackhull stencil under three coats of Ironhull paint. They painted over it again and said nothing.\n- Yard hands say the navy will take every hauler Brannock can build and give none of them back. Somebody has started a pool on how long that takes.\n- Cadets are leaving the academy terraces a term early now, and the instructors who stayed won't say what they were told.\n- Old hands say the glitter in the sky gets brighter after each fleet departs, as though every ship shed something on the way out. The yard hands call it ballast and laugh.\n- Nobody can remember a levy week this quiet. Ironhull masters pay without a word, and the clerks don't like it.\n- A chart in the commodore's anteroom is said to have pencil crosses on it, and the crosses get rubbed out and redrawn, each time a little nearer.\n- Replacement crews arrive on sealed orders and leave on sealed orders. The quartermasters say the stores they draw would see a ship further than the orders say.\n- Customs men say a certain class of crate from Quire is now waved through unopened, and none of them have been told why.\n- Bond clerks say there is a row in the stacks whose owners have all been struck off the registers, and whose seals are renewed every year anyway, by someone.\n- Loaders swear a crane or two shifts a box overnight when no shift is on. The clerks blame the inventory drones, and the drones have no comment.\n- Waiting masters say the depot holds more cargo from the closed lane than the navy admits to having seen.\n- Upland farmers say a field near the eastern domes won't take seed since the first evacuee ship came in. The soil tests are fine, and the farmers have started leaving it fallow with a fence round it.\n- Harvest officers have been counting silos in a way that isn't how you count a harvest. Farm folk say that's what you do before a long siege.\n- Storms off the sea come in from the direction of the jump lane lately, and the old fishers say they have a different smell. The harvest board says weather has no direction.\n- Growers swear a bloomling once visited and stood in the tomato dome all night, and left without a word. The Seed Hall locked its drawers afterwards, and nobody says what for.\n- When Hollin crosses the sun, the debris haze flickers in a rhythm the tug crews don't like. They say it's only light.\n- Crates of fresh produce go out on the night shuttle to a ship that isn't on the roster. The dock clerks sign for it and look away.\n- Loaders in the Warehouse Quarter say one bay in the far row stays warm all night, though no one is assigned to it and the heating there was cut.\n- Some evacuee ships are said to carry more people than the manifest says, and the clerks have been told not to count twice.\n- Tug crews say the station-rings above Merrow have lights on that haven't been lit in years. They aren't open to visiting ships, and nobody can say who is aboard.\n- Cutters on the deep galleries say the ice below the Long Cut rings when nothing is working near it. They say it rings in the same note the lane buoys make, and that it has been doing so since the lane closed.\n- The debris ring round Rime is thicker on the Gaunt side every season. Tug crews say it is old wreckage working loose, and they have started leaving the bigger pieces alone.\n- A tanker pilot swears the picket's lamps at the jump zone go out for the length of a breath, all together, once a shift. The picket calls it a test.\n- Folk in the Lamp Hall say a Varrow child draws the same shaft town every day, with every window lit, though it was dark when she left.\n- Skimmer crews say the lightning on Gaunt's night side has started to strike in a pattern, and that it was random before the lane closed. The station's weather desk says it is random still.\n- A Blackhull captain was heard saying that the Rubble hides a rock as big as a station, and that it has a hatch on it nobody welded. The crews of the tugs that pass it have stopped giving it a name.\n- Scoop crews swear that the picket's lights stay on all night above the lane, bright enough to see through the cloud-tops. They also say the picket never seems to change shifts.\n- Somebody on the station is running a book on how long the picket will last before it asks to be relieved, and the odds are shortening.\n- Gardeners say crates the size of coffins come down by night to a white annexe east of the Concourse, and that the lawns on that side have been told they need no mowing.\n- The lift music in the Concourse towers has played the same eight bars since the quarantine statement went out. The staff say they haven't noticed, and several of them hum it.\n- Bond clerks say the accounts of Varrow families have stopped growing. Nobody knows whether it is mercy or a way of keeping them on the books, and nobody will ask.\n- An old Ironhull master swears he was shown a price for his debt that was lower than he owed, and was told it was a clerical kindness. He still has the slip, and he is afraid to spend it.\n- Porters say the name at the top of the waiting list hasn't changed in thirty years, and that the people who ask about it are moved gently down.\n- A surgeon from the deep wards was heard saying the best of the new treatments isn't made in any lab. Nobody who heard it asked what the Bloom would make of that.\n- Tug crews say there is a gap in the glitter round Vell, a lane swept clean as a ruled line, and it wasn't there last season.\n- Patients swear their consent forms were signed before they reached the ring. The staff say it's a courtesy, and offer them tea."
+  }
+ ]
+}

@@ -132,7 +132,7 @@ function loadSystem(raw, schema, opts) {
     bodies.push({
       id: b.id, name: b.name, kind: b.kind, parent: parent.id, orbit: b.orbit,
       x: parent.x + Math.cos(a) * d, y: parent.y + Math.sin(a) * d, r: field ? b.width / 2 : b.orbit.radius, g: 0,
-      belt: { width: b.width, density: b.density, rocks: b.rocks, seed: b.seed }, port: null
+      belt: { width: b.width, density: b.density, rocks: b.rocks, seed: b.seed, sizes: b.sizes, clumping: b.clumping, profile: b.profile }, port: null
     });
   }
   if (sys.start && !bodies.some(b => b.id === sys.start && b.port)) notes.push({ path: '$.start', msg: `${sys.start} is not a port body; starting at the first port`, fatal: false });

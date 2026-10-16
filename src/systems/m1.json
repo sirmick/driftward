@@ -222,7 +222,10 @@
         "carbon",
         "metal"
       ],
-      "seed": 7
+      "seed": 7,
+      "sizes": "mixed",
+      "clumping": 0.5,
+      "profile": "soft"
     },
     {
       "id": "tailings",
@@ -239,7 +242,8 @@
         "iron",
         "basalt"
       ],
-      "seed": 3
+      "seed": 3,
+      "sizes": "gravel"
     }
   ],
   "traffic": {

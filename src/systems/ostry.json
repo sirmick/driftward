@@ -154,7 +154,10 @@
         "icy",
         "carbon"
       ],
-      "seed": 4
+      "seed": 4,
+      "sizes": "gravel",
+      "clumping": 0.2,
+      "profile": "banded"
     }
   ],
   "traffic": {
