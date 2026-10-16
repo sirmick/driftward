@@ -27,6 +27,11 @@ pub const BODY_STAR: u8 = 0;
 pub const BODY_PLANET: u8 = 1;
 pub const BODY_MOON: u8 = 2;
 pub const BODY_STATION: u8 = 3;
+/// An asteroid belt: a ring of rocks round its parent, centred on it, `r` the ring's middle. No well, no port, and
+/// nothing steers round it; the autopilot flies to the nearest point of its ring (player.rs `nav_point`).
+pub const BODY_BELT: u8 = 4;
+/// An asteroid field: a cluster of rocks, `r` its radius. No well, no port, and nothing steers round it.
+pub const BODY_FIELD: u8 = 5;
 
 /// Request landing at the port under the player.
 pub const CMD_LAND: u32 = 1;

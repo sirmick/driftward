@@ -6,7 +6,7 @@ buys and sells through the core (panel and commands), within credits and hold sp
 deliveries, and one accepted, flown there by the autopilot and landed pays; the flight HUD's keys (locations,
 targets, the map) work; ambient traffic starts mid-flow and turns
 over (ships land and new ones launch); assist flight in open space
-matches the lab's numbers; launch, landing and a day passing (with its docking fee) work; save then load restores
+matches the lab's numbers; asteroid belts are listed in orbital order and the autopilot flies into one; launch, landing and a day passing (with its docking fee) work; save then load restores
 the exact state; a replay exported from the browser (snapshot + input log, trades included) reruns natively to the
 same state hash; the live clock ticks at 60 Hz.
 Needs Playwright for Python (on the dev box: ~/.venvs/web/bin/python tools/play-smoke.py) and cargo.
@@ -162,6 +162,19 @@ with sync_playwright() as p:
     check(pg.is_visible('#map') and not pg.is_visible('#loc'), 'M opens the system map')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     check(not pg.is_visible('#map'), 'Escape closes it')
+
+    # asteroid belts and fields: in the location list in orbital order, and the autopilot flies into a belt (to the
+    # nearest point of its ring, straight through anything rocky in the way) and stops there
+    if ev("__play.BODIES.some(b => b.id === 'scree')"):
+        bt = ev("""(() => { const P = __play, C = P.CMD; P.newGame(12, { space: [-17000, -1000] }); P.advance(0.2, []);
+          const j = P.BODIES.findIndex(b => b.id === 'scree'), B = P.BODIES[j], q0 = P.probe();
+          const auto = P.command(C.autopilot, j); let t = 0; while (P.probe().auto >= 0 && t < 300) { P.advance(1, []); t++; }
+          const q = P.probe(), d = Math.hypot(q.x - B.x, q.y - B.y);
+          return { names: P.locations().map(r => r.name), auto, t, off: Math.abs(d - B.r), half: B.belt.width / 2, v: q.v, rocks: P.rocks() }; })()""")
+        n = bt['names']
+        check('The Scree' in n and n.index('Halde') < n.index('The Scree') < n.index('Vast'), f"the belt is in the location list in orbital order: {', '.join(n)}")
+        check(bt['auto'] == 0 and bt['t'] < 300 and bt['off'] < bt['half'] and bt['v'] < 30, f"the autopilot flies into the belt in {bt['t']} s and stops {bt['off']:.0f} m from its middle")
+        check(bt['rocks'] > 1000, f"the belts and fields hold {bt['rocks']} rocks")
 
     # flight: the same numbers as the lab's Fly tab (the Prism military class I, the M0 Halcyon fighter, from rest, clear space)
     a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -8000], ship: 'prism.military:c1' }); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe()]; })()")

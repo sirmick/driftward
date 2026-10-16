@@ -14,7 +14,7 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
   const ports = bodies.filter(b => b.port).map(b => b.port.name);
   // what the clamp can't see (loadSystem notes a bad parent or start): ids unique, every orbit clear of its parent and
   // inside the jump zones (traffic's arrivals start there), services listed once, environmental stations clear of
-  // every other body
+  // every other body; belts and fields clear of every body (a belt's ring, a field's disc), and inside the jump zones
   if (system) {
     const ids = new Set(), jump = (system.traffic || {}).jumpRadius ?? schema.properties.traffic.properties.jumpRadius.default;
     for (const b of system.bodies) {
@@ -29,10 +29,24 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
       const sv = (b.port && b.port.services) || [];
       if (new Set(sv).size !== sv.length) notes.push({ path: `${at}.port.services`, msg: 'a service listed twice', fatal: false });
     }
+    const rocky = b => b.kind === 'belt' || b.kind === 'field';
     for (const e of bodies.filter(b => b.env)) for (const o of bodies) {
-      if (o === e) continue;
+      if (o === e || rocky(o)) continue;
       const gap = Math.hypot(e.x - o.x, e.y - o.y) - e.r - o.r;
       if (gap < 100) notes.push({ path: `$.bodies[${e.parent}].environs`, msg: `${e.id} is within ${Math.round(gap)} m of ${o.id}`, fatal: false });
+    }
+    for (const k of bodies.filter(rocky)) {
+      const at = `$.belts[${k.id}]`, half = k.belt.width / 2;
+      if (ids.has(k.id)) notes.push({ path: at, msg: `id ${k.id} used twice`, fatal: true });
+      ids.add(k.id);
+      const P = bodies.find(o => o.id === k.parent);
+      if (k.kind === 'belt' ? k.r - half < P.r : Math.hypot(k.x - P.x, k.y - P.y) - k.r < P.r) notes.push({ path: `${at}.orbit.radius`, msg: `it reaches inside ${P.id}`, fatal: true });
+      if (Math.hypot(k.x, k.y) + (k.kind === 'belt' ? k.r + half : k.r) > jump) notes.push({ path: at, msg: `reaches past the jump radius (${jump} m)`, fatal: true });
+      for (const o of bodies) {
+        if (o === k || o === P || rocky(o)) continue;
+        const d = Math.hypot(o.x - k.x, o.y - k.y), gap = (k.kind === 'belt' ? Math.abs(d - k.r) - half : d - k.r) - o.r;
+        if (gap < 100) notes.push({ path: at, msg: `${o.id} is within ${Math.round(gap)} m of it`, fatal: false });
+      }
     }
   }
   if (!system || notes.length) { bad++; console.log(`${f}: ${notes.length} problem(s)`); notes.forEach(n => console.log(`  ${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`)); }

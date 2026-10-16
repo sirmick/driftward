@@ -20,6 +20,7 @@ const state = {
 // ---------------- WebGL setup ----------------
 /*SHADERS*/
 /*GFX*/
+/*ROCKS*/
 /*BAKE*/
 const canvas = $('view');
 const G = makeGfx(canvas);

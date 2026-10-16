@@ -32,7 +32,7 @@ const ART = JSON.parse($('art').textContent);
 const debug = makeDebug({ el: $('debug'), raw: JSON.parse($('system').textContent), loaded, econ: ECON, lore: LORE, art: ART, log: JSON.parse($('content-log').textContent) });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const star = STARS[STAR.look] || STARS.sol;
-const BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3 };
+const BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3, belt: 4, field: 5 };
 // planets and moons, drawn by the planet shader
 const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
   const pu = planetUniforms(b.look); // every field filled by the schema clamp, defaults and all
@@ -296,8 +296,8 @@ let showPanel = () => {};
 const NUM = new Intl.NumberFormat('en-US'), fmtCr = n => NUM.format(n); // one formatter: toLocaleString builds one per call, and the HUD formats every frame
 
 CORE_READY.then(CORE => {
-  // body capacity: the schema's cap on bodies, the star, and the most environmental stations a system holds
-  const CFG = { maxShips: 128, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + 1 + MAX_ENVIRONS, envN: 16, envW: 40000, seed: 1 };
+  // body capacity: the schema's caps on bodies and belts, the star, and the most environmental stations a system holds
+  const CFG = { maxShips: 128, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + SYSTEM_SCHEMA.properties.belts.maxItems + 1 + MAX_ENVIRONS, envN: 16, envW: 40000, seed: 1 };
   const sim = CORE.world(CFG);
   const SH = sim.ship, IN = CORE.IN;
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; });
@@ -306,11 +306,46 @@ CORE_READY.then(CORE => {
   // copies take the core's positions, so routes, wells and the drawing agree in every browser
   BODIES.forEach((b, j) => {
     const B = sim.body; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
-    if (j) sim.placeBody(j, BODIES.findIndex(p => p.id === b.parent), b.orbit.radius, b.orbit.angle);
+    if (j) sim.placeBody(j, BODIES.findIndex(p => p.id === b.parent), b.kind === 'belt' ? 0 : b.orbit.radius, b.orbit.angle); // a belt is centred on its parent
     b.x = B.x[j]; b.y = B.y[j];
     B.pop[j] = b.port ? TRAFFIC_DATA.population[b.port.population] || 1 : 0; // traffic's gravity model
   });
   for (const o of [...WORLDS, ...STATIONS]) { const b = BODIES.find(b => b.id === o.id); o.x = b.x; o.y = b.y; }
+  // Asteroid belts and fields: their rocks (src/rocks.js), placed once from each one's seed round where the core put
+  // it. Scenery: not in the sim (ships fly through them), so the page owns them. Density 1 is a rock per 22,000 m²;
+  // a belt's rocks thin toward its edges and gather in clumps along it, a field's toward its rim. Sizes follow a power
+  // law, 15 to 500 m: mostly small (half under 23 m), one in a hundred over 200 m, so a belt is open space with rocks
+  // in it, a tenth of it covered, rather than a wall (the lab's 3 km rocks would cover it). The types are the belt's, the
+  // first commonest. Sorted by size, so a cell's rocks draw small first and big ones sit on top.
+  const ROCKS = [], ROCK_CELL = 2000, rockGrid = new Map(), MAX_ROCKS = 24000;
+  let rockReach = 0;
+  for (const B of BODIES) {
+    if (B.kind !== 'belt' && B.kind !== 'field') continue;
+    const K = B.belt, r = rockRng(`${B.id}:${K.seed}`), belt = B.kind === 'belt', half = K.width / 2;
+    const n = Math.min(MAX_ROCKS - ROCKS.length, Math.round((belt ? 2 * Math.PI * B.r * K.width : Math.PI * B.r * B.r) * K.density / 22000));
+    const ph = [r() * 6.283, r() * 6.283, r() * 6.283], wt = K.rocks.map((_, i) => [6, 3, 1][i]), wsum = wt.reduce((a, b) => a + b, 0);
+    for (let k = 0, tries = 0; k < n && tries < n * 4; tries++) {
+      let x, y;
+      if (belt) {
+        const a = r() * 6.283, clump = 0.5 + 0.3 * Math.sin(3 * a + ph[0]) + 0.2 * Math.sin(11 * a + ph[1]);
+        if (r() > 0.25 + 0.75 * clump) continue;
+        const d = B.r + (r() + r() - 1) * half;
+        x = B.x + Math.cos(a) * d; y = B.y + Math.sin(a) * d;
+      } else {
+        const a = r() * 6.283, d = B.r * Math.pow(r(), 0.7);
+        x = B.x + Math.cos(a) * d; y = B.y + Math.sin(a) * d;
+      }
+      let pick = r() * wsum, ti = 0; while (ti < wt.length - 1 && (pick -= wt[ti]) > 0) ti++;
+      const rock = makeRock(K.rocks[ti], k, r);
+      rock.size = 15 * Math.pow(1 - r() * (1 - Math.pow(15 / 500, 1.7)), -1 / 1.7);
+      const m = rock.size / 2, reach = m * rockExt(rock);
+      ROCKS.push({ a: rock, x, y, m, reach, seed: r() });
+      rockReach = Math.max(rockReach, reach);
+      k++;
+    }
+  }
+  ROCKS.sort((p, q) => p.m - q.m);
+  ROCKS.forEach((o, i) => { const key = Math.floor(o.x / ROCK_CELL) + ',' + Math.floor(o.y / ROCK_CELL); if (!rockGrid.has(key)) rockGrid.set(key, []); rockGrid.get(key).push(i); });
   // traffic hulls: the owning culture's brand, a size class per role (src/traffic.json; validated by npm run check)
   // the traffic mix (the system file's traffic, validated against the catalog by npm run check): each entry's share
   // split over its classes by weight, one core mix row per line and class; loiter rows carry ships to keep up
@@ -825,7 +860,7 @@ CORE_READY.then(CORE => {
   // ---------- render ----------
   const MAXS = CFG.maxShips;
   const VS = { ship: instVAO([4, 2], MAXS), station: instVAO([4, 2], Math.max(1, STATIONS.length)), plume: instVAO([4, 4, 2], MAXS * 12),
-    orbiter: instVAO([4, 4], sim.orbitOut.length / 8), ghost: instVAO([4, 4], 8) };
+    orbiter: instVAO([4, 4], sim.orbitOut.length / 8), ghost: instVAO([4, 4], 8), speck: instVAO([4, 4], Math.max(1, ROCKS.length)) };
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
   const typeCount = new Int32Array(types.length), typeStart = new Int32Array(types.length), typeFill = new Int32Array(types.length);
   const LP = new Float32Array(64), LC = new Float32Array(64);
@@ -840,6 +875,9 @@ CORE_READY.then(CORE => {
   gl.useProgram(FP.plume.p);
   { const u = FP.plume.u; gl.uniform3fv(u.uPlCol, plCol); gl.uniform3fv(u.uPlCore, plCore); gl.uniform4fv(u.uPlP, plP); gl.uniform1fv(u.uPlSpread, plSpread); gl.uniform3fv(u.uPlBurn, plBurn); }
   const stInst = new Float32Array(Math.max(1, STATIONS.length) * 6);
+  // rocks on screen: drawn as rocks (at most ROCK_DRAW), or under a pixel and a half across as specks of light
+  const ROCK_DRAW = 3000, rockKit = makeRockKit(gl, compile, quad, ROCK_DRAW), rockInst = new Float32Array(ROCK_DRAW * ROCK_STRIDE);
+  const rockSeen = [], speckInst = new Float32Array(Math.max(1, ROCKS.length) * 8);
   const sunCam = new Float32Array(3), sunAt = new Float32Array(3); // sunFrom's results, reused
   const nearW = new Int32Array(4); // the star dimming's nearest worlds
   const dimU = new Float32Array(16); // worlds the sky dims its stars round: screen x, y, radius (px)
@@ -1075,6 +1113,30 @@ CORE_READY.then(CORE => {
         bindPlanet(gl, u, p.pu); planetClock(gl, u, t, p.pu.seed);
         draw();
       } }
+    // belts' and fields' rocks near the view: each rock sphere-traced, small ones as specks (the orbiters' debris look)
+    if (ROCKS.length) {
+      const mx = halfW + rockReach, my = halfH + rockReach, minPx = 1.5 / ss;
+      let nr = 0, ns = 0; rockSeen.length = 0;
+      for (let gx = Math.floor((cx - mx) / ROCK_CELL), gx1 = Math.floor((cx + mx) / ROCK_CELL); gx <= gx1; gx++) {
+        for (let gy = Math.floor((cy - my) / ROCK_CELL), gy1 = Math.floor((cy + my) / ROCK_CELL); gy <= gy1; gy++) {
+          const cell = rockGrid.get(gx + ',' + gy);
+          if (cell) for (const i of cell) { const o = ROCKS[i]; if (Math.abs(o.x - cx) < halfW + o.reach && Math.abs(o.y - cy) < halfH + o.reach) rockSeen.push(i); }
+        }
+      }
+      rockSeen.sort((a, b) => a - b); // by size: big rocks over small
+      for (const i of rockSeen) {
+        const o = ROCKS[i];
+        if (o.reach < minPx) { const k = ns++ * 8; speckInst[k] = o.x; speckInst[k + 1] = o.y; speckInst[k + 2] = o.m; speckInst[k + 3] = 0; speckInst[k + 4] = 0.7; speckInst[k + 5] = 0; speckInst[k + 6] = o.seed; speckInst[k + 7] = 1; }
+        else if (nr < ROCK_DRAW) rockKit.pack(rockInst, nr++, o.a, o.x, o.y, o.m);
+      }
+      if (nr) { rockKit.begin({ res: [TW, TH], cam: [cx, cy], scale: ss, time: t, star: [STAR.x, STAR.y], sunCol, amb: star.amb }); rockKit.draw(rockInst, nr); }
+      if (ns) {
+        gl.blendFunc(gl.ONE, gl.ONE);
+        setView(FP.orbiter, TW, TH, cx, cy); gl.uniform1f(FP.orbiter.u.uTime, t); gl.uniform3fv(FP.orbiter.u.uSunCol, sunCol);
+        gl.bindVertexArray(VS.speck.vao); upload(VS.speck, speckInst, ns); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, ns); gl.bindVertexArray(null);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      }
+    }
     // orbiters: the core places them and keeps only what can be seen; then lens ghosts for the brightest flares, along
     // the line from the flare through the middle of the screen
     { const n = sim.orbitEval((sim.tick() + sim.alpha()) * sim.DT, STAR.x, STAR.y, cx, cy, halfW, halfH, 0.06 / scale);
@@ -1326,10 +1388,20 @@ CORE_READY.then(CORE => {
   }
 
   // ---------- navigation: what is where ----------
+  // Belts and fields: a belt's point is the nearest of its ring (where the autopilot flies, player.rs nav_point) and
+  // its reach half its width; a field's are its centre and radius, as any body's
+  const rocky = B => B.kind === 'belt' || B.kind === 'field';
+  function navPoint(j, px, py) {
+    const B = BODIES[j];
+    if (B.kind !== 'belt') return [B.x, B.y];
+    const dx = px - B.x, dy = py - B.y, d = Math.hypot(dx, dy);
+    return d < 1e-6 ? [B.x + B.r, B.y] : [B.x + dx / d * B.r, B.y + dy / d * B.r];
+  }
+  const navReach = B => B.kind === 'belt' ? B.belt.width / 2 : B.r;
   // Every body, from the player's drawn (interpolated) position, with its mission marker.
   const navObjects = () => {
     const dest = new Set(activeMissions().map(k => MS.dest[k]));
-    return BODIES.map((b, j) => ({ j, name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x: b.x, y: b.y, r: b.r, kind: b.kind, port: !!b.port, mission: dest.has(j), env: !!b.env }))
+    return BODIES.map((b, j) => { const [x, y] = navPoint(j, SH.rx[0], SH.ry[0]); return { j, name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x, y, r: navReach(b), kind: b.kind, port: !!b.port, mission: dest.has(j), env: !!b.env, rocky: rocky(b) }; })
       .filter(o => !o.env); // environmental stations are scenery: on the map and radar, not in the overlay
   };
   function navInfo(o) {
@@ -1366,12 +1438,12 @@ CORE_READY.then(CORE => {
     hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace';
     hx.fillStyle = near.surf <= 0 ? NAV_HOT : NAV_COL;
     const well = SH.well[0]; // strength of the well here (1: a full-strength planet's surface)
-    hx.fillText((near.surf <= 0 ? `OVER ${near.name.toUpperCase()}` : `NEAREST ${near.name.toUpperCase()} ${fmtDist(near.surf)}`) + (well > 0.01 ? `  WELL ${Math.round(well * 100)}%` : ''), 14, 20 + 4 * 17);
+    hx.fillText((near.surf <= 0 ? `${near.rocky ? 'IN' : 'OVER'} ${near.name.toUpperCase()}` : `NEAREST ${near.name.toUpperCase()} ${fmtDist(near.surf)}`) + (well > 0.01 ? `  WELL ${Math.round(well * 100)}%` : ''), 14, 20 + 4 * 17);
     if (!navOn) return;
     hx.textBaseline = 'middle';
     for (const o of navs) {
       const [sx, sy] = toScreen(o.x, o.y), hot = o.surf <= 0, col = hot ? NAV_HOT : o.mission ? MIS_COL : NAV_COL;
-      const name = (o.mission ? 'DELIVER: ' : '') + o.name.toUpperCase(), sub = hot ? 'OVER' : `${fmtDist(o.surf)}  ${fmtClose(o.closing)}`.trim();
+      const name = (o.mission ? 'DELIVER: ' : '') + o.name.toUpperCase(), sub = hot ? (o.rocky ? 'IN IT' : 'OVER') : `${fmtDist(o.surf)}  ${fmtClose(o.closing)}`.trim();
       hx.fillStyle = col; hx.strokeStyle = col; hx.lineWidth = 1.5;
       const e = edgePoint(sx, sy);
       if (!e) { // centre on screen: label it there
@@ -1437,7 +1509,7 @@ CORE_READY.then(CORE => {
   function drawTargetMark() {
     let x, y, r;
     const j = targetBody(), i = targetShip();
-    if (j >= 0) { x = BODIES[j].x; y = BODIES[j].y; r = BODIES[j].r * scale / dpr; }
+    if (j >= 0) { [x, y] = navPoint(j, SH.rx[0], SH.ry[0]); r = navReach(BODIES[j]) * scale / dpr; }
     else if (i >= 0) { x = SH.rx[i]; y = SH.ry[i]; r = Math.max(12, types[SH.kind[i]].half * scale / dpr * 1.2); }
     else { if (navTarget && navTarget.ship !== undefined) { setTarget(null); toast('Target lost: it landed'); } return; }
     const [sx, sy] = toScreen(x, y), e = edgePoint(sx, sy);
@@ -1457,9 +1529,9 @@ CORE_READY.then(CORE => {
     const w = 268, x = W - w - 14, rows = [];
     let range, close, title, sub;
     if (j >= 0) {
-      const B = BODIES[j], o = navInfo({ x: B.x, y: B.y, r: B.r });
+      const B = BODIES[j], [nx, ny] = navPoint(j, SH.rx[0], SH.ry[0]), o = navInfo({ x: nx, y: ny, r: navReach(B) });
       title = B.port ? B.port.name : B.name;
-      sub = [B.name !== title ? B.name : '', B.kind, B.port ? B.port.role.replace('-', ' ') : ''].filter(Boolean).join(' · ');
+      sub = [B.name !== title ? B.name : '', B.kind, B.port ? B.port.role.replace('-', ' ') : '', B.belt ? B.belt.rocks.map(k => ROCK_TYPES[k].label.toLowerCase()).join(', ') : ''].filter(Boolean).join(' · ');
       range = fmtDist(o.surf); close = o.closing;
       if (B.port) {
         const pb = sim.portBelow(), st = B.kind === 'station', limit = sim.param(st ? 'dock_speed' : 'land_speed');
@@ -1502,14 +1574,16 @@ CORE_READY.then(CORE => {
   // ---------- the location list (right, under the radar) ----------
   // The Book: the star, planets and free-orbiting stations in orbital order; the body whose local zone the player is
   // in (ZONE_IN radii, left at ZONE_OUT) expands to show its moons and stations. A row shows the range and landable,
-  // dockable and mission markers; a click or its number key sets the nav target.
+  // dockable and mission markers; a click or its number key sets the nav target. Belts and fields take their place in
+  // the order (a belt by its ring's radius), the range to a belt is to its nearest edge.
   const ZONE_IN = 6, ZONE_OUT = 7;
-  const fromStar = j => Math.hypot(BODIES[j].x - STAR.x, BODIES[j].y - STAR.y);
-  const TOP = BODIES.map((_, j) => j).filter(j => j === 0 || BODIES[j].parent === STAR.id).sort((a, b) => fromStar(a) - fromStar(b));
-  // a body's moons and stations, nearest first; the star's planets are top-level rows already, so it has none
-  const KIDS = TOP.map(p => BODIES.map((_, j) => j).filter(j => p !== 0 && BODIES[j].parent === BODIES[p].id && !BODIES[j].env)
-    .sort((a, b) => Math.hypot(BODIES[a].x - BODIES[p].x, BODIES[a].y - BODIES[p].y) - Math.hypot(BODIES[b].x - BODIES[p].x, BODIES[b].y - BODIES[p].y)));
-  const ICON = { star: '✹', planet: '●', moon: '•', station: '◇' };
+  const orbitOf = j => { const B = BODIES[j], P = BODIES.find(o => o.id === B.parent) || STAR; return B.kind === 'belt' ? B.r : Math.hypot(B.x - P.x, B.y - P.y); };
+  const TOP = BODIES.map((_, j) => j).filter(j => j === 0 || BODIES[j].parent === STAR.id).sort((a, b) => orbitOf(a) - orbitOf(b));
+  // a body's moons, stations, belts and fields, nearest first; the star's are top-level rows already, so it has none
+  const KIDS = TOP.map(p => BODIES.map((_, j) => j).filter(j => p !== 0 && BODIES[j].parent === BODIES[p].id && !BODIES[j].env).sort((a, b) => orbitOf(a) - orbitOf(b)));
+  const ICON = { star: '✹', planet: '●', moon: '•', station: '◇', belt: '◌', field: '⁘' };
+  // the range to a body's surface, a field's rim or a belt's nearer edge (0 inside)
+  const surfFrom = (j, px, py) => { const B = BODIES[j], d = Math.hypot(B.x - px, B.y - py); return B.kind === 'belt' ? Math.abs(d - B.r) - B.belt.width / 2 : d - B.r; };
   let expanded = -1, locRows = [], locAt = 0;
   function refreshLocations() {
     const now = performance.now();
@@ -1526,7 +1600,7 @@ CORE_READY.then(CORE => {
     el.innerHTML = locRows.map(([j, child], n) => {
       const B = BODIES[j], tags = (B.port ? `<span class="tag">${B.kind === 'station' ? 'DOCK' : 'LAND'}</span>` : '') + (dest.has(j) ? '<span class="tag m">◆</span>' : '');
       return `<button type="button" data-j="${j}" class="${child ? 'child' : ''}${j === tb ? ' target' : ''}"><span class="n">${n < 9 ? n + 1 : ''}</span><span class="ico">${ICON[B.kind] || '•'}</span>`
-        + `<span>${B.name}${tags}</span><span class="r">${fmtDist(dist(j) - B.r)}</span></button>`;
+        + `<span>${B.name}${tags}</span><span class="r">${fmtDist(surfFrom(j, px, py))}</span></button>`;
     }).join('');
   }
   pickLocation = n => { const row = locRows[n - 1]; if (row) setTarget({ body: row[0] }); locAt = 0; };
@@ -1539,6 +1613,8 @@ CORE_READY.then(CORE => {
   // North up, centred on the player, bodies to scale; anything beyond the range sits on the rim. Ships appear only
   // here (the Book), as dots; the target is ringed.
   const MAP_RANGE = 24000; // meters from centre to rim
+  const STN_PX = 4.5; // the smallest a station draws on the radar (px from centre to corner): to scale it would be a dot
+  function stationMark(x, y, r) { hx.beginPath(); hx.moveTo(x, y - r); hx.lineTo(x + r, y); hx.lineTo(x, y + r); hx.lineTo(x - r, y); hx.closePath(); }
   const radarBox = () => { const R = Math.max(60, Math.min(96, Math.min(W, H) * 0.14)); return { R, x: W - 2 * R - 14, y: 14, h: 2 * R + 14 }; };
   function drawRadar(navs) {
     const { R } = radarBox(), cx = W - R - 14, cy = R + 24, k = R / MAP_RANGE;
@@ -1551,15 +1627,34 @@ CORE_READY.then(CORE => {
     hx.font = '500 10px "IBM Plex Mono", ui-monospace, monospace'; hx.textAlign = 'center'; hx.textBaseline = 'middle';
     for (const o of navs) {
       let mx = (o.x - px) * k, my = -(o.y - py) * k;
-      const md = Math.hypot(mx, my), rr = Math.max(2.5, o.r * k), hot = o.surf <= 0, tgt = o.j === tb;
+      const md = Math.hypot(mx, my), hot = o.surf <= 0, tgt = o.j === tb;
+      let rr = Math.max(2.5, o.r * k);
       if (md - rr > R) { // beyond range: a pip on the rim
         mx *= (R - 4) / md; my *= (R - 4) / md;
         hx.fillStyle = tgt ? TGT_COL : o.mission ? MIS_COL : NAV_COL; hx.beginPath(); hx.arc(cx + mx, cy + my, tgt || o.mission ? 3.5 : 2.5, 0, 6.283); hx.fill();
         continue;
       }
+      if (o.kind === 'belt') { // its ring, as a band as wide as the belt
+        const B = BODIES[o.j];
+        hx.strokeStyle = tgt || hot ? 'rgba(226,184,102,.4)' : 'rgba(176,164,146,.28)'; hx.lineWidth = Math.max(2, B.belt.width * k);
+        hx.beginPath(); hx.arc(cx + (B.x - px) * k, cy - (B.y - py) * k, B.r * k, 0, 6.283); hx.stroke();
+        continue;
+      }
+      if (o.kind === 'field') hx.setLineDash([2, 3]);
       hx.strokeStyle = tgt || hot ? NAV_HOT : o.mission ? MIS_COL : 'rgba(159,180,200,.75)'; hx.lineWidth = hot || o.mission || tgt ? 1.5 : 1;
-      hx.beginPath(); hx.arc(cx + mx, cy + my, rr, 0, 6.283); hx.stroke();
+      if (o.kind === 'station') { rr = Math.max(STN_PX, rr); stationMark(cx + mx, cy + my, rr); hx.stroke(); } // a diamond, big enough to see
+      else { hx.beginPath(); hx.arc(cx + mx, cy + my, rr, 0, 6.283); hx.stroke(); }
+      hx.setLineDash([]);
       hx.fillStyle = tgt || hot ? NAV_HOT : o.mission ? MIS_COL : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
+    }
+    // environmental stations: not in the nav list, but on the radar as smaller, fainter diamonds, unlabelled
+    for (let j = 0; j < BODIES.length; j++) {
+      const B = BODIES[j];
+      if (!B.env) continue;
+      const mx = (B.x - px) * k, my = -(B.y - py) * k, rr = Math.max(STN_PX * 0.8, B.r * k);
+      if (Math.hypot(mx, my) - rr > R) continue;
+      stationMark(cx + mx, cy + my, rr);
+      hx.fillStyle = j === tb ? NAV_HOT : 'rgba(159,180,200,.65)'; hx.fill();
     }
     for (let i = 1; i < sim.count(); i++) { // slot 0 is the player
       if (!SH.alive[i]) continue;
@@ -1587,7 +1682,7 @@ CORE_READY.then(CORE => {
   let mapOn = false;
   // the map shows the bodies and the jump zones (north, east, south and west, at the system's jump radius)
   const jumpR = () => sim.param('jump_radius'), jumpSpread = () => sim.param('jump_spread');
-  const mapExtent = Math.max(...BODIES.map(b => Math.hypot(b.x - STAR.x, b.y - STAR.y) + b.r), (TCFG.jumpRadius || 45000) + 4000) * 1.08;
+  const mapExtent = Math.max(...BODIES.map(b => Math.hypot(b.x - STAR.x, b.y - STAR.y) + b.r + (b.kind === 'belt' ? b.belt.width / 2 : 0)), (TCFG.jumpRadius || 45000) + 4000) * 1.08;
   const MAP_TOP = 76; // the title and help lines
   const mapView = () => { const h = H - stripH, s = Math.min(W, h - MAP_TOP) / 2 / mapExtent; return { s, cx: W / 2, cy: MAP_TOP + (h - MAP_TOP) / 2, h }; };
   toggleMap = on => {
@@ -1605,7 +1700,7 @@ CORE_READY.then(CORE => {
     // orbits round each body's parent
     c.strokeStyle = 'rgba(138,149,164,.22)'; c.lineWidth = 1;
     for (const B of BODIES) {
-      if (!B.parent || B.env) continue;
+      if (!B.parent || B.env || B.kind === 'belt') continue; // a belt is drawn as its own ring
       const P = BODIES.find(o => o.id === B.parent) || STAR, [px, py] = mapPos(P.x, P.y, v);
       c.beginPath(); c.arc(px, py, Math.hypot(B.x - P.x, B.y - P.y) * v.s, 0, 6.283); c.stroke();
     }
@@ -1619,20 +1714,29 @@ CORE_READY.then(CORE => {
     // the autopilot's course: to the point it is steering for (round any obstacle), then the target
     const auto = sim.game.auto[0] - 1;
     if (auto >= 0) {
-      const [ax, ay] = mapPos(SH.rx[0], SH.ry[0], v), [wx, wy] = mapPos(sim.game.aim_x[0], sim.game.aim_y[0], v), [bx, by] = mapPos(BODIES[auto].x, BODIES[auto].y, v);
+      const [ax, ay] = mapPos(SH.rx[0], SH.ry[0], v), [wx, wy] = mapPos(sim.game.aim_x[0], sim.game.aim_y[0], v), [bx, by] = mapPos(...navPoint(auto, SH.rx[0], SH.ry[0]), v);
       c.setLineDash([5, 5]); c.strokeStyle = 'rgba(127,208,138,.8)'; c.beginPath(); c.moveTo(ax, ay); c.lineTo(wx, wy); c.lineTo(bx, by); c.stroke(); c.setLineDash([]);
     }
     c.textAlign = 'center'; c.textBaseline = 'middle';
     BODIES.forEach((B, j) => {
       const [x, y] = mapPos(B.x, B.y, v), r = Math.max(B.kind === 'star' ? 7 : 3.5, B.r * v.s);
+      if (B.kind === 'belt') { // a band round its parent, labelled at its foot
+        const bw = Math.max(3, B.belt.width * v.s);
+        c.strokeStyle = 'rgba(176,164,146,.3)'; c.lineWidth = bw; c.beginPath(); c.arc(x, y, B.r * v.s, 0, 6.283); c.stroke();
+        if (j === tb || dest.has(j)) { c.strokeStyle = j === tb ? TGT_COL : MIS_COL; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, B.r * v.s + bw / 2 + 3, 0, 6.283); c.stroke(); }
+        c.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; c.fillStyle = j === tb ? TGT_COL : '#b0a492';
+        c.fillText(B.name.toUpperCase(), x, y + B.r * v.s + bw / 2 + 12);
+        return;
+      }
+      if (B.kind === 'field') { c.fillStyle = 'rgba(176,164,146,.22)'; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); c.setLineDash([2, 3]); c.strokeStyle = 'rgba(176,164,146,.6)'; c.lineWidth = 1; c.stroke(); c.setLineDash([]); }
       c.fillStyle = B.kind === 'star' ? '#f2b26b' : B.env ? 'rgba(201,210,220,.55)' : B.kind === 'station' ? '#c9d2dc' : '#6f8296';
       if (B.kind === 'station') { c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillRect(-r, -r, 2 * r, 2 * r); c.restore(); }
-      else { c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); }
+      else if (B.kind !== 'field') { c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); }
       if (j === tb) { c.strokeStyle = TGT_COL; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 6, 0, 6.283); c.stroke(); }
       if (dest.has(j)) { c.strokeStyle = MIS_COL; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, r + 10, 0, 6.283); c.stroke(); }
       if (B.env && j !== tb) return; // environmental stations: a marker, no label (unless targeted)
       c.font = '600 12px "IBM Plex Mono", ui-monospace, monospace';
-      c.fillStyle = j === tb ? TGT_COL : dest.has(j) ? MIS_COL : B.port ? '#7fd08a' : '#9fb4c8';
+      c.fillStyle = j === tb ? TGT_COL : dest.has(j) ? MIS_COL : B.port ? '#7fd08a' : B.kind === 'field' ? '#b0a492' : '#9fb4c8';
       c.fillText(B.name.toUpperCase(), x, y - r - 12);
       if (B.port) { c.font = '500 10.5px "IBM Plex Mono", ui-monospace, monospace'; c.fillStyle = '#8a95a4'; c.fillText(B.port.name, x, y + r + 12); }
     });
@@ -1655,7 +1759,11 @@ CORE_READY.then(CORE => {
   mapEl.addEventListener('pointerdown', e => {
     const v = mapView(), r = mapEl.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
     let best = null, bd = 22;
-    BODIES.forEach((B, j) => { const [bx, by] = mapPos(B.x, B.y, v), d = Math.hypot(bx - x, by - y) - Math.max(0, B.r * v.s - 4); if (d < bd) { bd = d; best = { body: j }; } });
+    BODIES.forEach((B, j) => {
+      const [bx, by] = mapPos(B.x, B.y, v), e = Math.hypot(bx - x, by - y);
+      const d = B.kind === 'belt' ? Math.abs(e - B.r * v.s) - Math.max(0, B.belt.width * v.s / 2 - 4) : e - Math.max(0, B.r * v.s - 4); // a belt: anywhere on its band
+      if (d < bd) { bd = d; best = { body: j }; }
+    });
     for (let i = 1; i < sim.count(); i++) {
       if (!SH.alive[i]) continue;
       const [sx, sy] = mapPos(SH.rx[i], SH.ry[i], v), d = Math.hypot(sx - x, sy - y);
@@ -1675,6 +1783,8 @@ CORE_READY.then(CORE => {
     locations: () => locRows.map(([j, child]) => ({ j, name: BODIES[j].name, child })),
     // ambient traffic: every ship in flight, with its role, phase, route and whether it is on rails
     traffic: () => { const out = []; for (let i = 0; i < sim.count(); i++) if (TR.role[i]) out.push({ i, role: TRAFFIC.streams[TR.role[i] - 1], line: types[SH.kind[i]].brand.id, cls: catalog.sizes[types[SH.kind[i]].zi].id, phase: TR.phase[i], from: TR.from[i], to: TR.to[i], rail: SH.rail[i], x: SH.x[i], y: SH.y[i], v: Math.hypot(SH.vx[i], SH.vy[i]) }); return out; },
+    // how many rocks the belts and fields hold (scenery: src/rocks.js)
+    rocks: () => ROCKS.length,
     // dev: put the (flying) player at rest over body j; a logged command, so replays still match
     teleport: j => command(CMD.teleport, j),
     setZoom: z => { setZoom(z); return zoom; }, // the view's zoom, 0.25 to 4 (the wheel's range)

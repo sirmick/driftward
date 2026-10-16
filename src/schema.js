@@ -66,7 +66,8 @@ function clampToSchema(schema, value, path, notes) {
 // from a hash of its id: spread evenly round it, clear of its surface by 1.6 of its own size plus a quarter to three
 // quarters of the world's radius, sizes 0.8 to 1.2 times the archetype's
 // (opts.stationRadius(archetype), metres; 400 without one). At most MAX_ENVIRONS in a system; the rest are dropped
-// with a note. Their bake seeds come in two variants per archetype and owner, so they share bakes.
+// with a note. Their bake seeds come in two variants per archetype and owner, so they share bakes. Asteroid belts
+// and fields come after them.
 const MAX_ENVIRONS = 24;
 function loadSystem(raw, schema, opts) {
   opts = opts || {};
@@ -118,6 +119,20 @@ function loadSystem(raw, schema, opts) {
         x: w.x + Math.cos(a) * orbit.radius, y: w.y + Math.sin(a) * orbit.radius, r, g: 0,
         station: { archetype: e.archetype, brand: e.brand, seed: `${e.archetype}-${e.brand}-${k % 2 + 1}` }, env: { archetype: e.archetype, brand: e.brand, scale }, port: null
       });
+    });
+  }
+  // asteroid belts and fields, last: a belt is centred on its parent, its radius the ring's middle; a field sits on
+  // its orbit, its radius half its width. Neither has a well.
+  for (const b of sys.belts || []) {
+    const at = `$.belts[${b.id}]`;
+    if (bodies.some(o => o.id === b.id)) { notes.push({ path: at, msg: `id ${b.id} is taken; dropped`, fatal: false }); continue; }
+    let parent = bodies.find(o => o.id === (b.parent || 'star') && !o.env && o.kind !== 'belt' && o.kind !== 'field');
+    if (!parent) { notes.push({ path: at, msg: `parent ${b.parent} not found; circling the star`, fatal: false }); parent = bodies[0]; }
+    const a = b.orbit.angle * Math.PI / 180, field = b.kind === 'field', d = field ? b.orbit.radius : 0;
+    bodies.push({
+      id: b.id, name: b.name, kind: b.kind, parent: parent.id, orbit: b.orbit,
+      x: parent.x + Math.cos(a) * d, y: parent.y + Math.sin(a) * d, r: field ? b.width / 2 : b.orbit.radius, g: 0,
+      belt: { width: b.width, density: b.density, rocks: b.rocks, seed: b.seed }, port: null
     });
   }
   if (sys.start && !bodies.some(b => b.id === sys.start && b.port)) notes.push({ path: '$.start', msg: `${sys.start} is not a port body; starting at the first port`, fatal: false });

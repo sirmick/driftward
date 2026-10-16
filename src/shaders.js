@@ -1,6 +1,6 @@
 // ======================= SHADERS =======================
 // GLSL sources shared by the lab (index.html) and the game (play.html). Plain strings, compiled by each page's
-// graphics kit (gfx.js). Lab-only shaders for planets, suns, stations and asteroids live in their own modules.
+// graphics kit (gfx.js). Lab-only shaders for planets, suns and stations live in their own modules; asteroids in rocks.js, shared.
 
 // ---------- common: noise, full-screen pass, starfield ----------
 const NOISE = `
@@ -9,6 +9,19 @@ float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
   return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
 float fbm(vec2 p){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*vn(p); p=p*2.03+1.3; a*=.5; } return s; }`;
 
+// 3D value noise, fbm, ridged noise and Worley cells, for the suns' and the rocks' shaders (rocks.js)
+const NOISE3 = `
+float h31(vec3 p){ p = fract(p*.3183099+.1); p *= 17.; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float n3(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
+  return mix(mix(mix(h31(i),h31(i+vec3(1,0,0)),f.x), mix(h31(i+vec3(0,1,0)),h31(i+vec3(1,1,0)),f.x), f.y),
+             mix(mix(h31(i+vec3(0,0,1)),h31(i+vec3(1,0,1)),f.x), mix(h31(i+vec3(0,1,1)),h31(i+vec3(1,1,1)),f.x), f.y), f.z); }
+float fbm3(vec3 p){ float s=0., a=.5; for(int i=0;i<6;i++){ s+=a*n3(p); p=p*2.02+vec3(1.7,9.2,3.1); a*=.5; } return s/.984; }
+float ridge3(vec3 p){ float s=0., a=.5; for(int i=0;i<5;i++){ float n=1.-abs(n3(p)*2.-1.); s+=a*n*n; p=p*2.03+vec3(5.1,1.3,7.7); a*=.5; } return s; }
+vec2 worley3(vec3 p){ vec3 i=floor(p), f=fract(p); float d1=8., d2=8.;
+  for(int z=-1;z<=1;z++) for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++){
+    vec3 g=vec3(float(x),float(y),float(z)); vec3 o=vec3(h31(i+g),h31(i+g+17.1),h31(i+g+31.7));
+    float d=length(g+o-f); if(d<d1){ d2=d1; d1=d; } else if(d<d2) d2=d; }
+  return vec2(d1,d2); }`;
 const FS_VS = `#version 300 es
 in vec2 aPos; out vec2 vUv; void main(){ vUv=aPos*0.5+0.5; gl_Position=vec4(aPos,0.,1.); }`;
 

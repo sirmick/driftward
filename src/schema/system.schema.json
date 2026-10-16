@@ -442,6 +442,110 @@
         }
       }
     },
+    "belts": {
+      "type": "array",
+      "description": "Asteroid belts and fields: scenery in M1 (drawn with the lab's rocks, src/rocks.js), listed in the location list in orbital order and flown to by the autopilot; mining targets to come (M3). Ships fly through them. At most 4.",
+      "default": [],
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "orbit"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "kind": {
+            "description": "A belt is a ring of rocks round its parent; a field is a cluster at one point of an orbit.",
+            "enum": [
+              "belt",
+              "field"
+            ],
+            "default": "belt"
+          },
+          "parent": {
+            "description": "Id of the body it circles; omit to circle the star.",
+            "type": "string",
+            "default": ""
+          },
+          "orbit": {
+            "type": "object",
+            "required": [
+              "radius"
+            ],
+            "properties": {
+              "radius": {
+                "description": "A belt: the middle of its ring. A field: how far its centre is from the parent.",
+                "type": "number",
+                "minimum": 1500,
+                "maximum": 60000
+              },
+              "angle": {
+                "description": "A field: where its centre is on the orbit. A belt ignores it.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360,
+                "default": 0
+              }
+            }
+          },
+          "width": {
+            "description": "A belt: the ring's width. A field: its diameter. Metres.",
+            "type": "number",
+            "minimum": 300,
+            "maximum": 12000,
+            "default": 2400
+          },
+          "density": {
+            "description": "How crowded: 1 is a rock every 150 m or so, 0.1 a scattering.",
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 1,
+            "default": 0.5
+          },
+          "rocks": {
+            "description": "What the rocks are made of (the lab's compositions), the first commonest.",
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "items": {
+              "enum": [
+                "carbon",
+                "silicate",
+                "metal",
+                "basalt",
+                "iron",
+                "olivine",
+                "icy",
+                "crystal",
+                "gold",
+                "cobalt"
+              ]
+            },
+            "default": [
+              "silicate",
+              "carbon"
+            ]
+          },
+          "seed": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 1
+          }
+        }
+      }
+    },
     "traffic": {
       "description": "Ambient traffic (the Book's Traffic chapter): local ships between the ports, through traffic in from and out to the jump zones, and ships loitering round their ports. Which hulls fly is the mix; the core decides when and where.",
       "type": "object",

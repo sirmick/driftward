@@ -20,7 +20,7 @@
 
 use crate::market::MAX_GOODS;
 use crate::math::{atan2, cos, exp, hypot, ln, sin, TAU};
-use crate::port::{BODY_STAR, BODY_STATION, DESCENT_S, DONE, LAUNCH_S};
+use crate::port::{BODY_BELT, BODY_FIELD, BODY_STAR, BODY_STATION, DESCENT_S, DONE, LAUNCH_S};
 use crate::world::{World, DT, P};
 
 /// Local roles (rows of the local lanes; their shares are params).
@@ -108,15 +108,16 @@ impl World {
     }
 
     /// A waypoint round the body that intrudes deepest into its clearance circle (the star's 2 radii, others' 1.6)
-    /// along the straight line from `a` to `e`, if any. Bodies in `skip`, and any whose clearance holds `a` (the one
-    /// being left), are ignored. Traffic routes and the player's autopilot both steer by it.
+    /// along the straight line from `a` to `e`, if any. Bodies in `skip`, any whose clearance holds `a` (the one being
+    /// left), and belts and fields (ships fly through them), are ignored. Traffic routes and the player's autopilot
+    /// both steer by it.
     pub fn detour(&self, a: (f64, f64), e: (f64, f64), skip: [usize; 2]) -> Option<(f64, f64)> {
         let b = &self.bodies;
         let (sx, sy) = (e.0 - a.0, e.1 - a.1);
         let len2 = (sx * sx + sy * sy).max(1e-6);
         let mut worst: Option<(f64, f64, f64, f64, f64, f64)> = None; // intrusion, closest point x, y, centre x, y, clearance
         for j in 0..self.n_bodies {
-            if skip.contains(&j) { continue; }
+            if skip.contains(&j) || b.kind[j] == BODY_BELT || b.kind[j] == BODY_FIELD { continue; }
             let clear = b.r[j] * if b.kind[j] == BODY_STAR { 2.0 } else { 1.6 };
             if hypot(a.0 - b.x[j], a.1 - b.y[j]) < clear { continue; }
             let t = (((b.x[j] - a.0) * sx + (b.y[j] - a.1) * sy) / len2).clamp(0.0, 1.0);

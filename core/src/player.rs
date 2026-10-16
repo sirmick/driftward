@@ -11,10 +11,11 @@
 //!
 //! The fly-to autopilot (the Book's, from the system map; port.rs CMD_AUTOPILOT) flies under full assist: it heads for
 //! the target body, round the star or any planet in the way (traffic.rs `detour`), and brakes to stop slow over it,
-//! ready to land. Touching thrust, reverse or turn, or leaving full assist, hands control back.
+//! ready to land. A belt's target is the nearest point of its ring. Touching thrust, reverse or turn, or leaving full
+//! assist, hands control back.
 
 use crate::flight::{dir_cap, heading};
-use crate::port::BODY_STATION;
+use crate::port::{BODY_BELT, BODY_STATION};
 use crate::math::{atan2, clamp1, hypot, wrap};
 use crate::world::{World, DT, P};
 
@@ -84,19 +85,29 @@ pub fn control(w: &mut World) {
     w.game.set[0] = set;
 }
 
+/// Where to fly to reach body `j` from (x, y): its centre, or for a belt the nearest point of its ring.
+pub fn nav_point(w: &World, j: usize, x: f64, y: f64) -> (f64, f64) {
+    let (bx, by) = (w.bodies.x[j], w.bodies.y[j]);
+    if w.bodies.kind[j] != BODY_BELT { return (bx, by); }
+    let (dx, dy) = (x - bx, y - by);
+    let d = hypot(dx, dy);
+    if d < 1e-6 { return (bx + w.bodies.r[j], by); }
+    (bx + dx / d * w.bodies.r[j], by + dy / d * w.bodies.r[j])
+}
+
 /// The autopilot's tick: a desired velocity toward the next point (a waypoint round an obstacle, or the target),
 /// capped by the hull's top speed and by a braking curve that reaches half the landing limit at `stop` metres out;
 /// there, slow, it disengages, holding still over the port.
 fn autopilot(w: &mut World, i: usize) {
     let j = (w.game.auto[0] - 1) as usize;
     let (x, y) = (w.ships.x[i], w.ships.y[i]);
-    let (bx, by) = (w.bodies.x[j], w.bodies.y[j]);
+    let (bx, by) = nav_point(w, j, x, y);
     let (tx, ty) = w.detour((x, y), (bx, by), [j, j]).unwrap_or((bx, by));
     (w.game.aim_x[0], w.game.aim_y[0]) = (tx, ty);
     let k = w.ships.kind[i] as usize;
     let (accel, vmax) = (w.types.accel[k], w.types.vmax[k]);
     let limit = if w.bodies.kind[j] == BODY_STATION { w.p(P::dock_speed) } else { w.p(P::land_speed) };
-    let stop = (w.bodies.r[j] * 0.25).max(80.0);
+    let stop = if w.bodies.kind[j] == BODY_BELT { 300.0 } else { (w.bodies.r[j] * 0.25).max(80.0) };
     let d_end = hypot(bx - x, by - y);
     let sp = hypot(w.ships.vx[i], w.ships.vy[i]);
     let s = &mut w.ships;
@@ -224,6 +235,32 @@ mod tests {
         w.command(CMD_AUTOPILOT, 0, 0);
         hold(&mut w, IN_ASSIST | IN_LEFT, 0.1);
         assert_eq!(w.game.auto[0], 0);
+    }
+
+    #[test]
+    fn autopilot_flies_through_a_field_to_the_nearest_point_of_a_belt() {
+        use crate::port::{BODY_FIELD, CMD_AUTOPILOT, OK};
+        let mut w = World::new(Config { max_ships: 2, max_types: 1, max_bodies: 2, env_n: 8, env_w: 1000.0 }, 1);
+        (w.types.accel[0], w.types.turn[0], w.types.vmax[0], w.types.well[0]) = (60.0, 1.5, 200.0, 0.35);
+        w.n_bodies = 2;
+        // a belt round the origin, 8 km out, and a field in the way, which is no obstacle
+        (w.bodies.r[0], w.bodies.kind[0]) = (8000.0, BODY_BELT);
+        (w.bodies.x[1], w.bodies.r[1], w.bodies.kind[1]) = (4000.0, 1500.0, BODY_FIELD);
+        (w.count, w.ships.alive[0], w.game.player[0]) = (1, 1, 0);
+        (w.ships.x[0], w.ships.y[0]) = (500.0, 300.0);
+        assert_eq!(nav_point(&w, 0, 500.0, 300.0), (8000.0 * 500.0 / hypot(500.0, 300.0), 8000.0 * 300.0 / hypot(500.0, 300.0)));
+        assert_eq!(w.command(CMD_AUTOPILOT, 0, 0), OK);
+        w.game.input[0] = IN_ASSIST;
+        let mut wide = 0.0f64;
+        for _ in 0..(300.0 / DT) as usize {
+            w.step();
+            wide = wide.max((w.ships.y[0] / w.ships.x[0] - 0.6).abs());
+            if w.game.auto[0] == 0 { break; }
+        }
+        assert_eq!(w.game.auto[0], 0, "never arrived: at {} {}", w.ships.x[0], w.ships.y[0]);
+        assert!(wide < 0.05, "it flew straight out through the field (strayed {wide} off the line)");
+        let d = hypot(w.ships.x[0], w.ships.y[0]);
+        assert!((d - 8000.0).abs() < 300.0 && hypot(w.ships.vx[0], w.ships.vy[0]) < w.p(P::land_speed), "stopped in the belt: {d} m out");
     }
 
     #[test]

@@ -39,7 +39,9 @@ const WORKERS = 3;
 // ---------- the system and its facts ----------
 const sysFile = `src/systems/${opt('system', 'm1')}.json`;
 const sysSchema = readJSON('src/schema/system.schema.json'), loreSchema = readJSON('src/schema/lore.schema.json');
-const { system: SYS, bodies: BODIES, notes: sysNotes } = loadSystem(readJSON(sysFile), sysSchema);
+const { system: SYS, bodies: ALL_BODIES, notes: sysNotes } = loadSystem(readJSON(sysFile), sysSchema);
+// asteroid belts and fields are not in the facts yet: the lore was written before them
+const BODIES = ALL_BODIES.filter(b => b.kind !== 'belt' && b.kind !== 'field');
 if (!SYS) { console.error(`${sysFile} is unusable:`, sysNotes); process.exit(1); }
 const ECON = readJSON('src/economy.json');
 const loreFile = path.join(root, 'src', 'lore', `${SYS.id}.json`), artDir = path.join(root, 'art', SYS.id);
