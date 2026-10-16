@@ -115,6 +115,15 @@ for k, f in (('worlds', 'worlds.json'), ('stories', 'stories.json')):
     if (src / 'galaxy' / f).exists(): galaxy_data['game'][k] = json.loads((src / 'galaxy' / f).read_text())
 # and the regions' hand-written notes (src/lore/regions/<region>.md), for the debug screen's Regions tab
 galaxy_data['game']['regionNotes'] = {f.stem: f.read_text() for f in sorted((src / 'lore' / 'regions').glob('*.md'))}
+# the setting (canon for all the lore), and how the stories were written (each call: model, cost, problems, prompt; the
+# setting, sent with every prompt, cut out of them: it is shown once)
+setting_md = (src / 'lore' / 'setting.md').read_text()
+galaxy_data['game']['setting'] = setting_md
+if (src / 'galaxy' / 'stories.log.json').exists():
+    slog = json.loads((src / 'galaxy' / 'stories.log.json').read_text())
+    for rec in slog:
+        for msg in rec.get('messages', []): msg['content'] = msg['content'].replace(setting_md, '[the setting: shown once, on the Regions tab]')
+    galaxy_data['game']['storiesLog'] = slog
 galaxy = json.dumps(galaxy_data, ensure_ascii=False, separators=(',', ':'))
 assert '</script' not in galaxy
 game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*SUNS*/', '/*MAP*/', '/*MAPPANEL*/', '/*JITTER*/', '/*PLAY*/']), '').replace('/*GALAXY*/', galaxy)

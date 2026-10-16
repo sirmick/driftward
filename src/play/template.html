@@ -232,6 +232,11 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 .dbg-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; }
 .dbg-person { display: grid; grid-template-columns: 120px 1fr; gap: 12px; }
 .dbg-person p { margin: 4px 0 !important; font-size: 12.5px; }
+.dbg-person-art { grid-column: 1 / -1; }
+.dbg-person-art small { display: block; margin: 2px 0 4px; }
+.dbg-person img { width: 100%; border-radius: 5px; border: 1px solid var(--line); display: block; }
+.dbg-summary { margin: 0 0 12px; padding-left: 18px; max-width: 1100px; color: #c4ccd6; font-size: 13px; }
+.dbg-summary li { margin: 0 0 4px; }
 .dbg-grid th.here, .dbg-grid td.here { background: rgba(226,184,102,.08); }
 .dbg-grid td.best { outline: 1px solid var(--amber); outline-offset: -2px; }
 /* the Ships tab: see-through, so the hulls the game's canvas draws behind it show; the rest of the page hides */
@@ -403,7 +408,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
     <div class="setting">Bloom <select id="s-bloom"><option value="1">On</option><option value="0">Off</option></select></div>
     <div class="setting">Navigation overlay at start <select id="s-nav"><option value="0">Off</option><option value="1">On</option></select></div>
     <div class="setting">Assist level at start <select id="s-assist"><option value="0">Full assist</option><option value="1">Drift off</option><option value="2">Full off</option></select></div>
-    <div class="setting">Render resolution <select id="s-quality"><option value="0">Auto (drops when frames run late)</option><option value="1">Full</option><option value="0.75">75%</option><option value="0.5">50%</option></select></div>
+    <div class="setting">Render resolution <select id="s-quality"><option value="0">Auto (drops when frames run late)</option><option value="1">Full</option><option value="0.85">85%</option><option value="0.75">75%</option><option value="0.62">62%</option><option value="0.5">50%</option></select></div>
     <div class="setting">Debug readout (tick, fps) <select id="s-debug"><option value="1">On</option><option value="0">Off</option></select></div>
     <button type="button" class="item primary" id="s-done">Done<span>Esc</span></button>
     <p class="note">Settings are kept in this browser.</p>

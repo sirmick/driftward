@@ -275,7 +275,7 @@ function makeStarKit(gl, compile, draw) {
     if (T.kind === 'hole') {
       const u = BH.u; gl.useProgram(BH.p);
       gl.uniform2f(u.uRes, RW, RH); gl.uniform1f(u.uTime, o.t);
-      gl.uniform3fv(u.uStar, o.sky.star); gl.uniform3fv(u.uNeb, o.sky.neb); gl.uniform2f(u.uSunDir, o.sky.sd[0], o.sky.sd[1]); gl.uniform2f(u.uOff, o.sky.off[0], o.sky.off[1]);
+      gl.uniform3fv(u.uStar, o.sky.star); gl.uniform3fv(u.uNeb, o.sky.neb); gl.uniform2f(u.uSunDir, o.sky.sd[0], o.sky.sd[1]); gl.uniform2f(u.uOff, o.sky.off[0], o.sky.off[1]); gl.uniform1f(u.uRS, o.sky.rs || 1);
       gl.uniform2f(u.uCenter, o.cx, o.cy); gl.uniform1f(u.uRpx, o.rpx); gl.uniform1f(u.uExt, o.ext);
       gl.uniform2f(u.uCenterPx, o.cx, o.cy); gl.uniform1f(u.uPxPerRs, o.rpx);
       gl.uniform3fv(u.uN, vecFromTilt(s.diskTilt, s.diskAngle));

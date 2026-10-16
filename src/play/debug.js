@@ -101,7 +101,9 @@ function makeDebug(ctx) {
         + `<p class="dbg-sub">Rumors</p>${p.rumors.map(r => `<p>${e(r)}</p>`).join('')}` : '<p class="dbg-note">No lore for this port.</p>';
       const people = p ? p.people.map(q => {
         const f = artFiles.find(a => a.kind === 'portrait' && a.id === q.id);
-        return `<div class="dbg-person">${f ? `<div>${imageBlock(f)}</div>` : '<div class="dbg-note">no portrait</div>'}<div><b>${e(q.name)}</b> <code>${e(q.id)}</code><br><small>${e(q.role)}</small><p>${e(q.text)}</p><p><i>“${e(q.line)}”</i></p><p><small>Look: ${e(q.look)}</small></p></div></div>`;
+        // the portrait beside who they are; how it was made (its record and prompts) under both, full width
+        return `<div class="dbg-person">${f ? `<div><img src="${e(f.src)}" alt="${e(f.name)}" loading="lazy"></div>` : '<div class="dbg-note">no portrait</div>'}<div><b>${e(q.name)}</b> <code>${e(q.id)}</code><br><small>${e(q.role)}</small><p>${e(q.text)}</p><p><i>“${e(q.line)}”</i></p><p><small>Look: ${e(q.look)}</small></p></div>`
+          + (f ? `<div class="dbg-person-art">${artMeta(f)}${f.rec.prompt ? fold('Own prompt part', text(ownPart(f)), false) + fold('Full prompt', text(f.rec.prompt), false) : '<small class="warn">no log entry</small>'}</div>` : '') + `</div>`;
       }).join('') : '';
       return `<div class="dbg-port"><h4>${e(b.port.name)} <small>${e(b.name)} · <code>${e(b.id)}</code></small></h4>`
         + `<div class="dbg-cols"><div>${bodyCol(b)}</div><div>${loreCol}</div><div class="dbg-vista">${vista ? imageBlock(vista) : '<p class="dbg-note">No vista: the port shows the procedural view.</p>'}</div></div>`
@@ -114,6 +116,18 @@ function makeDebug(ctx) {
       }).join('')}</tbody></table>`);
 
     // the files, the only place raw JSON appears
+    // this system on the galaxy map: its region, its world (people, ports, wealth) and its story
+    try {
+      const GG = galaxy().game, me = GG.systems.find(c => c.system === current().id || c.name === SYS.name);
+      if (me) {
+        const w = ((GG.worlds || {}).systems || {})[me.star], st = ((GG.stories || {}).systems || {})[me.star];
+        add('galaxy', 'Galaxy', kv([['Region', `${e((GG.regions || {})[me.region] || me.region)}`], ['Held by', e((GG.factions || {})[me.faction] || me.status)],
+          ['People', w ? `${e(people(w.population))}, ${e(w.tier)}` : ''], ['Ports', w ? e(w.roles.join(', ')) : ''],
+          ['Wealth, security, unrest', w ? `${w.wealth}, ${w.security}, ${w.unrest}` : ''], ['Settled', e(me.settled || '')], ['Jumps from Sol', e(me.jumps)]])
+          + (st ? `<p class="dbg-sub">Story</p><ul>${st.bullets.map(b => `<li>${e(b)}</li>`).join('')}</ul>` : '')
+          + `<p><button type="button" class="dbg-link" data-planet="${me.star}">Open on the Planets tab</button> · <button type="button" class="dbg-link" data-star="${me.star}">on the Map</button></p>`);
+      }
+    } catch (err) { /* no galaxy in this build */ }
     add('raw', 'Raw', fold('System file <code>src/systems/</code>, as written', json(raw))
       + (L ? fold(`Lore <code>src/lore/${e(SYS.id)}.json</code>`, json(L)) : '')
       + (LL ? fold(`Lore record <code>src/lore/${e(SYS.id)}.log.json</code>: facts, messages, run`, json(LL)) : '')
@@ -324,8 +338,13 @@ function makeDebug(ctx) {
     try { R = regionData(); } catch (err) { return '<p class="dbg-note">No galaxy in this build.</p>'; }
     const { G, W, ST, names, by, order, fac, notes } = R;
     const told = k => by[k].filter(c => ST.systems[c.star]).length;
+    const LOG = G.storiesLog || [];
     const list = order.map(k => {
       const sys = by[k], settled = sys.filter(c => c.status === 'inhabited'), tr = W.regions[k] || {}, story = ST.regions[k];
+      const calls = LOG.filter(r => r.region === k);
+      const written = calls.length ? fold(`How its stories were written: ${calls.length} call${calls.length > 1 ? 's' : ''}, ${money(calls.reduce((n, r) => n + (r.cost || 0), 0))}`,
+        calls.map(r => `<p><small>${e(r.date)} · attempt ${r.attempt} · ${e(r.served || r.model)} · ${money(r.cost)}${r.problems.length ? ` · <span class="warn">${r.problems.length} problem(s): ${e(r.problems.slice(0, 3).join('; '))}</span>` : ' · passed'}</small></p>`
+          + r.messages.map(m => fold(e(m.role === 'system' ? 'The rules' : 'The facts sent'), text(m.content), false)).join('')).join(''), false) : '';
       const owners = {}; settled.forEach(c => { owners[c.faction] = (owners[c.faction] || 0) + 1; });
       const facts = kv([
         ['Systems', `${sys.length} (${settled.length} settled${sys.length - settled.length ? `, ${sys.length - settled.length} other` : ''})`],
@@ -337,12 +356,18 @@ function makeDebug(ctx) {
       const authored = notes[k] ? fold('Hand-written notes (src/lore/regions/' + e(k) + '.md)', md(notes[k]), true) : '';
       const links = `<p class="dbg-sub">Systems (${sys.length})</p><ul class="dbg-syslist">${sys.map(c => `<li><button type="button" class="dbg-link${c.status === 'dead' ? ' dead' : ''}" data-planet="${c.star}" title="Open on the Planets tab">${e(c.name)}</button>`
         + ` <small>${e(c.faction ? fac[c.faction] : STATUS_NAME[c.status] || c.status)}${c.status === 'dead' && c.faction ? ', dead' : ''}</small></li>`).join('')}</ul>`;
-      return { id: 'rg-' + k, title: names[k], body: facts + summary + authored + links };
+      return { id: 'rg-' + k, title: names[k], body: facts + summary + authored + written + links };
     });
+    if (G.setting) list.unshift({ id: 'rg-setting', title: 'The setting', body: `<p class="dbg-note">src/lore/setting.md: canon for every system's lore and every region's stories.</p>` + fold('The setting', md(G.setting), false) });
     const total = Object.values(W.regions).reduce((n, r) => n + (r.population || 0), 0);
     const top = `<div class="dbg-head-line"><span><b>Regions</b></span><span>${order.length} regions · ${G.systems.length} systems · ${people(total)} people in the regions with trade</span>`
       + `<span>stories for ${Object.keys(ST.systems).length} systems in ${Object.keys(ST.regions).length} regions</span><span>tools/galaxy.py, worlds.py, stories.py; docs/galaxy.md</span></div>`;
     return sections(list, top);
+  }
+  // links to a system: on the Planets tab (data-planet) or the Map (data-star)
+  function mountLinks(pane) {
+    pane.querySelectorAll('.dbg-link[data-planet]').forEach(b => { b.onclick = () => { pendingPlanet = +b.dataset.planet; show('planets'); }; });
+    pane.querySelectorAll('.dbg-link[data-star]').forEach(b => { b.onclick = () => { pendingStar = +b.dataset.star; show('map'); }; });
   }
   function mountRegions(pane) {
     pane.querySelectorAll('.dbg-link[data-planet]').forEach(b => { b.onclick = () => { pendingPlanet = +b.dataset.planet; show('planets'); }; });
@@ -386,7 +411,8 @@ function makeDebug(ctx) {
         ['Year', 'When it was settled (or charted, emptied, lost)'], ['Story', 'Its backstory (tools/stories.py)']];
       const table = `<table class="dbg-grid dbg-planets"><colgroup><col class="c-sys"><col class="c-who"><col class="c-pop"><col class="c-ports"><col class="c-m"><col class="c-m"><col class="c-m"><col class="c-year"><col class="c-story"></colgroup>`
         + `<thead><tr>${head.map(([h, tip], n) => `<th${n === 2 || (n >= 4 && n <= 7) ? ' class="n"' : ''} title="${e(tip)}">${e(h)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
-      return { id: 'pl-' + k, title: names[k], body: table };
+      const sum = (ST.regions[k] || {}).summary;
+      return { id: 'pl-' + k, title: names[k], body: (sum && sum.length ? `<ul class="dbg-summary">${sum.map(b => `<li>${e(b)}</li>`).join('')}</ul>` : '') + table };
     });
     const top = `<div class="dbg-head-line"><span><b>Planets</b></span><span>${G.systems.length} systems in ${order.length} regions · ${Object.keys(W.systems).length} settled</span>`
       + `<span>people, ports and wealth from tools/worlds.py · stories from tools/stories.py · a name opens the system on the Map</span></div>`;
@@ -430,7 +456,7 @@ function makeDebug(ctx) {
     return starMap;
   }
 
-  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }, { id: 'regions', name: 'Regions', render: regionsTab, mount: mountRegions, fixed: true }, { id: 'planets', name: 'Planets', render: planetsTab, mount: mountPlanets, fixed: true }, { id: 'map', name: 'Map', render: mapTab, mount: mountMap, clear: true }];
+  const TABS = [{ id: 'content', name: 'Content', render: content, mount: mountLinks, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }, { id: 'regions', name: 'Regions', render: regionsTab, mount: mountRegions, fixed: true }, { id: 'planets', name: 'Planets', render: planetsTab, mount: mountPlanets, fixed: true }, { id: 'map', name: 'Map', render: mapTab, mount: mountMap, clear: true }];
   let tab = TABS[0].id;
   const cache = new Map();
   function show(id) {
@@ -452,7 +478,7 @@ function makeDebug(ctx) {
   // its body's name, its port's name or its id, a system its name or id. With no @, places in the current system
   // come first. A left side of * (or nothing, before an @) lists the systems themselves: one each, arriving over its
   // start port.
-  let jump = null, jsel = 0, jmatches = [];
+  let jump = null, jsel = 0, jmatches = [], jlistAsked = false;
   const jin = el.querySelector('#dbg-jump'), jlist = el.querySelector('.dbg-jump-list');
   const norm = v => String(v || '').toLowerCase().replace(/\s+/g, ' ').trim();
   const score = (q, ...names) => {
@@ -477,16 +503,16 @@ function makeDebug(ctx) {
         ? `<b>*</b><span>@${e(p.system)}</span><small class="k">arrive over ${e(p.port || p.place)}</small>`
         : `<b>${e(p.place)}</b>${p.port && p.port !== p.place ? ` <small>${e(p.port)}</small>` : ''}<span>@${e(p.system)}</span><small class="k">${e(p.kind)}</small>`}</button>`).join('')
       || '<p class="dbg-note">Nothing matches</p>';
-    jlist.hidden = document.activeElement !== jin;
+    jlist.hidden = document.activeElement !== jin || (!jin.value && !jlistAsked); // the list once something is typed, or asked for (down)
   }
   function jumpGo(p) { if (p && jump.go(p.k, p.j) === 0) { jin.value = ''; jlist.hidden = true; } }
   function close() { el.hidden = true; document.body.classList.remove('dbg-clear'); jin.blur(); }
   jin.addEventListener('input', () => { jsel = 0; jumpRender(); });
   jin.addEventListener('focus', jumpRender);
-  jin.addEventListener('blur', () => setTimeout(() => { jlist.hidden = true; }, 150));
+  jin.addEventListener('blur', () => setTimeout(() => { jlist.hidden = true; jlistAsked = false; }, 150));
   jin.addEventListener('keydown', ev => {
     if (ev.code === 'Backquote' || (ev.key === 'Escape' && !jin.value)) { ev.preventDefault(); ev.stopPropagation(); close(); return; }
-    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { jsel = (jsel + (ev.key === 'ArrowDown' ? 1 : jmatches.length - 1)) % Math.max(1, jmatches.length); jumpRender(); ev.preventDefault(); }
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { if (jlist.hidden) { jlistAsked = true; jumpRender(); ev.preventDefault(); return; } jsel = (jsel + (ev.key === 'ArrowDown' ? 1 : jmatches.length - 1)) % Math.max(1, jmatches.length); jumpRender(); ev.preventDefault(); }
     else if (ev.key === 'Enter') { jumpGo(jmatches[jsel]); ev.preventDefault(); }
     else if (ev.key === 'Tab') {
       const p = jmatches[jsel]; if (!p) return;

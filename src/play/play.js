@@ -1288,7 +1288,7 @@ CORE_READY.then(CORE => {
     gl.uniform2f(P.bg.u.uRes, TW, TH); gl.uniform1f(P.bg.u.uTime, t);
     gl.uniform3fv(P.bg.u.uStar, star.col); gl.uniform3fv(P.bg.u.uNeb, star.neb);
     gl.uniform2f(P.bg.u.uSunDir, sunCam[0] / sl, sunCam[1] / sl);
-    gl.uniform2f(P.bg.u.uOff, cx * ss * 0.04, cy * ss * 0.04);
+    gl.uniform2f(P.bg.u.uOff, cx * ss * 0.04, cy * ss * 0.04); gl.uniform1f(P.bg.u.uRS, renderScale); starSky.rs = renderScale;
     // dim the stars round the (up to four) nearest worlds whose debris could be on screen
     { let nd = 0; dimU.fill(0);
       const rank = p => Math.hypot(p.x - cx, p.y - cy) / p.r;

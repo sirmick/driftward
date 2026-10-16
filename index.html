@@ -4352,7 +4352,9 @@ const FS_VS = `#version 300 es
 in vec2 aPos; out vec2 vUv; void main(){ vUv=aPos*0.5+0.5; gl_Position=vec4(aPos,0.,1.); }`;
 
 // Shared sky: the plain background and the black-hole lens both sample it, so lensed stars match the sky around them.
-const SKY = `uniform vec2 uRes; uniform float uTime; uniform vec3 uStar; uniform vec3 uNeb; uniform vec2 uSunDir; uniform vec2 uOff;
+// px is in scene-target pixels; uRS is the target's scale against the canvas (the render resolution, 0: full), so the
+// stars sit at the same canvas pixels whatever the resolution
+const SKY = `uniform vec2 uRes; uniform float uTime; uniform vec3 uStar; uniform vec3 uNeb; uniform vec2 uSunDir; uniform vec2 uOff; uniform float uRS;
 ${NOISE}
 float starK = 1.; // the stars' brightness (the background dims them near worlds, so orbiting debris reads)
 vec3 sky(vec2 px){
@@ -4364,7 +4366,7 @@ vec3 sky(vec2 px){
   float sd = max(dot(normalize(q+1e-4), uSunDir),0.);
   c += pow(uStar,vec3(2.2))*0.012*pow(sd,4.)*smoothstep(0.,.9,length(q));
   for(int l=0;l<3;l++){
-    float sc = 90.+float(l)*70.; vec2 g = px/sc*(1.+float(l)*.37) + float(l)*13.7; vec2 id=floor(g); vec2 f=fract(g)-.5;
+    float sc = 90.+float(l)*70.; vec2 g = px/(uRS > 0. ? uRS : 1.)/sc*(1.+float(l)*.37) + float(l)*13.7; vec2 id=floor(g); vec2 f=fract(g)-.5;
     float r = h21(id+float(l)); if(r>.18) continue;
     vec2 o2 = vec2(h21(id+3.1),h21(id+7.3))-.5; float d=length(f-o2*.7);
     float tw = .75+.25*sin(uTime*(1.+r*9.)+r*40.);
@@ -7292,7 +7294,7 @@ function makeStarKit(gl, compile, draw) {
     if (T.kind === 'hole') {
       const u = BH.u; gl.useProgram(BH.p);
       gl.uniform2f(u.uRes, RW, RH); gl.uniform1f(u.uTime, o.t);
-      gl.uniform3fv(u.uStar, o.sky.star); gl.uniform3fv(u.uNeb, o.sky.neb); gl.uniform2f(u.uSunDir, o.sky.sd[0], o.sky.sd[1]); gl.uniform2f(u.uOff, o.sky.off[0], o.sky.off[1]);
+      gl.uniform3fv(u.uStar, o.sky.star); gl.uniform3fv(u.uNeb, o.sky.neb); gl.uniform2f(u.uSunDir, o.sky.sd[0], o.sky.sd[1]); gl.uniform2f(u.uOff, o.sky.off[0], o.sky.off[1]); gl.uniform1f(u.uRS, o.sky.rs || 1);
       gl.uniform2f(u.uCenter, o.cx, o.cy); gl.uniform1f(u.uRpx, o.rpx); gl.uniform1f(u.uExt, o.ext);
       gl.uniform2f(u.uCenterPx, o.cx, o.cy); gl.uniform1f(u.uPxPerRs, o.rpx);
       gl.uniform3fv(u.uN, vecFromTilt(s.diskTilt, s.diskAngle));

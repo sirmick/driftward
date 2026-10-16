@@ -26,7 +26,9 @@ const FS_VS = `#version 300 es
 in vec2 aPos; out vec2 vUv; void main(){ vUv=aPos*0.5+0.5; gl_Position=vec4(aPos,0.,1.); }`;
 
 // Shared sky: the plain background and the black-hole lens both sample it, so lensed stars match the sky around them.
-const SKY = `uniform vec2 uRes; uniform float uTime; uniform vec3 uStar; uniform vec3 uNeb; uniform vec2 uSunDir; uniform vec2 uOff;
+// px is in scene-target pixels; uRS is the target's scale against the canvas (the render resolution, 0: full), so the
+// stars sit at the same canvas pixels whatever the resolution
+const SKY = `uniform vec2 uRes; uniform float uTime; uniform vec3 uStar; uniform vec3 uNeb; uniform vec2 uSunDir; uniform vec2 uOff; uniform float uRS;
 ${NOISE}
 float starK = 1.; // the stars' brightness (the background dims them near worlds, so orbiting debris reads)
 vec3 sky(vec2 px){
@@ -38,7 +40,7 @@ vec3 sky(vec2 px){
   float sd = max(dot(normalize(q+1e-4), uSunDir),0.);
   c += pow(uStar,vec3(2.2))*0.012*pow(sd,4.)*smoothstep(0.,.9,length(q));
   for(int l=0;l<3;l++){
-    float sc = 90.+float(l)*70.; vec2 g = px/sc*(1.+float(l)*.37) + float(l)*13.7; vec2 id=floor(g); vec2 f=fract(g)-.5;
+    float sc = 90.+float(l)*70.; vec2 g = px/(uRS > 0. ? uRS : 1.)/sc*(1.+float(l)*.37) + float(l)*13.7; vec2 id=floor(g); vec2 f=fract(g)-.5;
     float r = h21(id+float(l)); if(r>.18) continue;
     vec2 o2 = vec2(h21(id+3.1),h21(id+7.3))-.5; float d=length(f-o2*.7);
     float tw = .75+.25*sin(uTime*(1.+r*9.)+r*40.);

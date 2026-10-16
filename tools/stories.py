@@ -74,9 +74,11 @@ def region_job(rk):
     here = [c for c in systems if c.get('region') == rk]
     settled = [c for c in here if c['status'] in ('inhabited', 'living')]  # people, or the Bloom's living worlds
     small = len(here) <= 12
-    if here and all(c['group'] == 'drift' for c in here):
-        human = lambda c: any(by_star[o]['group'] not in ('drift',) for o, _ in nb[c['star']])
-        dead = sorted(here, key=lambda c: (not c.get('hazard'), not human(c), -(c.get('depth') or 0)))[:DRIFT_PICK]
+    drift = [c for c in here if c['group'] == 'drift']
+    if drift and len(drift) * 2 >= len(here):  # a Drift sector: its handful told, and any notable others in it
+        human = lambda c: any(by_star[o]['group'] != 'drift' for o, _ in nb[c['star']])
+        dead = sorted(drift, key=lambda c: (not c.get('hazard'), not human(c), -(c.get('depth') or 0)))[:DRIFT_PICK]
+        dead += [c for c in here if c['group'] != 'drift' and c not in settled and notable(c, False)]
     else:
         dead = [c for c in here if c not in settled and (notable(c, small) or c['status'] == 'held')]
     trade = W['regions'].get(rk, {})

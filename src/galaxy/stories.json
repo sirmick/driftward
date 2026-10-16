@@ -31,6 +31,265 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16"
+  },
+  "anvil": {
+   "summary": [
+    "The Anvil is the Ironhull Compact's heartland: thirty worlds and towns of miners, refiners and forge crews, about four billion people, strung across the middle and outer rings among a lot of dead red dwarfs.",
+    "It ships ore, metals, chemicals, alloys and components inward, and lives on imported food, water, fuel, medicine and anything that comes in a box, so every hauler's schedule is a political matter.",
+    "The Compact levies are paid to the Federation, but the strikes are remembered here, and Freeflag sympathy runs high along the Reach and Shoals borders, where lanes dip into Freeflag space.",
+    "Since 2524 the Anvil has had a hole in its flank: the quarantined Glass systems sit beside Chi Draconis, and the families of Varrow and Hesk still have no answers.",
+    "The outer Anvil, from Tarn and Mattock to GJ 3920, opens onto the Drift, which means smugglers, salvagers and Shadow rumours arrive together."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "beacon-cells": {
+   "summary": [
+    "Beacon Cells is a thin pocket of the outer ring: one living system, Dawnward, and four dead ones strung around a blue giant that makes the whole place easy to hide in.",
+    "Nearly all of it is Freeflag's, and it trades in what a rebellion needs: quiet berths, patched hulls, fuel, and silence about who was here.",
+    "The only way in from the Anvil is the lane out of Onkaria, held by the Ironhull Compact, so the region's one real border runs through a choke point.",
+    "Freeflag crews and Ironhull haulers share it more easily than their governments admit, since many Ironhulls remember the strikes and Tarrow.",
+    "What it lacks is anything worth a navy's attention, which is why Freeflag chose it."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "black-shelf": {
+   "summary": [
+    "The Black Shelf is a wide scatter of fifty-nine dead systems one jump past the last human beacons, charted by survey ships and visited mostly by people who cannot afford to be seen.",
+    "Nobody settles here: the stars are red dwarfs, white dwarfs and the odd bloated giant, and the planets are either scorched, frozen or not worth the fuel to reach.",
+    "What trade there is runs through it rather than to it, with haulers cutting between the Anvil, the Long Dark and the Shoals to dodge navy inspection and Prism's tolls.",
+    "Salvagers work the old survey buoys and abandoned claim markers, and the lanes are known mainly for being empty, which suits anyone who wants to vanish or wait."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "blackspace": {
+   "summary": [
+    "Blackspace is a thin scatter of Blackhull havens, about eight million people in four settled systems, most of them at Low Tide, with a string of dead red dwarfs in between.",
+    "Its one export is water, cut as ice and hauled out by crews who ask little of their buyers; everything else is imported.",
+    "Food, fuel, components, goods and medicine all come in from outside, because nothing here grows or gets built, and the ports charge accordingly in favours and silence.",
+    "The havens are bound by the Blackhull trade: shared hulls, shared grudges, and a habit of sheltering anyone the Federation or Prism wants to find.",
+    "Distance divides them: the settled systems sit days apart behind empty stars, with the Concord Worlds, the Drift, the Shoals and the Far Lanterns all pressing on the edges."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "blightspace": {
+   "summary": [
+    "Blightspace is twenty-one systems of dim stars and dead ends beyond Corran Gate, charted by the navy as held by the Shadow since 2519 and settled by nobody.",
+    "Nothing is traded here and nobody sails here on business: what the navy knows comes from picket logs and long-range scans, and the rest is guesswork.",
+    "Three ways in are known: the lane from emptied Corran into GJ 4074, and two lanes from emptied Mallory, at 44 Ophiuchi and Gl 654.3, with a third into Gl 695.1.",
+    "Pulsars, black holes and a red giant make the region hazardous even with the Shadow left out, which is part of why the navy has never tried to retake any of it."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "cells": {
+   "summary": [
+    "The Cells are five outer-ring systems held by Freeflag, each cut off from the rest of the rebellion and from each other by dead stars, and about eight million people live in them.",
+    "They sell water, fuel and chemicals, mostly from ice haulers and gas skimmers, and buy in food, components, goods and medicine through lanes that are short of friends.",
+    "Bread alone holds three-quarters of the people; Free Harbor holds most of the rest, and the other three systems together hold only a few thousand more than a large ship's company.",
+    "What binds the Cells is Tarrow in 2499 and a shared refusal to let a Federation ship dock; what divides them is distance, thin supply and a long habit of arguing."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "concord": {
+   "summary": [
+    "The Concord Worlds are the Federation's larder: thirty settled systems and about fifty-seven billion people, most of them in the inner ring and fed from their own fields.",
+    "They sell food and manufactured goods and import almost everything else: water, metals, fuel, chemicals, alloys, components and medicine, hauled in largely from Ironhull mines and Prism's houses.",
+    "Sixty dead systems lie among the farms: white dwarfs, cold rocks and a red giant that serve as lane junctions, picket stations and, along the borders, hiding places.",
+    "Federation law and the navy bind the region, but its edges pull away: Blackhull havens at Low Tide, the Margins, Prism's border at Gl 445, and Freeflag's raids reaching towards Providence.",
+    "The Glass and the Shadow have not reached these worlds, but the navy's requisitioned freighters and Prism's core recall are already thinning the shipping that feeds them."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "corran-gate": {
+   "summary": [
+    "Corran Gate is a chain of five dead systems on the far edge of the outer ring, and nobody lives in any of them now.",
+    "Nothing is traded here. Three of the systems were settled by people with little else to try, and the Shadow emptied all three between 2521 and 2523.",
+    "The lanes run from The Long Watch through Gl 629.3 and The Metronome to the emptied systems, then out into Blightspace. The Federation holds the near end and has nothing at the far end.",
+    "Corran Gate is where the Shadow first came through, so the navy treats it as the front. Everyone further in treats it as somewhere they would rather not go."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "drift": {
+   "summary": [
+    "The Drift is ninety-odd dead or barely charted systems, mostly red dwarfs and cinders, wedged between nine settled regions and belonging to none of them.",
+    "Nobody lives here, so the trade is salvage, smuggled cargo and rumour, carried by crews who want a lane that no customs cutter bothers to watch.",
+    "Freeflag boats, Blackhull runners and navy pickets all use the same unmarked lanes, which keeps everyone polite and nobody honest.",
+    "Charts of the Drift are thin and out of date, and a captain who buys one should assume the survey was done in a hurry by someone short of fuel."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "far-lanterns": {
+   "summary": [
+    "The Far Lanterns is seventy dead stars strung between the Concord Worlds, Prism Research and the Bloom's Garden and Hedge, with not one settled system among them.",
+    "It trades in nothing but transit: salvagers, Blackhull runners and navy pickets use its lanes as back doors between the rings and the Drift.",
+    "Its stars are a spread of reds, browns and white dwarfs. Each was surveyed, found wanting and left on the charts, and the lanterns of the name are the dim beacons the survey ships left behind.",
+    "Every neighbour wants the lanes open and nobody wants the stars. Prism, the Federation, the Blackhull havens and the Bloom's borders all cross here, and nobody asks who is watching."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "furnace-deeps": {
+   "summary": [
+    "The Furnace Deeps is a short, hot chain of three systems: Chara, the one place anyone lives, then a Wolf-Rayet star, then a brown dwarf with nothing on it.",
+    "Its only trade is ore and refined metal, which Chara's refineries take from the mining systems of the neighbouring Anvil and ship back out along the same lanes.",
+    "The Deeps is Ironhull Compact space throughout, and it runs on Compact habits: levy paid on time, no questions asked of a hull that looks the part.",
+    "What divides it is distance: Chara is a crowded town of working people, while the two systems beyond it are empty, dangerous or both, and nobody goes there without a reason."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "garden": {
+   "summary": [
+    "The Garden is Bloom space: twenty living worlds charted by human surveyors since contact in 2376, set among twenty-one dead systems that nobody has ever settled or been asked to.",
+    "Humans come as travellers and surveyors under the Accord, so there are no colonies, no mines and no flags, only survey stations, buoys and the occasional carrier on a licensed run.",
+    "What trades here is mostly information and carriage: charts, instrument runs and passage for the few people the Bloom permits, since nothing that grows may be taken.",
+    "The rim is where people meet it: Pollen's lane to Wrack in the Anvil, and Zosma, Mossdeep, Rhizome and Seedbed facing the Hedge and the Far Lanterns.",
+    "Since Shadowfall the Bloom has closed parts of its sector without explanation, and the Garden is where humans notice it first, in lanes that are quieter and buoys that stay dark."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "hedge": {
+   "summary": [
+    "The Hedge is a tangle of ten living Bloom worlds and seven dead stars, lying between the Garden and the Far Lanterns and charted by human surveyors from 2390 to 2410.",
+    "Almost nothing is shipped out of it: humans trade in survey data, lane passage and patience, because under the Accord anything that grows stays where it grows.",
+    "The Accord binds every visitor here: no weapons hot near a living world, no cutting or collecting, and no torch burned through a seeding, whatever the schedule says.",
+    "Since Shadowfall the Bloom has gone quieter in the Hedge, and surveyors on the Garden side report fewer greetings, shifted lane markers and no explanation offered."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "iron-outposts": {
+   "summary": [
+    "The Ironhull Outposts are two mining systems, Grist and 85 Pegasi, joined by a two-day lane and cut off from the rest of the Compact.",
+    "They trade ore, refined metal and forged plate, and most of it goes the long way round to Compact yards, because the short ways run through dead space.",
+    "Both lie against The Cells, a run of empty systems, so everything the Outposts own hangs on the two lanes that lead out through Gl 12.",
+    "Charter Strike memories and anger over Varrow and Hesk bind the Outposts to the Compact, though distance leaves them feeling forgotten by it."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "lighthouse-run": {
+   "summary": [
+    "Lighthouse Run is a short pocket of lanes around a pulsar, where the Federation's inner ring meets the middle ring and the edge of Blackhull space.",
+    "New Lagos feeds and garrisons the Federation side, while Barnacle, across the choke point, moves containers for Blackhull crews and asks no questions about what is inside.",
+    "Grain, containers and navy stores run one way, and contraband and quiet favours run the other, with both ends of the lane watched by people who know it.",
+    "Everything here turns on the Lighthouse, a pulsar nobody can live beside, whose lanes every captain in the Run must cross."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "long-dark": {
+   "summary": [
+    "The Long Dark is a hundred-odd systems with nobody living in them, a drift of brown dwarfs, red dwarfs and cold cinders wedged between seven settled regions.",
+    "It trades nothing in any ledger, but prospectors, salvagers and smugglers use its empty lanes as back roads between the Concord Worlds, the Margins and the Maw.",
+    "Most of its systems carry only survey numbers, because the Rush ran out of money before anyone came back to name them, and the few real names are claims nobody finished.",
+    "Every neighbour borders it and none holds it: the navy is too stretched to patrol it, and captains who use it go quietly and keep their fuel high.",
+    "Since the Glass took the systems beside Prism Research, crews have been warier of the lanes on that side, and the Long Dark's silence feels less like peace than it used to."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "long-watch": {
+   "summary": [
+    "The Long Watch is a string of Federation-held lanes where two crowded, well-fed worlds, Gl 581 and Gamma Pavonis, sit among ten dead stars that nobody has ever made pay.",
+    "It trades food and freight: grain and processed agri goods out of the two worlds, and container traffic moving through their ports towards the Concord Worlds and the inner ring.",
+    "The navy holds the region, and the dead systems are where its pickets, beacons and inspection stops sit, since every lane here is also a border or a way out to the edge.",
+    "Its edges touch the Margins, the Drift, the Outer Dark and Corran Gate, so outside trouble arrives first as a late freighter or a silent picket.",
+    "What divides it is plain: the two living worlds are rich and orderly, and everything beyond them is empty, watched and getting closer."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "margins": {
+   "summary": [
+    "The Margins is a ragged scatter of twenty-four settled systems among forty-nine dead ones, wedged between the Concord Worlds, the Anvil, Prism Research, the Drift and the dark edges beyond.",
+    "About 139 million people live here, and nearly 95 million of them are at Vasquez; most other Margins towns are small, thinly guarded and a long way from anyone's help.",
+    "It ships water, ore, fuel and chemicals out, and pays dearly for food, components, goods and medicine, which is how Prism's lenders and the navy's inspectors find their way in.",
+    "Every settled system here is independent, and nobody agrees what that means: some mean free of the Federation, some mean free of debt, and most just mean nobody has sent a bill yet.",
+    "With the Shadow at the far edge and the Glass eating the inner middle ring, the Margins is a back door that may soon be a front line."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "mirrorspace": {
+   "summary": [
+    "Mirrorspace is the spacers' name for the four middle-ring systems that went glass in 2524: Lucerne, Facet, Varrow and Hesk, strung along the borders of the Anvil, the Calder March and the Reach.",
+    "It trades nothing, because the Federation shut the lanes in under a jump-resonance hazard quarantine, and no ship sent in has come back.",
+    "Two of the four were Prism systems and two were Ironhull mines, so each side has dead of its own and a story it would sooner not tell.",
+    "What binds the neighbouring systems is the silence: the Compact's anger at the cover-up, the Federation's closed lanes and Prism's polite recall of certain navigation cores all end at the same four dead lanes."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "outer-dark": {
+   "summary": [
+    "The Outer Dark is a scatter of sixty-odd dead stars beyond the settled rings: black holes, dwarfs and one tired giant, charted because the lanes run through them, not because anyone wanted them.",
+    "Nothing is mined or farmed here, and almost nothing is traded; ships pass through on lanes to the Margins, the Long Watch and the Concord Worlds, or cut across to the Drift when someone is hiding.",
+    "What binds it is the lanes: every dead system is a stop between somebody's ports, and the navy, Freeflag raiders and salvagers all use them and trust none of the others.",
+    "Since Shadowfall the quiet counts for less, because a dead system with no traffic is where a picket would be posted and where a shade could arrive unseen."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "prism-inc": {
+   "summary": [
+    "Prism Incorporate is thirteen company worlds packed around the inner ring's edge, home to about seventeen billion people who work for, rent from and owe the same polite landlord.",
+    "It ships alloys, components, finished goods and medicine outward, and lives on imported food, water, metals, fuel and chemicals, so every hungry hold in the region is a good one.",
+    "Its borders are mostly paperwork: the Inner Sphere to the Sol side, the Concord Worlds and the Ironhull Anvil at choke-point lanes, and the Calder March beyond Gl 625.",
+    "The one border nobody has paperwork for is Mirrorspace, where Lucerne went glass in 2524; Prism calls its cores recall precautionary, and everyone nearby counts the lanes anyway.",
+    "Wages are good, unrest is low and security is heavy, which holds right up to the day a navigation core is recalled and nobody will say what was wrong with it."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "prism-research": {
+   "summary": [
+    "Prism Research is three company systems strung along the outer ring, about 766 million people in all, cut off from the inner ring where the rest of Prism's holdings lie.",
+    "Forges, habitats and laboratories turn out alloys, components, goods and medicine, and the region imports nearly everything else: food, water, metals, fuel and chemicals all arrive by hauler.",
+    "Four dead systems fill the gaps between the worlds, two of them red-star gateways to the open Drift, and the only lane out toward independent space runs through a red giant.",
+    "Prism is landlord, employer and law here, and polite about it. Associates keep their jobs and their company housing, and nobody out here forgets who owns the debt on both."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "shoals": {
+   "summary": [
+    "The Shoals is sixty-odd dead systems with no settlement in any of them: stars with nothing worth the mortgage, strung on lanes that people use only to get somewhere else.",
+    "It trades in nothing. What moves through it is Ironhull ore haulers cutting corners, Freeflag runners keeping off navy charts, Blackhull crews going home, and the odd salvager hoping for a wreck.",
+    "Its edges are held by people who disagree about everything else: Ironhull mines in the Anvil, Freeflag worlds in the Reach and the Cells, Blackhull havens in Blackspace, and the Drift beyond.",
+    "With the navy stretched between Freeflag and the Shadow, nobody patrols the Shoals, so everyone passing through is quietly hoping they are the only ones who thought of it."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "the-maw": {
+   "summary": [
+    "The Maw is two dead systems in the Drift, a black hole and a white dwarf, with nobody living in either and no flag claiming them.",
+    "Nothing is traded here; the only cargo is whatever surveyors, salvagers and the odd lost captain carry out in their holds and their logs.",
+    "Every lane runs back through the Long Dark, and the dwarf also has one lane to the Far Lanterns, so the region is something you cross rather than reach.",
+    "What binds the two systems is the same thing that divides them: long, empty jumps of two days or more, and no port, beacon or tug between any of them."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "the-sink": {
+   "summary": [
+    "The Sink is a dead-end pocket of the middle ring: one small independent town, Tenpenny, hemmed in by four lifeless stars, one of them a black hole.",
+    "Its only export is what Tenpenny can cut or skim: ice from the outer bodies and gas for fuel, sold to anyone desperate or cheap enough to come this way.",
+    "Traffic arrives from the Margins by way of Gl 118, or from the Concord Worlds side, and then has to cross the black hole's lane to reach the town.",
+    "Nothing binds the region and no flag claims it, which suits Tenpenny and makes it a convenient place to be unrecorded."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
   }
  },
  "systems": {
@@ -375,6 +634,2415 @@
     "Its lane to Reckoning is a choke point, and Reckoning's watch crews log every ship that comes out of it, because very few have a reason to go in."
    ],
    "region": "reach"
+  },
+  "89660": {
+   "bullets": [
+    "Chi Draconis was settled in 2257 by ore-prospectors from Sol who found the belts rich and the sun dependable, and it has been a Compact town since the Charter Strikes.",
+    "Its nineteen million people work a mine and a refinery, and ore from the outer Anvil often passes through here on its way inward.",
+    "Lucerne, one lane away at under two days, went glass in 2524, and the quarantine buoys now sit in sight of Chi Draconis traffic.",
+    "Unrest is above the Anvil's average: dock crews talk openly about the cover-up, and the navy inspectors have stopped enjoying their visits.",
+    "A captain willing to carry unofficial letters from relatives of Lucerne's lost crews could find a lot of grateful, angry people at the refinery bars."
+   ],
+   "region": "anvil"
+  },
+  "64720": {
+   "bullets": [
+    "Swarf was settled in 2279 around 61 Virginis, and grew into a forge world of some two hundred million on the back of cheap ore and stubborn labour.",
+    "It mines, refines and forges, and its sheet and structural alloys are shipped to half the Compact.",
+    "Two of its three lanes lead to dead red dwarfs, so everything comes and goes by a single busy route through GJ 3707.",
+    "Swarf is calmer than most of the Anvil, but its yards are full of haulers being fitted with guns, and the foremen are quietly arguing about who they are really for."
+   ],
+   "region": "anvil"
+  },
+  "64189": {
+   "bullets": [
+    "Stour, around Beta Comae Berenices, was settled in 2286 by a mining co-operative that never quite stopped being one.",
+    "Twenty-one million people mine and refine here, and the town is steady, orderly and proud of its low unrest.",
+    "Its lane to Chara links the Anvil to the Furnace Deeps, so Stour's docks see a lot of Deeps metal on the way somewhere else.",
+    "A refinery shift that has lost its foreman to a navy requisition is said to be looking for a replacement who is not too fond of paperwork."
+   ],
+   "region": "anvil"
+  },
+  "56828": {
+   "bullets": [
+    "61 Ursae Majoris was settled in 2277 and stayed a quiet mining town, a few strikes and one memorable flood of coolant its only notable history.",
+    "Seventeen million people work its mine and refinery, and the town sends refined stock to Alula Australis and Chara by short lanes.",
+    "It is a secure, well-run place by Anvil standards, and its harbour authority is known for fining everyone equally.",
+    "Crews complain that the navy's requisition lists have taken three tugs without paying, and a captain with a spare hull might find work."
+   ],
+   "region": "anvil"
+  },
+  "81054": {
+   "bullets": [
+    "Quarle was settled in 2254 around an orange sun, among the earliest of the Anvil's worlds, and now holds some 137 million people.",
+    "It mines, refines and forges, and it is the Compact's front door to Prism's Gl 643, whose customs sit across a choke point.",
+    "Prism pays well and asks politely, which makes Quarle's forge masters suspicious, and the recall of navigation cores has not helped.",
+    "Gl 654, the dead system on the other lane, is a favourite stop for ships who would rather not be logged at Quarle's docks."
+   ],
+   "region": "anvil"
+  },
+  "37718": {
+   "bullets": [
+    "Pollux was settled in 2304 around a swollen red giant, whose bright, wide star makes shipping into the system slow and mining cheap.",
+    "Twenty-five million people live in a mining and refining town at the end of a long chain of jumps, ten from Sol.",
+    "Its lanes run to GJ 2069A, to a dead system and across a border to a dead Margins star, so very little passes through it by chance.",
+    "Pollux has been lonely long enough to resent everyone, and its dockmasters will ask a stranger twice who sent them."
+   ],
+   "region": "anvil"
+  },
+  "118742": {
+   "bullets": [
+    "Alula Australis was settled in 2283 by crews from 61 Ursae Majoris who wanted a mine nobody else could tax.",
+    "Thirty-one million people mine and refine here, and it is a crossroads town, with lanes to Noquisi, Vug, 61 Ursae Majoris and a dead red dwarf.",
+    "It is among the poorer places in the middle ring, and its unrest runs a little above its neighbours' as lanes to the glass cluster grow quieter.",
+    "The dead lane to GJ 3667 is an open invitation to salvagers, and the harbour office would rather not know who goes."
+   ],
+   "region": "anvil"
+  },
+  "14596": {
+   "bullets": [
+    "Burr, around Iota Persei, was settled in 2285 and grew into a world of over a hundred million, a mining and forge centre of the middle ring.",
+    "Its foundries turn out hull plate and drive casings, and Burr lacks only the money to buy back the ore it smelts.",
+    "One lane goes to GJ 3126, a dead system on Prism's side of the border, and Prism patrols watch it with interest.",
+    "Burr's forge crews have been refitting haulers with guns for months, and the yard foremen remember who burned the strikes' last barricades."
+   ],
+   "region": "anvil"
+  },
+  "10620": {
+   "bullets": [
+    "Callow was settled in 2307 and, with ice as well as ore, grew into the Anvil's biggest world, home to about one and a half billion people.",
+    "It mines, supplies ice and refines, which makes it a water exporter in a region that mostly begs for it.",
+    "With its size comes unrest: the crowded lower decks have been angry since the Glass, and the Compact's police have been stretched thin.",
+    "Gl 67, the dead system near Callow and Titawin, is a handy place for hauliers to meet without anyone asking."
+   ],
+   "region": "anvil"
+  },
+  "57584": {
+   "bullets": [
+    "Zavijava was settled in 2268, and its three ports mine ore, cut ice and run forges for a population of some four hundred million.",
+    "It is a well-fed, prosperous and well-defended Anvil world, and it sends water and alloys to Denebola and Porrima by short lanes.",
+    "Security is comparatively high, and the Compact has quietly made Zavijava its main depot for requisitioned hull repairs.",
+    "The forge guilds have begun asking who is being protected, and a captain who knows the answer might trade it."
+   ],
+   "region": "anvil"
+  },
+  "57459": {
+   "bullets": [
+    "Denebola was settled in 2265 as a small mining colony under a white star, and it has never grown past half a million people.",
+    "Its mining and refinery crews are tough and tightly bound, partly because the dead GJ 3667 sits across a choke point just beyond them.",
+    "Denebola's position next to GJ 3667, where the quarantine and the glass are said to creep close, makes its folk unwilling to say much.",
+    "A lone survey beacon at the edge of its system has been reporting oddities, and nobody at the colony wants to be the one to file it."
+   ],
+   "region": "anvil"
+  },
+  "77836": {
+   "bullets": [
+    "Gamma Serpentis was settled in 2291, an ordinary mining town with a refinery and seventeen million people who think of themselves as ordinary.",
+    "It sits in a tidy triangle with Gl 609 and Brack, and tends to trade ore and plate with both.",
+    "Unrest is middling and rising, mostly over the requisitions and the lack of news from the east.",
+    "The harbourmaster keeps a quiet ledger of ships that did not return from navy charters, and has begun to share it with captains he trusts."
+   ],
+   "region": "anvil"
+  },
+  "69451": {
+   "bullets": [
+    "Arcturus was settled in 2264 around a red giant, and its forge crews live under a huge, dim, cold-looking sun.",
+    "Five million people mine and forge here, a small town with a long memory and a strong sense of its own worth.",
+    "One lane runs to Footwall, a Freeflag system, and Freeflag runners sometimes use it, a fact the Compact pretends not to see.",
+    "Drift Mouth next door is dead and a good place to meet, and a captain with Freeflag cargo might find a fence in Arcturus."
+   ],
+   "region": "anvil"
+  },
+  "46945": {
+   "bullets": [
+    "Cadge, around 11 Leonis Minoris, was settled in 2296, and its mining and forge ports are known for good steel and bad tempers.",
+    "Twenty-six million people live in a town that is secure by Anvil standards, with a navy post and an Ironhull yard side by side.",
+    "It trades by lane with Copernicus, Wrack and Gant, and its forge masters are among the loudest voices in the Compact's meetings.",
+    "Unrest is middling, and a captain hauling guns for the Compact's refit programme could get plenty of work here and plenty of questions."
+   ],
+   "region": "anvil"
+  },
+  "61748": {
+   "bullets": [
+    "Porrima was settled in 2290 under a white star, and three million people mine and refine here in the quiet, tidy way of a small and careful town.",
+    "It is linked to Zavijava and GJ 3728B, and the red giant system next door gives it a spectacular sky.",
+    "Unrest is the lowest on the Anvil, partly because its people have the sense to live quietly.",
+    "The lane to Gl 480, a dead system, is rarely used, and the harbour office suspects someone is using it all the same."
+   ],
+   "region": "anvil"
+  },
+  "77022": {
+   "bullets": [
+    "Brack was settled in 2315 around Lambda Serpentis, and its fifty million people mine and refine ore for the neighbouring towns.",
+    "It is a reliable, workmanlike town, with lanes to Gamma Serpentis, Gl 609 and the more distant GJ 3981.",
+    "Its refinery has been running double shifts since the navy began buying alloy, and the extra work has not made anyone happier.",
+    "Old hands say the freight clerks at Brack will bend a manifest for a friend, which is useful to a captain who has friends."
+   ],
+   "region": "anvil"
+  },
+  "43464": {
+   "bullets": [
+    "Copernicus was settled in 2302, and its thirty million people mine and refine ore in a town known for its sensible dockside.",
+    "Lanes run to GJ 2069A, Cadge and Gl 353, which makes it a useful relay for ore moving between the western towns.",
+    "Security is middling and unrest low, and the town has been careful to stay out of the quarrels of its bigger neighbours.",
+    "A workers' council there is said to be collecting names of crews lost to navy requisition, and wants a courier to carry the list to the Compact."
+   ],
+   "region": "anvil"
+  },
+  "73467": {
+   "bullets": [
+    "Hob, around 44 Boötis, was settled in 2297 and became a world of nearly two hundred million, with mines, refineries and a good forge.",
+    "Its yards build hauler hulls for the Compact, and the gun mounts now bolted to them are the town's current pride and worry.",
+    "Hob is stable and well fed, but its trade lanes lead outward to Skerry, GJ 3873 and Tholl, which are all closer to the Drift than anyone likes.",
+    "The yard unions say the navy's requisition lists name Hob ships first, and a captain can hear the grumbling in any bar."
+   ],
+   "region": "anvil"
+  },
+  "51312": {
+   "bullets": [
+    "36 Ursae Majoris was settled in 2313 and grew into a world of two hundred million, with mines, refineries and a forge that has outlasted three owners.",
+    "It sits between Gant and the outer towns of Chalawan and Clinker, and much of the western ore trade passes through its docks.",
+    "Security is fairly good, but the world feels the strain of the outer Anvil's unrest, which flows inward along the lanes.",
+    "A forge-master has been quietly buying scrap hulls and paying in cash, which makes some people ask what she is building."
+   ],
+   "region": "anvil"
+  },
+  "46720": {
+   "bullets": [
+    "Gant was settled in 2299 around Theta Ursae Majoris, and now holds some three hundred million people on a world the Compact calls outer ring.",
+    "Its mines, refineries and forge supply a third of the ore the western Anvil sells, and it knows it.",
+    "Security is low and unrest high, and Freeflag pamphlets are found in the dock lockers more often than the harbour police admit.",
+    "A captain willing to carry a message between the forge stewards and a Freeflag contact could earn a great deal of trust or a great deal of trouble."
+   ],
+   "region": "anvil"
+  },
+  "7499": {
+   "bullets": [
+    "Titawin was settled in 2312 and is a mining, refining and forge world of about 138 million, on the edge of the Compact.",
+    "It faces dead systems on two of its three lanes, Gl 67 and Gl 14, so its only living neighbour is Callow.",
+    "Security is low, with the navy thin on the ground, and Titawin's people have learned to keep their own watch.",
+    "Gl 67 is barely over a day away, and people say salvagers and smugglers meet there beyond the reach of anyone's customs."
+   ],
+   "region": "anvil"
+  },
+  "53565": {
+   "bullets": [
+    "Chalawan was settled in 2298 and has become a world of nearly two hundred million, with mines, refineries and forge yards beyond the middle ring.",
+    "Its short lane to Vug connects it to Alula Australis, and most of its trade goes that way.",
+    "Security is poor, unrest is high, and the Compact has sent little help because it has little to send.",
+    "Rumour says a Blackhull crew has been drinking at a dockside bar there, and the harbourmaster has been told not to look."
+   ],
+   "region": "anvil"
+  },
+  "85773": {
+   "bullets": [
+    "Holt, around 26 Draconis, was settled in 2305 and holds seventy-five million people who mine and refine in the shadow of the Anvil itself.",
+    "It is linked by short lanes to Anvil, Gl 675 and Gl 630.1A, a tight cluster that trades mostly with itself.",
+    "Security is thin and unrest close to boiling, with wages fixed at what the Compact can afford and prices fixed at what Prism can charge.",
+    "A wildcat strike committee is said to meet in the old ore sheds, and a captain who moves cargo might be asked to carry more than cargo."
+   ],
+   "region": "anvil"
+  },
+  "42319": {
+   "bullets": [
+    "Clinker, around Pi-1 Ursae Majoris, was settled in 2321, a late and marginal Anvil town that has never quite stopped being a camp.",
+    "Forty-three million people mine and forge here, in a place with little security and a lot of salvage to defend.",
+    "Tailings, a dead brown dwarf, lies across a border lane from Clinker, and the town's scrap haulers go there for what they can find.",
+    "The town runs on makeshift deals, and a captain who offers honest prices may find it surprising enough to be remembered."
+   ],
+   "region": "anvil"
+  },
+  "70274": {
+   "bullets": [
+    "Skerry, around Theta Boötis, was settled in 2310 and has thirty-two million people mining and refining on the edge of the Furnace Deeps.",
+    "Its lane to Adit connects it to the Deeps, and Deeps smelters are the town's best customers.",
+    "Security is thin, unrest moderate, and the harbour is as crowded with traffic as it is short of patrols.",
+    "A rumour of cheap Deeps alloys falling off a hauler has drawn buyers to Skerry, and the harbour police are watching the quay."
+   ],
+   "region": "anvil"
+  },
+  "48941": {
+   "bullets": [
+    "Wrack, around 20 Leonis Minoris, was settled in 2318 on the Anvil's border with the Garden, and its fifty-nine million people mine and refine ore.",
+    "Its lane to Pollen, a living Bloom world, makes it the Anvil's closest neighbour to something human beings do not understand.",
+    "Security is poor and unrest is among the highest on the Anvil, as the Bloom's closed sectors have unsettled traders and navy alike.",
+    "The Accord forbids weapons near Pollen, and a captain hauling guns for the Compact's refits had better know which side of that line the cargo sits."
+   ],
+   "region": "anvil"
+  },
+  "82607": {
+   "bullets": [
+    "Anvil, around 19 Draconis, was settled in 2330, a small mining and refining town that gave its name to the region long before it grew into one.",
+    "Seven million people live there, in a place that feels like a museum of its own pride.",
+    "Security is thin, and the town leans on Holt and its neighbouring systems for defence.",
+    "People say the original charter is kept in a locked case in the harbour office, and that nobody agrees on what it entitles them to."
+   ],
+   "region": "anvil"
+  },
+  "77524": {
+   "bullets": [
+    "Tholl, around Chi Herculis, was settled in 2320, and its mines, ice shipping and forges now support about 122 million people.",
+    "It exports water, which in the outer Anvil makes it a kind of banker, and it is hated and courted accordingly.",
+    "Security is thin, and the road to the Drift via GJ 3920 and Tarn is only lightly watched.",
+    "A captain who can move water quietly past the navy to Freeflag buyers would find Tholl's ice-brokers more than willing to deal."
+   ],
+   "region": "anvil"
+  },
+  "78223": {
+   "bullets": [
+    "Tarn, around Rho Coronae Borealis, was settled in 2331 as a late mining and forge town on the very edge of the Compact.",
+    "Fifty-nine million people live there, and it is a gateway into the open Drift, with a lane to Strike, a Freeflag system, two days away.",
+    "Security is poor and unrest high, with Freeflag sympathy open and navy visits met with closed shutters.",
+    "A captain who knows the Drift could be hired here to guide shipments through the unmarked reaches, and to keep quiet about what is carried."
+   ],
+   "region": "anvil"
+  },
+  "62014": {
+   "bullets": [
+    "Mattock, around 10 Canum Venaticorum, was settled in 2349, the youngest world in the Anvil, and now has some 104 million people.",
+    "It mines, refines and forges, and is a gateway into the open Drift, with a dead Shoals star three days away.",
+    "Security is poor and unrest high, as the Compact's levy sits heavy on a world that has had little time to grow.",
+    "Salvagers come in from the Drift with strange cargo, and Mattock's yards have a sideline in not asking where it came from."
+   ],
+   "region": "anvil"
+  },
+  "119184": {
+   "bullets": [
+    "GJ 1221 is a dead red dwarf on the Compact's books, a faint inner-ring star that nobody has settled, though a Compact beacon marks the lane.",
+    "It sits between Chi Draconis and Prism's Gl 445, and its main use is as a place for ships to wait out inspections."
+   ],
+   "region": "anvil"
+  },
+  "118902": {
+   "bullets": [
+    "Gl 518 is a dead red dwarf with nothing to mine and no one to claim it, and the Compact has never bothered to fortify it.",
+    "Its lanes run to Gar and Gl 536, both dead, and to Swarf, so the only traffic is the occasional Swarf prospector checking old claims."
+   ],
+   "region": "anvil"
+  },
+  "118955": {
+   "bullets": [
+    "GJ 3839 is a dead red dwarf held by the Compact, kept as a lane relay, with no population and no reason to have one.",
+    "It lies on the lane between Stour and Arcturus and also touches the Federation's Xi Boötis, which makes it a quiet border crossing for the careful."
+   ],
+   "region": "anvil"
+  },
+  "118756": {
+   "bullets": [
+    "GJ 3667 is a dead red dwarf with no settlement, flaring now and then, and uneasy rumour says the lanes near it have been behaving oddly.",
+    "It joins Denebola and Alula Australis to the Concord Worlds and the Garden, and the Compact has no wish to explain why traffic has thinned."
+   ],
+   "region": "anvil"
+  },
+  "56359": {
+   "bullets": [
+    "Gl 433 is a dead red dwarf, a bare system of rock and flares with nothing worth hauling out of it.",
+    "Its single quick lane to Gl 432A makes it a dead-end pair, popular with prospectors and with anyone who wants to be left alone."
+   ],
+   "region": "anvil"
+  },
+  "118800": {
+   "bullets": [
+    "GJ 3707 is a dead orange star held by the Compact, a lane junction with a beacon but no settlement.",
+    "All of Swarf's ore leaves through it, so it is better watched than most dead systems, and the harbour office there keeps a log of its traffic."
+   ],
+   "region": "anvil"
+  },
+  "56283": {
+   "bullets": [
+    "Gl 432A is a dead red dwarf, with no known resources and no one in residence beyond whatever the old charts still list.",
+    "It is a short hop from Gl 433 and a long one from GJ 3707, so it sees almost nobody."
+   ],
+   "region": "anvil"
+  },
+  "66953": {
+   "bullets": [
+    "GJ 3804 is a dead white star near Swarf, bright enough to be pretty and barren enough to be left alone.",
+    "Swarf's prospectors have surveyed it more than once and found nothing to mine, and its lane to Gl 536 leads only into more dead space."
+   ],
+   "region": "anvil"
+  },
+  "83342": {
+   "bullets": [
+    "Gl 654 is a dead red dwarf with a nearly useless set of rocks, and the Compact only keeps a beacon at its Quarle lane.",
+    "Its far lane runs three days to Standfast, a Freeflag system, so it is quietly used by those who know the way."
+   ],
+   "region": "anvil"
+  },
+  "118819": {
+   "bullets": [
+    "GJ 3728B is a dead red giant held by the Compact, too bright and too hot for anyone to settle near.",
+    "It is a useful junction, with lanes to Porrima, Zavijava, GJ 3707 and Stope, and its radiation keeps ships from loitering."
+   ],
+   "region": "anvil"
+  },
+  "7903": {
+   "bullets": [
+    "Gl 67 is a dead red dwarf with no inhabitants, wedged between Titawin and Callow, and unwatched by either of them.",
+    "Its short lane to Titawin makes it a convenient meeting place for those who would rather not use a port."
+   ],
+   "region": "anvil"
+  },
+  "66878": {
+   "bullets": [
+    "Drift Mouth is a dead red dwarf at the Anvil's outer edge, named for what lies beyond it and unsettled for the same reason.",
+    "It connects Arcturus to Gl 480, and its traffic is mostly smugglers who know there is no navy picket."
+   ],
+   "region": "anvil"
+  },
+  "118277": {
+   "bullets": [
+    "Gl 164 is a dead white dwarf held by the Compact, a cold, faint remnant with nothing to mine and a beacon to mark the lane.",
+    "It links Burr to Capella in the Margins, so the little traffic that passes through is usually independent and discreet."
+   ],
+   "region": "anvil"
+  },
+  "118460": {
+   "bullets": [
+    "GJ 3423 is a dead red dwarf, with no known resources and no settlers, sitting on a long border lane from Pollux.",
+    "It leads to Pell's Folly in the Margins, and the few who use it are generally avoiding something."
+   ],
+   "region": "anvil"
+  },
+  "118801": {
+   "bullets": [
+    "Stope is a dead white dwarf, once surveyed for ore and abandoned when the survey came back empty.",
+    "Its lanes lead only to GJ 3728B and GJ 3655, another dead system, so it is more of a dead end than a crossing."
+   ],
+   "region": "anvil"
+  },
+  "61513": {
+   "bullets": [
+    "Gl 480 is a dead red dwarf, with no mine and no settlement, notable only for its place among a cluster of empty systems.",
+    "Lanes run to Porrima, GJ 3782B and Drift Mouth, and the Porrima harbour office suspects it of being a smugglers' waypoint."
+   ],
+   "region": "anvil"
+  },
+  "54790": {
+   "bullets": [
+    "Tailings is a dead brown dwarf, a dim, cold star whose name comes from the scrap that Clinker's crews have hauled out of its orbit.",
+    "One lane runs to Clinker and one to Gl 322 in the Cells, three days away, so most visitors are scavengers."
+   ],
+   "region": "anvil"
+  },
+  "1365": {
+   "bullets": [
+    "Gl 14 is a dead red dwarf, a faint star with nothing to claim, and it is the last stop before the emptier dead systems beyond.",
+    "Its lane to Titawin is long, and the lane to GJ 4381, another dead system, is shorter, so salvagers tend to loop through it."
+   ],
+   "region": "anvil"
+  },
+  "82765": {
+   "bullets": [
+    "Gl 649.1A is a dead red dwarf, a day from its twin Gl 651, and the two form a pair of empty systems that few care about.",
+    "Its only other lane leads to GJ 3920, nearly three days away, so the pair is as isolated as the charts can make it."
+   ],
+   "region": "anvil"
+  },
+  "83134": {
+   "bullets": [
+    "Gl 651 is a dead orange star, a day from Gl 649.1A, and it has never been settled, though some rocks there are said to be worth a look.",
+    "Its only other lane leads to GJ 3920, and prospectors who go out to it report mostly emptiness."
+   ],
+   "region": "anvil"
+  },
+  "77278": {
+   "bullets": [
+    "GJ 3920 is a dead red dwarf held by the Compact, a gateway into the open Drift, with a beacon and no inhabitants.",
+    "Lanes run to Winze Reach, Tholl, the twin dead stars and a dead Shoals system, so it sees smugglers, prospectors and the odd navy picket."
+   ],
+   "region": "anvil"
+  },
+  "84604": {
+   "bullets": [
+    "Dawnward was settled in 2334 as an outwatch, a lane-watch post built when the Rush was still paying for such things, with a few hundred crew and not much else.",
+    "The money dried up in the 2370s and the post stayed, so its two thousand people are the children of watchkeepers, now keeping watch for Freeflag.",
+    "Its one port is a haven, and it asks few questions: converted freighters under painted flags lay up here, patch their hulls and leave before the tide of rumour turns.",
+    "Unrest runs high and security low, since no Federation ship has been welcome here since Tarrow, and every captain knows how that ended for the habitat and its two hundred dead.",
+    "A captain can find work here carrying parts or messages across the Onkaria choke point, where Ironhull pickets are inclined to look away but the navy's inspectors are not."
+   ],
+   "region": "beacon-cells"
+  },
+  "119137": {
+   "bullets": [
+    "Onkaria is a red dwarf with nothing worth settling, no ice worth hauling and no one living there, and the charts keep it only because of where its lanes go.",
+    "The Ironhull Compact holds it for the choke point alone: one lane into Freeflag's Beacon Cells, watched by a picket that tallies traffic and, for a modest consideration, mislays some of it."
+   ],
+   "region": "beacon-cells"
+  },
+  "83505": {
+   "bullets": [
+    "The Beacon is a blue giant whose radiation scours every rock around it, so nobody lives here and nothing would survive trying.",
+    "Freeflag holds it because four lanes meet here and no navy captain wants to sit long in that glare, so convoys cross it quickly and sensors there are mostly noise."
+   ],
+   "region": "beacon-cells"
+  },
+  "119182": {
+   "bullets": [
+    "GJ 4029 is a white dwarf with a few dead rocks around it, nothing to mine and nowhere to build, and it was never settled.",
+    "Freeflag crews use it as a waypoint on the road to the Reach, where a ship can drift unseen between jumps and wait for the all-clear."
+   ],
+   "region": "beacon-cells"
+  },
+  "81848": {
+   "bullets": [
+    "GJ 3972 is a red dwarf at the end of a thin lane, with no settlement and no reason to build one.",
+    "Freeflag holds it for the dead end's sake: hulls too damaged for Dawnward's yards are said to be laid up here, stripped for parts and left to cool."
+   ],
+   "region": "beacon-cells"
+  },
+  "3411": {
+   "bullets": [
+    "Gl 30 is a red dwarf with a few cold rocks and no one on them; surveyors logged it as a flare risk and moved on.",
+    "Its four lanes all lead deeper into the Shelf, which makes it a quiet crossroads for captains who would rather not meet a patrol."
+   ],
+   "region": "black-shelf"
+  },
+  "118056": {
+   "bullets": [
+    "GJ 1034 is a red giant whose swollen star has swallowed or stripped any inner worlds, and its radiation and deep gravity well make loitering a poor idea.",
+    "It sits on the lane to the Long Dark, and salvagers say a few survey buoys still ping out there, if you are willing to fly close enough to hear them."
+   ],
+   "region": "black-shelf"
+  },
+  "7325": {
+   "bullets": [
+    "Gl 59.1 is a white dwarf, a dim cooling cinder with nothing left worth building on, which is why the charts carry a survey stamp and no settlement.",
+    "Four lanes meet here, and crews crossing the Shelf use it as a dark waypoint, trusting that no one else has a reason to be there."
+   ],
+   "region": "black-shelf"
+  },
+  "3866": {
+   "bullets": [
+    "HIP 3876 is a white dwarf with a faint debris belt and no world fit for anyone, so nobody has ever filed a claim worth keeping.",
+    "Hauliers crossing between Gl 59.1 and the deeper Shelf pass through it, and some leave caches here, so a patient scavenger might find one not yet collected."
+   ],
+   "region": "black-shelf"
+  },
+  "8848": {
+   "bullets": [
+    "GJ 3122 is a red dwarf with a few airless rocks and flares frequent enough to make a hab roof a poor investment, so it stayed empty.",
+    "The lanes out run to a handful of uncharted Drift systems, and surveyors have never fully mapped what lies at the far ends."
+   ],
+   "region": "black-shelf"
+  },
+  "3355": {
+   "bullets": [
+    "Gl 29.1 is a white dwarf with nothing in orbit but dust and ice, and no one has ever found a reason to stay.",
+    "It is the Shelf's far side from the Anvil's traffic, so anyone running dark between Gl 30 and the deeper Drift tends to come through here."
+   ],
+   "region": "black-shelf"
+  },
+  "3759": {
+   "bullets": [
+    "Ice miners settled Low Tide in 2287, long before anyone said Blackhull, and for a century it was a cold, ordinary town shipping water to its neighbours.",
+    "After the Charter Strikes, crews who had lost everything drifted in, and the town turned haven; it is now the biggest place in Blackspace, with about six million people.",
+    "It is known for ice, and for docks where nobody checks a manifest too closely, with lanes running to Barnacle and across the border to Gl 908 and Van Maanen's Star.",
+    "Those two Federation lanes are choke points, and the navy watches them with ships it can ill spare, so inspections and requisition notices are the talk of every bar.",
+    "Security is poor and unrest runs high, with Freeflag recruiters working the docks and Ironhull cousins angry about the Glass cover-up, so the town is one bad inspection from a riot.",
+    "A hauler captain at the ice docks says the navy is counting hulls at Gl 908 for requisition, and wants a quiet passage out through Barnacle first."
+   ],
+   "region": "blackspace"
+  },
+  "107213": {
+   "bullets": [
+    "Ice crews settled Deneb Algedi in 2319 under a white sun, in the middle ring, and later the Blackhulls made it a haven.",
+    "Every lane out leads to a dead system, so nobody arrives here by accident and ships that do arrive have usually chosen it.",
+    "About a million people live here, selling ice and a safe berth, and buying in all the food and medicine they can pay for.",
+    "Security is thin and unrest is high, because supplies come the long way round and the Federation's levy collectors have started asking why Blackhulls keep turning up here.",
+    "Ironhull relatives have come asking Blackhull crews what they have seen on the quarantined lanes, and a captain who can carry letters and keep quiet will find work."
+   ],
+   "region": "blackspace"
+  },
+  "40728": {
+   "bullets": [
+    "Blind Eye was settled in 2396, just after the Charter Strikes, by crews with no charter and no home, who gave the place a name that says nobody is watching.",
+    "It is a colony of about six hundred and sixty thousand, with an ice port and a haven port, and little else to recommend it.",
+    "Security is almost nil, and unrest is high: crews settle quarrels by hand, and Freeflag recruiters find the young easy to talk to.",
+    "Two dead red dwarfs lie close behind it, and a long lane runs out to GJ 3505 in the Far Lanterns, towards the edge where the Shadow is.",
+    "A hauler is overdue from GJ 3505, and her owners will cut a share to anyone who goes and looks."
+   ],
+   "region": "blackspace"
+  },
+  "104520": {
+   "bullets": [
+    "Wreckers was settled in 2438 as an outwatch, a few hundred salvagers working the hulks in the red dwarf systems behind it, and it still has one haven port.",
+    "About two thousand people live here, with no ice, no farms and no law, so every meal and every part is imported.",
+    "Security is almost nonexistent and unrest is high, because the salvage has thinned and the hungry crews have started eyeing one another's finds.",
+    "Freeflag raiders use the place to refit and hide, which the Federation has noticed, and a navy visit here would not stop to ask questions.",
+    "A salvager at the bar claims to have found an intact hull in Gl 836.7 and will sell the coordinates to anyone who can pay in parts."
+   ],
+   "region": "blackspace"
+  },
+  "104095": {
+   "bullets": [
+    "A brown dwarf, barely a star, with no world worth a dome, so nobody has ever lived here.",
+    "Its lanes to Deneb Algedi and Okafor make it a quiet back route for those who would rather not be logged."
+   ],
+   "region": "blackspace"
+  },
+  "119378": {
+   "bullets": [
+    "A white dwarf, a burned-out cinder with hard radiation and a deep well, and no settlement has ever lasted here.",
+    "Pilots cross to Okafor and Deneb Algedi without lingering, and surveyors advise nobody to stay."
+   ],
+   "region": "blackspace"
+  },
+  "103468": {
+   "bullets": [
+    "A red dwarf with nothing habitable, and nobody has ever tried to settle it.",
+    "It is a junction on the long way between Deneb Algedi, Placer and the Drift, and the lane to Gl 819A is used mostly by ships that do not want to be seen."
+   ],
+   "region": "blackspace"
+  },
+  "119422": {
+   "bullets": [
+    "Prospectors staked claims here on the strength of the name, and the ore ran thin, so the claim markers are all that is left.",
+    "Nobody has lived here since, though salvagers say a few claim beacons still answer when pinged."
+   ],
+   "region": "blackspace"
+  },
+  "104700": {
+   "bullets": [
+    "A red dwarf that flares, with no world a crew could hold, so nobody has stayed.",
+    "It sits between Wreckers, Placer and Gl 836.7, so ships pass through often and rarely stop."
+   ],
+   "region": "blackspace"
+  },
+  "39046": {
+   "bullets": [
+    "A red dwarf with nothing worth settling, one short hop from Blind Eye.",
+    "Its lanes are used by Blind Eye crews who want a place to hide a cargo or wait out a patrol."
+   ],
+   "region": "blackspace"
+  },
+  "118521": {
+   "bullets": [
+    "A red dwarf that nobody has ever settled, lying between Blind Eye and Gl 295.",
+    "Blind Eye crews use it as a hiding place, and surveyors say a few of their caches are still there, though not necessarily forgotten."
+   ],
+   "region": "blackspace"
+  },
+  "107007": {
+   "bullets": [
+    "A red dwarf at the end of the line past Wreckers, with no world to live on.",
+    "Salvagers say hulks drift here, and the one lane out leads back through Wreckers or Gl 824."
+   ],
+   "region": "blackspace"
+  },
+  "119237": {
+   "bullets": [
+    "The only lane out of emptied Corran ends at this dim red dwarf, and pickets have logged shades here since 2519, two years before Corran died.",
+    "Nothing has returned from the lane onward to Ascella, so what the shades do with the system remains unknown."
+   ],
+   "region": "blightspace"
+  },
+  "86222": {
+   "bullets": [
+    "A pulsar sweeps hard radiation across this system on a fast, steady beat, and navy scans from 2519 onward show shade contacts moving inside it regardless.",
+    "It is a dead end with one lane, to Gl 654.3, and no one has gone in to see what the shades want here."
+   ],
+   "region": "blightspace"
+  },
+  "119176": {
+   "bullets": [
+    "Jump arrivals here land inside the deep well of a black hole, a hazard that was keeping captains away long before shades were logged in 2519.",
+    "The lanes to 44 Ophiuchi and GJ 1217 are charted only from the edges, and nothing is known about the system itself."
+   ],
+   "region": "blightspace"
+  },
+  "85081": {
+   "bullets": [
+    "Lying one lane past emptied Mallory, this white star was logged as shade territory from 2519, and navy charts treat it as the front door to Blightspace.",
+    "Pickets report contacts on the lane in both directions, but no ship has crossed to GJ 9600 and come back to say what lies between."
+   ],
+   "region": "blightspace"
+  },
+  "83589": {
+   "bullets": [
+    "A black hole with three lanes, to HIP 86489, Mallory and HIP 81385, makes this the nearest thing Blightspace has to a crossroads, and shades have held it since 2519.",
+    "Navy analysts would love to know why a hazard star with such an awkward well is worth holding, and have no answer."
+   ],
+   "region": "blightspace"
+  },
+  "86847": {
+   "bullets": [
+    "Shades have been logged at this swollen red giant since 2519, on a lane from Mallory that carried ore traffic once, before anything here was worth fearing.",
+    "Its lanes run on to Alnasl and HIP 87330, and nobody has seen what moves along them."
+   ],
+   "region": "blightspace"
+  },
+  "82892": {
+   "bullets": [
+    "A small red dwarf on the lane between GJ 9577 and HIP 82621, it has been held by the Shadow since 2519 and is far from every friendly beacon.",
+    "Scans show only a faint, cold star and some traffic that does not answer hails."
+   ],
+   "region": "blightspace"
+  },
+  "81138": {
+   "bullets": [
+    "The white dwarf here has three lanes, to GJ 9577, HIP 81827 and Gl 654.3, and pickets have logged shade contacts on all of them since 2519.",
+    "Whatever shades want with a dead star's cinder is not in any report, because nobody has got close enough to write one."
+   ],
+   "region": "blightspace"
+  },
+  "84767": {
+   "bullets": [
+    "A brown dwarf gives almost no light here, so scans are poor, but they were enough to log shade contacts from 2519.",
+    "The lanes to GJ 3996 and GJ 9600 are the only ways in, and the navy does not use either."
+   ],
+   "region": "blightspace"
+  },
+  "82369": {
+   "bullets": [
+    "Shades have held this white dwarf since 2519, on a lane chain that links HIP 83147 to the dead end at Sabik.",
+    "No survivor, picket crew or salvager has ever reported seeing anything that was built here, or anything that lives here."
+   ],
+   "region": "blightspace"
+  },
+  "93213": {
+   "bullets": [
+    "Ascella is a white star two lanes past the Corran side of Blightspace, and navy long-range scans have shown shade contacts since 2519.",
+    "The lanes to GJ 4074 and HIP 90611 are both long, and no ship has tried either since the front moved."
+   ],
+   "region": "blightspace"
+  },
+  "83755": {
+   "bullets": [
+    "At seventeen jumps from Sol, Sabik is a dead end at the far edge of Blightspace, with a single lane to HIP 82621 and shades logged since 2519.",
+    "Nobody has charted it beyond a star type and a distance, and the navy has no plan to learn more."
+   ],
+   "region": "blightspace"
+  },
+  "84229": {
+   "bullets": [
+    "A red dwarf on the short lanes to GJ 1217 and Gl 650, held by the Shadow since 2519 and quiet on every scan the navy has managed.",
+    "The quiet has convinced no one, and no ship has gone in to test it."
+   ],
+   "region": "blightspace"
+  },
+  "83021": {
+   "bullets": [
+    "This brown dwarf is a dead end with one lane, to GJ 3996, and pickets logged shade contacts here from 2519.",
+    "A system that hard to reach and that dim should hold nothing worth taking, so why the shades hold it is unknown."
+   ],
+   "region": "blightspace"
+  },
+  "81881": {
+   "bullets": [
+    "Shades have held this red dwarf since 2519, and it sits on the short lane between HIP 81385 and HIP 83147.",
+    "Charts show no more than a star type and two lanes, and the navy has not sent a ship to add to them."
+   ],
+   "region": "blightspace"
+  },
+  "81577": {
+   "bullets": [
+    "A pulsar dead end off HIP 81385, with radiation that scrambles scans, so the shade contacts logged since 2519 are the best the navy has.",
+    "Nobody can say whether the shades are here for the pulsar or in spite of it."
+   ],
+   "region": "blightspace"
+  },
+  "87060": {
+   "bullets": [
+    "The lanes from this red dwarf run to Gl 695.1 and HIP 84425, and shades have been logged on both since 2519.",
+    "The navy has no recorded survey of the system, and no one who has been inside it."
+   ],
+   "region": "blightspace"
+  },
+  "90331": {
+   "bullets": [
+    "A black hole whose well makes arrivals dangerous, held by the Shadow since 2519 and joined by lane to HIP 89620 and Ascella.",
+    "Scans show nothing in the system but the hole, which tells nobody anything useful."
+   ],
+   "region": "blightspace"
+  },
+  "88361": {
+   "bullets": [
+    "Alnasl is a red giant with lanes to HIP 89620 and Gl 695.1, and the shades have held it since 2519.",
+    "The big star's glare blinds most long-range scans, so what the shades do here is not known."
+   ],
+   "region": "blightspace"
+  },
+  "89343": {
+   "bullets": [
+    "Shade contacts at this white dwarf were first logged in 2519, on the short lanes between Alnasl and HIP 90611.",
+    "Pickets never came closer than a lane's length, and the system has gone unseen since."
+   ],
+   "region": "blightspace"
+  },
+  "84167": {
+   "bullets": [
+    "The last red dwarf at the end of a single long lane from HIP 87330, held by the Shadow since 2519 and a hundred light years from Sol.",
+    "It is the farthest point of Blightspace on the navy's charts, and the charts stop there."
+   ],
+   "region": "blightspace"
+  },
+  "116405": {
+   "bullets": [
+    "Bread was settled in 2357 as an ice stop for haulers working the outer ring's frozen debris, and grew into a town because water is always wanted somewhere.",
+    "With about six million people it is the largest settlement in the Cells, and its ice port and its haven port keep half the region's neighbours in water and in debt to it.",
+    "The haven is full, security is thin and unrest runs high: Bread is a Freeflag cell with no friendly territory behind it, and food and medicine arrive on sufferance.",
+    "Of its three lanes, the one through GJ 4355 toward the Margins is a choke point, and the only road out that nobody on either side bothers to watch."
+   ],
+   "region": "cells"
+  },
+  "1391": {
+   "bullets": [
+    "Tarrow was settled in 2360 as a gas colony, skimming fuel for the haulers of the Rush, and stayed small and stubborn for a hundred and forty years.",
+    "In 2499 Prism repossessed its habitat for defaulted loans and the navy cleared it; two hundred people died when the hab was vented, and the rebellion dates from that year.",
+    "Today about eighty-five thousand people skim gas and shelter runaways, and no Federation ship is allowed to dock; security is almost nothing, and everyone on the surface knows a name from the list.",
+    "A captain could ask who signed the repossession order and where the loan ledgers went, since there are people in Tarrow who would pay well to find out."
+   ],
+   "region": "cells"
+  },
+  "112997": {
+   "bullets": [
+    "Helvetios was settled in 2422, late in the Rush's long tail, by ice crews who wanted somewhere nobody had already claimed and found a yellow star nobody had wanted.",
+    "Its ice port sends water and volatiles to the other Cells, and its haven shelters about fifty-six thousand people who prefer not to be asked questions.",
+    "Unrest is among the highest in the region and the garrison is a few armed freighters, but nobody has yet come to test them.",
+    "Lode, a dead white dwarf, is only 1.3 days away, and ships that need to vanish for a week are said to vanish there."
+   ],
+   "region": "cells"
+  },
+  "112090": {
+   "bullets": [
+    "Defiance was settled in 2386 as a remote outpost; its name is older than Freeflag by a century, a joke by a long-gone survey crew that stuck.",
+    "It has no industry, only a haven port and about six thousand people living on what other systems can spare and on the fees of ships needing a quiet berth.",
+    "Security is the lowest in the Cells, and the outpost is held only because nobody else wants to feed it.",
+    "A haven that takes in everyone keeps no records, so a captain looking for a missing crew or a stolen cargo could start on its docks."
+   ],
+   "region": "cells"
+  },
+  "45201": {
+   "bullets": [
+    "Free Harbor was settled in 2401 as a gas town on the edge of the Rush's last push, and its name was meant as a boast about berthing fees.",
+    "About two million people live here, and its gas port supplies fuel to most of the Cells and to anyone who will pay in cargo rather than credit.",
+    "All three of its lanes run through dead red dwarfs, so ships arrive slowly and can be seen from a long way off.",
+    "Unrest is high and the haven is crowded, and the lane to GJ 1098 leads on to Footwall Reach, a dead system few have charted and fewer have explained."
+   ],
+   "region": "cells"
+  },
+  "118014": {
+   "bullets": [
+    "GJ 3052 is a brown dwarf, too cold and dim to warm anything, and nobody ever filed a plan to settle it.",
+    "It sits on the lane between Tarrow and the Ironhull Outposts, which makes it a place where Freeflag crews and quiet Ironhull cousins can meet without a port's paperwork."
+   ],
+   "region": "cells"
+  },
+  "119524": {
+   "bullets": [
+    "Lode is a white dwarf, a dead star's hard small light, and the prospectors who named it found nothing worth a second trip.",
+    "It is a short hop from Helvetios and Defiance, which is why unmarked ships sometimes sit there for days, reactors cold."
+   ],
+   "region": "cells"
+  },
+  "119580": {
+   "bullets": [
+    "GJ 4355 has a yellow star and no settlement, and the survey reports give no reason why, which has never stopped spacers inventing several.",
+    "It is the lane from Bread to the Margins, and ships that cross it tend to be doing something they don't log."
+   ],
+   "region": "cells"
+  },
+  "43411": {
+   "bullets": [
+    "Gl 322 is a flaring red dwarf with nothing worth settling, and its lane runs on to Tailings in the Anvil.",
+    "Freeflag's gas haulers from Free Harbor pass through it, and are the only regular traffic it has."
+   ],
+   "region": "cells"
+  },
+  "118481": {
+   "bullets": [
+    "GJ 1098 is a red dwarf whose flares make long stays unwise, and nobody has built anything there that lasted.",
+    "Its lane to Footwall Reach is the only way beyond it, and the charts for that side are thin."
+   ],
+   "region": "cells"
+  },
+  "41572": {
+   "bullets": [
+    "Gl 308.1 is another flare-prone red dwarf with no settlement, a stop on the way to Footwall Reach for crews who are not in a hurry.",
+    "Free Harbor lies 1.7 days off, and its watch crews know the dead system better than any chart does."
+   ],
+   "region": "cells"
+  },
+  "118583": {
+   "bullets": [
+    "Farmers from the Procyon side took up this red dwarf's thin light in 2196, breeding crops for red-tinged days and settling on the one world that would hold a field.",
+    "Grain and packed produce flow through its container-port towards Procyon and the Inner Sphere, which is most of what GJ 3522 is known for.",
+    "It is quiet, well policed and prosperous, and the only grumbling is over navy requisitions pulling freighter crews off the Procyon run for the front.",
+    "A clerk at the container-port has noticed sealed crates logged out for Gl 285 that nobody there has ever signed for."
+   ],
+   "region": "concord"
+  },
+  "118707": {
+   "bullets": [
+    "Settled in 2200, GJ 3622 was one of the dozen systems of the Rush's first generation, and it has kept the navy garrison it was given to guard the Wolf 359 approach.",
+    "Wheat and cattle feed, container loads and a heavy military port make it a staging post as much as a farm world.",
+    "With the navy lifting ships and crews for the front, unrest here is higher than the garrison likes, and the quiet is the kind that gets patrolled.",
+    "A quartermaster is rumoured to be selling ration lots off the books, and the buyers are not all Federation."
+   ],
+   "region": "concord"
+  },
+  "117960": {
+   "bullets": [
+    "A yellow-sun world settled in 2190, GJ 1002 grew from farming compacts into a habitat-ringed giant of some two and a half billion people.",
+    "Its container-port sorts a large share of the region's food into lane-sized loads, and half the district's dockhands know each other's families.",
+    "Next door lies dead Gl 908, and past that Low Tide, so Blackhull goods trickle in alongside the grain and the customs office knows it.",
+    "Someone in the habitat ring is selling clean manifests that pass inspection, and nobody agrees on whose clerk is doing the copying."
+   ],
+   "region": "concord"
+  },
+  "54052": {
+   "bullets": [
+    "Gl 412A, settled in 2192, is the most populous world in the Concord region, ten billion people on farmland and habitat rings stacked around a yellow sun.",
+    "It is as rich as the inner ring gets, and a great deal of the food on Federation tables passes through its container-port.",
+    "Size is its problem: ration boards, hab allotments and queues of every kind have grown into a bureaucracy that moves slower than any navy convoy.",
+    "An audit of the habitat ring's ration boards was ordered quietly last year and has not been mentioned since, which has left a lot of nervous people."
+   ],
+   "region": "concord"
+  },
+  "49767": {
+   "bullets": [
+    "Gl 380 was settled in 2180, four years after the Valhalla Result, and is one of the oldest colonies of the Rush, now home to nearly seven billion.",
+    "Its military port watches the lane to Gl 445, where Prism's border begins, and the navy inspects everything that crosses.",
+    "Security here is the weakest in the inner ring, and the navy resents Prism's precautionary recall of navigation cores, which has grounded ships it needs.",
+    "Associates in Prism grey cross from Gl 445 carrying sealed cases that customs is not permitted to open, and a customs officer wants someone to ask why."
+   ],
+   "region": "concord"
+  },
+  "1240": {
+   "bullets": [
+    "Red-dwarf GJ 1005A was settled in 2211 by smallholders from GJ 1002, and has kept its farms small and its navy port busy.",
+    "Its military port guards the choke point to dead GJ 2005 in the Margins, which makes it the region's front door for anyone coming in from outside the law.",
+    "Calm and orderly, but the garrison keeps its guns manned, and patrol crews complain that the Margins send up more empty hulls than they should.",
+    "Ships have been coming out of GJ 2005 with their transponders silent and their holds light, and none of them stop to explain."
+   ],
+   "region": "concord"
+  },
+  "19799": {
+   "bullets": [
+    "Settled in 2198 under an orange sun, Keid grew as a farm-and-habitat world with a trade in grain and finished goods.",
+    "Its container-port sits on the lane to Epsilon Eridani, so Keid's cargoes reach the Inner Sphere faster than most.",
+    "The place is wealthy and tightly policed, and the local grievance is a navy requisition that took two grain haulers and a freight captain with them.",
+    "A hab-ring cooperative has filed for a transport charter outside Federation inspection, and nobody knows who is backing it."
+   ],
+   "region": "concord"
+  },
+  "118578": {
+   "bullets": [
+    "GJ 1116A was settled in 2214 as the second wave of Concord farms pushed outward, and it has grown to four billion.",
+    "Its container-port ships grain and processed food towards Luyten's Star and the Inner Sphere, and the habitats take most of the grain that stays.",
+    "Calm, wealthy and well guarded, it worries mainly about shipping: fewer hulls, longer waits, and rising prices in the habitat markets.",
+    "A freighter captain at the port claims to have refused a charter for a hold of unmarked navigation cores, and the cores were not on the recall list."
+   ],
+   "region": "concord"
+  },
+  "118406": {
+   "bullets": [
+    "GJ 3379 was settled in 2202 beneath a steady yellow sun, and its three lanes make it a junction for the Concord farm district.",
+    "It is known for its habitat rings and for dock crews who can turn a convoy around in a shift.",
+    "Prosperous and well policed, though traffic-heavy, and the waiting yards are full of ships stuck behind navy requisition orders.",
+    "A dockside union is rumoured to be quietly hiding hulls from the requisition lists, and the navy has begun to suspect."
+   ],
+   "region": "concord"
+  },
+  "33139": {
+   "bullets": [
+    "HIP 33226, a red-dwarf farm world settled in 2236, sits out on the thin side of the inner ring with a population of under half a billion.",
+    "It supplies Gl 268 and the habitat belt with food, and its small container-port is all that lets it export.",
+    "A quiet, orderly place, where the main worry is that the Gl 268 lane is the only one worth using and the navy is leaning on it.",
+    "A retired navy pilot runs a salvage tug out of the habitat and is asking questions about the lane to GJ 1111 that he should not."
+   ],
+   "region": "concord"
+  },
+  "83352": {
+   "bullets": [
+    "HIP 83609 was settled in 2245 and grew around a shipyard that builds freighters and navy escorts under licence on a yellow sun's steady light.",
+    "It is known for its yards and its military port, and the lane to Gl 667A on the Long Watch makes it a staging point for the front.",
+    "Prism's core recall has stalled several hulls on the slips, and the navy wants them anyway; the yard's managers are caught between the two.",
+    "A shipwright says one of the recalled cores was swapped out for a blank before it left, and he is willing to say who signed for it."
+   ],
+   "region": "concord"
+  },
+  "37659": {
+   "bullets": [
+    "Settled in 2232, Gl 285 is an orange-sun farm world whose habitats and container-port serve the quiet end of the inner ring.",
+    "It sells grain and goods along its short lanes to GJ 3454 and GJ 3522, and rarely makes the news.",
+    "Wealthy, secure and dull, with the odd grumble that the navy has taken more freighters than the harvest can spare.",
+    "A port inspector found a hull whose cargo register matched another ship's, plate for plate, and nobody has claimed either."
+   ],
+   "region": "concord"
+  },
+  "84220": {
+   "bullets": [
+    "Gl 664 was settled in 2248 around an ageing red giant, on a world far enough out to catch a long, warm, red-tinged season.",
+    "It is known for hardy crops bred to the giant's light and for the shielding its habitats need against flare and radiation.",
+    "It is quiet and well guarded, but the shielding is costly to maintain and a shortage of replacement components is starting to bite.",
+    "An engineer at the habitat says the sun's flares have been shifting pattern, and has been told to stop saying so."
+   ],
+   "region": "concord"
+  },
+  "99143": {
+   "bullets": [
+    "Gl 783A, a yellow-sun world settled in 2243, has grown to two billion on farmland, container yards and a navy garrison.",
+    "Its military port covers the lane to Gl 784 on the Long Watch, and the garrison is as much a part of the town as the harbour.",
+    "Security is tight and unrest low, but the navy has been leaning on it for ships and crews and the town has noticed.",
+    "A garrison officer has been sending requests for relief to a command that no longer seems to answer."
+   ],
+   "region": "concord"
+  },
+  "15471": {
+   "bullets": [
+    "82 G. Eri was settled in 2205 and is known for its shipyard, which builds the region's grain freighters and has done so for three generations.",
+    "Habitat rings and farm belts share a yellow sun, and the people are proud of hulls that last.",
+    "It is prosperous and calm, though the Prism navigation-core recall has left several freighters half-finished on the slips.",
+    "A yard foreman has a ledger of cores installed before the recall, and what he says is in it would interest the navy."
+   ],
+   "region": "concord"
+  },
+  "98924": {
+   "bullets": [
+    "Delta Pavonis was settled late for an inner-ring world, in 2270, as the lanes opened towards Pellucid and the Long Watch.",
+    "A yellow-sun farm world with a navy port and a container yard, it sends food to the Long Watch and takes fuel and components in return.",
+    "Quiet and rich, with the garrison stretched thin and the farmers wondering when the front will want their sons.",
+    "A freight captain hears odd traffic on the lane to Gamma Pavonis, ships going out loaded and coming back empty."
+   ],
+   "region": "concord"
+  },
+  "118344": {
+   "bullets": [
+    "GJ 3323 is a small orange-sun world settled in 2234, with a few hundred million people on farms and habitat rings.",
+    "It lies on the lane between Keid and Tabit, and sells grain and goods to both.",
+    "It is calm and prosperous and neglected by the navy, which has thinned its patrols here for the front.",
+    "Two freighters called in with engine trouble last month and were gone before the port authority could inspect them."
+   ],
+   "region": "concord"
+  },
+  "34511": {
+   "bullets": [
+    "Gl 268 was settled in 2263 as a navy-backed farm colony on an orange sun, and the garrison has stayed.",
+    "It is known for its military port, quiet habitat rings, and the lowest unrest in the region.",
+    "The calm is partly drill: the navy recruits hard, and families here have begun to count how many sons the front has taken.",
+    "A navy chaplain keeps a list of names that the official casualty roll does not."
+   ],
+   "region": "concord"
+  },
+  "118399": {
+   "bullets": [
+    "Gl 223.2 was settled in 2258 on a red dwarf's dim light, and has grown into a modest farm world of under half a billion.",
+    "Habitat rings and a container-port move its grain and fruit to GJ 3379 and GJ 3323.",
+    "Secure, orderly and short of replacement parts, it is starting to feel the thinning of the shipping lanes.",
+    "A crop-breeder says a blight has shown up in the red-light wheat that is not on any list of known diseases."
+   ],
+   "region": "concord"
+  },
+  "53612": {
+   "bullets": [
+    "Gl 408 was settled in 2207 around a red dwarf, one of the region's early small colonies, and still has fewer than four hundred million people.",
+    "It exports grain and manufactures through its container-port and takes pride in running its farms without any outside help.",
+    "It is secure and prosperous but short of crews, as the navy has requisitioned its best freighters.",
+    "A cooperative has bought a retired hauler and is quietly refitting it, and nobody is saying with what."
+   ],
+   "region": "concord"
+  },
+  "72432": {
+   "bullets": [
+    "Xi Boötis was settled in 2230 and sits at the edge of the Concord region, with a lane across the border to GJ 3839 in the Anvil.",
+    "Its military port inspects Ironhull ore ships coming in, and its farms feed the miners going back.",
+    "The navy's inspections are the grievance: Ironhull crews arrive angry about Varrow and Hesk, and the inspectors' patience is thin.",
+    "An Ironhull captain wants passage for the families of Varrow's lost crew, and has been told no by every office in the system."
+   ],
+   "region": "concord"
+  },
+  "2016": {
+   "bullets": [
+    "Pellucid, catalogued as Beta Hydri, was settled in 2272 as a middle-ring shipyard world, the last of the region's big yards to open.",
+    "It is known for its shipyard and its habitat rings, and it builds smaller freighters for the Long Watch and the outer ring.",
+    "Security is thinner here than in the inner ring, and the yards are short of cores since Prism's recall.",
+    "A yard supervisor has let it be known that a Freeflag buyer is offering to pay for hulls without cores."
+   ],
+   "region": "concord"
+  },
+  "22396": {
+   "bullets": [
+    "Tabit was settled in 2271 and grew as a middle-ring farm and garrison world, now close to a billion people.",
+    "Its military port keeps an eye on the outer lanes, and its habitat rings house half the garrison's families.",
+    "Wealth and security are moderate, and the garrison has been drawn down to feed the front, leaving the farms to look after themselves.",
+    "A patrol that left for GJ 1065 never filed its return report, and the garrison has not mentioned it."
+   ],
+   "region": "concord"
+  },
+  "118084": {
+   "bullets": [
+    "p Eridani was settled in 2225 and is a rich orange-sun world of two billion with a container-port, a military port and a long memory of border scares.",
+    "Its lane to dead HIP 12703 is a choke point, and everything coming through it is inspected twice.",
+    "Wealth is high but security is thin, and unrest has crept up with the shortage of ships; its dockhands are sharp-tongued.",
+    "A salvage crew claims there are hulls drifting in HIP 12703 with their navigation cores missing, and none of them is on a register."
+   ],
+   "region": "concord"
+  },
+  "1595": {
+   "bullets": [
+    "Valparaiso, catalogued as Zeta Tucanae, was settled in 2274 and is the smallest of the middle-ring worlds, with barely a hundred million people.",
+    "Its farms and habitat serve a navy port that watches the lane to Gamma Pavonis and the Long Watch.",
+    "It is neither rich nor secure, and its people feel passed over when ships and supplies go to bigger worlds.",
+    "A garrison deserter is hiding in the habitat, and the story he tells about the Long Watch is not the navy's."
+   ],
+   "region": "concord"
+  },
+  "27844": {
+   "bullets": [
+    "Sabine, catalogued as Chi-1 Orionis, was settled in 2223 and grew rich as a relay world, where messages and news from four lanes pass through its port.",
+    "It is known for its relay, its farms and its garrison, and its operators hear more than any other port in the region.",
+    "The relay has been strained since the quarantine: traffic from the middle ring has thinned, and the operators have been told what not to log.",
+    "A relay technician keeps a copy of the traffic logs from 2524, and the logs show a pattern that was not supposed to exist."
+   ],
+   "region": "concord"
+  },
+  "27006": {
+   "bullets": [
+    "Garrison, catalogued as Gamma Leporis, took its name from the navy post that stood here in 2221; the post is long gone and the farms stayed.",
+    "It is known for grain and for its habitat rings, and its container-port sits on the lanes to Gl 185A and dead Gl 190.",
+    "It is reasonably wealthy and thinly guarded for a place named for a garrison, which the locals find funny, and the navy does not.",
+    "Ships have been turning back from Gl 190 with damaged hulls and no log, and the harbourmaster would like to know why."
+   ],
+   "region": "concord"
+  },
+  "17336": {
+   "bullets": [
+    "Rana was settled in 2273 as a navy-backed farm colony on an orange sun, and has grown to nearly a billion people.",
+    "Its military port covers the lanes to GJ 1065 and HIP 18899, and its farms feed the garrisons along them.",
+    "It is calm, with security moderate and unrest low, but the garrison has been shrinking and the farmers have noticed.",
+    "A farmer's cooperative has been trading with someone in dead Gl 173, who pays in components that have no serial numbers."
+   ],
+   "region": "concord"
+  },
+  "15419": {
+   "bullets": [
+    "Bellamy, catalogued as Kappa-1 Ceti, was settled in 2259 and has grown to over three billion on rich farmland and habitat rings.",
+    "It is known for its container-port and its lane to New Lagos in Lighthouse Run, where it trades food for the Run's salvage and gossip.",
+    "Wealth is high but security only moderate, and unrest is climbing as shipping shortages hit the markets.",
+    "A captain from New Lagos is offering good money for hulls that do not need inspection, and the offers are getting bolder."
+   ],
+   "region": "concord"
+  },
+  "16811": {
+   "bullets": [
+    "Providence, catalogued as 10 Tauri, was settled in 2288 as a farm town in the outer ring, and has stayed a town of some forty-three million.",
+    "It grows food and ships it through a small container-port to GJ 3224 and the Concord worlds, and it is the end of the line.",
+    "Security is thin, unrest is the highest in the region, and since Tarrow in 2499 Freeflag has had sympathisers in the fields and on the docks.",
+    "A freighter captain says Freeflag agents have offered to buy the whole harvest at a better rate than the navy, and some farmers are listening."
+   ],
+   "region": "concord"
+  },
+  "3820": {
+   "bullets": [
+    "Van Maanen's Star is a white dwarf, a cooling cinder with nothing to settle, and the Federation keeps only a picket here.",
+    "The lane to Low Tide in Blackspace makes it a choke point, and navy crews call it the back door that nobody bothered to lock."
+   ],
+   "region": "concord"
+  },
+  "80579": {
+   "bullets": [
+    "Wolf 1061 is a small red dwarf with no world anyone could build on, and it is held by the Federation mostly because of where it sits.",
+    "The lane to Prism's Gl 643 passes through here, so a navy picket watches it and the associates pretend not to notice."
+   ],
+   "region": "concord"
+  },
+  "118830": {
+   "bullets": [
+    "Gl 473A is a white dwarf, and nothing in the system could hold a colony, but its position, two jumps from Sol, keeps it on every navy chart.",
+    "A picket watches the lane to GJ 1156, where the unheld red giant makes the traffic nervous."
+   ],
+   "region": "concord"
+  },
+  "117106": {
+   "bullets": [
+    "Gl 908 is a red dwarf with nothing worth settling, held by the Federation on paper and used by smugglers in practice.",
+    "Its lane to Low Tide in Blackspace makes it the quiet route for Blackhull cargo heading for GJ 1002."
+   ],
+   "region": "concord"
+  },
+  "118812": {
+   "bullets": [
+    "GJ 1156 is a red giant, and its wind and flares are a real danger to ships that linger; nobody holds it and nobody lives there.",
+    "The lanes to dead Gar and GJ 3667 in the Anvil make it a place the careful avoid and the desperate use."
+   ],
+   "region": "concord"
+  },
+  "23877": {
+   "bullets": [
+    "Gl 190 is a red dwarf with no settlement, though it is held by the Federation and sits on the Garrison side of the Concord lanes.",
+    "The lane to Nowhere Much in the Margins makes it a choke point, and ships that come through it are not always the ships that left."
+   ],
+   "region": "concord"
+  },
+  "9764": {
+   "bullets": [
+    "GJ 3135 is a red dwarf with nothing to settle, held by the Federation as a lane marker between GJ 3193B and the dead systems beyond.",
+    "Its far lane to GJ 1028 is a choke point and a dead end, and the navy does not send many patrols down it."
+   ],
+   "region": "concord"
+  },
+  "12671": {
+   "bullets": [
+    "HIP 12703 is a red dwarf with nothing settled, held by nobody, and it sits at a choke point beside p Eridani.",
+    "Lanes to Gl 118 in the Sink and HIP 13218 in the Margins make it a crossroads for salvagers and a place where hulls go missing."
+   ],
+   "region": "concord"
+  },
+  "118041": {
+   "bullets": [
+    "GJ 1028 is a red dwarf at the edge of the settled lanes; nobody holds it and nobody lives there.",
+    "It connects only to GJ 3135 and Gl 46, both dead, and what passes through it is nobody's business but its own."
+   ],
+   "region": "concord"
+  },
+  "118387": {
+   "bullets": [
+    "GJ 1083A is a white dwarf with no habitable world, held by the Federation as a picket on the way out from Sabine.",
+    "The lane to Gl 169 is a choke point, and the navy logs every ship that takes it."
+   ],
+   "region": "concord"
+  },
+  "29243": {
+   "bullets": [
+    "Gl 228A is a brown dwarf, too cold and dim to hold a colony, held by the Federation and visited only by navy patrols.",
+    "Its lane to GJ 3356 in the Margins is a choke point, and the patrols come back with less to say than they should."
+   ],
+   "region": "concord"
+  },
+  "21503": {
+   "bullets": [
+    "Gl 173 is a red dwarf with nothing settled, held by the Federation on paper and left to its own devices in practice.",
+    "The lane to Nowhere Much in the Margins makes it a choke point, and Rana's farmers know it is not quite empty."
+   ],
+   "region": "concord"
+  },
+  "20865": {
+   "bullets": [
+    "Gl 169 is a red dwarf, unheld and unsettled, on the margin between the Concord lanes and the Margins.",
+    "Ships use it to slip across the border at a choke point beside GJ 1083A, and few ask what they carry."
+   ],
+   "region": "concord"
+  },
+  "118352": {
+   "bullets": [
+    "GJ 3331A is a white dwarf with nothing to settle, held by the Federation as a lane marker on the road from Gl 190.",
+    "The lane to Nowhere Much in the Margins is short for a choke point, and smugglers have noticed."
+   ],
+   "region": "concord"
+  },
+  "118220": {
+   "bullets": [
+    "GJ 3224 is a brown dwarf too cold to hold a colony, held by the Federation as the last marker before Providence.",
+    "The lane to Seam is a choke point, and with Freeflag active nearby the patrols here are thin and nervous."
+   ],
+   "region": "concord"
+  },
+  "118240": {
+   "bullets": [
+    "Scrapheap, catalogued as GJ 1062, is a red dwarf named for what salvagers found in orbit: old hulls and discarded hardware, and nothing alive.",
+    "The lane to Bright Prospect in the Margins is a choke point, and the salvagers who work here are not always fussy about whose hulls they strip."
+   ],
+   "region": "concord"
+  },
+  "12896": {
+   "bullets": [
+    "Seam, catalogued as Gl 112.1, is a white dwarf at the outer edge of the Concord lanes, unheld and uninhabited.",
+    "Its choke point on the lane from GJ 3224 is the last stop before dead GJ 3142, and ships that go beyond it are rarely logged again."
+   ],
+   "region": "concord"
+  },
+  "82846": {
+   "bullets": [
+    "A pulsar sweeps the Metronome with hard radiation on a beat you can set a watch by. Nobody lives there, and the navy holds it anyway because it faces the Shadow.",
+    "The Federation keeps pickets here, and since Avesta emptied they have been the nearest thing to a wall between the front and Gl 629.3. Crews call the posting the tick."
+   ],
+   "region": "corran-gate"
+  },
+  "119094": {
+   "bullets": [
+    "Gl 629.3 is a red dwarf with nothing worth settling, and it was never anything but a waypoint on the lane between The Long Watch and The Metronome.",
+    "The Federation holds it for the lane alone. Any ship coming back from the front passes through here, which makes it a quiet place to hear what the pickets will not put in their reports."
+   ],
+   "region": "corran-gate"
+  },
+  "119095": {
+   "bullets": [
+    "Settled in 2354 under a pulsar's hard light, Avesta was a hard place to live that people lived in anyway until the Shadow emptied it in 2523.",
+    "The navy has charted the system from The Metronome but does not enter. Whatever happened to Avesta's people, nobody has yet reported what was left behind."
+   ],
+   "region": "corran-gate"
+  },
+  "84867": {
+   "bullets": [
+    "Mallory was settled in 2370 around a brown dwarf, a dim place that stayed on the charts mainly because four lanes met there. The Shadow emptied it in 2522.",
+    "With Mallory gone, the lanes to Gl 695.1, 44 Ophiuchi and Gl 654.3 in Blightspace lead straight to the front, and the people holding those systems know it."
+   ],
+   "region": "corran-gate"
+  },
+  "90217": {
+   "bullets": [
+    "Corran was settled in 2454 under an ageing red giant, and in 2521 it became the first system the Shadow was known to have emptied. Every living thing there died.",
+    "Its only lane runs to GJ 4074 in Blightspace. Anyone who wants to know what happened there has to go in that way, and nobody has yet reported coming back out with answers."
+   ],
+   "region": "corran-gate"
+  },
+  "118895": {
+   "bullets": [
+    "GJ 3790 is a flare-prone red dwarf one jump from human space; surveyors logged nothing worth a claim, and nobody has bothered to dispute that.",
+    "Its lanes run to both Diadem and Shoulder, so Freeflag crews are said to use it as a back door when the navy is watching the main routes."
+   ],
+   "region": "drift"
+  },
+  "118411": {
+   "bullets": [
+    "GJ 3382 is a dim red dwarf with no settlement and no charted world worth a landing, and it sits one jump inside the Drift.",
+    "Salvagers say the lane toward HIP 27922 in the Far Lanterns is quieter than the charts suggest, and quiet is why some crews prefer it."
+   ],
+   "region": "drift"
+  },
+  "11412": {
+   "bullets": [
+    "HIP 11439 is an empty red dwarf, kept on the charts mostly as a place to wait between the Drift and the Federation's Gl 100A.",
+    "Crews dodging inspection at Gl 100A are said to drop out here and sit dark for days, so a ship that appears unannounced is probably not on a legitimate run."
+   ],
+   "region": "drift"
+  },
+  "40125": {
+   "bullets": [
+    "Gl 301A is a dead red dwarf with only two lanes, one deeper into the Drift and one to Dry Well in the Margins.",
+    "Dry Well's scavengers treat it as a back yard, stripping what earlier claimants left and telling no one what they find."
+   ],
+   "region": "drift"
+  },
+  "108544": {
+   "bullets": [
+    "GJ 4249 is a red dwarf with nothing settled and nothing worth settling, one jump from Gl 841A in the Long Watch, where Federation lookouts log whatever comes through.",
+    "Since the front began moving inward, ships leaving the Drift by this lane get checked harder than they used to, and the crews resent it."
+   ],
+   "region": "drift"
+  },
+  "83937": {
+   "bullets": [
+    "HIP 84195 is a white dwarf, a cold and faintly burning cinder whose surveyed planets, if any survived, give off only hard ultraviolet and a lot of debris.",
+    "Four lanes meet here, to GJ 3990, DR-0029, GJ 1208 and the Shoals, so ships pass through often and stop rarely, since the light is bad for hulls and tempers."
+   ],
+   "region": "drift"
+  },
+  "21368": {
+   "bullets": [
+    "Aldebaran is a red giant that swelled past usefulness long before anyone arrived; its inner worlds are cinders, and the survey of 2300s found nothing worth a charter.",
+    "Ships still cross it because three short lanes meet here and a fourth runs on to Cobb in the Margins, and the giant's glare makes a poor place to be followed."
+   ],
+   "region": "far-lanterns"
+  },
+  "118547": {
+   "bullets": [
+    "GJ 3505 is a brown dwarf with no real warmth and no worlds worth the fuel, so no charter company ever bid for it.",
+    "It sits between Petal's living world and the Blackhull haven at Blind Eye, which makes it a dark corner where hulls with no wish to be logged pass each other without a word."
+   ],
+   "region": "far-lanterns"
+  },
+  "44135": {
+   "bullets": [
+    "Ross 687 is a flaring red dwarf whose bursts cook any hab shell left unshielded, and that is why nobody stayed after the first survey.",
+    "It is one short jump from the Garden's Seedbed, so surveyors treat it as a waiting room and keep their torches cold when the Bloom is seeding."
+   ],
+   "region": "far-lanterns"
+  },
+  "118440": {
+   "bullets": [
+    "GJ 3409B is a white dwarf, a dead star's cooling ember, and what planets it had were stripped long ago; nobody has ever found a reason to settle it.",
+    "Five lanes meet here, one of them to Prism's Lumen, so the traffic is real and mostly quiet, and Prism has never said what rides in its holds."
+   ],
+   "region": "far-lanterns"
+  },
+  "12077": {
+   "bullets": [
+    "GJ 1048 is a red dwarf with a few airless rocks, charted once and never claimed, and left on the lists mainly because the lanes through it are useful.",
+    "It lies a day and a half from Gl 100A in the Concord Worlds, and with the navy stretched thin by the Shadow, the patrols that once swept it come far less often."
+   ],
+   "region": "far-lanterns"
+  },
+  "17502": {
+   "bullets": [
+    "Gl 154.1A is a brown dwarf at the end of a thin pair of lanes, with nothing to mine, nothing to harvest and nothing to see.",
+    "Its one road out of the region runs to Stope Reach in the Margins, and the few crews who use it say it is quiet, which in the Drift is worth noting."
+   ],
+   "region": "far-lanterns"
+  },
+  "61124": {
+   "bullets": [
+    "Belt crews, the grandparents of the Ironhulls, settled Chara in 2280 around a yellow star and a good seam of ore, and built the first refinery before they built a proper street.",
+    "Mining and refining are all Chara is known for: ore comes in from the Anvil systems on the two nearest lanes, and ingots and slag go out, and the whole town smells of both.",
+    "About 54 million people now live there, and it has stayed comfortably off for a middle-ring town, with a navy picket that actually turns up when called.",
+    "Unrest simmers all the same: Chara's crews have heard what the quarantine hides about Varrow and Hesk, and the Federation's habit of requisitioning refitted haulers has not helped their mood.",
+    "A captain could pull on the refinery manifests, where a few ingot loads each month leave under a Compact seal and never reach a stated buyer."
+   ],
+   "region": "furnace-deeps"
+  },
+  "64821": {
+   "bullets": [
+    "Nobody lives at The Furnace because its Wolf-Rayet star, Gl 508A, scours everything near it with radiation and stellar wind, and no hull short of a purpose-built one lasts long in its glare.",
+    "Chara's miners named it for what it does to a ship's plating, and pilots cut through only when the lane saves more time than the shielding costs."
+   ],
+   "region": "furnace-deeps"
+  },
+  "66415": {
+   "bullets": [
+    "Adit is a brown dwarf, Gl 521, too dim to warm anything and too far out to be worth a claim, and surveyors found no world there worth the fuel.",
+    "It stays on the Compact's books as a waypoint between The Furnace and Skerry, where the odd salvager comes through and the odd smuggler, too, preferring a lane that nobody watches."
+   ],
+   "region": "furnace-deeps"
+  },
+  "49828": {
+   "bullets": [
+    "A survey crew charted Spore in 2378, two years after contact, and nearly lost a tender to a seeding it mistook for weather; the Accord's seeding rule is remembered with that scrape.",
+    "Pale fruiting towers rise from the world under the white star and release their spores in slow cycles, which surveyors time from orbit like tides.",
+    "The Accord lets crews orbit, scan and use marked landing fields, and nothing more: no weapons hot, no sample taken, not even a boot scraping.",
+    "Survey logs say the cycles have been running shorter since about 2521, and the Bloom will not discuss it; a captain could carry the logs to someone who wants them."
+   ],
+   "region": "garden"
+  },
+  "118751": {
+   "bullets": [
+    "Marsh was among the first worlds charted, in 2376, when the survey ships that found the Bloom were still arguing over whether anything here was alive.",
+    "The orange sun lights a world of warm, shallow, living water, laced with floating mats that move in patterns charts struggle to hold still.",
+    "Humans may fly over and scan it, but nothing may be drawn from the water, and the old survey buoy sits well clear, as the Accord asks.",
+    "The lane to dead Gl 403 is quieter than it was; one early surveyor's journals mention a second lit world there, and nobody has checked."
+   ],
+   "region": "garden"
+  },
+  "50199": {
+   "bullets": [
+    "Charted in 2395, Verdance was surveyed late because its lanes run only to dead systems, and ships had to cross uninhabited space to reach it.",
+    "Under its yellow sun the whole land seems one green mass, dense canopy broken by bare ring-shaped clearings that surveyors say are kept cleared.",
+    "The Accord forbids touching what grows, and crews here are told so twice, because Verdance looks so much like old Earth that people forget.",
+    "Both lanes lead to dead stars, so a captain here is a long way from help; a salvager's rumour of a wreck on the HIP 50636 lane is still open."
+   ],
+   "region": "garden"
+  },
+  "118725": {
+   "bullets": [
+    "Rainhold was charted in 2377, one of the early survey stops, and it has been the main crossroads of the western Garden ever since.",
+    "Cloud under the white sun is constantly condensing and falling on a world of tall, fern-like growth, and surveyors work from orbit more often than not.",
+    "Under the Accord crews may land only where the Bloom has marked ground, and a hot weapon anywhere in the system ends a licence.",
+    "Spore, Burgeon and dead Gl 403 all meet here, so Rainhold sees whatever news there is; recently it sees less, and nobody knows who is holding it back."
+   ],
+   "region": "garden"
+  },
+  "118774": {
+   "bullets": [
+    "Surveyors charted Bough in 1396's decade after the first sweep, in 2396, working outward from Mere along a lane they never expected to be useful.",
+    "The orange sun's world carries one vast branching growth that spans a whole continent, and surveyors have given up counting whether it is one thing or many.",
+    "Humans can scan and orbit freely; landing is restricted to marked ground, and nothing, not a leaf, may leave the system.",
+    "Its only other lane runs to dead GJ 3732B, and ships that make the crossing report the Bough lane buoy occasionally changing its beacon pattern, unprompted."
+   ],
+   "region": "garden"
+  },
+  "56071": {
+   "bullets": [
+    "Arbor was charted in 2380, when the survey push reached Zosma and needed a safe waypoint on the way back toward Marsh.",
+    "Huge trunk-like structures stand across the yellow sun's world, many kilometres apart, linked by something surveyors call roots because they have no better word.",
+    "The Accord lets crews orbit, scan and land at marked fields; trade with the Bloom here means being handed things, never taking them.",
+    "Zosma lies a short step along the lane and borders the Hedge, so Arbor sees more human traffic than most; a captain could sell passage and keep quiet about it."
+   ],
+   "region": "garden"
+  },
+  "44167": {
+   "bullets": [
+    "Bower was charted in 2385 by a crew who followed a lane out of dead Gl 330 and found a lit world at the end of it.",
+    "Its yellow sun lights a world of woven, arch-like growth that surveyors say resembles a half-built city, though nobody claims it is one.",
+    "Human crews may scan from orbit and land only on marked ground, and the Bloom has made it clear it watches how they behave.",
+    "Both its lanes lead to dead systems, which makes it a quiet corner; a surveyor's note about a recurring signal on the GJ 3553 lane has never been followed up."
+   ],
+   "region": "garden"
+  },
+  "118655": {
+   "bullets": [
+    "Tilth was charted in 2398 late in the survey, with a crew working the lane from Pollen and not expecting much.",
+    "The yellow sun's world is patched with enormous bands of dark, turned-looking ground in which grow rows of fine, regular shoots that no human hand planted.",
+    "Crews may watch and scan, but the Accord's bar on taking anything that grows applies sharply here, since a handful of soil looks harmless and is not.",
+    "Tilth sits between Pollen and dead GJ 3582, and surveyors say the planted rows have moved since the last chart; someone could earn a living re-checking."
+   ],
+   "region": "garden"
+  },
+  "118716": {
+   "bullets": [
+    "Quickening was charted in 2382, and the name stuck because the survey crew saw the surface change colour within days of arriving.",
+    "Under its white sun the world cycles quickly through blooms, flushes of growth that rise and collapse in weeks, and surveyors time their visits to them.",
+    "The Accord forbids anything hot near a living world, and crews here are reminded that a bloom is not a good reason to fire a thruster.",
+    "Lanes to Burgeon and Mere join it to the heart of the Garden; the cycle has sped up recently, and the survey office wants to know why."
+   ],
+   "region": "garden"
+  },
+  "118761": {
+   "bullets": [
+    "Mere was charted in 2387, when survey ships working the Bough lane stopped over to check the charts and stayed a season.",
+    "The orange sun shines on a world mostly covered by still, dark water, with floating gardens that rise and sink in a slow rhythm.",
+    "Crews may orbit, scan and land at marked shorelines, but nothing may be taken from the water, however clear it looks.",
+    "Mere links Bough and Quickening, and survey crews have noted that the floating gardens are drifting toward one coast, as if heading somewhere."
+   ],
+   "region": "garden"
+  },
+  "118681": {
+   "bullets": [
+    "Pollen was charted in 2388, and it is the Garden's door to the Anvil: the lane to Wrack, an Ironhull system, is two days and change.",
+    "Under the white sun the world sheds fine clouds of pollen into its own upper air, glittering and visible from orbit like a second atmosphere.",
+    "The Accord applies as strictly to Ironhull crews as to anyone, and a few have learned that a hauler's gun is no reason to relax it.",
+    "Ironhull haulers now pass through with Federation inspectors asking questions; a captain with discreet cargo of news, not goods, could do well here."
+   ],
+   "region": "garden"
+  },
+  "53330": {
+   "bullets": [
+    "Burgeon was charted in 2381, and it became a junction because three lanes meet there, to Mossdeep, Quickening and Rainhold.",
+    "The orange sun's world is dense with growth in tiers, from low mats to canopy, and surveyors have found it hard to say where the ground begins.",
+    "Human crews may scan, orbit and land at marked fields; the Bloom has sometimes moved the markers without warning, and visitors are expected to notice.",
+    "Mossdeep leads on to the Hedge, so Burgeon feels the pressure of the front first; there is steady work for anyone willing to carry surveyors."
+   ],
+   "region": "garden"
+  },
+  "46376": {
+   "bullets": [
+    "Loam was charted in 2389 under the catalogue name Tau-1 Hydrae, one of the few Garden stars that old Earth astronomers knew by name.",
+    "The yellow sun's world is covered in deep, dark, living soil in bands that shift slowly with the seasons, and surveyors work from stable orbits.",
+    "The Accord bars taking anything that grows, and Loam is where that rule is hardest to keep, since the ground itself is alive.",
+    "Lanes lead to dead GJ 3553 and Winze and to Root; salvagers say there is a derelict on the Winze lane, and nobody has confirmed it."
+   ],
+   "region": "garden"
+  },
+  "54712": {
+   "bullets": [
+    "Zosma was charted in 2383 and sits next to the Hedge: a 1.1-day lane runs to Sporefall, among the shortest in the region.",
+    "The white sun lights a world of long ridges, covered in slow-growing crust and pierced by wide vents that exhale warm, moist air.",
+    "The Accord applies in full, and crews from the Hedge crossing in are checked at the buoy and reminded that no weapon is to be armed.",
+    "Since Shadowfall the Hedge side is nervous, and Zosma sees refugees' rumours before the news; a captain can trade in what is heard, not what is held."
+   ],
+   "region": "garden"
+  },
+  "45252": {
+   "bullets": [
+    "Canopy was charted late, in 2406, after the survey crews found the lane from Root and had little reason to go on until a probe sent back images.",
+    "Under the orange sun the world is overgrown with a single continuous layer of growth high above the ground, which surveyors have never been able to map beneath.",
+    "Humans may scan and orbit; landing is limited to a few marked clearings, and the Bloom is strict about leaving them as found.",
+    "The lane to Seedbed leads toward the Far Lanterns, and survey logs suggest the canopy has been thinning near the edge, which nobody can explain."
+   ],
+   "region": "garden"
+  },
+  "54650": {
+   "bullets": [
+    "Mossdeep was charted in 2384 and is the only red dwarf among the Garden's living worlds, so its light is dim and its colours are strange.",
+    "Dark, dense growth covers the world under the weak red sun, and surveyors report it seems to hold what little light there is.",
+    "The Accord applies as it does elsewhere; with two lanes into the Hedge, Mossdeep is where human crews most often arrive armed and must be told to stand down.",
+    "Tendril and Dewfall are both close, and in the Shadow's time Mossdeep's lanes are watched; a captain might carry warnings between the Hedge and the Bloom."
+   ],
+   "region": "garden"
+  },
+  "118594": {
+   "bullets": [
+    "Root was charted in 2401, at the end of a long lane from Loam, and the survey crew found a world that was clearly older than its neighbours.",
+    "Under the white sun, thick ropes of growth run across the whole surface like a root system, with larger nodes at junctions visible from orbit.",
+    "Humans may scan and orbit and land on marked ground; the Accord's bar on taking anything that grows is read here very strictly.",
+    "Root joins Loam and Canopy, and surveyors say the nodes pulse in ways that look like signalling; a captain with decent instruments might map it."
+   ],
+   "region": "garden"
+  },
+  "118649": {
+   "bullets": [
+    "Undergrowth was charted in 2402, after survey ships ran the lane from dead Gl 351.1 in the Hedge and found a living world past it.",
+    "The white sun lights a world of low, dense, shaded growth, and surveyors say the ground is almost never visible from orbit.",
+    "Crews may scan and orbit and land in marked places; the Bloom treats stray lights and engine burns near the surface as a breach, and says so.",
+    "With only one lane to a living world and one to the Hedge's dead stars, Undergrowth is isolated; a few salvagers claim to have seen movement at Gl 351.1."
+   ],
+   "region": "garden"
+  },
+  "46504": {
+   "bullets": [
+    "Rhizome was charted in 2392 and is a crossroads: four lanes meet here, to Undergrowth, Seedbed, Petal in the Hedge and dead GJ 3553.",
+    "Under the white sun the world is knitted with pale, thread-like growth that spreads over the land and out into shallow seas.",
+    "The Accord applies to all who come, whichever side of the Hedge they started from, and the Bloom has stopped one Federation tender at the buoy until it stood down.",
+    "Petal is only 2.1 days away, so Rhizome sees Hedge traffic; with the front moving inward, a captain could find steady carriage here."
+   ],
+   "region": "garden"
+  },
+  "44248": {
+   "bullets": [
+    "Seedbed was charted in 2403 and is the Garden's last stop before the Far Lanterns, with a lane to dead Ross 687 beyond.",
+    "Under the orange sun the world holds wide basins of pale, fine soil, from which new growth rises in ordered, repeated patterns.",
+    "Humans may scan and orbit and land only on marked ground, and the Accord's rule against burning a torch through a seeding is posted on the buoy.",
+    "Since Shadowfall the Bloom has watched this edge closely, and survey crews say the basins are being sown more often; someone should ask why."
+   ],
+   "region": "garden"
+  },
+  "118778": {
+   "bullets": [
+    "Human surveyors charted Glade in 2397, twenty-one years after contact, and have logged it on a rolling schedule ever since, reachable only through Lichen or Tendril.",
+    "Under its yellow sun they describe broad grown terraces that shift slowly between visits, and sounds nobody has yet matched to anything like speech.",
+    "The Accord applies in full: weapons cold, nothing that grows leaves with you, and survey crews scrape their boot treads before returning to the ship.",
+    "Each pass of the dead-reckoning surveys finds the terraces rearranged a little more, and the old charts are quietly failing.",
+    "A 2397 survey log describes a ring structure that no later crew can find, and someone in the Garden would pay for a second look."
+   ],
+   "region": "hedge"
+  },
+  "118767": {
+   "bullets": [
+    "Lichen was charted in 2399, and the name comes from the first survey crew, who saw pale grown crusts spreading across every hard surface of its main world.",
+    "Lichen sits between Glade and Sporefall, so it sees more survey traffic than most Hedge worlds, and its Bloom hosts have apparently noticed.",
+    "Surveyors report the crusts retreating from their landing sites, which they take as courtesy, though a few suspect it is a polite way of asking them to leave.",
+    "The Accord bars sampling, so every lab on the Garden side lacks a single gram of Lichen crust, and several have offered a lot for one."
+   ],
+   "region": "hedge"
+  },
+  "118737": {
+   "bullets": [
+    "Sporefall was charted in 2390, in the uneasy years after contact, and the first survey crews reached it by the Zosma lane because no other lane yet existed.",
+    "Its red dwarf gives a dim, ruddy light, and surveyors report clouds of drifting spores that fog optics and lodge in every seal.",
+    "The Accord forbids burning a torch through a seeding, and Sporefall seeds often, so Zosma-bound captains check the Bloom's signals before leaving the lane.",
+    "Crews that have worked the Zosma lane since Shadowfall say the spore clouds have thickened, and that the Bloom has started turning back ships it once let through.",
+    "A salvager's rumour says a survey cutter from 2391 vanished near the red dwarf, and that something grown now sits where she was last seen."
+   ],
+   "region": "hedge"
+  },
+  "55679": {
+   "bullets": [
+    "Tendril was charted in 2391, and it is the Hedge's gate to Mossdeep in the Garden, which makes it a hub for survey traffic.",
+    "Surveyors report long grown lines running between the orange star's worlds, like cables, and they pulse in slow sequence that crews have learned to log but not to read.",
+    "Visitors keep weapons cold and take nothing, and the few captains who have tried to stay quiet and poach a cutting have been turned away at the next lane.",
+    "Tendril lies two lanes deep from Glade and sees few ships, so what the Bloom does here goes mostly unwatched, and the Bloom seems to know it."
+   ],
+   "region": "hedge"
+  },
+  "45040": {
+   "bullets": [
+    "Petal was charted in 2404, and its yellow sun makes it among the more livable-looking Hedge worlds, though no human may settle it.",
+    "Lanes run to Rhizome in the Garden and to GJ 3505, a dead star in the Far Lanterns, so survey crews pass through on the way somewhere else.",
+    "Surveyors describe vast grown blooms that open and close on a cycle of weeks, and the Accord says to keep the torch cold during every one.",
+    "Captains who have crossed from the dead Lantern star say the Bloom here watches the lane more closely than it did before Shadowfall.",
+    "A surveyor's note claims the blooms open facing the dead star at GJ 3505, which nobody has been able to explain."
+   ],
+   "region": "hedge"
+  },
+  "118724": {
+   "bullets": [
+    "Dewfall was charted in 2394 under an orange sun, named for the film of moisture that grown surfaces seem to shed every dawn.",
+    "It has three lanes: one to dead GJ 3643, one to Fen, and one to Mossdeep in the Garden, so it is a modest crossroads.",
+    "Surveyors report living towers rising in the morning damp and drooping by dusk, and they log them hourly because the Accord forbids anything more intrusive.",
+    "Nobody lives at Dewfall, but survey crews linger in its lanes, and a captain with a hold of cold-weather gear can find work there.",
+    "A crew from Mossdeep claims the towers have begun to lean towards dead GJ 3643, a star with nothing on the chart to explain why."
+   ],
+   "region": "hedge"
+  },
+  "48274": {
+   "bullets": [
+    "Thicket was charted in 2410, the last of the Hedge's survey worlds, and it lies thirteen jumps from Sol, at the far end of a long thin chain.",
+    "Its white star burns hot, and surveyors report a dense tangle of grown barbs and branches that makes the inner system hard to navigate.",
+    "Lanes lead to Frond and to dead GJ 3570, so visitors are usually surveyors, salvagers working the dead star, or somebody lost.",
+    "The Accord applies here as everywhere, and the tangle grows thick enough to foul a hull that gets too close, which the Bloom may regard as its own enforcement.",
+    "A salvager's tale holds that a hauler lost near GJ 3570 drifted into Thicket's tangle intact, and has not been seen since."
+   ],
+   "region": "hedge"
+  },
+  "50422": {
+   "bullets": [
+    "Fernlight was charted in 2408, and its two lanes both run to dead stars, GJ 2077 and GJ 3598, so no live system touches it.",
+    "Under the yellow sun surveyors report feathery grown fronds taller than a hab ring, bending in a wind no instrument can find.",
+    "Because it sits so far from anything inhabited, Fernlight gets the fewest visitors in the Hedge, and its Bloom hosts get the fewest warnings.",
+    "Weapons stay cold and nothing leaves with you, and a captain who breaks either rule here will have nobody to blame but the dead stars.",
+    "Fronds were seen bending toward GJ 3598 in 2519, the year the picket went silent, and a few spacers draw a conclusion from that."
+   ],
+   "region": "hedge"
+  },
+  "118663": {
+   "bullets": [
+    "Frond was charted in 2409 under an orange sun, and it sits one lane from Thicket and two from the dead stars GJ 3576 and GJ 3598.",
+    "Surveyors describe a grown canopy that covers whole continents and rises and falls in slow swells, like the chest of something asleep.",
+    "The Accord forbids touching it, so crews study it from orbit with long-range optics, and nobody has ever walked beneath it.",
+    "The Bloom seems to know when ships come, since the canopy lifts a day before each arrival, which some crews find welcoming and others find unnerving.",
+    "A survey tech from 2412 left a note saying the swells are slowing, and no later crew has agreed or disagreed."
+   ],
+   "region": "hedge"
+  },
+  "118706": {
+   "bullets": [
+    "Fen was charted in 2405 around a red dwarf, and three lanes meet here: two to dead stars, GJ 3624 and GJ 3598, and one to Dewfall.",
+    "Surveyors report waterlogged lowlands covered in grown reeds that glow faintly in the red light, and strings of floating growths that drift without a current.",
+    "Visitors must keep weapons cold and take nothing, and Fen's dim light makes the rule hard to police, which the Bloom may count on.",
+    "As the Shadow's front moves inward, captains in the Hedge have started to wonder whether Fen's quiet is peace or something being held back.",
+    "A rumour says the glowing reeds brightened for three days in 2521, the week Corran died, and a surveyor has the logs."
+   ],
+   "region": "hedge"
+  },
+  "3087": {
+   "bullets": [
+    "Mining crews settled Grist in 2314, during the Rush, bolting their first habitats to the rock under an orange sun and leaving the name of a grinding mill.",
+    "It is a working town of about twelve million, known for its ore and its refineries, and for sending ingots on to 85 Pegasi's forges.",
+    "Grist is comfortable by Compact standards, but the families of Varrow and Hesk crews drink here, and they say the Federation's silence makes them angrier than the Glass.",
+    "Grist sits cut off from the main Compact, with two dead lanes behind it, and its patrol hulls are thin on the ground and mostly old.",
+    "A captain could pick up work hauling refinery output on the long way round, where crews who dislike the Compact's route pay to ask no questions."
+   ],
+   "region": "iron-outposts"
+  },
+  "171": {
+   "bullets": [
+    "The Ironhulls settled 85 Pegasi in 2341, twenty-seven years after Grist, and built the yellow-star world into a forge-city of about 530 million.",
+    "Its mines feed its refineries, its refineries feed its forges, and its forges turn out hull plate, struts and, lately, gun mounts for refitted haulers.",
+    "The Federation wants those refitted ships and their crews for the Shadow front, and 85 Pegasi has started to resent how politely it is being asked.",
+    "Unrest is lower here than elsewhere in the Compact, but Freeflag handbills turn up in the forge districts and the foremen have stopped tearing them down.",
+    "A captain could find out who is quietly paying for the gun mounts that leave the forges without a Federation inspection stamp."
+   ],
+   "region": "iron-outposts"
+  },
+  "117970": {
+   "bullets": [
+    "Gl 12 is a red dwarf with nothing worth settling, a dim, flaring star and bare rock, and nobody has ever filed a claim that held.",
+    "It matters only as a choke point: the lane from Grist and 85 Pegasi to the empty Cells passes through it, and salvagers and smugglers use that lane."
+   ],
+   "region": "iron-outposts"
+  },
+  "118025": {
+   "bullets": [
+    "GJ 3061B is a red dwarf at the outer edge of the Outposts, uninhabited, and surveyors long ago wrote it off as not worth the fuel.",
+    "Its two lanes lead only to Grist and 85 Pegasi, so anyone sheltering there is either lost or has reason to stay out of sight."
+   ],
+   "region": "iron-outposts"
+  },
+  "12082": {
+   "bullets": [
+    "Settled in 2212, early in the Rush, New Lagos grew from a few farm domes under an orange sun into a world of about 1.5 billion.",
+    "Its agri ports feed the neighbouring systems, its container port ships the surplus, and the navy keeps a base here to guard both.",
+    "It is rich and well guarded, with little open unrest, but ships and crews are requisitioned for the Shadow front, and dockers resent it.",
+    "A harbour clerk needs a sealed container carried to Barnacle unlogged; a captain could take the job and learn who in the navy office is paid to look away."
+   ],
+   "region": "lighthouse-run"
+  },
+  "7966": {
+   "bullets": [
+    "Barnacle was settled in 2266 as a small orange-star colony, and since the Charter Strikes it has been a haven for Blackhull crews with nowhere else to dock.",
+    "About 890 thousand people live here, running a container port that rehandles cargo no Federation yard would touch, and a haven that asks few questions.",
+    "Security is thin and unrest is rising: the navy sits across the choke point at New Lagos, and talk of the Glass cover-up and Freeflag works through the docks.",
+    "A captain could pick up sealed boxes bound for the inner ring, though the haven's wardens suspect a Federation informant is already working the quays."
+   ],
+   "region": "lighthouse-run"
+  },
+  "118100": {
+   "bullets": [
+    "Nobody lives at the Lighthouse: the pulsar sweeps the system with hard radiation, and no hull or habitat has yet been built to survive it for long.",
+    "The Federation holds it all the same, because four lanes meet here, and captains cross it fast, shielded and without stopping."
+   ],
+   "region": "lighthouse-run"
+  },
+  "19207": {
+   "bullets": [
+    "HIP 19255 is a brown dwarf with no light worth the name, and six lanes meet here, every one running to another dead system.",
+    "Salvagers treat it as a crossroads in the dark; the two nearest neighbours, DR-0008 and DR-0009, are known only by survey number, and few log a visit."
+   ],
+   "region": "long-dark"
+  },
+  "118244": {
+   "bullets": [
+    "GJ 9120 is a red dwarf nobody settled, a dim, flare-prone star with nothing on the charts worth the fuel to stop for.",
+    "Its lane to Cobb in the Margins, three days out, makes it a quiet back door for independent traders who would rather not meet a navy inspection."
+   ],
+   "region": "long-dark"
+  },
+  "118173": {
+   "bullets": [
+    "GJ 1052 is an ordinary orange star that nobody ever settled, and its charts have gone unrevised since the Rush ended.",
+    "It sits between the Federation's GJ 2030B in the Concord Worlds and DR-0014 in the Maw, so crews cutting across tend to travel with their transponders turned down."
+   ],
+   "region": "long-dark"
+  },
+  "17625": {
+   "bullets": [
+    "GJ 1064A is a Wolf-Rayet star, and its radiation and stellar wind would strip an unshielded hull, which is the whole reason nobody lives here.",
+    "Outcrop Reach, three days down the far lane, is one of the few dead systems in the region with a proper name, which suggests someone once worked there."
+   ],
+   "region": "long-dark"
+  },
+  "118304": {
+   "bullets": [
+    "GJ 3287 is a brown dwarf with no inner worlds worth mentioning, and no one has ever found a reason to stay.",
+    "Its far lane runs three days to Placer Reach, a name that suggests prospectors filed a claim there, and whether it ever paid is something no chart records."
+   ],
+   "region": "long-dark"
+  },
+  "118426": {
+   "bullets": [
+    "GJ 3393 is an orange star with no settlement and no beacon, the kind of system the Rush passed through and never came back to.",
+    "A lane runs 2.7 days to GJ 3407B in the Margins, which makes it a handy dead-end shortcut for anyone who knows the other three lanes lead only to more emptiness."
+   ],
+   "region": "long-dark"
+  },
+  "74766": {
+   "bullets": [
+    "Gl 581 was settled in 2238, in the first great rush outward, and has been a Federation world ever since, farmed under a dim red sun with mirrors and long patience.",
+    "About 240 million people live here, and the system is known for its grain, its stacked habitats and a container-port that handles much of the freight crossing the Concord Worlds.",
+    "It is rich, heavily garrisoned and calm, and the grumbling is about requisitions: the navy keeps taking freighters and crews for the Shadow front, and harvests wait on hulls that never return.",
+    "Its only neighbour in the Long Watch is dead GJ 3877, so the wider lane network runs through the Concord Worlds and the port supervisors know it.",
+    "A captain with spare hold space could be paid well, and quietly, to move boxes that the requisition lists conveniently forgot."
+   ],
+   "region": "long-watch"
+  },
+  "105519": {
+   "bullets": [
+    "Gamma Pavonis was settled in 2269 as a breadbasket for the middle ring, and it still sells grain to mining systems that resent the Federation's prices and eat the grain anyway.",
+    "With about 1.6 billion people it is one of the biggest worlds in the region, all farmland, habitat towers and a container-port that never really sleeps.",
+    "Wealth is high and unrest low, but security is thinner than it looks, as the navy has pulled hulls towards the front and the Glass quarantine has made every nearby lane feel closer to trouble.",
+    "Under Prism's recall, nobody on the docks will say which navigation cores have been pulled, and a few haulers are flying on swapped units with no paperwork.",
+    "A captain could take a crate marked as recalled core stock from a quiet dockside broker, and would want to know where it is going before accepting."
+   ],
+   "region": "long-watch"
+  },
+  "82565": {
+   "bullets": [
+    "Gl 644A is an orange star on the charts as a lane junction between Gl 664 and Wolf 1061, and nobody has ever found a reason to stay.",
+    "Navy traffic passes through on its way between the Concord Worlds, and the beacon here is maintained mostly because someone once wrote it into a schedule."
+   ],
+   "region": "long-watch"
+  },
+  "99382": {
+   "bullets": [
+    "Gl 784 is a yellow star with nothing worth living on, and the Federation holds it only because the lanes to Gl 783A and Gl 754 pass through it.",
+    "Surveyors found no world that could hold a dome, which is the usual verdict in this region, and the system has been left to its beacon."
+   ],
+   "region": "long-watch"
+  },
+  "118995": {
+   "bullets": [
+    "GJ 3877 is a brown dwarf, too cool to warm anything and too dim to light a dock, and its two lanes run only to Gl 555 and Gl 581.",
+    "Nobody lives here, though the lane to Gl 581 keeps a thin trickle of navy and freight moving through."
+   ],
+   "region": "long-watch"
+  },
+  "84451": {
+   "bullets": [
+    "Gl 667A is a yellow star that looked good on early charts and gave nothing in the surveys, so nobody has ever put a roof over their head here.",
+    "It is a four-lane junction between the Concord Worlds and the Long Watch, and traffic that slows here is usually waiting on a navy inspection slot."
+   ],
+   "region": "long-watch"
+  },
+  "119102": {
+   "bullets": [
+    "Gl 633 is a brown dwarf with no habitable rock and almost no light, and its lanes to Gl 667A and HIP 84051 are long and slow.",
+    "Crews call it a bad place to break down, since nobody is nearer than two and a half days and the navy rarely stops by."
+   ],
+   "region": "long-watch"
+  },
+  "108224": {
+   "bullets": [
+    "Gl 842 is a red dwarf with no world worth the mass of a dome, and settlers who surveyed it went on to Gamma Pavonis instead.",
+    "Its lanes to Assay and Gamma Pavonis make it a quiet back-door, and the navy sometimes parks a picket here that nobody will admit to."
+   ],
+   "region": "long-watch"
+  },
+  "83793": {
+   "bullets": [
+    "HIP 84051 is a red giant, swollen and unstable, and its radiation and deep well have kept every would-be settler away since the first survey.",
+    "Two lanes lead out to the Margins, at Long Shot and Cervantes, which makes it a choke point that smugglers and the navy both watch and neither admits to."
+   ],
+   "region": "long-watch"
+  },
+  "108060": {
+   "bullets": [
+    "Gl 841A is an orange star in the outer ring, long surveyed and never settled, with nothing worth the cost of a dome.",
+    "Its lane to GJ 4249 runs into the dead Drift, and traffic here is mostly salvagers who go out and sometimes do not report back."
+   ],
+   "region": "long-watch"
+  },
+  "85387": {
+   "bullets": [
+    "Gangue is a white dwarf, a cooling cinder whose radiation and well have kept it empty, and its catalogue name, Gl 676A, is the only thing that ever settled there.",
+    "Lanes run to Cervantes in the Margins and to Gl 629.3 in Corran Gate, so freight and rumour from Corran pass through on their way inward."
+   ],
+   "region": "long-watch"
+  },
+  "119341": {
+   "bullets": [
+    "GJ 1251 is a red dwarf at the far end of the outer ring, and its use is as a gateway: from here a ship can enter the open Drift.",
+    "Nu Octantis, in the Outer Dark, lies three days off, and the Federation keeps GJ 1251 on its charts because nobody wants to lose sight of what is coming through."
+   ],
+   "region": "long-watch"
+  },
+  "113008": {
+   "bullets": [
+    "Fomalhaut was settled in 2255 by prospectors working the second wave of the Rush, and it has been mining its rock and skimming its gas giant ever since.",
+    "Its three lanes lead only to dead systems, so the town's ore and fuel reach the Federation's Concord Worlds by way of the empty stretch at GJ 2005.",
+    "Roughly three million people live here, modestly well off and modestly guarded, with a tired suspicion of anyone who arrives asking about the quarantines.",
+    "A captain could find steady work running ore through GJ 2005 to the Concord choke point, and learn quickly which inspectors can be talked round."
+   ],
+   "region": "margins"
+  },
+  "23638": {
+   "bullets": [
+    "Vasquez was claimed in 2308 by an ice-hauling cooperative whose charter-master gave the system his name, and it grew faster than any other Margins town.",
+    "With about 95 million people it is the Margins in miniature: its ice and gas ports feed everyone nearby, and it still can't grow enough food for itself.",
+    "Crowding, rationed water and a thin security presence keep tempers hot, and the meeting halls fill whenever a Federation requisition notice goes up.",
+    "A captain who can bring food, medicine or components in bulk will never be short of buyers, nor of people asking where the cargo came from."
+   ],
+   "region": "margins"
+  },
+  "108830": {
+   "bullets": [
+    "Lindqvist was settled late, in 2433, by crews who had lost their berths in the long aftermath of the Charter Strikes and wanted somewhere nobody held a lien.",
+    "Its ice and gas ports keep about two million people alive, in a town that never quite grew past the first prefab rows.",
+    "Security is thin and tempers are uneasy, and the three dead systems around it make a quiet place for ships that would rather not be logged.",
+    "Salvagers here swear that wrecks lie unclaimed in the dead systems at Gl 851 and GJ 4201, and a few have paid to be proved wrong."
+   ],
+   "region": "margins"
+  },
+  "15333": {
+   "bullets": [
+    "Quill was founded in 2306 by ice haulers who followed the first lanes out from Zeta Reticuli's cometary belt, two years before neighbouring Vasquez.",
+    "About three million people work its ice and gas ports, and it is the steadier of the pair: less crowded, less angry, and less noticed.",
+    "Its trade runs mostly to Vasquez, 2.3 days away, which gives it a market but also makes it hostage to any trouble there.",
+    "One lane leads to Gl 118, a dead system in the Sink, and ships have been seen coming back from it without papers."
+   ],
+   "region": "margins"
+  },
+  "80442": {
+   "bullets": [
+    "Zeta Trianguli Australis was settled in 2335 by a mining syndicate that has long since dissolved and left its debts to the miners' children.",
+    "About two million people dig ore and skim gas, with a mining port that runs hard and a security force that barely runs at all.",
+    "Unrest is high for a town this size, mostly over pay, and the nearby lanes into dead systems make a good hiding place for anyone leaving owing money.",
+    "The 1.6-day lane to Long Shot carries most of its ore and most of its rumours, and a hauler willing to run it regularly will be known by everyone."
+   ],
+   "region": "margins"
+  },
+  "77716": {
+   "bullets": [
+    "Long Shot was settled in 2323 under a white sun by people who bet their savings on a survey nobody else believed, and the name stuck.",
+    "The bet half paid off: its mining and ice ports support about three million people, none of them rich and all of them proud of it.",
+    "Its lane to HIP 84051 in the Long Watch is a Federation choke point, so every ore cargo goes out under navy inspection.",
+    "With the navy short of ships, inspectors have started eyeing local haulers as requisition stock, and a captain could be asked to carry what the owners would rather hide."
+   ],
+   "region": "margins"
+  },
+  "24549": {
+   "bullets": [
+    "Capella was founded in 2346 under a dim red dwarf by a small crew of ice cutters, and it has never grown past a few thousand people.",
+    "Its single ice port is the whole economy, and with almost no security the outpost depends on whoever happens to be docked.",
+    "Unrest is high, and the lane to Gl 164 in the Ironhull Anvil means Compact crews and quieter visitors put in here and are not asked questions.",
+    "A captain could carry ice, news or a passenger across that choke point, if they can stomach not knowing which of the three it will turn out to be."
+   ],
+   "region": "margins"
+  },
+  "22210": {
+   "bullets": [
+    "Nowhere Much was settled in 2316 by miners who named it as a joke, and the name stuck once the joke stopped being funny.",
+    "About two million people work its mining and ice ports, while all three lanes out run through Federation choke points into the Concord Worlds.",
+    "The navy inspects everything that leaves, and the town's anger at the delays feeds the sympathy for Freeflag that surfaces at its bars and notice-boards.",
+    "Smugglers say there is a quieter way past the Concord inspectors, and that the price of finding it is always more than the cargo is worth."
+   ],
+   "region": "margins"
+  },
+  "12810": {
+   "bullets": [
+    "Bright Prospect was settled in 2342 by prospectors who followed a rich survey of the Tau-1 Eridani system belt, and the town is now about six million strong.",
+    "Its mining and ice ports keep the Margins' outer reaches supplied, but the system has almost no security and no authority above its own councils.",
+    "Unrest runs high, with miners' councils warning that the Federation's lane at Scrapheap will close on them the day the navy needs the ore.",
+    "A captain could take cargo to Dalim, 2.3 days away, or hire on with a council that needs guns more than it can say."
+   ],
+   "region": "margins"
+  },
+  "14843": {
+   "bullets": [
+    "Dalim was settled in 2364 by families who left Bright Prospect when its claims filled up, and has stayed a colony of about 212 thousand ever since.",
+    "Its mining and ice ports sell mostly to Bright Prospect, and the two towns are close in the way of relatives who owe each other money.",
+    "With little security and rising unrest, Dalim lives with a constant fear of raiders, and the dead systems around it offer plenty of cover.",
+    "The dead system at Stope Reach, 2.5 days away, is named for old workings, and Dalim miners say those workings were never fully surveyed."
+   ],
+   "region": "margins"
+  },
+  "25215": {
+   "bullets": [
+    "Dunmore was settled in 2332 by mining crews working the system's asteroid belt, and about 716 thousand people now live in the colony they built.",
+    "Its mining and ice ports ship out ore and water, while a lane to the dead system at GJ 3356 offers a hard 2.0-day run past a swollen red giant.",
+    "The navy rarely visits and security is thin, so the colony relies on its own defences and a long tradition of settling arguments in the back rooms.",
+    "A lane runs 2.7 days to Gl 233A in Prism Research, a dead system, and ships coming from that direction have had trouble explaining why."
+   ],
+   "region": "margins"
+  },
+  "102154": {
+   "bullets": [
+    "Okafor was settled in 2326 by a mining crew led by the engineer whose name the colony carries, and about 437 thousand people now live under its yellow sun.",
+    "Its mining and ice ports supply ore and water to the outer Margins, and its closest lanes run into the dead systems of Blackspace.",
+    "Security is thin and unrest is climbing, and ships that dock with no transponder history are more common than the harbour office likes to admit.",
+    "A captain who knows how to run quietly could earn well here carrying cargo through Blackspace, though the people who hire for that rarely give their names."
+   ],
+   "region": "margins"
+  },
+  "74952": {
+   "bullets": [
+    "Murphy's Claim began in 2367 as a single mining claim filed by a prospector named Murphy, whose deed has been disputed in the colony's courts ever since.",
+    "About fourteen thousand people work the one mining port, and every lane out leads to a dead system more than 2.6 days away.",
+    "Security is almost nonexistent, which suits some of the claim-holders and terrifies the rest, who worry about raiders and about each other.",
+    "A captain could carry a copy of the original deed to anyone who wants to buy the argument, or to anyone who wants it buried."
+   ],
+   "region": "margins"
+  },
+  "5849": {
+   "bullets": [
+    "Ramsey was settled in 2350 by gas-skimming crews who found an ice-rich belt, and the town of about three million has quietly outgrown its welcome.",
+    "Its ice and gas ports sell fuel and water to every ship in range, and its position beside several dead lanes makes it a natural last stop.",
+    "Security is thin and unrest middling, with the town councils fearing both a Federation tax collector and a Freeflag recruiter, whichever arrives first.",
+    "The 2.7-day lane to Kittering is the only way the colony's goods reach a bigger market, so whoever guards it can name their terms."
+   ],
+   "region": "margins"
+  },
+  "86529": {
+   "bullets": [
+    "Cervantes was settled in 2336 by miners who liked a quiet system, and it has grown into a town of about eight million that never stays quiet.",
+    "Its mining and ice ports are among the busiest in the Margins, and its lanes to Gangue and HIP 84051 open straight into Federation space.",
+    "The navy inspects, taxes and increasingly requisitions here, so security is the weakest it can be while the unrest is the loudest.",
+    "A captain could carry cargo out to Gangue in 1.4 days, or carry a crew out of the system before a requisition notice arrives."
+   ],
+   "region": "margins"
+  },
+  "38273": {
+   "bullets": [
+    "Dry Well was settled in 2428 by a mining company that bet the system's name was a joke; it wasn't, and water is still brought in from outside.",
+    "About twenty-three thousand people hold on at one mining port, and the Drift lane to Gl 301A, three days out, is the nearest thing they have to a road.",
+    "Security is thin, unrest is high, and the place survives on spare parts and habit.",
+    "Salvagers come through from the Drift with stories of wrecks and abandoned ships, and the better-informed ones will pay for fuel and a quiet berth."
+   ],
+   "region": "margins"
+  },
+  "32394": {
+   "bullets": [
+    "Pell's Folly was settled in 2412 by a speculator named Pell who sold shares in the system's gas and ice, and went unlamented when the shares failed.",
+    "About 43 thousand people stayed on and now work the ice and gas ports, supplying ships heading to or from the Anvil.",
+    "Security is thin and unrest is high, and the colony's debts, mostly held outside, have people nervous after what happened at Tarrow.",
+    "A lane to GJ 1092 leads on to Pollux in the Ironhull Anvil, and a captain with Compact friends can find work running that way."
+   ],
+   "region": "margins"
+  },
+  "19028": {
+   "bullets": [
+    "Cobb was settled in 2368 as a single mining outpost, and about thirteen thousand people have stuck it out through every downturn since.",
+    "Its one mining port ships ore to anyone who will pay, and the three lanes out run toward the Long Dark and the Far Lanterns.",
+    "Security is thin, unrest is steady, and the outpost has learned to expect that strangers who ask about the far lanes are not here for the ore.",
+    "A captain could take the three-day lane to Aldebaran in the Far Lanterns, but nobody at Cobb will vouch for what comes back."
+   ],
+   "region": "margins"
+  },
+  "12620": {
+   "bullets": [
+    "Nakamura was settled in 2343 by a mining crew from Iota Horologii's belt, and about 53 thousand people live in the colony today.",
+    "Its mining and ice ports sell mostly to Kittering, 2.0 days away, and the pair keep each other afloat through a trade that neither can afford to lose.",
+    "Unrest is among the highest in the Margins, with grievances over pay, debts and the loss of young people who leave to join Freeflag crews.",
+    "A captain could carry recruits or rumours between Nakamura and Kittering, and the lanes to the dead systems at Assay Reach and HIP 13218 are quieter still."
+   ],
+   "region": "margins"
+  },
+  "88765": {
+   "bullets": [
+    "Hendry's Rest was settled in 2345 by mining crews who liked the name of their first strike, and about ten million people live there now.",
+    "Its mining and ice ports are large, its security small, and its unrest the highest of any big town in the Margins.",
+    "Anger here runs toward the Federation and Prism both, and Freeflag recruiters are not turned away at the door.",
+    "The lane to Drift Mouth Reach, 2.4 days away, leads toward the Drift, and a captain could find salvage, smugglers or trouble there, probably in that order."
+   ],
+   "region": "margins"
+  },
+  "8989": {
+   "bullets": [
+    "Kittering was settled in 2352 by miners following ore finds in the Chi Eridani belt, and it has become a colony of about 773 thousand.",
+    "Its mining and ice ports make it a crossroads for Nakamura, Ramsey and the dark lane out to GJ 3102 in the Outer Dark.",
+    "Security is thin and unrest middling, and the colony prides itself on being the one place in the area that argues in committee before it shoots.",
+    "News from the far edge reaches Kittering first, and spacers here are quick to say what they have heard about the Shadow and slow to say who told them."
+   ],
+   "region": "margins"
+  },
+  "26330": {
+   "bullets": [
+    "Grubstake was settled late, in 2448, by people who had nowhere else to go and a single ice port to go to.",
+    "About twenty-seven thousand people live in the outpost, and it is poor, short of everything, and very good at making do.",
+    "Unrest is high, security thin, and the two lanes into the Outer Dark are watched by people who have started sleeping badly.",
+    "A captain could supply Grubstake with food and parts and be treated as family, or ask about the Outer Dark and be shown the door."
+   ],
+   "region": "margins"
+  },
+  "908": {
+   "bullets": [
+    "Second Wind was settled in 2417 by survivors of a failed colony elsewhere, who named it for what they hoped to get and have not entirely got.",
+    "About twenty-one thousand people live around a single ice port, supplying water to passing ships from a system whose lanes all lead to dead neighbours.",
+    "Security is thin, unrest is high, and the colony is short of the medicine and components it cannot make for itself.",
+    "A captain could earn a lasting welcome by bringing medicine, or hear about the dead systems at Gl 912 and GJ 1284 from people who have prospected them."
+   ],
+   "region": "margins"
+  },
+  "40587": {
+   "bullets": [
+    "Holloway was set up in 2443 as an outwatch, a listening post on the edge of the Outer Dark, and about two thousand people still keep it.",
+    "Its single gas port refuels the few ships that pass, and its crews trade fuel for news at every opportunity.",
+    "With almost no security and a view of the lanes into the dark, the watchers are jumpy, underpaid and aware that the Shadow has been moving inward.",
+    "The watchers keep logs of everything seen on the lanes toward GJ 3486 and GJ 3440, and a captain who brings supplies might be allowed to read them."
+   ],
+   "region": "margins"
+  },
+  "117987": {
+   "bullets": [
+    "GJ 2005 has no world worth settling: bare rock and thin ice, which Fomalhaut's prospectors surveyed and left alone.",
+    "It survives as a waypoint on the lane between Fomalhaut and the Federation's Concord choke point, and as a good place to wait out an inspection."
+   ],
+   "region": "margins"
+  },
+  "118383": {
+   "bullets": [
+    "GJ 3356 is a red giant, swollen and scorching, and whatever planets it once had have been burned bare or are too close to the radiation and the deep well to approach.",
+    "Nobody lives there, though Dunmore crews sometimes brave the 2.0-day run through it to reach the Federation choke point at Gl 228A."
+   ],
+   "region": "margins"
+  },
+  "118444": {
+   "bullets": [
+    "GJ 1092 is a brown dwarf, too dim to warm anything, with a few frozen worlds and no reason for anyone to stay.",
+    "It matters only as a lane between Pell's Folly and Pollux in the Ironhull Anvil, and the haulers who use it do so without stopping."
+   ],
+   "region": "margins"
+  },
+  "119218": {
+   "bullets": [
+    "Lucerne was settled in 2276, a yellow-star system six jumps from Sol, and by 2524 it was one of the two Prism systems on the inner edge of the middle ring that went silent first.",
+    "Crews at Chi Draconis on the Anvil side say that nothing leaves the lane from Lucerne except ships in perfect formation, and none of them answer a hail."
+   ],
+   "region": "mirrorspace"
+  },
+  "86705": {
+   "bullets": [
+    "Varrow was an Ironhull mining system, settled in 2311 and nine jumps from Sol, and it went glass in 2524 with its crews still aboard.",
+    "Its only lane runs to Calder, so the Federation pickets there are the only ones who see anything, and the families of Varrow's crews have been told nothing."
+   ],
+   "region": "mirrorspace"
+  },
+  "82006": {
+   "bullets": [
+    "Facet, an orange-star system settled in 2300, was one of the first two Prism systems to fall in 2524, and survivors who reached Merrow described the lights changing colour all at once.",
+    "Its single lane ends at Merrow, where the Federation's quarantine is enforced and where captains still ask why Prism recalled certain navigation cores only after Facet went quiet."
+   ],
+   "region": "mirrorspace"
+  },
+  "88694": {
+   "bullets": [
+    "Hesk was an Ironhull mining system, settled in 2339 and eleven jumps from Sol, and it went glass in 2524 along with Varrow.",
+    "Its only lane leads to GJ 4062, a Freeflag system, where recruiters use Hesk's lost crews to argue that neither the Federation nor Prism will tell the Ironhulls the truth."
+   ],
+   "region": "mirrorspace"
+  },
+  "118765": {
+   "bullets": [
+    "GJ 1147 is a black hole, and nobody lives there because there is nothing to live on: no planet, no rock worth the fuel, only a well deep enough to ruin careless approaches.",
+    "Lanes run on to two more dead systems and to the Drift at GJ 3634, so a few captains cross it, giving the hole a wide berth and not lingering."
+   ],
+   "region": "outer-dark"
+  },
+  "1029": {
+   "bullets": [
+    "HIP 1031 is a red dwarf too dim and flare-prone to hold a colony, and the one survey that looked at it filed its report and went home.",
+    "Its lanes lead to three dead neighbours, one of them in the Drift, which makes it a quiet crossing for ships that would rather not be logged."
+   ],
+   "region": "outer-dark"
+  },
+  "63164": {
+   "bullets": [
+    "Gl 491A is a brown dwarf, barely a star, with no heat worth settling for and no planets anyone has bothered to chart in detail.",
+    "All three of its lanes run to dead systems in the Outer Dark, so it sits at the end of nowhere and is visited by almost nobody."
+   ],
+   "region": "outer-dark"
+  },
+  "106746": {
+   "bullets": [
+    "Nu Octantis is a red giant, swollen and unstable, its inner worlds long since scoured, so nobody settled here and the radiation off the star keeps lingering ships honest.",
+    "It is the best-connected dead system in this corner, with lanes to the Concord Worlds, the Long Watch and the Drift, so traffic passes through quickly and rumours sit here a while."
+   ],
+   "region": "outer-dark"
+  },
+  "118531": {
+   "bullets": [
+    "GJ 3486 is a white dwarf, a cooling cinder with nothing left to mine, and it was charted only because it lies on the way to the Margins.",
+    "Holloway and Grubstake are a few days off, and their crews use the lanes through here, so the odd hauler passes and the odd freighter with no flag at all."
+   ],
+   "region": "outer-dark"
+  },
+  "7540": {
+   "bullets": [
+    "GJ 3102 is a brown dwarf with no planets worth the name, and nobody has ever filed a claim on it, which in this region is nearly an achievement.",
+    "Its one settled neighbour is Kittering in the Margins, three days off, whose people sometimes drift out here for quiet, salvage or something they would rather not discuss."
+   ],
+   "region": "outer-dark"
+  },
+  "119312": {
+   "bullets": [
+    "Halcyon Dynamics settled GJ 1245A in 2256, building under lamps around a dim red dwarf that flares often enough to be written into every work contract.",
+    "Today about 442 million people run its forges, its research port and a relay that carries Prism traffic between the Inner Sphere and the rest of the region.",
+    "Unrest here is a little higher than in most Prism worlds, and relay staff mutter that the recall notices reached them before any explanation did.",
+    "A captain could hire on to haul spare relay parts and listen to what the operators say about the traffic they no longer pass on."
+   ],
+   "region": "prism-inc"
+  },
+  "88327": {
+   "bullets": [
+    "70 Ophiuchi was settled in 2250 by Halcyon, which put its first foundries on the warm side of an orange sun and its crews in orbital habitats.",
+    "About 911 million people now live here, working forges and research yards that turn out components for half the region's shipyards.",
+    "Everything is clean and well guarded, and the only grumbling is over housing allocations in the older habitats, which are assigned by an associate nobody has met.",
+    "Dockworkers say a backlog of recalled navigation cores is stacked in the research yards, and a captain who asks the wrong clerk might learn where they went."
+   ],
+   "region": "prism-inc"
+  },
+  "112106": {
+   "bullets": [
+    "Gl 873 was settled in 2239 around a plain yellow sun, and grew into the biggest world in the region, now home to about 4.3 billion people.",
+    "Its forges, relay and research port make it Prism's quiet engine room, and its lane to 61 Cygni carries Inner Sphere trade straight through.",
+    "Nothing is visibly wrong, which is the problem: a planet this crowded eats imported food and water, and any hiccup in the lanes shows on shelves within weeks.",
+    "Cargo masters here will pay well for dull, reliable freight, and a few of them are quietly stockpiling against the day the quarantine spreads."
+   ],
+   "region": "prism-inc"
+  },
+  "97338": {
+   "bullets": [
+    "Altair, a hot white star, was settled in 2251 by Halcyon, which wanted its light for research and built forges and habitats to feed on it.",
+    "About 493 million people live here, comfortable but less rich than their neighbours, and heavily patrolled by Prism security.",
+    "The white sun makes everything look new, and the habitat crews have learned to dim their windows and their opinions equally.",
+    "A captain could carry sealed research crates to Gl 752A and wonder why every manifest lists them as surplus."
+   ],
+   "region": "prism-inc"
+  },
+  "57371": {
+   "bullets": [
+    "Gl 445 was settled in 2227, early for a red dwarf, because its position three jumps from Sol made it the natural gate to everything beyond.",
+    "Today about 1.2 billion people live here, with forges, a relay and research port, and lanes to the Ironhull Anvil and the Federation's Concord Worlds.",
+    "Customs queues here are long and polite, and Ironhull crews pass through angry about Varrow and Hesk, which Prism's inspectors have learned not to mention.",
+    "A captain could carry a message between the Ironhull families asking after lost crews and the relay operators who may know more than they say."
+   ],
+   "region": "prism-inc"
+  },
+  "95799": {
+   "bullets": [
+    "Alsafi is the oldest world in the region, settled by Halcyon in 2209 under an orange sun, a few years after the first wave of jump colonies.",
+    "About 618 million people work its forges and habitats, and its research port holds the older Halcyon archives, which Prism neither shows nor throws away.",
+    "The old guard here remember when the company still had a human board, and they are careful to say so only among themselves.",
+    "A captain taking passengers to Alsafi might meet an archivist who wants something old carried out, and doesn't want to say what."
+   ],
+   "region": "prism-inc"
+  },
+  "94466": {
+   "bullets": [
+    "Gl 752A was settled in 2260, one of the later worlds in the region, when Halcyon filled the gaps between its older systems with forges and habitats.",
+    "About 1.4 billion people live under an orange sun, building alloys for the shipyards of Altair and 70 Ophiuchi next door.",
+    "Security is heavy and work is steady, but shifts have been lengthening since the recall and nobody is allowed to ask why the cores are late.",
+    "A captain willing to run short, unmarked lanes to Altair can make good money hauling parts that someone is in a hurry to forget."
+   ],
+   "region": "prism-inc"
+  },
+  "3814": {
+   "bullets": [
+    "Achird was settled in 2246 by Halcyon as a yellow-sun forge world, and its relay still carries more company traffic than any other in the region.",
+    "About 706 million people live here, and its lanes to Allure, Gl 892 and Groombridge 34 make it a hinge between the Prism core and the Inner Sphere.",
+    "It is wealthy, orderly and watched, and relay staff have been told to log every ship that has recently been near Allure or the Calder March.",
+    "A captain with a clean record might be hired to carry unlogged messages past the relay, for people who think the logs are being read."
+   ],
+   "region": "prism-inc"
+  },
+  "80218": {
+   "bullets": [
+    "Gl 625 was settled in 2262, Prism's furthest world from Sol in the region, and for a century was the quiet end of a quiet road.",
+    "About 2.4 billion people live here, working forges, habitats and research ports, and since 2524 their neighbour Lucerne has been Mirrorspace, a system gone glass.",
+    "Security is thinner here than anywhere else in the region, and Prism patrols watch the Lucerne lane while the Federation officially says nothing is there.",
+    "A captain could take evacuee stories and hard cash from people who want to leave, and learn what the quarantine is really keeping in."
+   ],
+   "region": "prism-inc"
+  },
+  "114260": {
+   "bullets": [
+    "Gl 892 was settled in 2220 and grew into one of the region's workhorse habitat worlds, with an orange sun, forges and big research halls.",
+    "About 1.7 billion people live here, and its three lanes to Achird, Gl 873 and Allure make it a crossroads for company freight.",
+    "Rents rise faster than wages in the habitats, and there are whispers of a work stoppage that nobody has yet dared to call one.",
+    "A captain could carry food to the habitat markets here and hear what the dockworkers will and won't do if the shortages come."
+   ],
+   "region": "prism-inc"
+  },
+  "82557": {
+   "bullets": [
+    "Gl 643 was settled in 2229 around a yellow sun, and has since become Prism's container hub on the border with the Federation and the Ironhulls.",
+    "About 458 million people work its forges, research port and sealed cargo yards, with lanes to Wolf 1061 and Quarle across two choke points.",
+    "Everything here is inspected twice, once by Prism and once by whoever is on the other side, and disputes over seals have closed berths for days.",
+    "A captain who knows how to read a manifest can make a living here, or lose one, depending on whose seal they trust."
+   ],
+   "region": "prism-inc"
+  },
+  "5325": {
+   "bullets": [
+    "Allure, catalogued as Mu Cassiopeiae, was settled in 2252 by Halcyon as a middle-ring forge and habitat world around a yellow sun.",
+    "About 2.6 billion people live here, and its lane to dead GJ 3126 is a choke point on the Ironhull border with Burr beyond.",
+    "Security is the weakest in the region, since Prism spreads its patrols thinly here, and locals have noticed which ships turn up and which do not.",
+    "A captain could take a quiet run to the GJ 3126 lane, where smugglers and Ironhull scouts are said to trade without much paperwork."
+   ],
+   "region": "prism-inc"
+  },
+  "90979": {
+   "bullets": [
+    "Vega was settled in 2278 as a company town of forges and labs under a white sun, and has never grown beyond about nine million people.",
+    "It is small, quiet and well off by outer-ring standards, with a lane to the Calder March that lets some freight slip past the bigger worlds' inspections.",
+    "Unrest is higher here than in most of the region, partly because the town is too small to hide anything from the company that employs everyone in it.",
+    "A captain might find Vega's forge crews willing to talk, and willing to pay, for news of what happened to the nearby systems."
+   ],
+   "region": "prism-inc"
+  },
+  "118101": {
+   "bullets": [
+    "GJ 3126 is a dead red dwarf, and nobody lives there; the charts agree on that and on little else.",
+    "Its lanes run to Allure and the Ironhull world of Burr, so it is a choke point both sides watch and neither admits to using."
+   ],
+   "region": "prism-inc"
+  },
+  "33190": {
+   "bullets": [
+    "Halcyon Dynamics settled Lumen in 2324 as a research-and-foundry world, long before the company became Prism, and the charter town has since grown into about 299 million people.",
+    "Its forges, relay stations and laboratories make it the richest world in the region, and what leaves its yards is mostly alloys and components that other Prism systems cannot make for themselves.",
+    "Security is thin for a world this valuable, and the quiet is uneasy: associates keep to company housing, and nobody on the docks talks about the recall notices for navigation cores.",
+    "Lumen is the region's door to the Drift via GJ 3420 and GJ 3413, and Prism sends survey crews out that way and does not publish what they find."
+   ],
+   "region": "prism-research"
+  },
+  "32276": {
+   "bullets": [
+    "Alzirr is a company town of about 13 million, settled in 2363 as a relay and research post on the edge of the Drift.",
+    "Its relay stations carry most of the region's traffic, and the laboratories are small, clean and expensive. Almost everyone in town is on a Prism contract, and most know it.",
+    "Unrest is higher than the wealth would suggest, and talk of Freeflag in the outer ring comes in with every hauler crew, though nobody here has raised a flag.",
+    "Contract workers say a survey ship cleared for the dead lane to GJ 9231B went out last season and did not file a return, and the relay logs for it are missing."
+   ],
+   "region": "prism-research"
+  },
+  "29727": {
+   "bullets": [
+    "Halcyon settled Candor in 2380, four years after Contact, and it has become the region's largest world at about 454 million, a place of forges, habitat rings and research campuses.",
+    "Its name is a polite cousin of CANTOR's, and the staff are tired of the joke; the research ports run mostly on work they are not allowed to describe.",
+    "Unrest is the highest in the region. The Glass has not touched Candor, but the silence about Varrow and Hesk has, and crews with Ironhull cousins are asking what the recalls were for.",
+    "A dock foreman on the habitat ring says the Prism associates are now doing their own cargo inspections, and one captain could find out why they stopped trusting the manifests."
+   ],
+   "region": "prism-research"
+  },
+  "30557": {
+   "bullets": [
+    "Gl 233A is a red giant with a swollen, unstable star and no world worth settling, and its choke-point lane to Lumen is the only real way in from Dunmore.",
+    "Hauler crews cross it quickly, because the radiation off the star is hard on old shielding, and nobody stays long enough to wonder why the beacon is dark."
+   ],
+   "region": "prism-research"
+  },
+  "118432": {
+   "bullets": [
+    "GJ 3398 is a dead yellow system that Prism holds as a waypoint between Alzirr and Candor, with no settled world and only an automated beacon to show it is claimed."
+   ],
+   "region": "prism-research"
+  },
+  "118457": {
+   "bullets": [
+    "GJ 3420 is a red giant with nothing habitable, held by Prism as the quiet gateway between Lumen and the Long Dark, where its beacon outlasts most of the traffic.",
+    "Salvagers who have gone through it report empty survey stations and a lane marker nobody has maintained for years."
+   ],
+   "region": "prism-research"
+  },
+  "118445": {
+   "bullets": [
+    "GJ 3413 is a dim red dwarf with no settled world, held by Prism as a staging point between Lumen and Alzirr and a gateway out to the Far Lanterns.",
+    "Survey crews report a few automated stations and a lot of debris, and nobody has yet agreed on whose it was."
+   ],
+   "region": "prism-research"
+  },
+  "118870": {
+   "bullets": [
+    "GJ 3766 is a brown dwarf, too dim and cold to warm anything, and nobody ever filed a claim worth keeping. The charts list it as a waypoint and nothing more.",
+    "It sits one jump into the Drift, between Mattock's Ironhull miners and the uncharted dark, so crews dodging a navy inspection use it as a quiet back door."
+   ],
+   "region": "shoals"
+  },
+  "118975": {
+   "bullets": [
+    "GJ 3853 is a red dwarf with nothing to hold a settlement: no worlds worth building on, and a star whose flares make any hab expensive to shield.",
+    "It lies between two Freeflag systems, Remembrance and Strike, which makes it a handy meeting point for raiders, and a place where a Federation ship ought not to linger."
+   ],
+   "region": "shoals"
+  },
+  "119405": {
+   "bullets": [
+    "GJ 4189A is a blue giant, and the radiation near it would cook an unshielded hull within hours. Nobody has tried to live here, and the one hazard chart is thick with warnings.",
+    "Its lane to Wreckers makes it a Blackhull approach. A captain who can fly the long way round the star's worst flares will find the Blackhulls friendlier than the navy."
+   ],
+   "region": "shoals"
+  },
+  "119560": {
+   "bullets": [
+    "GJ 4329 is a red dwarf, flare-prone and barren, and nobody has found a reason to settle it. It is a stop on the road, not a destination.",
+    "One lane runs to GJ 4319, a Freeflag system in the Cells, so a trickle of supplies and fighters passes through. Whoever watches the lane knows who is arming."
+   ],
+   "region": "shoals"
+  },
+  "96914": {
+   "bullets": [
+    "Gl 765.4A is a red giant, swollen and unstable, its inner worlds scorched long ago. Survey crews wrote it off as soon as they saw the numbers.",
+    "It is buried in the Shoals, two lanes from anywhere that matters, so its few visitors are salvagers and the occasional ship that wants to be lost for a while."
+   ],
+   "region": "shoals"
+  },
+  "119052": {
+   "bullets": [
+    "GJ 3933 is a brown dwarf with no real worlds, only cold rock and dust, so there was never a case for building here. It stays on the charts as a junction.",
+    "Two Ironhull systems, GJ 3920 and Tarn, lie a lane away, and their haulers cut through here when the navy's fees seem high. Nobody there will admit it."
+   ],
+   "region": "shoals"
+  },
+  "9000187": {
+   "bullets": [
+    "A black hole four jumps past the last human port, the Maw gave the region its name, and surveyors have never found anything there worth the risk of the approach.",
+    "The deep well is a real danger: salvagers who work the Drift treat it as a place to log, then leave, and the single lane to GJ 3174 is the only way back out."
+   ],
+   "region": "the-maw"
+  },
+  "9000013": {
+   "bullets": [
+    "DR-0014 is a white dwarf only two jumps into the Drift, uncharted beyond its lanes, with no recorded settlement and nothing to suggest anyone ever wanted one.",
+    "It is the region's crossroads, with four lanes running to the Long Dark and the Far Lanterns, so salvagers pass through often and stay only long enough to check their fuel."
+   ],
+   "region": "the-maw"
+  },
+  "29198": {
+   "bullets": [
+    "Ice haulers and gas skimmers settled Tenpenny in 2327, late in the Rush, because a yellow star with plenty of volatiles was worth the awkward lanes.",
+    "Some million people now live in one sprawling town, and its two ports, ice and gas, keep the place alive and make it the last fuel stop for miles.",
+    "Every lane out leads to a dead system, so ships come in past the black hole or a dim red dwarf and leave the same way, and the docks are patrolled loosely.",
+    "No power recognises the town, and with the navy stretched thin by the Shadow and Freeflag, talk of requisitioned ships has people arguing over whether to hide their haulers.",
+    "Dock gossip says a gas-port captain needs a hauler willing to run the Sink lane without a navy transponder, and will pay in fuel and no questions."
+   ],
+   "region": "the-sink"
+  },
+  "31215": {
+   "bullets": [
+    "HIP 31293 is a red dwarf with no world worth the cost of a habitat, and nobody has held a claim here long enough to leave a beacon.",
+    "It sits one short hop from Tenpenny, and the salvagers who pass through report only drifting hull scrap, most of it too old to trace."
+   ],
+   "region": "the-sink"
+  },
+  "14718": {
+   "bullets": [
+    "Nobody lives at The Sink because it is a black hole: tidal stress and radiation from infalling matter make the well deadly to anything that lingers.",
+    "It is still the way into Tenpenny from Gl 118, and pilots time their transits carefully and pass the name along as a warning."
+   ],
+   "region": "the-sink"
+  },
+  "13356": {
+   "bullets": [
+    "Gl 118 is a red dwarf with nothing settled on it, but it is a junction, with lanes running to Quill in the Margins and to the dead system HIP 12703.",
+    "Ships bound for Tenpenny wait here to check their fuel before committing to the black hole's lane, and the crews' wrecks and rubbish are the only sign anyone passes."
+   ],
+   "region": "the-sink"
+  },
+  "118371": {
+   "bullets": [
+    "GJ 1077 is a brown dwarf with too little light or heat to support a colony, and the charts show no claim here worth the paperwork.",
+    "It lies at the far end of Tenpenny's longest lane, and the few surveyors and salvagers who have gone out report cold rock, debris and silence."
+   ],
+   "region": "the-sink"
   }
  }
 }
