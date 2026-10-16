@@ -240,6 +240,7 @@ $('b-nav').onclick = () => { setNav(!navOn); canvas.focus(); };
 window.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) { if (e.code === 'Escape') e.target.blur(); return; }
   if (barrierUp()) { e.preventDefault(); return; } // the world is stopped while the system's ships and stations bake
+  if (noticeUp()) { if (['Enter', 'Space', 'Escape', 'NumpadEnter'].includes(e.code) && !e.repeat) closeNotice(); e.preventDefault(); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
   // the debug screen takes every key but its own: backquote opens and closes it, as does Esc
   if (e.code === 'Backquote' && !e.repeat) { if (debug.isOpen()) debug.close(); else { debug.open(); keys.clear(); } e.preventDefault(); return; }
@@ -305,7 +306,7 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
 let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false;
-let pauseGame = () => {}, shellBack = () => {}, jitterToggle = () => false, barrierUp = () => false;
+let pauseGame = () => {}, shellBack = () => {}, jitterToggle = () => false, barrierUp = () => false, noticeUp = () => false, closeNotice = () => {};
 // Esc steps back: a sequence skips; in port, an open panel closes; in flight, the map closes, then the target
 // clears; otherwise the game pauses
 function onEscape() {
@@ -535,7 +536,7 @@ CORE_READY.then(CORE => {
     if (sim.game.auto) sim.game.auto[0] = 0;
     if (opts && opts.backdrop) SH.alive[0] = 0; // nobody flies the title
     else { closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav); zoom = 1; }
-    missionSeen.set(sim.mission.state);
+    missionSeen.set(sim.mission.state); closeNotice();
     startRecording();
   }
   // commands go through here: applied now (between ticks) and logged for replays when they take effect
@@ -581,7 +582,7 @@ CORE_READY.then(CORE => {
     const meta = JSON.parse(localStorage.getItem(key + '.meta') || '{}');
     seedNow = meta.seed >>> 0;
     showSystem(sim.game.system[0]); // the save's system, live in the core already
-    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; viewScale = 0; missionSeen.set(sim.mission.state); startRecording();
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; viewScale = 0; missionSeen.set(sim.mission.state); closeNotice(); startRecording();
     closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav);
     toast(`Loaded day ${sim.day()}`);
     return true;
@@ -712,7 +713,7 @@ CORE_READY.then(CORE => {
     for (const k of bakeKinds) typeReady(types[k]);
     let ran = 0;
     checkBarrier();
-    if (!paused && !debug.isOpen() && !barrier) { // paused, debugging or behind the system barrier: the clock stops (the replay log is by tick, so a pause leaves no trace)
+    if (!paused && !debug.isOpen() && !barrier && !notice) { // paused, debugging or behind the system barrier: the clock stops (the replay log is by tick, so a pause leaves no trace)
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
       ran = sim.due(dt);
@@ -943,13 +944,30 @@ CORE_READY.then(CORE => {
   // report missions the core delivered (on landing) or failed (a day passed the deadline)
   const missionSeen = new Uint8Array(NM);
   function watchMissions() {
+    const done = [];
     for (let k = 0; k < NM; k++) {
       const st = MS.state[k];
-      if (missionSeen[k] === MSTATE.active && st === MSTATE.delivered) toast(`Delivered ${cargoText(MS.tons[k], MS.good[k])} to ${missionDest(k)}: +${fmtCr(MS.pay[k])} cr`);
-      if (missionSeen[k] === MSTATE.active && st === MSTATE.failed) toast(`Mission failed: ${cargoText(MS.tons[k], MS.good[k])} to ${missionDest(k)} is past its deadline`);
+      if (st === MSTATE.delivered && missionSeen[k] !== st) { done.push(k); toast(`Delivered ${cargoText(MS.tons[k], MS.good[k])} to ${missionDest(k)}: +${fmtCr(MS.pay[k])} cr`); }
+      if (st === MSTATE.failed && missionSeen[k] !== st) toast(`Mission failed: ${cargoText(MS.tons[k], MS.good[k])} to ${missionDest(k)} is past its deadline`);
       if (missionSeen[k] !== st) { missionSeen[k] = st; refreshPort(); }
     }
+    if (done.length) showDeliveries(done);
   }
+  // A delivery's notice, on landing: the missions it completed, over the port screen in the barrier's blur. The clock
+  // holds until it is closed (Enter, Space, Escape or its button); a new game, a load or a jump closes it.
+  let notice = false;
+  function showDeliveries(ks) {
+    const at = BODIES[sim.game.at[0]], paid = ks.reduce((n, k) => n + MS.pay[k], 0);
+    $('notice-kicker').textContent = ks.length > 1 ? `${ks.length} deliveries complete` : 'Delivery complete';
+    $('notice-title').textContent = at && at.port ? at.port.name : at ? at.name : SYS.name;
+    $('notice-sub').textContent = `Day ${sim.day()} · ${SYS.name} system`;
+    $('notice-rows').innerHTML = ks.map(k => `<p class="notice-row"><span>${esc(cargoText(MS.tons[k], MS.good[k]))} from ${esc(portName(MS.from[k], MS.sys[k]))}</span><b>+${fmtCr(MS.pay[k])} cr</b></p>`).join('');
+    $('notice-total').textContent = `Paid ${fmtCr(paid)} cr · balance ${fmtCr(sim.credits())} cr`;
+    notice = true; $('notice').hidden = false; $('notice-ok').focus();
+  }
+  noticeUp = () => notice;
+  closeNotice = () => { if (!notice) return; notice = false; $('notice').hidden = true; canvas.focus(); };
+  $('notice-ok').onclick = () => closeNotice();
 
   // ---------- render ----------
   const MAXS = CFG.maxShips;
@@ -1599,7 +1617,7 @@ CORE_READY.then(CORE => {
   function jumpTo(k, j) {
     const r = command(CMD.jump, k, j);
     if (r !== 0) { toast(`Can't jump there: ${CORE.RESULT[r] || r}`); return r; }
-    showSystem(k);
+    showSystem(k); closeNotice();
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; viewScale = 0;
     toast(`Jumped to ${BODIES[j].name}, ${SYS.name} system`);
     return r;
@@ -1940,7 +1958,7 @@ CORE_READY.then(CORE => {
         save: b64(r.save), inputs: r.log
       };
     },
-    probe: () => ({ barrier: !!barrier, tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
+    probe: () => ({ barrier: !!barrier, notice, tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
       credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap() }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {

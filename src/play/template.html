@@ -130,8 +130,17 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 #title { background: linear-gradient(90deg, rgba(7,9,12,.9) 0%, rgba(7,9,12,.6) 40%, rgba(7,9,12,0) 72%); }
 #pause, #settings { background: rgba(7,9,12,.7); justify-items: center; }
 /* the system barrier: the world stopped and blurred behind a small dialog while the system's ships and stations bake */
-#barrier { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65); background: rgba(7,9,12,.25); }
-#barrier[hidden] { display: none; }
+#barrier, #notice { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65); background: rgba(7,9,12,.25); }
+#barrier[hidden], #notice[hidden] { display: none; }
+#notice { z-index: 19; }
+.notice-box { min-width: 380px; }
+#notice-title { margin: 2px 0 2px; font: 700 22px/1.1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--amber); }
+#notice-sub { margin: 0 0 10px; color: var(--muted); font: 500 12px var(--f-mono); }
+.notice-row { display: flex; justify-content: space-between; gap: 16px; margin: 0; padding: 6px 0; border-top: 1px solid var(--line); font: 500 12.5px var(--f-mono); color: var(--fg); }
+.notice-row b { color: #7fd08a; font-weight: 600; white-space: nowrap; }
+#notice-total { margin: 6px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font: 500 12px var(--f-mono); }
+#notice-ok { width: 100%; background: #121821; border: 1px solid var(--amber); border-radius: 6px; padding: 7px 12px; cursor: pointer; color: var(--amber); font: 600 13px var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+#notice-ok small { color: var(--muted); font: 500 11px var(--f-mono); margin-left: 6px; text-transform: none; }
 .barrier-box { min-width: 320px; max-width: 420px; background: rgba(12,16,21,.92); border: 1px solid var(--line); border-radius: 8px; padding: 16px 20px 14px; box-shadow: 0 12px 40px rgba(0,0,0,.55); }
 .barrier-kicker { margin: 0; color: var(--muted); font: 600 11px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; }
 #barrier-title { margin: 2px 0 2px; font: 700 22px/1.1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--amber); }
@@ -305,6 +314,10 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 <section id="barrier" hidden aria-label="Preparing the system" aria-live="polite">
   <div class="barrier-box"><p class="barrier-kicker">Entering</p><h3 id="barrier-title"></h3><p id="barrier-sub"></p>
     <div class="barrier-bar"><i id="barrier-fill"></i></div><p id="barrier-note"></p></div>
+</section>
+<section id="notice" hidden role="dialog" aria-label="Delivery complete">
+  <div class="barrier-box notice-box"><p class="barrier-kicker" id="notice-kicker">Delivery complete</p><h3 id="notice-title"></h3><p id="notice-sub"></p>
+    <div id="notice-rows"></div><p id="notice-total"></p><button type="button" id="notice-ok">Continue <small>Enter</small></button></div>
 </section>
 <section id="title" class="shell" hidden aria-label="Title">
   <div class="shell-card">
