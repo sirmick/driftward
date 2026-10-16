@@ -2,7 +2,7 @@
 
 M1 in the Book is "Trade and delivery": one system, a game shell, the sim core as a Rust/WASM crate, trading, one mission type, and ambient traffic. Its exit test: **a market trade and a delivery mission both complete end to end; save, reload and replay of the same inputs give the same result, tested headless.**
 
-This file tracks that milestone against the Book's `[M1]` items. Update it as work lands. Status: **done**, **partial** (with what is missing), or **to do**.
+This file tracks that milestone against the Book's `[M1]` items: what is done, and what is outstanding (buildable now, or waiting on a later milestone). Update it as work lands. Status: **done**, **partial** (with what is missing), or **to do**.
 
 Last updated: 2026-10-16, after the audit: environmental stations and their traffic, ferries, planet rings, dynamic resolution, the jitter probe and the dev server's state reports.
 
@@ -22,7 +22,17 @@ Last updated: 2026-10-16, after the audit: environmental stations and their traf
 | Shell | Done, but for death (no combat yet) |
 | Lore, painted vistas and portraits (OpenRouter) | Done, generated offline |
 | Environmental stations and their traffic | Done |
+| Planets, stars and stations in flight | Done, but for binary stars, the full 12 star classes and asteroid belts |
+| Moving stations (orbiting, spinning; docking matches their velocity) | To do: bodies hold still |
+| Mission templates (the state machine) | Deferred until a second mission type |
+| Debug control plane (local API) | Partial: state reports and `__ask`; the API's actions are to do |
 | Exit test, headless | Every piece works and is tested; the single scripted test is to do |
+
+**Outstanding for M1, in short** (detail under Outstanding below): the exit test as one script; asteroid belts and
+fields (mining targets, and rows in the location list); binary stars and the full 12 star classes; stations that orbit
+and spin; refuel and repair; news and intel in port; mission templates; the debug API's actions. Ship status on the
+HUD, contacts at their sensor error radius, death reloading the last save and the customs scan wait for M2's damage,
+fuel, sensors and law.
 
 ## Done
 
@@ -61,19 +71,36 @@ Last updated: 2026-10-16, after the audit: environmental stations and their traf
 - **Lore and art (OpenRouter).** `tools/gen-content.js` writes a system's content offline, from its sim facts: the bodies (order from the star, size, surface, colours), the owning faction and its design language (the Book's appendix), and each port's role, population, authored description, what its market sells cheap and pays well for, and which ports are near or far. One text call (Claude Sonnet 5.5) writes the whole system, so its ports agree: history, culture, an art bible (palette, lighting, architecture, materials, mood, design language) and per port two or three paragraphs, notable places, two to four named people (role, who they are, a line, a look) and rumors, plus what its vista shows. The answer is clamped by the game's own validator against `src/schema/lore.schema.json` and checked against the system (every port covered, person ids unique); a failing answer is retried with the problems fed back. It goes to `src/lore/<id>.json`. Then an image model (Gemini 3.1 Flash Image) paints a 16:9 vista per port and a portrait per person into `art/<id>/` as WebP. The art bible and the body's sim parameters go into every vista prompt, so the painting matches the flight view: image models read colour words, not hex, so each palette colour is named (deep navy blue, ashen grey, rust brown) and described by what the planet shader paints with it (seas, lowlands and highlands; bands and storms; crater floors, ground and rims), and the start port's vista is the style reference for the others (the first portrait likewise for the portraits). Every prompt, model, seed and cost is logged in `art/<id>/log.json`. Content is reviewed and committed, so play never waits on a model and every player sees the same port. The M1 run cost $1.51, with the vistas redone once. `--no-ref` paints without the reference, for an image that copies the reference's layout rather than its style (Tallow's did). `npm run check` validates the lore and checks every image matches a port or person in it.
 - **Port lore on the port screen.** The card shows the lore's first paragraph; About (I) has the full description, notable places and the system's history and culture; the Bar (B) lists the people in tonight with their portraits, what they say, and the rumors overheard. The painted vista fades in over the procedural view of the body. The build inlines the lore, and the page loads the art from `art/` beside it: opened on its own, without that folder, the page falls back to the procedural view and the people's initials.
 
-## Partial
+## Outstanding
 
-- **Port screen.** Name, body, role, population, the painted vista, lore, trade, the mission board, the bar, wait a day and launch. Missing: refuel and repair (shown disabled), which wait for fuel and damage in the core. The bar is people and rumors only: no hiring or bar missions until M2.
-- **HUD.** Missing: ship status (shields, hull, energy, heat, fuel), which waits for damage and fuel in the core, and radar contacts drawn at their sensor error radius, which waits for sensors in the core.
-- **Shell.** Missing: death reloading the last landing save, which waits for something that can kill you (M2).
-- **Debug control plane.** The debug screen (backquote) opens over the game with the clock stopped. **Content** shows how the system's content was made, each thing once: a header with the models, dates and costs; the pipeline's shared parts (the system-level facts, the lore prompt with its facts and schema factored out, the run and its attempts, the art bible, and the paragraphs the image prompts share); a card per port with its body (parameters, palette, the facts' words for it, market and routes), its lore, its vista and its people with their portraits, each image with only its own part of the prompt (the full prompt on demand); and the raw files. **Player** is live: the ship and its stats, flight state, credits, debt and net worth, the hold priced at every port (best price for cargo aboard marked), missions, and the session's tick, hash and seed. The lore run records its prompt in `src/lore/<id>.log.json` (Brannock's was recorded after the fact, and says so); the build inlines it and the art log. The page also exposes `window.__play` (new game, advance, commands, teleport, probe, save, load, export replay), which headless tests drive. Partly there: the dev server's state reports and `__ask` let Claude Code pull any open page's state, screenshot and replay. Missing: the local API's actions (time scale, teleport, spawn, state inspector, replay and diff) without a browser script.
-- **Controls.** As the Book's: arrows or WASD, Shift burner, Tab assist level (F too), T targets, L land, M map, wheel zoom; plus 1 to 9 for locations, G fly to, I the nav overlay; in port, T trade and M the mission board. Missing: J to jump (M4), gamepad.
+What the Book tags `[M1]` that is not done yet, grouped by what it waits on.
 
-## To do
+### Can be built now
 
-In build order.
+1. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively. Every piece already passes in `tools/play-smoke.py` (trade, delivery, save and load, a browser session replayed natively); the single script that is the milestone's exit test is to do.
+2. **Belts and fields.** Asteroid belts and fields round the star or a world, from the system schema, drawn with the lab's asteroids and listed in the location list in orbital order. In M1 they are scenery and mining targets to come (mining itself is M3).
+3. **Stars.** Binary systems, and the full 12 star classes (the schema has five: red dwarf to blue giant); exotics (pulsars, black holes) as hazard zones. The lab draws all of them; the game's star is one body at the origin.
+4. **Moving stations.** Ring stations spin and some orbit, so "still" means matched to the station's velocity: assist does the matching, and with assist off it is a skill. Bodies hold still today (see Deviations).
+5. **Refuel and repair** on the port screen (shown disabled). Refuel needs fuel in the core (flight burns it; M4's jumps need it); repair needs damage (M2), so in M1 they can only be wired up empty.
+6. **News and intel in port.** The Book lists them among a port's services; in one system there is little to report until events and other systems exist.
+7. **Mission templates.** The Book's mission template (objective nodes, triggers, branches, bindings) is tagged M1; with one mission type, delivery is written directly in `core/src/mission.rs`. The template machinery comes with the second type.
+8. **Debug control plane.** The dev panel's actions (time scale, teleport, spawn, state inspector, save, replay and diff) over a local API that Claude Code can drive without a browser script. Done so far: the dev server's state reports and `__ask` (any open page's state, screenshot, log and replay), `window.__play` for headless scripts, and the debug screen in the page.
+9. **The daily tick.** Each day should run the economy, conflict, population and event ticks, spread across frames once flight runs the clock. Today a day advances interest, boards and deadlines only, because the other systems do not exist yet (M4 on).
 
-1. **Exit test.** A headless script that buys at one port, sells at another, accepts and completes a delivery, then saves, reloads and replays to the same state hash, natively.
+### Waits on later milestones
+
+- **Ship status on the HUD** (shields, hull, energy, heat, fuel): waits for damage and fuel in the core (M2).
+- **Radar contacts at their sensor error radius:** waits for sensors in the core.
+- **Death reloads the last landing save:** waits for something that can kill you (M2).
+- **Customs deep scan on arrival** at controlled ports: waits for law (M6).
+- **The bar's hiring and bar missions:** M2 on; the bar is people and rumors only.
+- **J to jump:** M4. Gamepad: later.
+
+### Partly done
+
+- **Port screen.** Name, body, role, population, the painted vista (framed on big or high-DPI screens, with the port's controls inside it), lore, trade, the mission board, the bar, wait a day and launch. Missing: refuel and repair, news and intel.
+- **Debug control plane.** The debug screen (backquote) opens over the game with the clock stopped. **Content** shows how the system's content was made, each thing once: a header with the models, dates and costs; the pipeline's shared parts (the system-level facts, the lore prompt with its facts and schema factored out, the run and its attempts, the art bible, and the paragraphs the image prompts share); a card per port with its body (parameters, palette, the facts' words for it, market and routes), its lore, its vista and its people with their portraits, each image with only its own part of the prompt (the full prompt on demand); and the raw files. **Player** is live: the ship and its stats, flight state, credits, debt and net worth, the hold priced at every port (best price for cargo aboard marked), missions, and the session's tick, hash and seed. The lore run records its prompt in `src/lore/<id>.log.json` (Brannock's was recorded after the fact, and says so); the build inlines it and the art log. The page also exposes `window.__play` (new game, advance, commands, teleport, probe, save, load, export replay, report), which headless tests drive, and the dev server takes state reports from any open page. Missing: the local API's actions.
+- **Controls.** As the Book's: arrows or WASD, Shift burner, Tab assist level (F too), T targets, L land, M map, wheel zoom; plus 1 to 9 for locations, G fly to, I the nav overlay, J the jitter probe; in port, T trade and M the mission board. Missing: J to jump (M4; the probe will move), gamepad.
 
 ## Deviations from the Book
 
