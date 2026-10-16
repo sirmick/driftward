@@ -38,7 +38,7 @@
       "port": {
         "name": "Quire Foundry",
         "role": "forge",
-        "population": "town",
+        "population": "complex",
         "services": [
           "market",
           "missions",

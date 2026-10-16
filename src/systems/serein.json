@@ -98,7 +98,7 @@
       "port": {
         "name": "Halo Clinics",
         "role": "research",
-        "population": "town",
+        "population": "complex",
         "services": [
           "market",
           "missions",

@@ -44,7 +44,7 @@ FIXED_POP = {'Sol': 13e9, 'Brannock': 4e9, 'Ostry': 150e6, 'Calder': 900e6, 'Mer
 STAR_HOME = {'yellow': 1, 'orange': .8, 'white': .6, 'red-dwarf': .2, 'red-giant': .3, 'white-dwarf': 0, 'blue-giant': .1}
 OWNER_POP = {'federation': .3, 'prism': .4, 'ironhulls': .1, 'freeflag': -.8, 'independent': -.7, 'blackhulls': -1}
 # settlement tiers by people (the Book's, at the setting's scale), and how many ports each has
-TIERS = [('outwatch', 3e3, 1), ('outpost', 3e4, 1), ('colony', 1e6, 2), ('town', 1e8, 2), ('world', math.inf, 3)]
+TIERS = [('outwatch', 3e3, 1), ('outpost', 3e4, 1), ('colony', 1e6, 2), ('complex', 1e8, 2), ('world', math.inf, 3)]
 # the six Builtworlds in human space: Earth, and the great old worlds of the first settlements (Prism's at 61 Cygni);
 # the people on one
 BUILTWORLDS, BUILTWORLD = ['Sol', 'Alpha Centauri', 'Tau Ceti', 'Epsilon Eridani', 'Procyon', '61 Cygni'], 1e10
@@ -64,7 +64,7 @@ NEEDS = {'food': .5, 'water': .4, 'goods': .3, 'medicine': .2, 'fuel': .25}  # w
 PRODUCE = {'food': 4, 'water': 3, 'fuel': 3, 'goods': 3, 'medicine': 3, 'components': 3, 'ore': 2, 'metals': 2, 'chemicals': 2, 'alloys': 2}
 INDUSTRY = .5
 # the rare roles: at most this many in the galaxy, and only in systems this big
-RARE = {'shipyard': (12, 'world'), 'military': (20, 'town'), 'relay': (14, 'town'), 'research': (22, 'town')}
+RARE = {'shipyard': (12, 'world'), 'military': (20, 'complex'), 'relay': (14, 'complex'), 'research': (22, 'complex')}
 SUPPLY = .9        # every commodity's galactic supply at least this share of its demand
 EDGE = .5          # a region's export: a surplus of at least this; its import: a shortfall of at least this
 MARCH_ROLES = {'Brannock': ['mining', 'habitat', 'refinery', 'shipyard'], 'Calder': ['habitat', 'military', 'container-port'],

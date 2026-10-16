@@ -829,11 +829,11 @@
                   "outwatch",
                   "outpost",
                   "colony",
-                  "town",
+                  "complex",
                   "world"
                 ],
                 "default": "colony",
-                "description": "The port's settlement tier, from the fewest people to the most (tools/worlds.py's tiers: an outwatch is a few thousand at most, an outpost tens of thousands, a colony up to a million, a town up to a hundred million, a world more). The universe index gives the system's tier, from all its people: no port's may exceed it."
+                "description": "The port's settlement tier, from the fewest people to the most (tools/worlds.py's tiers: an outwatch is a few thousand at most, an outpost tens of thousands, a colony up to a million, a complex up to a hundred million, a world more). The universe index gives the system's tier, from all its people: no port's may exceed it."
               },
               "builtworld": {
                 "type": "boolean",

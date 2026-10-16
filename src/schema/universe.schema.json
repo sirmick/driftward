@@ -370,7 +370,7 @@
                   "outwatch",
                   "outpost",
                   "colony",
-                  "town",
+                  "complex",
                   "world"
                 ],
                 "description": "The settlement tier of all its people (the system schema's port population tiers): no port's may be higher."

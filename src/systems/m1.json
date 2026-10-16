@@ -37,7 +37,7 @@
       "port": {
         "name": "Cinder Deep",
         "role": "mining",
-        "population": "town",
+        "population": "complex",
         "services": [
           "market",
           "missions",
@@ -166,7 +166,7 @@
       "port": {
         "name": "Tallow Works",
         "role": "refinery",
-        "population": "town",
+        "population": "complex",
         "services": [
           "market",
           "missions",

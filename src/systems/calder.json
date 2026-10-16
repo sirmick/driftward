@@ -80,7 +80,7 @@
       "port": {
         "name": "Calder Station",
         "role": "military",
-        "population": "town",
+        "population": "complex",
         "services": [
           "market",
           "missions",

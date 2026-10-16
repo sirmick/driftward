@@ -56,7 +56,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3, belt: 4, field: 5 };
 // planets and moons, drawn by the planet shader (worldsOf, per system)
 // city lights follow a port's population (look.cityLights is a floor on top, for a world brighter than its tier)
-const CITY_LIGHTS = { outwatch: 0.03, outpost: 0.1, colony: 0.3, town: 0.6, world: 1 };
+const CITY_LIGHTS = { outwatch: 0.03, outpost: 0.1, colony: 0.3, complex: 0.6, world: 1 };
 const worldsOf = bodies => bodies.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
   const pu = planetUniforms(b.look); // every field filled by the schema clamp, defaults and all
   if (b.port) pu.city = Math.max(pu.city || 0, CITY_LIGHTS[b.port.population] || 0);
@@ -477,7 +477,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   function orbitersFor() {
     sim.orbitClear();
     // (a quarter of the first counts: enough to glitter, not a swarm); the ferries round the stations are below, unchanged
-    const TRAFFIC_N = { outwatch: 10, outpost: 30, colony: 90, town: 225, world: 500 }, DEBRIS_N = { rock: 2250, terran: 625, giant: 750 };
+    const TRAFFIC_N = { outwatch: 10, outpost: 30, colony: 90, complex: 225, world: 500 }, DEBRIS_N = { rock: 2250, terran: 625, giant: 750 };
     BODIES.forEach((b, j) => {
       if (b.kind !== 'planet' && b.kind !== 'moon') return;
       const L = b.look || {}, k = Math.min(1.6, Math.max(0.4, b.r / 1200));

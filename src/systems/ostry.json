@@ -91,7 +91,7 @@
       "port": {
         "name": "Rime Town",
         "role": "ice",
-        "population": "town",
+        "population": "complex",
         "services": [
           "market",
           "missions",

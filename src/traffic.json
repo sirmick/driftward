@@ -4,7 +4,7 @@
     "outwatch": 0.3,
     "outpost": 1,
     "colony": 3,
-    "town": 10,
+    "complex": 10,
     "world": 30
   },
   "environs": {
