@@ -249,7 +249,7 @@ pub struct World {
     pub mix: Mix,
     pub lanes: Lanes,
     pub jlanes: JLanes,
-    /// every system's layout (atlas.rs)
+    /// the layouts of the systems this game has been to (atlas.rs)
     pub atlas_head: AtlasHead,
     pub atlas_sys: AtlasSys,
     pub atlas_bodies: AtlasBodies,
@@ -266,6 +266,8 @@ pub struct World {
     pub(crate) cols: Vec<ColumnDesc>,
     /// snapshot buffer, sized for this config at creation (see snapshot.rs)
     pub(crate) snap: Vec<u8>,
+    /// one atlas slot's row as bytes, for the page to log and a replay to put back (atlas.rs); sized at creation
+    pub atlas_row: Vec<u8>,
     /// orbiting debris and traffic: looks only, outside the snapshot and the hash (orbit.rs)
     pub orbit: Orbit,
     manifest: String,
@@ -302,11 +304,14 @@ impl World {
             acc: 0.0,
             cols: Vec::new(),
             snap: Vec::new(),
+            atlas_row: Vec::new(),
             orbit: Orbit::new(),
             manifest: String::new(),
         });
         w.cols = w.columns();
         w.snap = vec![0; snapshot::snapshot_len(&w.cols)];
+        w.atlas_row = vec![0; w.atlas_row_len()];
+        w.atlas_reset();
         w.game.player[0] = -1; // no player until the page sets one
         w.manifest = w.build_manifest();
         w

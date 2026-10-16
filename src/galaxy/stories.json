@@ -8,7 +8,8 @@
     "Prism holds 61 Cygni and Struve 2398 A as company towns inside Federation space, with the rest of Prism Incorporate behind them, and nobody here forgets whose cores fly their ships."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "calder-march": {
    "summary": [
@@ -19,7 +20,8 @@
     "It has been policed, taxed and argued over for a century and never fought over. The navy is leaving for the Shadow front, and what holds the Seam together is habit."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "reach": {
    "summary": [
@@ -30,7 +32,8 @@
     "Federation patrols are thin, Prism's debts are still owed, and Ironhull crews from the Anvil trade here with more sympathy than the Compact admits."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "anvil": {
    "summary": [
@@ -41,7 +44,8 @@
     "The outer Anvil, from Tarn and Mattock to GJ 3920, opens onto the Drift, which means smugglers, salvagers and Shadow rumours arrive together."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "beacon-cells": {
    "summary": [
@@ -52,7 +56,8 @@
     "What it lacks is anything worth a navy's attention, which is why Freeflag chose it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "black-shelf": {
    "summary": [
@@ -62,7 +67,8 @@
     "Salvagers work the old survey buoys and abandoned claim markers, and the lanes are known mainly for being empty, which suits anyone who wants to vanish or wait."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "blackspace": {
    "summary": [
@@ -73,7 +79,8 @@
     "Distance divides them: the settled systems sit days apart behind empty stars, with the Concord Worlds, the Drift, the Shoals and the Far Lanterns all pressing on the edges."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "blightspace": {
    "summary": [
@@ -83,7 +90,8 @@
     "Pulsars, black holes and a red giant make the region hazardous even with the Shadow left out, which is part of why the navy has never tried to retake any of it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "cells": {
    "summary": [
@@ -93,7 +101,8 @@
     "What binds the Cells is Tarrow in 2499 and a shared refusal to let a Federation ship dock; what divides them is distance, thin supply and a long habit of arguing."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "concord": {
    "summary": [
@@ -104,7 +113,8 @@
     "The Glass and the Shadow have not reached these worlds, but the navy's requisitioned freighters and Prism's core recall are already thinning the shipping that feeds them."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "corran-gate": {
    "summary": [
@@ -114,7 +124,8 @@
     "Corran Gate is where the Shadow first came through, so the navy treats it as the front. Everyone further in treats it as somewhere they would rather not go."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "drift": {
    "summary": [
@@ -124,7 +135,8 @@
     "Charts of the Drift are thin and out of date, and a captain who buys one should assume the survey was done in a hurry by someone short of fuel."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "far-lanterns": {
    "summary": [
@@ -134,7 +146,8 @@
     "Every neighbour wants the lanes open and nobody wants the stars. Prism, the Federation, the Blackhull havens and the Bloom's borders all cross here, and nobody asks who is watching."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "furnace-deeps": {
    "summary": [
@@ -144,7 +157,8 @@
     "What divides it is distance: Chara is a crowded town of working people, while the two systems beyond it are empty, dangerous or both, and nobody goes there without a reason."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "garden": {
    "summary": [
@@ -155,7 +169,8 @@
     "Since Shadowfall the Bloom has closed parts of its sector without explanation, and the Garden is where humans notice it first, in lanes that are quieter and buoys that stay dark."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "hedge": {
    "summary": [
@@ -165,7 +180,8 @@
     "Since Shadowfall the Bloom has gone quieter in the Hedge, and surveyors on the Garden side report fewer greetings, shifted lane markers and no explanation offered."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "iron-outposts": {
    "summary": [
@@ -175,7 +191,8 @@
     "Charter Strike memories and anger over Varrow and Hesk bind the Outposts to the Compact, though distance leaves them feeling forgotten by it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "lighthouse-run": {
    "summary": [
@@ -185,7 +202,8 @@
     "Everything here turns on the Lighthouse, a pulsar nobody can live beside, whose lanes every captain in the Run must cross."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "long-dark": {
    "summary": [
@@ -196,7 +214,8 @@
     "Since the Glass took the systems beside Prism Research, crews have been warier of the lanes on that side, and the Long Dark's silence feels less like peace than it used to."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "long-watch": {
    "summary": [
@@ -207,7 +226,8 @@
     "What divides it is plain: the two living worlds are rich and orderly, and everything beyond them is empty, watched and getting closer."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "margins": {
    "summary": [
@@ -218,7 +238,8 @@
     "With the Shadow at the far edge and the Glass eating the inner middle ring, the Margins is a back door that may soon be a front line."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "mirrorspace": {
    "summary": [
@@ -228,7 +249,8 @@
     "What binds the neighbouring systems is the silence: the Compact's anger at the cover-up, the Federation's closed lanes and Prism's polite recall of certain navigation cores all end at the same four dead lanes."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "outer-dark": {
    "summary": [
@@ -238,7 +260,8 @@
     "Since Shadowfall the quiet counts for less, because a dead system with no traffic is where a picket would be posted and where a shade could arrive unseen."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "prism-inc": {
    "summary": [
@@ -249,7 +272,8 @@
     "Wages are good, unrest is low and security is heavy, which holds right up to the day a navigation core is recalled and nobody will say what was wrong with it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "prism-research": {
    "summary": [
@@ -259,7 +283,8 @@
     "Prism is landlord, employer and law here, and polite about it. Associates keep their jobs and their company housing, and nobody out here forgets who owns the debt on both."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "shoals": {
    "summary": [
@@ -269,7 +294,8 @@
     "With the navy stretched between Freeflag and the Shadow, nobody patrols the Shoals, so everyone passing through is quietly hoping they are the only ones who thought of it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "the-maw": {
    "summary": [
@@ -279,7 +305,8 @@
     "What binds the two systems is the same thing that divides them: long, empty jumps of two days or more, and no port, beacon or tug between any of them."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   },
   "the-sink": {
    "summary": [
@@ -289,7 +316,8 @@
     "Nothing binds the region and no flag claims it, which suits Tenpenny and makes it a convenient place to be unrecorded."
    ],
    "model": "anthropic/claude-sonnet-5.5",
-   "date": "2026-10-16"
+   "date": "2026-10-16",
+   "galaxy": "e244578e151daa81"
   }
  },
  "systems": {

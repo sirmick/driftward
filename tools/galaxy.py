@@ -114,8 +114,8 @@ SETTLED = [(0, 2176), (12, 2200), (40, 2250), (100, 2320), (140, 2375), (160, 24
 CONTACT, BLOOM_CHARTED, SHADOW_SEEN, GLASS_LOST = 2376, 2410, 2519, 2524
 # the Calder March (src/lore/regions/calder-march.md): its systems, their stars' classes (src/systems/*.json; a white
 # star may be any F type, since A stars are too rare to find two close together) and their owners
-MARCH = [('brannock', 'Brannock', 'orange', 'iron'), ('calder', 'Calder', 'white', 'fed'), ('merrow', 'Merrow', 'yellow', 'fed'),
-         ('serein', 'Serein', 'yellow', 'prism'), ('quire', 'Quire', 'white', 'prism'), ('ostry', 'Ostry', 'red-dwarf', 'iron')]
+MARCH = [('brannock', 'Brannock', 'orange', 'ironhulls'), ('calder', 'Calder', 'white', 'federation'), ('merrow', 'Merrow', 'yellow', 'federation'),
+         ('serein', 'Serein', 'yellow', 'prism'), ('quire', 'Quire', 'white', 'prism'), ('ostry', 'Ostry', 'red-dwarf', 'ironhulls')]
 MARCH_LY = (18, 34)
 MARCH_REACH = 24  # Ironhull inhabited systems Brannock must join, through the Compact's own, beyond itself
 GLASS = ['Varrow', 'Hesk', 'Lucerne', 'Facet']  # the two Ironhull systems, then Prism's research world and its foundry
@@ -123,25 +123,25 @@ GLASS = ['Varrow', 'Hesk', 'Lucerne', 'Facet']  # the two Ironhull systems, then
 # and whether their territory holds together (each piece of it beyond the first costs PIECE_COST; the Blackhull havens
 # and the Independents are scattered by nature)
 FACTIONS = {
-    'fed':   dict(name='Federation', n=45, rings=('inner', 'middle', 'outer'), home=('inner', 28), whole=True),
-    'iron':  dict(name='Ironhull Compact', n=35, rings=('middle', 'outer'), home=('middle', 24), whole=True),
+    'federation':   dict(name='Federation', n=45, rings=('inner', 'middle', 'outer'), home=('inner', 28), whole=True),
+    'ironhulls':  dict(name='Ironhull Compact', n=35, rings=('middle', 'outer'), home=('middle', 24), whole=True),
     'prism': dict(name='Prism', n=20, rings=('inner', 'middle', 'outer'), home=('inner', 12), whole=True),
-    'free':  dict(name='Freeflag', n=20, rings=('outer',), home=('outer', 20), whole=True),
-    'black': dict(name='Blackhull havens', n=5, rings=('middle', 'outer'), home=('outer', 2), whole=False),
-    'indep': dict(name='Independent', n=25, rings=('middle', 'outer'), home=('outer', 18), whole=False),
+    'freeflag':  dict(name='Freeflag', n=20, rings=('outer',), home=('outer', 20), whole=True),
+    'blackhulls': dict(name='Blackhull havens', n=5, rings=('middle', 'outer'), home=('outer', 2), whole=False),
+    'independent': dict(name='Independent', n=25, rings=('middle', 'outer'), home=('outer', 18), whole=False),
 }
 PIECE_COST = 6
 # the lane model's cost of a lane inside a territory (times its length), and across a border (times its length, plus a
 # fixed cost): so territories are laced with lanes and borders cross at a few choke points
 INSIDE_COST, BORDER_COST = .7, (1.6, 4)
 FED_HOLDS = ['Sol', 'Alpha Centauri', "Barnard's Star", 'Wolf 359', 'Epsilon Eridani', 'Tau Ceti']
-FRONTIER = ['fed', 'iron', 'prism', 'free']  # the factions given equal access to the open Drift
+FRONTIER = ['federation', 'ironhulls', 'prism', 'freeflag']  # the factions given equal access to the open Drift
 MIN_OPEN, MIN_GATEWAYS = 1, 2
 SECTORS = 8
 # where a faction's territory leans: toward a March system's bearing from Sol, each of its systems costing its angle
 # off that bearing (radians) times the weight; the Ironhulls hold the March's side of the middle ring, Freeflag the
 # outer ring beyond them (the strikes made them cousins), Prism's company worlds lean the same way, toward Serein
-BEARINGS = {'iron': ('brannock', 2.0), 'free': ('brannock', 1.5), 'prism': ('serein', .6)}
+BEARINGS = {'ironhulls': ('brannock', 2.0), 'freeflag': ('brannock', 1.5), 'prism': ('serein', .6)}
 # the regions: every system belongs to one, named here; built after the lanes (see the region stage below)
 REGIONS = {
     'inner-sphere': 'The Inner Sphere', 'concord': 'The Concord Worlds', 'long-watch': 'The Long Watch',
@@ -163,7 +163,7 @@ HAZARDS = [('The Lighthouse', 'pulsar', 'lighthouse', 'lighthouse-run'), ('The F
            ('The Beacon', 'blue-giant', 'beacon', 'beacon-cells'), ('The Metronome', 'pulsar', 'metronome', 'corran-gate'),
            ('The Sink', 'black-hole', 'sink', 'the-sink'), ('The Maw', 'black-hole', 'maw', 'the-maw')]
 # what a piece of a faction's territory apart from its main body is
-EXCLAVE = {'fed': 'navy base', 'iron': 'outpost', 'prism': 'company world', 'free': 'rebel cell'}
+EXCLAVE = {'federation': 'navy base', 'ironhulls': 'outpost', 'prism': 'company world', 'freeflag': 'rebel cell'}
 # the deep Drift: depth by jumps from human space; at each depth how many systems a system spawns (on average), how
 # far its children lie (ly), and the chance it links to a neighbour too (a loop)
 DRIFT_DEPTH = 8
@@ -363,7 +363,7 @@ elif STAGE == 'factions':
             for i in human:
                 if role[i] == 'dead': f.fix(own[i, k], 0)
     for (_, _, _, k), i in zip(MARCH, march): f.fix(own[i, k], 1)
-    for n in FED_HOLDS: f.fix(own[by_name[n], 'fed'], 1)
+    for n in FED_HOLDS: f.fix(own[by_name[n], 'federation'], 1)
     # held together over the lanes there could be: a flow from a root in each piece through the faction's own
     # systems, each consuming a unit; a piece beyond the first costs PIECE_COST
     M = 120
@@ -391,12 +391,12 @@ elif STAGE == 'factions':
     # reaches taking a unit
     bran = march[[m_[0] for m_ in MARCH].index('brannock')]
     gb, zb = {}, {i: f.var(f'zb{i}', 0, 1) for i in human if i != bran}
-    for i, v in zb.items(): f.add({v: 1, own[i, 'iron']: -1}, hi=0)
+    for i, v in zb.items(): f.add({v: 1, own[i, 'ironhulls']: -1}, hi=0)
     for a, b in E:
         if a in hset and b in hset:
             for s_, t_ in ((a, b), (b, a)):
                 gb[s_, t_] = f.var(f'gb{s_},{t_}', 0, M)
-                f.add({gb[s_, t_]: 1, own[s_, 'iron']: -M}, hi=0); f.add({gb[s_, t_]: 1, own[t_, 'iron']: -M}, hi=0)
+                f.add({gb[s_, t_]: 1, own[s_, 'ironhulls']: -M}, hi=0); f.add({gb[s_, t_]: 1, own[t_, 'ironhulls']: -M}, hi=0)
     for i in zb:  # inflow - outflow = what i takes
         expr = {zb[i]: -1}
         for j in near[i]:
@@ -437,7 +437,7 @@ elif STAGE == 'factions':
     for rt in roots.values():
         for v in rt.values(): obj[v] = obj.get(v, 0) - PIECE_COST
     for i in human:  # the navy holds the front: the systems that could have a lane to the Shadow
-        if any(role[j] == 'shadow' for j in near[i]): obj[own[i, 'fed']] = obj.get(own[i, 'fed'], 0) + FRONT_BONUS
+        if any(role[j] == 'shadow' for j in near[i]): obj[own[i, 'federation']] = obj.get(own[i, 'federation'], 0) + FRONT_BONUS
     # leaning toward a bearing: each system costs its angle off the faction's (dead ones, claimed as territory, less)
     for k, (sid, w) in BEARINGS.items():
         b = P[march[[m_[0] for m_ in MARCH].index(sid)]]; b = b / np.linalg.norm(b)
@@ -677,12 +677,12 @@ def pick(cands, anchor):
     return min(cands, key=lambda i: np.linalg.norm(P[i] - anchor)) if cands else None
 corran = emptied[0] if emptied else None
 where = {
-    'lighthouse': lambda: pick([i for i in dead_cat if any(owner.get(j) == 'fed' for j in lane_nb[i]) and any(owner.get(j) == 'prism' for j in lane_nb[i])]
+    'lighthouse': lambda: pick([i for i in dead_cat if any(owner.get(j) == 'federation' for j in lane_nb[i]) and any(owner.get(j) == 'prism' for j in lane_nb[i])]
                                or [i for i in dead_cat if any(owner.get(j) == 'prism' for j in lane_nb[i])], np.zeros(3)),
-    'furnace': lambda: pick([i for i in dead_cat if main(i, 'iron')], centre([i for i in role if main(i, 'iron')])),
-    'beacon': lambda: pick([i for i in dead_cat if main(i, 'free') or any(main(j, 'free') for j in lane_nb[i])], centre([i for i in role if main(i, 'free')])),
+    'furnace': lambda: pick([i for i in dead_cat if main(i, 'ironhulls')], centre([i for i in role if main(i, 'ironhulls')])),
+    'beacon': lambda: pick([i for i in dead_cat if main(i, 'freeflag') or any(main(j, 'freeflag') for j in lane_nb[i])], centre([i for i in role if main(i, 'freeflag')])),
     'metronome': lambda: pick([i for i in dead_cat if any(j in front or role[j] == 'shadow' for j in lane_nb[i])], P[corran] if corran is not None else np.zeros(3)),
-    'sink': lambda: pick([i for i in dead_cat if i not in owner and any(owner.get(j) == 'indep' for j in lane_nb[i])], centre([i for i in role if owner.get(i) == 'indep'])),
+    'sink': lambda: pick([i for i in dead_cat if i not in owner and any(owner.get(j) == 'independent' for j in lane_nb[i])], centre([i for i in role if owner.get(i) == 'independent'])),
 }
 for hname, hclass, rule, _ in HAZARDS:
     if rule in where:
@@ -720,14 +720,14 @@ for i, r_ in role.items():
     elif r_ in ('bloom', 'bdead'): region[i] = 'hedge' if i in hedge else 'garden'
     elif r_ == 'shadow': region[i] = 'corran-gate' if i in emptied else 'blightspace'
     elif r_ == 'drift': region[i] = open_name.get(int(sector[i]), 'drift')
-    elif o == 'fed' and main(i, 'fed'):
+    elif o == 'federation' and main(i, 'federation'):
         ang = np.degrees(np.arccos(np.clip(P[i] @ shadow_u / max(LY[i], 1e-9), -1, 1)))
         region[i] = 'long-watch' if ang < LONG_WATCH and LY[i] > 20 else 'concord'
     elif o == 'prism': region[i] = 'prism-inc' if main(i, 'prism') else 'prism-research'
-    elif o == 'iron': region[i] = 'anvil' if main(i, 'iron') else 'iron-outposts'
-    elif o == 'free': region[i] = 'reach' if main(i, 'free') else 'cells'
-    elif o == 'indep': region[i] = 'margins'
-    elif o == 'black': region[i] = 'blackspace'
+    elif o == 'ironhulls': region[i] = 'anvil' if main(i, 'ironhulls') else 'iron-outposts'
+    elif o == 'freeflag': region[i] = 'reach' if main(i, 'freeflag') else 'cells'
+    elif o == 'independent': region[i] = 'margins'
+    elif o == 'blackhulls': region[i] = 'blackspace'
 for i in front: region[i] = 'corran-gate'
 for i, (hname, _) in hazard.items():  # a hazard and its neighbours in its kind of space
     if isinstance(i, str): continue
@@ -762,7 +762,7 @@ proper = lambda s: not s.get('catalog') and s['name'] not in (s.get('desig') or 
 for i in sorted(role, key=lambda i: LY[i]):
     if i in names or proper(stars[i]) or stars[i]['name'] in PINNED: continue
     r_ = role[i]
-    if r_ == 'inh' and nrng.random() < INVENT_SETTLED[ring_of[i]]: names[i] = name(owner.get(i, 'indep'))
+    if r_ == 'inh' and nrng.random() < INVENT_SETTLED[ring_of[i]]: names[i] = name(owner.get(i, 'independent'))
     elif r_ == 'dead' and nrng.random() < INVENT_DEAD[ring_of[i]]: names[i] = name('claim')
     elif r_ == 'bloom': names[i] = name('bloom')
 # when: settled systems in order of jumps from Sol and distance (Freeflag's and the Independents' late, marginal),
@@ -772,7 +772,7 @@ def on_curve(n):
     for (n0, y0), (n1, y1) in zip(SETTLED, SETTLED[1:]):
         if n <= n1: return round(y0 + (y1 - y0) * (n - n0) / max(1, n1 - n0))
     return SETTLED[-1][1]
-late = {'free': 3, 'indep': 2, 'black': 2}
+late = {'freeflag': 3, 'independent': 2, 'blackhulls': 2}
 settled_order = sorted((i for i in role if (role[i] in ('inh', 'glass') or i in emptied) and stars[i]['name'] != 'Sol'),
                        key=lambda i: hops.get(i, 30) + LY[i] / 8 + late.get(owner.get(i), 0) + yrng.uniform(0, 3))
 settled = {i: on_curve(n) for n, i in enumerate(settled_order)}

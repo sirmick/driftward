@@ -7,3 +7,4 @@ art/*/raw/
 *.token
 .dev/
 __pycache__/
+dist/

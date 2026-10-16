@@ -172,11 +172,51 @@ pub unsafe extern "C" fn dw_place_landed(w: *mut World, body: u32) { unsafe { wo
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dw_post_boards(w: *mut World) { unsafe { world(w) }.post_boards() }
 
-/// Store the live system as atlas system `k` (atlas.rs); 1 if stored.
+/// Store the live system as system `id` (a star id) in atlas slot `k` (atlas.rs); 1 if stored.
 /// # Safety
 /// See `world`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dw_atlas_store(w: *mut World, k: u32) -> u32 { unsafe { world(w) }.atlas_store(k as usize) as u32 }
+pub unsafe extern "C" fn dw_atlas_store(w: *mut World, k: u32, id: u32) -> u32 { unsafe { world(w) }.atlas_store(k as usize, id) as u32 }
+
+/// Empty the atlas (a new game).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_atlas_reset(w: *mut World) { unsafe { world(w) }.atlas_reset() }
+
+/// The slot holding system `id`, or -1.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_atlas_find(w: *mut World, id: u32) -> i32 { unsafe { world(w) }.atlas_find(id).map_or(-1, |k| k as i32) }
+
+/// The slot system `id` would go in (its own, an empty one, or one the player can spare), or -1 if none.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_atlas_slot_for(w: *mut World, id: u32) -> i32 { unsafe { world(w) }.atlas_slot_for(id).map_or(-1, |k| k as i32) }
+
+/// The row buffer: one atlas slot as bytes (atlas.rs), its address and length.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_atlas_row_ptr(w: *mut World) -> *mut u8 { unsafe { world(w) }.atlas_row.as_mut_ptr() }
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_atlas_row_len(w: *mut World) -> u32 { unsafe { world(w) }.atlas_row.len() as u32 }
+
+/// Slot `k` into the row buffer (to log it); 1 if done.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_atlas_row_save(w: *mut World, k: u32) -> u32 { unsafe { world(w) }.atlas_row_save(k as usize) as u32 }
+
+/// The row buffer into slot `k` (a logged store); 1 if done.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_atlas_row_load(w: *mut World, k: u32) -> u32 { unsafe { world(w) }.atlas_row_load(k as usize) as u32 }
 
 /// Make atlas system `k` the live one (bodies, prices, traffic mix and params); 1 if loaded.
 /// # Safety

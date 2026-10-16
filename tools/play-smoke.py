@@ -9,14 +9,23 @@ over (ships land and new ones launch); assist flight in open space
 matches the lab's numbers; asteroid belts are listed in orbital order and the autopilot flies into one; launch, landing and a day passing (with its docking fee) work; save then load restores
 the exact state; a replay exported from the browser (snapshot + input log, trades included) reruns natively to the
 same state hash; the live clock ticks at 60 Hz.
+Given a directory instead of a page (a hosted build: python3 tools/build.py --hosted), it serves the directory over
+HTTP and drives its play.html, which fetches its data (src/data.js) rather than carrying it.
 Needs Playwright for Python (on the dev box: ~/.venvs/web/bin/python tools/play-smoke.py) and cargo.
-Usage: play-smoke.py [play.html] [screenshot.png]
+Usage: play-smoke.py [play.html | DIR] [screenshot.png]
 """
-import base64, json, os, pathlib, shutil, subprocess, sys, tempfile, time
+import base64, functools, http.server, json, os, pathlib, shutil, subprocess, sys, tempfile, threading, time
 from playwright.sync_api import sync_playwright
 
 root = pathlib.Path(__file__).resolve().parent.parent
 page_path = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else root / 'play.html').resolve()
+if page_path.is_dir():  # a hosted build: serve it (quietly, on a free port)
+    Quiet = type('Quiet', (http.server.SimpleHTTPRequestHandler,), {'log_message': lambda *a: None})
+    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=str(page_path)))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    page_url = f'http://127.0.0.1:{server.server_address[1]}/play.html'
+else:
+    page_url = page_path.as_uri()
 shot = sys.argv[2] if len(sys.argv) > 2 else None
 fails = []
 
@@ -45,9 +54,11 @@ with sync_playwright() as p:
     errs = []
     pg.on('console', lambda m: m.type == 'error' and errs.append(m.text))
     pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.goto(page_path.as_uri())
+    pg.goto(page_url)
     pg.wait_for_function('window.__play && window.__play.probe().ready', timeout=120000)
     ev = pg.evaluate
+    inline = ev("document.querySelectorAll('script[data-file]').length")
+    print(f"data: {f'{inline} files inline' if inline else 'fetched from data/'} ({page_url})")
     t = ev('__play.probe()')
     check(t['shell'] == 'title' and pg.is_visible('#title') and pg.is_disabled('#t-continue'), 'starts on the title (nothing to continue yet)')
     pg.fill('#t-seed', '1'); pg.click('#t-new')
@@ -79,9 +90,9 @@ with sync_playwright() as p:
         t0 = ev('__play.probe().tick')
         pg.keyboard.press('Backquote'); pg.wait_for_timeout(600)
         d = ev("({ open: !document.getElementById('debug').hidden, sections: [...document.querySelectorAll('.dbg-body section')].map(s => s.id), ports: document.querySelectorAll('.dbg-port').length, images: document.querySelectorAll('.dbg-port img').length, prompt: document.querySelectorAll('#dbg-pipeline details[open] .dbg-text').length, tick: __play.probe().tick })")
-        check(d['open'] and d['sections'] == ['dbg-pipeline', 'dbg-ports', 'dbg-raw'] and d['prompt'] == 2 and d['ports'] == len(lore['ports'])
+        check(d['open'] and d['sections'] == ['dbg-pipeline', 'dbg-ports', 'dbg-galaxy', 'dbg-raw'] and d['prompt'] == 2 and d['ports'] == len(lore['ports'])
               and d['images'] == len(list((lore_file.parent.parent.parent / 'art' / 'brannock').glob('*.webp'))) and d['tick'] == t0,
-              f"` opens the debug screen with the clock stopped: the pipeline with the lore prompt, {d['ports']} port cards with {d['images']} images, the raw files")
+              f"` opens the debug screen with the clock stopped: the pipeline with the lore prompt, {d['ports']} port cards with {d['images']} images, the system in the universe, the raw files")
         pg.click('.dbg-tabs button[data-tab="player"]'); pg.wait_for_timeout(200)
         pl = ev("({ sections: document.querySelectorAll('.dbg-body section').length, ship: document.querySelector('#dbg-ship').innerText, rows: document.querySelectorAll('#dbg-hold tbody tr').length })")
         check(pl['sections'] == 6 and 'Copperhaul' in pl['ship'] and pl['rows'] == len(econ0['commodities']), f"its Player tab shows the ship, flight, money, the hold priced at every port, missions and the session")
@@ -176,24 +187,29 @@ with sync_playwright() as p:
         check(bt['auto'] == 0 and bt['t'] < 300 and bt['off'] < bt['half'] and bt['v'] < 30, f"the autopilot flies into the belt in {bt['t']} s and stops {bt['off']:.0f} m from its middle")
         check(bt['rocks'] > 1000, f"the belts and fields hold {bt['rocks']} rocks")
 
-    # the debug jump: the debug screen's box completes place@system and jumps there (a logged core command); a session
-    # that jumps between systems replays natively, and a save made after a jump loads back into that system
+    # the debug jump: the debug screen's box completes place@system and jumps there (a logged core command); systems are
+    # read and stored into the atlas only when first jumped to, so a new game holds the start system alone; a session
+    # that jumps between systems replays natively (the stores logged with it), and a save made after a jump loads back
+    # into that system
     if len(ev('__play.systems()')) > 1:
-        ev("(() => { const P = __play, C = P.CMD; P.newGame(21); P.command(C.launch); P.command(C.skip); P.advance(0.5, []); })()")
+        a0 = ev("(() => { const P = __play, C = P.CMD; P.newGame(21); P.command(C.launch); P.command(C.skip); P.advance(0.5, []); return P.atlas(); })()")
+        check(a0 == ['brannock'], f"a new game's atlas holds the start system alone: {a0}")
         pg.keyboard.press('Backquote'); pg.wait_for_timeout(300)
-        pg.keyboard.type('rime@ost'); pg.wait_for_timeout(150)
+        pg.keyboard.type('rime@ost'); pg.wait_for_timeout(300)
         first = ev("(document.querySelector('.dbg-jump-list button') || {}).innerText || ''").replace('\n', ' ')
         pg.keyboard.press('Enter'); pg.wait_for_timeout(300)
-        j = ev("(() => { const P = __play; return { sys: P.systems()[P.system()], at: P.BODIES[P.probe().at].name, mode: P.probe().mode, debug: !document.getElementById('debug').hidden }; })()")
-        check(first.startswith('Rime') and j == {'sys': 'ostry', 'at': 'Rime', 'mode': 0, 'debug': False}, f"the jump box completes rime@ost to {first!r} and jumps there: {j}")
-        js = ev("""(() => { const P = __play, C = P.CMD, s = P.systems(), cal = s.indexOf('calder'), B = P.places().find(p => p.k === cal && p.id === 'station');
-          P.advance(2, ['KeyW']); const r = P.jump(cal, B.j); P.advance(3, ['KeyW', 'KeyA']); P.save(); const saved = P.probe(); P.jump(0, 1); P.load();
+        j = ev("(() => { const P = __play; return { sys: P.system(), at: P.BODIES[P.probe().at].name, mode: P.probe().mode, debug: !document.getElementById('debug').hidden, atlas: P.atlas() }; })()")
+        check(first.startswith('Rime') and j == {'sys': 'ostry', 'at': 'Rime', 'mode': 0, 'debug': False, 'atlas': ['brannock', 'ostry']}, f"the jump box completes rime@ost to {first!r} and jumps there, storing it: {j}")
+        js = ev("""(async () => { const P = __play, C = P.CMD; await P.preload(); const B = P.places().find(p => p.sysId === 'calder' && p.id === 'station');
+          P.advance(2, ['KeyW']); const r = await P.jump('calder', B.j); P.advance(3, ['KeyW', 'KeyA']); P.save(); const saved = P.probe(); await P.jump('brannock', 1); await P.load();
           const back = P.probe(); P.advance(2, []); const rep = P.exportReplay();
-          return { r, saved: saved.hash, back: back.hash, sys: s[P.system()], replay: { save: P.b64(rep.save), log: rep.log, ticks: rep.ticks, tick: rep.tick, hash: rep.hash } }; })()""")
+          return { r, saved: saved.hash, back: back.hash, sys: P.system(), replay: { save: P.b64(rep.save), log: rep.log, ticks: rep.ticks, tick: rep.tick, hash: rep.hash } }; })()""")
         check(js['r'] == 0 and js['back'] == js['saved'] and js['sys'] == 'calder', f"a save after a jump loads back into {js['sys']} with the same hash")
-        jr = ev("""(() => { const P = __play, s = P.systems(); P.newGame(22); P.command(P.CMD.launch); P.command(P.CMD.skip); P.advance(1, ['KeyW']);
-          P.jump(s.indexOf('merrow'), 1); P.advance(4, ['KeyW', 'KeyD']); P.jump(s.indexOf('quire'), 2); P.advance(3, ['KeyW']);
-          const r = P.exportReplay(); return { save: P.b64(r.save), log: r.log, ticks: r.ticks, tick: r.tick, hash: r.hash }; })()""")
+        jr = ev("""(async () => { const P = __play; P.newGame(22); P.command(P.CMD.launch); P.command(P.CMD.skip); P.advance(1, ['KeyW']);
+          await P.jump('merrow', 1); P.advance(4, ['KeyW', 'KeyD']); await P.jump('quire', 2); P.advance(3, ['KeyW']);
+          const r = P.exportReplay(); return { atlas: P.atlas(), save: P.b64(r.save), log: r.log, ticks: r.ticks, tick: r.tick, hash: r.hash }; })()""")
+        stores = sum(1 for line in jr['log'].splitlines() if ' atlas ' in line)
+        check(jr['atlas'] == ['brannock', 'merrow', 'quire'] and stores == 2, f"two jumps to new systems store them, logged for the replay: atlas {jr['atlas']}, {stores} stores in the log")
         out = native_replay(base64.b64decode(jr['save']), jr['log'], jr['ticks'])
         check(out == f"tick {jr['tick']} hash {jr['hash']}", f"a session through three systems (two jumps) replays natively: {out}")
         pg.keyboard.press('Escape')

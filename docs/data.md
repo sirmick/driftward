@@ -1,70 +1,74 @@
-# Data audit: the universe's JSON, and loading it on demand
+# The universe's data: one index, systems loaded on demand
 
-Status: **audit, 2026-10-16; nothing below is built yet.** This is the brief for the next session: what data the game has, where each piece lives and what checks it, the gaps between the layers, and the proposed restructure into a universe index plus systems loaded on demand.
+Status, 2026-10-16: **steps 1 to 3 of the plan below are built; 4 and 5 are next.** This file records what the game's data is, where each piece lives and what checks it, what was built and decided, and the brief for the next session.
 
-## What exists today
+## What exists now
 
-| Layer | File(s) | JSON? | Schema? | Made by | Notes |
-| :-- | :-- | :-- | :-- | :-- | :-- |
-| Universe canon | `src/lore/setting.md` | prose | – | by hand | fed to every lore and story prompt as canon; fine as prose |
-| Region notes | `src/lore/regions/<region>.md` | prose | – | by hand | only `calder-march.md` so far; canon for that region's stories |
-| Real stars | `src/galaxy/stars.json` (472 KB) | ✓ | ✗ | `tools/hyg.py` | only the map needs it (its background stars, the catalogue view) |
-| Map: systems, lanes, factions, regions, the Drift | `src/galaxy/galaxy.json` (252 KB) | ✓ | ✗ | `tools/galaxy.py` | ~930 systems (596 charted, ~333 generated Drift), ~1,130 lanes |
-| Worlds: people, tier, port roles, wealth, security, unrest; region trade | `src/galaxy/worlds.json` | ✓ | ✗ | `tools/worlds.py` | 150 settled systems, keyed by star id |
-| Stories: region summaries, system bullets | `src/galaxy/stories.json` (192 KB) | ✓ | ✗ | `tools/stories.py` | all 28 regions, 338 systems |
-| **System** (star, planets, moons, stations, ports, belts, fields, traffic) | `src/systems/*.json` | ✓ | **✓** `src/schema/system.schema.json` | by hand | 6 systems (the Calder March); clamped by `src/schema.js`, checked by `tools/validate.js` |
-| **System lore** (history, culture, art bible, ports, people, rumours, vistas) | `src/lore/<id>.json` | ✓ | **✓** `src/schema/lore.schema.json` | `tools/gen-content.js` | the same 6 systems |
-| Ships, stations, factions' looks | `src/catalog.json` | ✓ | ✗ (enums cross-checked in `validate.js`) | by hand | |
-| Star and planet looks | inside each system file | ✓ | ✓ (system schema) | by hand | the map's per-class looks are code (`STAR_LOOKS` in `src/map/map.js`) |
-| Art | `art/<id>/*.webp`, `art/<id>/log.json` | log ✓ | ✗ | `tools/gen-content.js` | the build makes the manifest from the folder; images load on demand already |
-| Economy (commodities, prices by port role) | `src/economy.json` | ✓ | ✗ (checked in `validate.js`) | by hand | |
-| Traffic (hulls by culture and role, population weights) | `src/traffic.json` | ✓ | ✗ (checked in `validate.js`) | by hand | |
-| Generation records | `src/lore/*.log.json`, `src/galaxy/stories.log.json` (604 KB), `art/*/log.json` | ✓ | ✗ | the generators | debug only |
+| Layer | File(s) | Schema? | Made by | Notes |
+| :-- | :-- | :-- | :-- | :-- |
+| Universe canon | `src/lore/setting.md` | – | by hand | fed to every lore and story prompt as canon; prose |
+| Region notes | `src/lore/regions/<region>.md` | – | by hand | only `calder-march.md` so far; merged into the index as the region's `notes` |
+| Real stars | `src/galaxy/stars.json` (472 KB) | ✗ | `tools/hyg.py` | only the map reads it |
+| Map: systems, lanes, factions, regions, the Drift | `src/galaxy/galaxy.json` | ✗ | `tools/galaxy.py` | a source for the index; the faction keys are now the system schema's |
+| Worlds | `src/galaxy/worlds.json` | ✗ | `tools/worlds.py` | a source for the index; records the galaxy hash it was made from |
+| Stories | `src/galaxy/stories.json` | ✗ | `tools/stories.py` | a source for the index; each region records the galaxy hash it was told from |
+| **Universe index** | `src/galaxy/universe.json` (447 KB) | **✓** `src/schema/universe.schema.json` | `tools/universe.py`, on every build | factions, regions, every system once by star id, lanes; what the game, the map and the debug screen read |
+| **System** (the flyable layout) | `src/systems/*.json` | **✓** `system.schema.json` | by hand | 6 systems (the Calder March); each must agree with its index entry |
+| **System lore** | `src/lore/<id>.json` | **✓** `lore.schema.json` | `tools/gen-content.js` | the same 6 |
+| Ships, stations, factions' looks | `src/catalog.json` | ✗ (enums cross-checked) | by hand | |
+| Art | `art/<id>/*.webp`, `art/<id>/log.json` | ✗ | `tools/gen-content.js` | the build lists what exists; images load on demand |
+| Economy, traffic | `src/economy.json`, `src/traffic.json` | ✗ (checked in `validate.js`) | by hand | `economy.json`'s `start.system` is where a new game begins |
+| Generation records | `src/lore/*.log.json`, `src/galaxy/stories.log.json`, `art/*/log.json` | ✗ | the generators | debug only, read when the debug screen asks |
 
-Everything above is inlined into `play.html` (2.8 MB) and `map.html` by `tools/build.py`; the debug screen shows all of it (Content, Regions, Planets, Map tabs).
+`npm run check` validates the index against its schema and checks:
+* worlds and stories were made from the galaxy as it is (the hashes match);
+* every reference resolves (regions, owners, lane ends);
+* every system file agrees with its entry: name, owner, ring, region, star class; its ports' roles are exactly the world's; no port's tier is above the system's; a Builtworld where the index has one.
 
-## Gaps and inconsistencies
+## How the pages get it
 
-1. **No path from the map to a flyable system.** Only the 6 March systems have system files; the galaxy links an entry to its file through a `system` field that only those 6 carry. Nothing turns a galaxy entry plus its world into a system file, so ~590 systems exist on the map only.
-2. **Two vocabularies for the same things.**
-   * Faction keys: system files say `owner: federation | prism | ironhulls | blackhulls | freeflag | bloom | glass | shadow | none`; the galaxy says `faction: fed | iron | prism | free | black | indep` (and has Independents, which the system schema lacks).
-   * Population tiers: system ports use `outpost | colony | town | world`; worlds use `outwatch | outpost | colony | town | world`, plus a `builtworld` flag. The system schema has no outwatch or Builtworld; the thresholds differ.
-   * Port roles and star classes do match (`economy.json` roles = the system schema's role enum; the twelve star classes everywhere).
-3. **Facts duplicated, no single source of truth.** Brannock's people are in the March's region notes (4 billion), its system file's port tiers, and `worlds.json`; its owner in the system file and the galaxy; its ring and region in both. Nothing checks they agree.
-4. **Lanes never reach flight.** The galaxy has lanes (length, days, border and Drift flags); system files have four fixed jump zones (north, east, south, west, `traffic.jumpRadius`). The Book wants a zone per outbound lane, on the bearing toward its destination, coloured by destination.
-5. **A region's data is in four places:** its name (`galaxy.json` regions), its trade (`worlds.json` regions), its summary (`stories.json` regions), its notes (`lore/regions/*.md`). There is no region object and no region schema.
-6. **The core save holds every system** (`core/src/atlas.rs`: every system's layout, saved with the world). Fine for 6; not for 900.
-7. **Galaxy reruns break downstream data.** Worlds and stories are keyed by star id, but a galaxy rerun can rename, re-own or re-region systems. There is no check that worlds and stories still match the galaxy they were made from (record the galaxy's hash in each).
+`src/data.js` is the one way in, for the game and the map page alike. Every file is read once, asynchronously:
 
-## Proposed structure
+| File | What | Read |
+| :-- | :-- | :-- |
+| `universe.json` | the index | at start |
+| `systems/<id>.json` | the system file, its lore, its art manifest | the first time the game needs that system |
+| `logs/<id>.json` | how its lore and art were made | when the debug screen's Content tab shows it |
+| `stars.json` | the real stars | when a map is drawn |
+| `galaxy-log.json` | the setting and the stories' call log | when the Regions tab opens |
 
-**A universe index, loaded at start** (`universe.json`, one file, roughly 200–300 KB compact):
-* `factions`: id, name, colour (one vocabulary, used by system files too);
-* `regions`: id, name, kind (heartland, march, frontier, Drift sector, alien, hazard), summary, notes (the markdown, moved in or referenced), trade (exports, imports), borders;
-* `lanes`: from, to, ly, days, `border`, `drift`;
-* `systems`: the index entry per system: id, name, star (position, class, catalogue name), region, owner, status, ring, people and tier, port roles, wealth, security, unrest, years (settled, charted, emptied, lost), tags (hazard, front, gateway, exclave, provisional), story bullets, and `file` when a hand-written system file exists.
+**The decision: (c), both.** `npm run build` writes self-contained pages (each file inline in its own `<script type="application/json" data-file=...>`, parsed when first asked for), so `play.html` still opens from disk. `npm run build:hosted` writes `dist/`: the same pages without their data, `dist/data/` with each file, and `art/`. Serve that directory: `play.html` drops from 2.8 MB to 0.9 MB plus what is visited. `tools/play-smoke.py dist` serves and tests the hosted build. Both builds pass every check.
 
-**Per system, loaded on demand:** `systems/<id>.json` (the flyable layout), `lore/<id>.json` (ports, people, rumours), `art/<id>/` (already on demand).
+**The atlas holds only the systems visited** (`core/src/atlas.rs`):
+* Each of its 8 slots carries its system's star id. A new game empties it and lays out the start system.
+* A jump to a system not in the atlas reads its file if it must (the jump then returns a promise), lays it out, stores it, then jumps.
+* When every slot is full, a new system takes the first slot the player isn't in and has no active mission to.
+* A store mid-session goes into the replay log as `tick atlas k <hex>`: the slot's bytes, about 8 KB, since a native replay has no page to lay a system out. A replay puts them back on the same tick.
+* Loading a save reads any system in its atlas the page hasn't read yet, then loads.
+* The save format is version 17; older saves don't load.
 
-**Debug and map extras, loaded when opened:** `stars.json` (the real-star catalogue, for the map's background), every generation log.
+## What changed in the vocabulary
 
-**Systems without a file:** a system's flyable layout is **generated on first visit** from its index entry (star class, people, tier, port roles, owner, lanes) and a seed, then cached in the save; a hand-written file overrides it (as the March's do). This is the Book's "Drift systems are generated on first contact", extended to all unauthored systems.
+* **Faction keys:** one set everywhere, the system schema's: `federation`, `ironhulls`, `prism`, `freeflag`, `blackhulls`. Plus `independent`, which the system schema gained. The galaxy tools and `galaxy.json` were renamed to them (a rename in place, no rerun).
+* **Owner:** the index's `owner` is a system's faction, else the alien power whose space it is (`bloom`, `glass`, `shadow`), else `none`. That is the system schema's owner vocabulary, so a system file's owner must equal its entry's.
+* **Population tiers:** a port's `population` gained `outwatch`, and a port gained `builtworld`. The traffic weights, city lights, orbiting traffic and the vista prompts' crowd text all know both.
+* **Not done:** the index keeps the galaxy's field names as they were (`settled`, `charted`, `gateway`, `exclave` and the rest, flat on each system) rather than the grouped `years` and `tags` first sketched. Regions have no `kind` (heartland, march, frontier...): nothing in the data says it yet.
 
-**Schemas:** `src/schema/universe.schema.json` (faction, region, lane, system-index entry), validated in `npm run check` alongside the system and lore schemas, plus cross-checks: every system file agrees with its index entry (owner, ring, region, people's tier), worlds and stories match the galaxy's hash.
+## Gaps that remain
 
-## The decision to make first
+1. **No path from the map to a flyable system** beyond the 6 hand-written files (step 4).
+2. **Lanes never reach flight:** system files still have four fixed jump zones; the Book wants one per outbound lane, on its bearing (step 5).
+3. **Facts are still written twice:** a system file's owner, ring, region and port roles repeat its index entry. They are now checked to agree, not derived. Generated systems (step 4) will take them from the entry directly.
+4. **The jump box reads every flyable system** when it gets focus, so it can complete `place@system`. That's fine for 6 files. With generated systems it should list systems from the index and read one only when it is picked.
+5. **A full atlas forgets a system's layout,** not its missions' history: a delivered or failed mission bound for an evicted slot names a port of whatever system now holds that slot. Only past 8 systems in one game; active missions keep their slot.
+6. **The region notes are only the March's.** The index carries notes for any region that has a file.
 
-How the pages load on demand. Today `play.html` is one self-contained file that opens from disk (`file://`), where browsers block `fetch`.
-* **(a) Inline, parsed lazily:** the build puts each system in its own `<script type="application/json">` and the game parses one when needed. Still opens from disk; every system is in the download.
-* **(b) Fetch:** the page fetches `universe.json` and `systems/<id>.json`. Truly on demand; must be served (`npm run dev` or a host); no longer opens from disk.
-* **(c) Both,** behind one async `loadSystem(id)`; the build picks inline or fetch. **Recommended:** fetch for the hosted game, inline for a self-contained build.
+## Next: steps 4 and 5
 
-## Suggested order
-
-1. **One vocabulary:** faction keys and population tiers agreed across the system schema, the galaxy and worlds (add Independents and the outwatch to the system schema; Builtworld as a body or port flag).
-2. **`universe.schema.json` and `universe.json`:** built by a step that merges `galaxy.json`, `worlds.json`, `stories.json` and the region notes; validated in `npm run check`, with the cross-checks above.
-3. **The loader:** `loadUniverse()` and `loadSystem(id)` behind (a)/(b)/(c); the game, the map page and the debug screen read through it; the core's atlas holds only the systems visited.
-4. **Generated systems:** a system file from an index entry and a seed (`tools/` for previewing, the same code in the page for first visits), validated by the system schema.
-5. **Lanes drive jump zones:** each outbound lane a zone on its bearing; travel between systems by lane (today only the debug jump moves between systems).
+4. **Generated systems:** a system file made from an index entry and a seed: star class, people and tier, port roles, owner and lanes in; a layout that passes `system.schema.json` and the same cross-checks out.
+   * The same code for `tools/` (preview, validate many) and for the page, which makes a system on first visit.
+   * `loadSystem(id)` in the page falls back to it when the entry has no `file`; a hand-written file overrides it, as the March's do.
+   * The atlas already takes any star id, and a stored layout already reaches replays, so a made system replays like a written one.
+5. **Lanes drive jump zones:** each outbound lane a zone on its bearing toward its destination, coloured by destination, replacing the four fixed zones (`traffic.jumpRadius`, the core's jump lanes). Then travel between systems by lane, not only the debug jump.
 
 Related: `docs/galaxy.md` (how the map, worlds and stories are made), `docs/book.md` (the design: galaxy map, the Drift, jumping), `README.md` (the files).

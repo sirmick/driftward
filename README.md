@@ -6,7 +6,7 @@ This repository holds two self-contained WebGL2 pages with no dependencies and n
 
 ## Run it
 
-Open `index.html` for the lab or `play.html` for the game (it opens on its title: continue from your last landing, or start a new game from a seed), in a browser with WebGL2 (any current Chrome, Firefox, Safari or Edge). That's it.
+Open `index.html` for the lab or `play.html` for the game (it opens on its title: continue from your last landing, or start a new game from a seed), in a browser with WebGL2 (any current Chrome, Firefox, Safari or Edge). That's it. (To put the game on a web server instead, `npm run build:hosted` writes `dist/`: the same pages, which fetch their content from `dist/data/` as they need it rather than carrying it all.)
 
 The game so far: the Book's M1 system, Brannock (an orange star, three planets, a moon and a shipyard station, four of them ports, with an asteroid belt between Halde and Vast and a field of mine tailings round Cinder), loaded from a schema-validated file. You start landed at Halde Landing in a used Copperhaul (an Ironhull hauler) with 1,500 credits and a 12,000-credit debt to a lender; launch, fly, and land or dock at any port (be over it and slow, press L: the ship curls round the planet and spirals down over its horizon inside a plasma sheath, a day passes, the game autosaves; launch rises from the horizon and spirals back in, handing you control at speed). Each port's market (T) trades commodities at fixed prices set by its role (a mine sells ore cheap and pays well for food and goods; the refinery buys ore and sells metals), so buying low at one port and selling high at another pays; waiting in port costs a docking fee, and the debt gathers interest daily. The mission board (M) posts deliveries to the other ports: accept one, carry its cargo, and land at the destination by the deadline to be paid; your missions show on the HUD and their destinations on the nav overlay, radar and map. Ships fly between the ports, arrive from the four jump zones and leave by them, and loiter round their ports (mostly Ironhull haulers and refits, with Federation and Prism visitors and the odd container ship, from the system's traffic mix), launching and landing with the same plasma-sheath sequence as you, in numbers set by a gravity model of the ports' populations, distances and prices; they show as dots on the radar. Round the worlds sit environmental stations, built from a count of each type per world (forges round Cinder, habitat rings and a container port round Halde, refineries and a relay round Vast): stations you can see but not land at, each with its own traffic from a per-archetype matrix (container ships to and from the container port, ore haulers at the forges). Flight runs on the core's model, with the Book's three assist levels on Tab (full assist; drift off, with Q/E strafe and X retro; full off, where spins persist), side, reverse and turning thruster jets on each hull, gravity wells that pull you in and bend your top speed, so you fall in fast and crawl out (game physics, stronger on bigger hulls, though every hull can climb out), a radar, a location list (click or 1 to 9 to target), a nav target panel, a message log, a system map (M), a fly-to autopilot (G) and a navigation overlay (I) that labels or points to every planet with its distance and closing speed; in port, a painted vista of the place, its lore (I), and a bar (B) with named people, their portraits and the rumors going round, all written and painted by models from the sim's facts ahead of time; a debug screen (backquote) with how the content was made, the player's state, and a shipyard of every faction line's hulls; pause (P or Esc) with a menu and settings, save (F6) and load (F9), and export a replay of the session. Every station round a world circles it, the far ones slower, as real orbits go: docked ships ride along, landing is by speed relative to the station, and full assist holds still relative to one as you near it. The burner burns fuel and each port sells it (F), and repairs the hull (R); stars come in twelve classes, binaries among them, and the exotic ones (pulsars, black holes, quasars) have hazard zones where radiation burns through a hull, and a ship lost reloads the last landing. Everything that changes game state runs in the core, so a save restores the exact state and a replay reruns identically, in the browser or natively.
 
@@ -61,34 +61,39 @@ core/               the sim core, a Rust crate (WASM for the pages, native for t
   src/ffi.rs        the exports the page calls
   src/player.rs     the player's ship from one input bitmask per tick (assist set speed, raw thrust, retro)
   src/snapshot.rs   save and load: the whole world as one fixed-size byte image
-  src/replay.rs     input logs, and rerunning them from a snapshot
+  src/replay.rs     input logs (inputs, commands, systems stored mid-session), and rerunning them from a snapshot
   src/port.rs       ports and landings: flying, descending, landed, launching; the day; the game commands
   src/market.rs     cargo hold, credits, the lender, markets: buy, sell and repay commands
   src/mission.rs    mission boards and delivery missions: offers, accept, deliver on landing, deadlines
   src/traffic.rs    ambient traffic: lanes from a gravity model, Poisson launches, rails far and physics near, landings
-  src/atlas.rs      every system's layout, saved with the world, and the debug jump between systems
+  src/atlas.rs      the layouts of the systems a game has been to (a slot each, by star id), saved with the world, and the
+                    debug jump between systems
   src/motion.rs     moving stations: orbits on the game clock, carrying what is docked; the frame assist matches
   src/service.rs    fuel, hull, hazard zones' radiation, a lost ship; the refuel and repair commands
   src/scenario.rs   scripted world shared by native and WASM, for the determinism check
   src/bin/          scenario (prints a scenario's hash) and replay (reruns an exported session)
 src/
   core.js           loads the inlined WASM and wraps its columns in typed-array views
+  data.js           where the game's and the map's content comes from: the universe index at start, a system when it is first
+                    needed, the debug extras when opened; inline in a self-contained page, fetched from data/ in a hosted one
   shaders.js        GLSL sources shared by both pages
   gfx.js            the WebGL2 kit: context, programs, textures, HDR targets, bloom and tone map
   rocks.js          asteroids, shared: ten compositions, a rock from a type and seed, the instanced sphere-traced shader
   bake.js           the bake worker pool and its texture uploads
   look.js           colour helpers, star presets, brand plume and shield looks
   schema.js         clamps content to its JSON Schema before use; lays out a star system; checks lore against it
-  schema/           JSON Schemas: the contract for LLM-authored content (system.schema.json, lore.schema.json)
-  systems/          star systems, all built into the game: m1.json (Brannock, the Book's M1 system, where a game starts) and the rest of the Calder March
+  schema/           JSON Schemas: the contract for LLM-authored content (system.schema.json, lore.schema.json) and for the
+                    universe index (universe.schema.json)
+  systems/          the flyable star systems, each read when the game first goes there: m1.json (Brannock, the Book's M1 system, where a game starts) and the rest of the Calder March
   lore/             each system's lore, written by tools/gen-content.js: history, culture, art bible, ports' people and rumors
                     setting.md (the universe's backstory and recent events) and regions/ (a region's systems), canon for the lore
-  economy.json      commodities, price tiers by port role, the starting credits and debt
+  economy.json      commodities, price tiers by port role; where a new game starts, with its credits and debt
   traffic.json      traffic hulls by culture and role, population weights for the flows
   play/             the game page: template.html, play.js, debug.js (the debug screen), shipyard.js and suns.js (its Ships and Suns tabs)
   map/              the star map: map.js (the 3D chart) and panel.js (its side panel and mouse), shared by the map page
                     (template.html, view.js) and the game's debug screen (its Map tab)
-  galaxy/           stars.json: every star system within 80 ly of Sol, from the HYG database (tools/hyg.py); galaxy.json: the game's systems, lanes, factions and regions (tools/galaxy.py); worlds.json and stories.json: their people, economies and backstories
+  galaxy/           stars.json: every star system within 80 ly of Sol, from the HYG database (tools/hyg.py); galaxy.json: the game's systems, lanes, factions and regions (tools/galaxy.py); worlds.json and stories.json: their people, economies and backstories;
+                    universe.json: all of it merged into the index the game loads (tools/universe.py, remade by every build; docs/data.md)
   stars.js          the twelve star classes (looks, light, radius, well, hazard), and the star kit: star, pulsar and black hole shaders, lens flare
   catalog.json      size classes, the factions and their lines, station archetypes and heavy hulls
   gen.js            ship and station assembly and baking (pure JS, runs in workers and Node)
@@ -100,7 +105,10 @@ src/
   template.html     lab page shell and styles
 art/                painted port vistas and portraits per system (WebP, from tools/gen-content.js; the game loads them beside play.html)
 tools/
-  build.py          compiles core/ to WASM and assembles it with src/ into index.html, play.html and map.html
+  build.py          compiles core/ to WASM and assembles it with src/ into index.html, play.html and map.html, remaking the
+                    universe index; --hosted writes them to dist/ with their data beside them, to fetch
+  universe.py       the universe index: galaxy, worlds, stories and the region notes in one file, and the galaxy hash that
+                    shows worlds or stories made from an older galaxy
   check.js          boots the lab against a stub WebGL context and validates every shader it compiles, and the star kit's and the star map's
   core-test.js      core unit tests, native vs WASM state hashes, and a WASM session replayed natively
   fly-smoke.py      drives the lab's Fly tab in headless Chromium: speeds, seeded replay, clock rate
@@ -109,7 +117,8 @@ tools/
   jitter.py         drives the game page at exact refresh rates (60 to 240 Hz, timer noise, dropped frames) and reports motion jitter per frame
   exit-test.py      M1's exit test: a trade and a delivery end to end in the game page, then save, reload and replay (in the page and natively) reach the same state
   play-smoke.py     drives the game page: start landed, the market, ambient traffic, the mission board and a delivery, flight, a port visit, save and load, a browser session replayed natively
-  validate.js       validates every system file and its lore against their schemas, and checks the clamp itself
+  validate.js       validates every system file and its lore against their schemas, the universe index against its own and
+                    every system file against its index entry, and checks the clamp itself
   hyg.py            pulls the HYG star catalogue and writes src/galaxy/stars.json (positions, classes, names)
   galaxy.py         chooses the game's systems, lanes and factions among those stars as MIPs (needs scipy), into src/galaxy/galaxy.json;
                     how and why: docs/galaxy.md
@@ -127,13 +136,14 @@ tools/
 ```
 npm install          # dev tools only: PNG writer and glslangValidator
 npm run dev          # serve on :8000 (all interfaces; lab at /, game at /play.html), rebuild on save, live reload
-npm run build        # core/ -> WASM, then src/ + WASM -> index.html and play.html
+npm run build        # core/ -> WASM, then src/ + WASM -> index.html, play.html and map.html (self-contained)
+npm run build:hosted # the same into dist/, the content in dist/data/ for the pages to fetch: serve dist/
 npm run check        # build, validate all shaders and systems, run the core tests and the determinism checks
 npm test             # core tests and the determinism checks only
 npm run preview      # bake every ship on the CPU -> preview.png
 ```
 
-Building needs Rust with the WASM target (`rustup target add wasm32-unknown-unknown`). `python3 tools/build.py --skip-core` reuses the last compiled core. The browser smoke tests need Playwright for Python: `python tools/fly-smoke.py`, `python tools/play-smoke.py` and M1's exit test, `python tools/exit-test.py` (on the dev box, use `~/.venvs/web/bin/python`).
+Building needs Rust with the WASM target (`rustup target add wasm32-unknown-unknown`). `python3 tools/build.py --skip-core` reuses the last compiled core. The browser smoke tests need Playwright for Python: `python tools/fly-smoke.py`, `python tools/play-smoke.py` (or `python tools/play-smoke.py dist` for the hosted build, which it serves) and M1's exit test, `python tools/exit-test.py` (on the dev box, use `~/.venvs/web/bin/python`).
 
 In the game, backquote opens the debug screen. Its jump box takes you to any planet, moon, station, belt or field in any system: type `place@system` (both sides complete; Tab completes the side you are in, Enter jumps), or `*@system` to arrive over a system's start port. The jump is a logged core command, so saves and replays follow it. The screen's tabs: Content shows how the system's content was made (the lore prompt, the art bible and prompt templates, and per port its body, lore and images with their own prompts and costs); Player shows the ship, flight, money, the hold priced at every port and missions, live.
 

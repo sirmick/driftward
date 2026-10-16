@@ -16,6 +16,8 @@ The key: OPENROUTER_API_KEY, else openrouter.token here (gitignored), else ~/ope
 """
 import datetime, json, os, pathlib, re, sys, time
 import requests
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from universe import galaxy_hash
 
 root = pathlib.Path(__file__).resolve().parent.parent
 args = sys.argv[1:]
@@ -170,7 +172,8 @@ for rk in regions:
         feedback = '\n'.join(problems[:30])
         print(f'{REGION_NAMES[rk]} attempt {attempt}: {len(problems)} problem(s), asking again')
     if problems: print(f'{REGION_NAMES[rk]}: still {len(problems)} problem(s) after three tries; kept what passed')
-    store['regions'][rk] = {'summary': d.get('region', []) if d else [], 'model': MODEL, 'date': datetime.date.today().isoformat()}
+    # and the galaxy it was told from (tools/universe.py): a galaxy rerun shows the region's stories stale until it is told again
+    store['regions'][rk] = {'summary': d.get('region', []) if d else [], 'model': MODEL, 'date': datetime.date.today().isoformat(), 'galaxy': galaxy_hash(G)}
     for e in (d or {}).get('systems', []):
         if e.get('id') in by_star: store['systems'][str(e['id'])] = {'bullets': e['bullets'], 'region': rk}
     print(f'{REGION_NAMES[rk]}: {len(settled)} settled and {len(dead)} dead systems, ${cost:.3f}, {time.time() - t0:.0f} s')

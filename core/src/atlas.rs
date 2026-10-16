@@ -1,21 +1,31 @@
-//! The atlas: every system's layout, held in the core so a jump between systems is the core's own business and a
-//! replay across one reruns natively. The page lays each system out once at startup, exactly as it lays out the
-//! system being played (bodies placed with the core's trig, populations, environmental stations, market prices, the
-//! traffic mix and the system's traffic params), and stores that into the atlas (`atlas_store`); `atlas_load` puts
-//! one back as the live system. It is content: written at startup, saved with the world, never changed by play.
+//! The atlas: the layouts of the systems this game has been to, held in the core so a jump between systems is the
+//! core's own business and a replay across one reruns natively. Each slot holds one system, by its star id (the
+//! universe index's, src/galaxy/universe.json). The page lays a system out the first time the game needs it (a new
+//! game's start system; a jump's destination), exactly as it lays out the system being played (bodies placed with the
+//! core's trig, populations, environmental stations, market prices, the traffic mix and the system's traffic params),
+//! and stores that into a slot (`atlas_store`); `atlas_load` puts one back as the live system. It is content: never
+//! changed by play, saved with the world. When every slot is full, a new system takes the slot of one the player is
+//! not in and has no active mission to (`atlas_slot_for`).
+//!
+//! Replays: a slot stored during a session must reach a replay too, and a native replay has no page to lay it out, so
+//! the page logs the slot's bytes (`atlas_row_get`; replay.rs `LogEntry::Atlas`) and the replay puts them back
+//! (`atlas_row_put`) on the same tick.
 //!
 //! The debug jump (port.rs CMD_JUMP) loads a system and puts the player at rest over one of its bodies: the system
 //! left behind loses its traffic and boards, the new one gets fresh ones, and the player keeps everything else
 //! (credits, hold, missions; a mission is delivered only in the system it was taken for).
 
-use crate::cols::soa;
+use crate::cols::{soa, ColumnDesc};
 use crate::market::MAX_GOODS;
+use crate::mission::{MAX_MISSIONS, M_ACTIVE};
 use crate::port::{BODY_BELT, MODE_DEAD, MODE_DESCENDING, MODE_FLYING, MODE_LAUNCHING, NO_SUCH_BODY, OK, WRONG_MODE};
 use crate::traffic::MAX_MIX;
 use crate::world::{World, DT, P};
 
 /// Systems the atlas holds.
 pub const MAX_SYSTEMS: usize = 8;
+/// A slot's id before anything is stored there (star ids start at 0).
+pub const NO_SYSTEM: u32 = u32::MAX;
 
 soa! {
     /// The atlas's one row: how many systems it holds.
@@ -23,8 +33,9 @@ soa! {
 }
 
 soa! {
-    /// Per system: its body count, and its traffic params (jump_radius, traffic_ships, share_through).
-    pub struct AtlasSys { bodies: u16, jump_radius: f64, traffic_ships: f64, share_through: f64 }
+    /// Per system: its star id (the universe index's), its body count, and its traffic params (jump_radius,
+    /// traffic_ships, share_through).
+    pub struct AtlasSys { id: u32, bodies: u16, jump_radius: f64, traffic_ships: f64, share_through: f64 }
 }
 
 soa! {
@@ -49,8 +60,28 @@ impl World {
     /// Systems in the atlas.
     pub fn atlas_count(&self) -> usize { self.atlas_head.n[0] as usize }
 
-    /// Store the live system as system `k` of the atlas (k at most the current count, so systems go in order).
-    pub fn atlas_store(&mut self, k: usize) -> bool {
+    /// Empty the atlas (a new game starts with only its start system).
+    pub fn atlas_reset(&mut self) {
+        self.atlas_head.n[0] = 0;
+        self.atlas_sys.id.fill(NO_SYSTEM);
+    }
+
+    /// The slot holding system `id`, if one does.
+    pub fn atlas_find(&self, id: u32) -> Option<usize> { (0..self.atlas_count()).find(|&k| self.atlas_sys.id[k] == id) }
+
+    /// Where system `id` goes: its own slot if it has one, else the next empty one, else the first the player can
+    /// spare (not the system being played, and no active mission bound there). None if every slot is needed.
+    pub fn atlas_slot_for(&self, id: u32) -> Option<usize> {
+        if let Some(k) = self.atlas_find(id) { return Some(k); }
+        let n = self.atlas_count();
+        if n < MAX_SYSTEMS { return Some(n); }
+        let m = &self.missions;
+        (0..n).find(|&k| k != self.game.system[0] as usize && !(0..MAX_MISSIONS).any(|q| m.state[q] == M_ACTIVE && m.sys[q] as usize == k))
+    }
+
+    /// Store the live system as system `id` in slot `k` of the atlas: a slot already in use (its system is replaced),
+    /// or the next empty one (k the current count, so slots fill in order).
+    pub fn atlas_store(&mut self, k: usize, id: u32) -> bool {
         if k >= MAX_SYSTEMS || k > self.atlas_count() { return false; }
         let (nb, mb) = (self.n_bodies, self.cfg.max_bodies);
         let (b, a) = (&self.bodies, &mut self.atlas_bodies);
@@ -75,7 +106,7 @@ impl World {
         }
         let (jr, ts, st) = (self.p(P::jump_radius), self.p(P::traffic_ships), self.p(P::share_through));
         let s = &mut self.atlas_sys;
-        s.bodies[k] = nb as u16;
+        (s.id[k], s.bodies[k]) = (id, nb as u16);
         (s.jump_radius[k], s.traffic_ships[k], s.share_through[k]) = (jr, ts, st);
         if k == self.atlas_count() { self.atlas_head.n[0] = (k + 1) as u8; }
         true
@@ -117,6 +148,61 @@ impl World {
         self.params[P::share_through as usize] = st;
         self.game.system[0] = k as u8;
         true
+    }
+
+    /// Bytes in one slot's row: its part of every atlas column, in the columns' order.
+    pub fn atlas_row_len(&self) -> usize { self.atlas_row_cols().map(|c| c.len / MAX_SYSTEMS * c.size).sum() }
+
+    /// The per-slot atlas columns (every one holds MAX_SYSTEMS slots' worth, a slot's part contiguous), from the cached
+    /// column list: nothing here allocates, so WASM memory never grows under the page's views.
+    fn atlas_row_cols(&self) -> impl Iterator<Item = &ColumnDesc> {
+        self.cols.iter().filter(|c| matches!(c.group, "atlas_sys" | "atlas_body" | "atlas_market" | "atlas_mix"))
+    }
+
+    /// Slot `k`'s row as bytes, into `out` (atlas_row_len long): what the page logs for a replay when it stores a
+    /// system mid-session.
+    pub fn atlas_row_get(&self, k: usize, out: &mut [u8]) -> bool {
+        if k >= self.atlas_count() || out.len() != self.atlas_row_len() { return false; }
+        let mut at = 0;
+        for c in self.atlas_row_cols() {
+            let n = c.len / MAX_SYSTEMS * c.size;
+            // SAFETY: the descriptor covers a live column of this world, never resized after creation
+            let col = unsafe { std::slice::from_raw_parts(c.ptr as *const u8, c.len * c.size) };
+            out[at..at + n].copy_from_slice(&col[k * n..(k + 1) * n]);
+            at += n;
+        }
+        true
+    }
+
+    /// Put a row (from `atlas_row_get`) into slot `k`, as `atlas_store` would have: a replay's logged store.
+    pub fn atlas_row_put(&mut self, k: usize, row: &[u8]) -> bool {
+        if k >= MAX_SYSTEMS || k > self.atlas_count() || row.len() != self.atlas_row_len() { return false; }
+        let mut at = 0;
+        for c in self.atlas_row_cols() {
+            let n = c.len / MAX_SYSTEMS * c.size;
+            // SAFETY: as above; the destination is this world's own column, disjoint from `row`
+            let col = unsafe { std::slice::from_raw_parts_mut(c.ptr as *mut u8, c.len * c.size) };
+            col[k * n..(k + 1) * n].copy_from_slice(&row[at..at + n]);
+            at += n;
+        }
+        if k == self.atlas_count() { self.atlas_head.n[0] = (k + 1) as u8; }
+        true
+    }
+
+    /// Slot `k`'s row into the world's row buffer (`atlas_row`), for the page to read and log.
+    pub fn atlas_row_save(&mut self, k: usize) -> bool {
+        let mut row = std::mem::take(&mut self.atlas_row); // no allocation: the buffer moves out and back
+        let ok = self.atlas_row_get(k, &mut row);
+        self.atlas_row = row;
+        ok
+    }
+
+    /// The row buffer (as the page filled it from a log) into slot `k`.
+    pub fn atlas_row_load(&mut self, k: usize) -> bool {
+        let row = std::mem::take(&mut self.atlas_row);
+        let ok = self.atlas_row_put(k, &row);
+        self.atlas_row = row;
+        ok
     }
 
     /// Where a jump or teleport to body `b` puts the player: over it, a little south of its centre; for a belt, on its
@@ -164,22 +250,28 @@ impl World {
 mod tests {
     use super::*;
     use crate::port::{BODY_PLANET, BODY_STAR, CMD_JUMP, CMD_LAND, MODE_FLYING};
-    use crate::mission::{CMD_ACCEPT, MAX_OFFERS, M_ACTIVE, M_DELIVERED};
+    use crate::mission::{CMD_ACCEPT, MAX_OFFERS, M_DELIVERED};
     use crate::replay::{run, LogEntry};
     use crate::world::Config;
 
-    /// Two systems: a star and two port planets each, at different places, with different prices.
+    /// Lay system `k` of the two out in the live columns, as the page does: a star and two port planets, at places
+    /// and prices that differ by system.
+    fn lay_out(w: &mut World, k: usize) {
+        w.n_bodies = 3;
+        for (j, (x, r, kind, port)) in [(0.0, 2000.0, BODY_STAR, 0), (10_000.0 + 5000.0 * k as f64, 800.0, BODY_PLANET, 1), (-14_000.0, 600.0, BODY_PLANET, 1)].into_iter().enumerate() {
+            (w.bodies.x[j], w.bodies.y[j], w.bodies.r[j], w.bodies.kind[j], w.bodies.port[j], w.bodies.pop[j]) = (x, 0.0, r, kind, port, port as f64 * 5.0);
+        }
+        w.market.price.fill(0);
+        w.market.price[MAX_GOODS] = 30 + k as u32 * 10;
+    }
+
+    /// Two systems (star ids 100 and 101), both in the atlas, the player landed in the first.
     fn two_systems() -> Box<World> {
         let mut w = World::new(Config { max_ships: 32, max_types: 1, max_bodies: 4, env_n: 4, env_w: 1000.0 }, 5);
         (w.types.accel[0], w.types.turn[0], w.types.vmax[0], w.types.cargo[0]) = (60.0, 1.0, 200.0, 50);
         for k in 0..2 {
-            w.n_bodies = 3;
-            for (j, (x, r, kind, port)) in [(0.0, 2000.0, BODY_STAR, 0), (10_000.0 + 5000.0 * k as f64, 800.0, BODY_PLANET, 1), (-14_000.0, 600.0, BODY_PLANET, 1)].into_iter().enumerate() {
-                (w.bodies.x[j], w.bodies.y[j], w.bodies.r[j], w.bodies.kind[j], w.bodies.port[j], w.bodies.pop[j]) = (x, 0.0, r, kind, port, port as f64 * 5.0);
-            }
-            w.market.price.fill(0);
-            w.market.price[MAX_GOODS] = 30 + k as u32 * 10;
-            assert!(w.atlas_store(k));
+            lay_out(&mut w, k);
+            assert!(w.atlas_store(k, 100 + k as u32));
         }
         w.clear();
         w.atlas_load(0);
@@ -196,6 +288,7 @@ mod tests {
     fn a_jump_loads_the_other_system_and_missions_stay_with_theirs() {
         let mut w = two_systems();
         assert_eq!((w.atlas_count(), w.game.system[0], w.market.price[MAX_GOODS]), (2, 0, 30));
+        assert_eq!((w.atlas_find(101), w.atlas_find(102)), (Some(1), None));
         let offer = (0..MAX_OFFERS).find(|&k| w.offers.live[MAX_OFFERS + k] != 0).expect("an offer") as i32;
         assert_eq!(w.command(CMD_ACCEPT, offer, 0), OK);
         let dest = w.missions.dest[0] as usize;
@@ -228,7 +321,7 @@ mod tests {
         w.atlas_load(1);
         w.place_body(1, 0, 15_000.0, 0.0);
         w.body_motion(1, 600.0);
-        assert!(w.atlas_store(1));
+        assert!(w.atlas_store(1, 101));
         w.atlas_load(1);
         for _ in 0..10 { w.step(); }
         assert!(w.bodies.vx[1].hypot(w.bodies.vy[1]) > 100.0);
@@ -247,6 +340,54 @@ mod tests {
         assert_eq!(live.game.system[0], 1);
         let mut again = World::from_snapshot(&start).unwrap();
         run(&mut again, &log, 900);
+        assert_eq!(live.hash(), again.hash());
+    }
+
+    #[test]
+    fn a_full_atlas_reuses_a_slot_the_player_can_spare() {
+        let mut w = two_systems();
+        for k in 2..MAX_SYSTEMS { lay_out(&mut w, k); assert!(w.atlas_store(k, 100 + k as u32)); }
+        w.atlas_load(0);
+        assert_eq!((w.atlas_count(), w.atlas_slot_for(100), w.atlas_slot_for(999)), (MAX_SYSTEMS, Some(0), Some(1)));
+        // a mission bound for slot 1 keeps it; the live system's slot is never given up
+        let offer = (0..MAX_OFFERS).find(|&k| w.offers.live[MAX_OFFERS + k] != 0).expect("an offer") as i32;
+        assert_eq!(w.command(CMD_ACCEPT, offer, 0), OK);
+        w.missions.sys[0] = 1;
+        assert_eq!(w.atlas_slot_for(999), Some(2));
+        assert!(!w.atlas_store(MAX_SYSTEMS, 999), "no slot past the last");
+        lay_out(&mut w, 1);
+        assert!(w.atlas_store(2, 999));
+        assert_eq!((w.atlas_find(102), w.atlas_find(999), w.atlas_count()), (None, Some(2), MAX_SYSTEMS));
+        w.atlas_reset();
+        assert_eq!((w.atlas_count(), w.atlas_find(100), w.atlas_slot_for(100)), (0, None, Some(0)));
+    }
+
+    #[test]
+    fn a_system_stored_mid_session_reaches_the_replay() {
+        // only the first system is in the atlas when the session starts; the second is laid out and stored on the way
+        // to the jump, its row logged as the page logs it
+        let mut live = two_systems();
+        live.atlas_reset();
+        lay_out(&mut live, 0);
+        assert!(live.atlas_store(0, 100));
+        live.atlas_load(0);
+        live.save();
+        let start = live.snapshot().to_vec();
+        let mut log = vec![LogEntry::Command { tick: 0, code: crate::port::CMD_LAUNCH, a: 0, b: 0 }];
+        run(&mut live, &log, 400);
+        lay_out(&mut live, 1);
+        let k = live.atlas_slot_for(101).unwrap();
+        assert!(live.atlas_store(k, 101) && live.atlas_row_save(k));
+        log.push(LogEntry::Atlas { tick: live.tick, k: k as u32, row: live.atlas_row.clone() });
+        assert_eq!(live.command(CMD_JUMP, k as i32, 2), OK);
+        log.push(LogEntry::Command { tick: live.tick, code: CMD_JUMP, a: k as i32, b: 2 });
+        log.push(LogEntry::Input { tick: live.tick + 10, input: crate::player::IN_ASSIST | crate::player::IN_THRUST });
+        run(&mut live, &log[3..], 500);
+        assert_eq!((live.game.system[0], live.market.price[MAX_GOODS]), (1, 40));
+        let mut again = World::from_snapshot(&start).unwrap();
+        assert_eq!(again.atlas_count(), 1);
+        run(&mut again, &log, 900);
+        assert_eq!((again.atlas_count(), again.atlas_find(101)), (2, Some(1)));
         assert_eq!(live.hash(), again.hash());
     }
 }

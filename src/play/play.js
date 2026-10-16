@@ -11,9 +11,13 @@ const G = makeGfx(canvas);
 if (!G) { $('glerr').hidden = false; return; }
 const { gl, compile, P, quad, draw, tex } = G;
 
-// ---------- the systems: every system file, validated (clamped) against its schema, then laid out (src/schema.js) ----------
-// The build inlines every file in src/systems/, the start system first. The page draws one at a time, the one the core
-// says the player is in (game.system; the atlas holds them all: core/src/atlas.rs), through setSystem below.
+// ---------- the systems: the universe index at start, each system the first time it is needed ----------
+// Through src/data.js (inline in a self-contained page, fetched in a hosted one): the universe index (every system,
+// region, faction and lane: src/galaxy/universe.json) before the game starts, and a system's file, lore and art when
+// the game first needs it. A system file is validated (clamped) against its schema and laid out (src/schema.js) when it
+// is read. The core's atlas (core/src/atlas.rs) holds the layouts of the systems this game has been to, a slot each by
+// star id; the page draws one at a time, the one the core says the player is in (game.system, a slot), through
+// setSystem below.
 const SYSTEM_SCHEMA = JSON.parse($('system-schema').textContent), LORE_SCHEMA = JSON.parse($('lore-schema').textContent);
 // environmental stations are sized from their archetype's diameter range (the middle of it, as a radius)
 const LAYOUT = { stationRadius: id => { const a = catalog.stations.find(x => x.id === id); return a && a.diameter ? (a.diameter[0] + a.diameter[1]) / 4 : 400; } };
@@ -21,29 +25,38 @@ const LAYOUT = { stationRadius: id => { const a = catalog.stations.find(x => x.i
 const ECON = JSON.parse($('economy').textContent), GOODS = ECON.commodities;
 // ambient traffic (src/traffic.json): hulls by culture and role, population weights
 const TRAFFIC_DATA = JSON.parse($('traffic').textContent);
-// each system's lore (src/lore/<id>.json, from tools/gen-content.js), validated against its schema and the system; a
-// port without it shows the system file's description and an empty bar. The art manifest lists the painted vistas
-// and portraits found in art/<id>/ at build time; the content log, how they were made (the debug screen shows it).
-const LORES = JSON.parse($('lore').textContent), ARTS = JSON.parse($('art').textContent), LOGS = JSON.parse($('content-log').textContent);
-const SYSTEMS = JSON.parse($('systems').textContent).map(raw => {
-  const loaded = loadSystem(raw, SYSTEM_SCHEMA, LAYOUT);
-  loaded.notes.forEach(n => console.warn(`system ${raw.id} ${n.path}: ${n.msg}`));
-  if (!loaded.system) { console.error(`system ${raw.id} is unusable: ` + loaded.notes.filter(n => n.fatal).map(n => `${n.path} ${n.msg}`).join('; ')); return null; }
-  const id = loaded.system.id, lore = LORES[id] ? loadLore(LORES[id], LORE_SCHEMA, loaded.system) : { lore: null, ports: new Map(), notes: [] };
+const DATA = makeData();
+// the universe index, filled in when it is read (before the game starts); its entries by system file id and by star id;
+// the systems with a file, the start system first (where a new game begins: economy.json's start.system)
+const UNIVERSE = { systems: [], lanes: [], factions: {}, regions: {} }, ENTRY = new Map(), BY_STAR = new Map();
+let FLYABLE = [];
+const START_ID = ECON.start.system;
+// each system read so far, by id: { id, raw, loaded, lore, art, entry }. Its lore (src/lore/<id>.json, from
+// tools/gen-content.js) is validated against its schema and the system; a port without it shows the system file's
+// description and an empty bar. The art manifest lists the painted vistas and portraits found in art/<id>/ at build
+// time. How its content was made (logs/<id>.json) is read only by the debug screen.
+const SYSTEMS = new Map();
+function addSystem(id, bundle) {
+  const raw = bundle.system, loaded = loadSystem(raw, SYSTEM_SCHEMA, LAYOUT);
+  loaded.notes.forEach(n => console.warn(`system ${id} ${n.path}: ${n.msg}`));
+  if (!loaded.system) { console.error(`system ${id} is unusable: ` + loaded.notes.filter(n => n.fatal).map(n => `${n.path} ${n.msg}`).join('; ')); return null; }
+  const lore = bundle.lore ? loadLore(bundle.lore, LORE_SCHEMA, loaded.system) : { lore: null, ports: new Map(), notes: [] };
   lore.notes.forEach(n => console.warn(`lore ${id} ${n.path}: ${n.msg}`));
-  return { id, raw, loaded, lore, art: ARTS[id] || { vistas: {}, portraits: {} }, log: LOGS[id] || {} };
-}).filter(Boolean);
-if (!SYSTEMS.length) { $('glerr').textContent = 'No usable system file'; $('glerr').hidden = false; return; }
-const START_SYSTEM = 0;
+  const rec = { id, raw, loaded, lore, art: bundle.art || { vistas: {}, portraits: {} }, entry: ENTRY.get(id) };
+  SYSTEMS.set(id, rec);
+  return rec;
+}
+// read the systems not read yet; resolves once each has its record (an unusable one has none)
+const needSystems = ids => Promise.all(ids.filter(id => !SYSTEMS.has(id)).map(id => DATA.system(id).then(b => { if (!SYSTEMS.has(id)) addSystem(id, b); })));
 // the system the page draws now, set by setSystem (below, once the bake helpers exist)
-let sysK = -1, SYS, BODIES, STAR, SUNS, LORE, ART, star, WORLDS, STATIONS;
+let sysRec = null, SYS, BODIES, STAR, SUNS, LORE, ART, star, WORLDS, STATIONS;
 // the debug screen (backquote): how the current system's content was made (src/play/debug.js), and the jump box
-const debug = makeDebug({ el: $('debug'), econ: ECON, system: () => SYSTEMS[sysK] });
+const debug = makeDebug({ el: $('debug'), econ: ECON, data: DATA, universe: UNIVERSE, system: () => sysRec });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3, belt: 4, field: 5 };
 // planets and moons, drawn by the planet shader (worldsOf, per system)
 // city lights follow a port's population (look.cityLights is a floor on top, for a world brighter than its tier)
-const CITY_LIGHTS = { outpost: 0.1, colony: 0.3, town: 0.6, world: 1 };
+const CITY_LIGHTS = { outwatch: 0.03, outpost: 0.1, colony: 0.3, town: 0.6, world: 1 };
 const worldsOf = bodies => bodies.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
   const pu = planetUniforms(b.look); // every field filled by the schema clamp, defaults and all
   if (b.port) pu.city = Math.max(pu.city || 0, CITY_LIGHTS[b.port.population] || 0);
@@ -82,9 +95,9 @@ debug.setYard(yard);
 const starKit = makeStarKit(gl, compile, draw);
 const sunGallery = makeSunGallery({ gl, P: G.P, draw: G.draw, kit: starKit, target: () => G.targets.scene });
 debug.setSuns(sunGallery);
-// the galaxy (src/galaxy/: the real stars round Sol and the game's systems, lanes and factions) for the debug screen's
-// Map tab, built when the tab first opens
-debug.setStarMap(labels => { const galaxy = JSON.parse($('galaxy').textContent); return Object.assign(makeStarMap(G, canvas, labels, galaxy), { galaxy }); });
+// the galaxy (the real stars round Sol and the universe's systems, lanes and factions) for the debug screen's Map tab,
+// built when the tab first opens
+debug.setStarMap((labels, data) => makeStarMap(G, canvas, labels, data));
 const nSizes = catalog.sizes.length;
 const types = [];
 catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
@@ -137,12 +150,11 @@ const stationsOf = bodies => bodies.filter(b => b.kind === 'station').map(b => {
   // their own scale
   return Object.assign({}, b, { key: `stn|${arch.id}|${brand.id}|${st.seed}`, req: { station: arch.id, brand: brand.id, seed: st.seed }, brand, spin: arch.spin || 0.01, scale: b.env ? b.env.scale : 1, s: null });
 });
-// The page's view of system k: its bodies, the worlds and stations to draw (made once per system; their positions are
-// the core's, copied in when the system is laid out), its star, lore and art. Its stations start baking, unless it is
-// only being laid out (bake false: every system is, at startup).
-function setSystem(k, bake = true) {
-  const S = SYSTEMS[k];
-  sysK = k; SYS = S.loaded.system; BODIES = S.loaded.bodies; STAR = BODIES[0]; LORE = S.lore; ART = S.art;
+// The page's view of a system (its record): its bodies, the worlds and stations to draw (made once per system; their
+// positions are the core's, copied in when the system is laid out), its star, lore and art. Its stations start baking,
+// unless it is only being laid out (bake false).
+function setSystem(S, bake = true) {
+  sysRec = S; SYS = S.loaded.system; BODIES = S.loaded.bodies; STAR = BODIES[0]; LORE = S.lore; ART = S.art;
   // the stars (a binary has two), each with its light (src/stars.js); the first's lights the sky
   SUNS = BODIES.filter(b => b.kind === 'star');
   SUNS.forEach(S => { S.light = starLight(S.starClass); S.lightLin = lin(S.light.col); });
@@ -153,7 +165,6 @@ function setSystem(k, bake = true) {
   [...new Map(STATIONS.map(T => [T.key, T.req]))].forEach(([key, req]) => { if (!baker.ships.get(key)) baker.enqueue(key, false, req); });
   baker.pump();
 }
-setSystem(START_SYSTEM);
 function stationReady(S) {
   if (S.s) return true;
   const s = baker.ships.get(S.key);
@@ -348,7 +359,15 @@ const panelOpen = () => PANELS.find(p => !$(p).hidden) || null;
 let showPanel = () => {};
 const NUM = new Intl.NumberFormat('en-US'), fmtCr = n => NUM.format(n); // one formatter: toLocaleString builds one per call, and the HUD formats every frame
 
-CORE_READY.then(CORE => {
+// the index, then the start system, then the game
+const UNIVERSE_READY = DATA.universe().then(u => {
+  Object.assign(UNIVERSE, u);
+  for (const c of UNIVERSE.systems) { BY_STAR.set(c.id, c); if (c.file) ENTRY.set(c.file, c); }
+  FLYABLE = UNIVERSE.systems.filter(c => c.file).map(c => c.file).sort((a, b) => (b === START_ID) - (a === START_ID) || (a < b ? -1 : a > b ? 1 : 0));
+  return needSystems([START_ID]);
+}).then(() => { if (!SYSTEMS.get(START_ID)) throw new Error(`the start system ${START_ID} is unusable`); });
+Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
+  setSystem(SYSTEMS.get(START_ID), false); // the page's view holds a system from the start; a new game lays it out and draws it
   // body capacity: the schema's caps on bodies and belts, the star, and the most environmental stations a system holds
   const CFG = { maxShips: 128, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + SYSTEM_SCHEMA.properties.belts.maxItems + 1 + MAX_ENVIRONS, envN: 16, envW: 40000, seed: 1 };
   const sim = CORE.world(CFG);
@@ -458,7 +477,7 @@ CORE_READY.then(CORE => {
   function orbitersFor() {
     sim.orbitClear();
     // (a quarter of the first counts: enough to glitter, not a swarm); the ferries round the stations are below, unchanged
-    const TRAFFIC_N = { outpost: 30, colony: 90, town: 225, world: 500 }, DEBRIS_N = { rock: 2250, terran: 625, giant: 750 };
+    const TRAFFIC_N = { outwatch: 10, outpost: 30, colony: 90, town: 225, world: 500 }, DEBRIS_N = { rock: 2250, terran: 625, giant: 750 };
     BODIES.forEach((b, j) => {
       if (b.kind !== 'planet' && b.kind !== 'moon') return;
       const L = b.look || {}, k = Math.min(1.6, Math.max(0.4, b.r / 1200));
@@ -483,15 +502,16 @@ CORE_READY.then(CORE => {
       });
     });
   }
-  // Every system is laid out in the core's live columns, as the one being played would be, and stored in the atlas
-  // (core/src/atlas.rs), which keeps them all: a new game, a load or a jump then makes one live in the core alone.
+  // A system is laid out in the core's live columns, as the one being played would be, and stored in an atlas slot
+  // (core/src/atlas.rs) the first time the game needs it: a new game's start system, a jump's destination. A new game,
+  // a load or a jump then makes a slot live in the core alone.
   // bodies: the core places each on its orbit with its own trig (loadSystem lists parents first), and the page's
   // copies take the core's positions, so routes, wells and the drawing agree in every browser
   // a port's services the core runs (core/src/service.rs SVC_*), and its fuel price: the market's, where it sells fuel,
   // else dear (the base price at the high tier)
   const SVC = { refuel: 1, repair: 2 }, FUEL = GOODS.findIndex(c => c.id === 'fuel');
-  function layoutSystem(k) {
-    setSystem(k, false);
+  function layoutSystem(S, k) {
+    setSystem(S, false);
     sim.setBodies(BODIES.length);
     BODIES.forEach((b, j) => {
       const B = sim.body; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
@@ -499,8 +519,9 @@ CORE_READY.then(CORE => {
       B.reach[j] = b.reach || 0; B.hazard[j] = b.hazard || 0; B.rad[j] = b.rad || 0;
       if (!j) { B.x[0] = 0; B.y[0] = 0; }
       sim.placeBody(j, j ? BODIES.findIndex(p => p.id === b.parent) : 0, !j || b.kind === 'belt' ? 0 : b.orbit.radius, j ? b.orbit.angle : 0); // a belt is centred on its parent
-      if (b.motion) sim.bodyMotion(j, b.motion.period * (b.motion.clockwise ? -1 : 1)); // a station that orbits (core/src/motion.rs)
-      b.x = b.x0 = B.x[j]; b.y = b.y0 = B.y[j]; // (x0, y0): where it was laid out, at time 0
+      b.x0 = B.x[j]; b.y0 = B.y[j]; // (x0, y0): where it is at time 0, as placed
+      if (b.motion) sim.bodyMotion(j, b.motion.period * (b.motion.clockwise ? -1 : 1)); // a station that orbits (core/src/motion.rs): where it is now
+      b.x = B.x[j]; b.y = B.y[j];
       B.pop[j] = b.port ? TRAFFIC_DATA.population[b.port.population] || 1 : 0; // traffic's gravity model
       const sv = (b.port && b.port.services) || [];
       B.svc[j] = sv.reduce((n, v) => n | (SVC[v] || 0), 0);
@@ -508,9 +529,12 @@ CORE_READY.then(CORE => {
     for (const o of [...WORLDS, ...STATIONS]) { const b = BODIES.find(b => b.id === o.id); o.x = b.x; o.y = b.y; }
     writeTraffic(); writePrices();
     BODIES.forEach((b, j) => { if (!b.port) return; const m = FUEL >= 0 ? sim.price(j, FUEL) : 0; sim.body.fuel_price[j] = m || Math.round((FUEL >= 0 ? GOODS[FUEL].base : 45) * ECON.tiers.high); });
-    if (!sim.atlasStore(k)) console.error(`the atlas is full: system ${SYS.id} left out`);
+    if (!sim.atlasStore(k, S.entry.id)) throw new Error(`atlas slot ${k} refused system ${SYS.id}`);
   }
-  SYSTEMS.forEach((_, k) => layoutSystem(k));
+  // the atlas's slots, by system: slot k's record (every system in the atlas has been read: it was laid out from its
+  // record, or a load read it first), and the slot a system is in (-1: none)
+  const slotRec = k => { const c = BY_STAR.get(sim.atlasId(k)); return c && SYSTEMS.get(c.file); };
+  const slotOf = S => sim.atlasFind(S.entry.id);
   // The page draws system k, live in the core: its rocks, orbiters, start port, the ship types its traffic flies, and
   // the views made from its bodies (systemViews, below: the location list's rows, the map's extent, the sky's colours)
   let startBody = 1;
@@ -518,11 +542,11 @@ CORE_READY.then(CORE => {
   // frame (syncMovers)
   let MOVERS = [];
   function syncMovers() { for (const m of MOVERS) { m.b.x = sim.body.rx[m.j]; m.b.y = sim.body.ry[m.j]; if (m.st) { m.st.x = m.b.x; m.st.y = m.b.y; } } }
-  function showSystem(k) {
-    setSystem(k);
+  function showSystem(S) {
+    setSystem(S);
     MOVERS = BODIES.map((b, j) => b.motion ? { j, b, st: STATIONS.find(o => o.id === b.id) } : null).filter(Boolean);
     syncMovers();
-    ({ list: ROCKS, grid: rockGrid, reach: rockReach } = rocksOf(SYSTEMS[k]));
+    ({ list: ROCKS, grid: rockGrid, reach: rockReach } = rocksOf(S));
     orbitersFor();
     startBody = Math.max(1, BODIES.findIndex(b => b.id === SYS.start && b.port), BODIES.findIndex(b => b.port));
     bakeKinds = mixKinds();
@@ -533,7 +557,7 @@ CORE_READY.then(CORE => {
   // the system's stations, the hulls its traffic flies and the player's own are baked. The bakes themselves still run
   // on the worker pool as they always did; this only waits for them. A bake that fails counts as done, so it can't hang.
   let barrier = null; // { keys, total } while up
-  const FACTION_NAME = { federation: 'The Federation', prism: 'Prism', ironhulls: 'The Ironhull Compact', blackhulls: 'The Blackhulls', freeflag: 'Freeflag', bloom: 'The Bloom', glass: 'The Glass', shadow: 'The Shadow', none: 'Unclaimed' };
+  const FACTION_NAME = { federation: 'The Federation', prism: 'Prism', ironhulls: 'The Ironhull Compact', blackhulls: 'The Blackhulls', freeflag: 'Freeflag', independent: 'Independent', bloom: 'The Bloom', glass: 'The Glass', shadow: 'The Shadow', none: 'Unclaimed' };
   const PLURAL = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   function raiseBarrier() {
     const st = [...new Set(STATIONS.map(T => T.key))], hulls = [...new Set([...bakeKinds, SH.kind[0]].map(k => types[k] && types[k].key).filter(Boolean))];
@@ -554,7 +578,8 @@ CORE_READY.then(CORE => {
     $('barrier-note').textContent = `Baking ${PLURAL(barrier.st, 'station')} and ${PLURAL(barrier.hulls, 'hull')}: ${done} of ${barrier.total}`;
   }
 
-  // replay recording: the snapshot at the start of the session plus every input change since
+  // replay recording: the snapshot at the start of the session plus every input change since, every command, and every
+  // system stored into the atlas since (its slot's bytes: a native replay has no page to lay it out)
   let rec = null, lastBits = -1;
   function startRecording() { rec = { start: sim.save(), startTick: sim.tick(), log: [] }; lastBits = -1; }
 
@@ -565,7 +590,9 @@ CORE_READY.then(CORE => {
   function newGame(seed, opts) {
     seedNow = seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed >>> 0;
     sim.clear(); sim.reseed(seedNow);
-    sim.atlasLoad(START_SYSTEM); showSystem(START_SYSTEM); // the start system, live in the core and drawn
+    // the start system alone in the atlas, live in the core and drawn
+    const S0 = SYSTEMS.get(START_ID);
+    sim.atlasReset(); layoutSystem(S0, 0); sim.atlasLoad(0); showSystem(S0);
     sim.setCount(1);
     SH.kind[0] = playerTypeIndex(opts && opts.ship); SH.alive[0] = 1; SH.ang[0] = 0; // opts.ship: 'faction.line:class' (dev and tests)
     SH.hull[0] = sim.type.hull[SH.kind[0]]; sim.game.fuel[0] = sim.type.fuel[SH.kind[0]]; // sound, and a full tank
@@ -591,6 +618,17 @@ CORE_READY.then(CORE => {
     const r = sim.command(code, a || 0, b || 0);
     if (r === 0) rec.log.push([sim.tick(), 'cmd', code, a || 0, b || 0]);
     return r;
+  }
+  // a system into the atlas mid-session: laid out over the live columns (which the jump that follows replaces), stored
+  // in the slot the core picks for it, and logged for replays; the slot, or -1 if every one is needed
+  function storeSystem(S) {
+    let k = slotOf(S);
+    if (k >= 0) return k;
+    k = sim.atlasSlotFor(S.entry.id);
+    if (k < 0) return -1;
+    layoutSystem(S, k);
+    rec.log.push([sim.tick(), 'atlas', k, sim.atlasRow(k)]);
+    return k;
   }
   landOrLaunch = () => {
     const m = sim.mode();
@@ -637,22 +675,34 @@ CORE_READY.then(CORE => {
   function loadFrom(key) {
     const s = localStorage.getItem(key);
     if (!s) return false;
-    const err = sim.load(unb64(s));
+    const before = sim.save(), err = sim.load(unb64(s));
     if (err) { toast(`Save is unreadable (error ${err}): saved by an older build?`); return false; }
+    // every system in the save's atlas must be read (to draw it, and to name missions' ports): if one isn't yet, the
+    // world goes back as it was while they are read, then the save loads again (a promise of that, here)
+    const ids = []; for (let k = 0; k < sim.atlasCount(); k++) ids.push(sim.atlasId(k));
+    const missing = ids.map(id => BY_STAR.get(id)).filter(c => !c || !c.file || !SYSTEMS.has(c.file));
+    if (missing.length) {
+      sim.load(before);
+      if (missing.some(c => !c || !c.file)) { toast('Save is from another universe: a system in it is not in this one'); return false; }
+      return needSystems(missing.map(c => c.file)).then(() => loadFrom(key));
+    }
     const meta = JSON.parse(localStorage.getItem(key + '.meta') || '{}');
     seedNow = meta.seed >>> 0;
-    showSystem(sim.game.system[0]); // the save's system, live in the core already
+    showSystem(slotRec(sim.game.system[0])); // the save's system, live in the core already
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; viewScale = 0; missionSeen.set(sim.mission.state); closeNotice(); closeLost(); startRecording();
     closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav);
     toast(`Loaded day ${sim.day()}`);
     return true;
   }
-  loadGame = () => { if (!loadFrom('driftward.save') && !loadFrom('driftward.autosave')) toast('No saved game'); };
+  // (a promise, when a system the save holds must be read first)
+  loadGame = () => { const r = loadFrom('driftward.save') || loadFrom('driftward.autosave'); if (!r) toast('No saved game'); return r; };
   // autosave on landing, as in EV (the Book: death reloads the last landing save)
   function autosave() { store('driftward.autosave'); }
   function exportReplay() {
     const ticks = sim.tick() - rec.startTick, hash = sim.hash();
-    const log = `# driftward input log: replay with\n#   cargo run --release --bin replay -- driftward-save.bin driftward-inputs.txt ${ticks}\n# expect: tick ${sim.tick()} hash ${hash}\n` + rec.log.map(e => e[1] === 'cmd' ? `${e[0]} cmd ${e[2]} ${e[3]} ${e[4]}` : `${e[0]} ${e[1]}`).join('\n') + '\n';
+    const hex = b => Array.from(b, v => v.toString(16).padStart(2, '0')).join('');
+    const log = `# driftward input log: replay with\n#   cargo run --release --bin replay -- driftward-save.bin driftward-inputs.txt ${ticks}\n# expect: tick ${sim.tick()} hash ${hash}\n`
+      + rec.log.map(e => e[1] === 'cmd' ? `${e[0]} cmd ${e[2]} ${e[3]} ${e[4]}` : e[1] === 'atlas' ? `${e[0]} atlas ${e[2]} ${hex(e[3])}` : `${e[0]} ${e[1]}`).join('\n') + '\n';
     return { save: rec.start, log, ticks, tick: sim.tick(), hash };
   }
   function download(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
@@ -666,7 +716,8 @@ CORE_READY.then(CORE => {
   function closeShell() { for (const id of ['title', 'pause', 'settings']) $(id).hidden = true; paused = false; canvas.focus(); }
   // the title: over a live view of the system (traffic flying past Halde), with Continue from the last landing
   function showTitle() {
-    const H0 = BODIES[startBody];
+    // over the start system's start port (where its file places it, before the core lays it out the first time)
+    const B0 = SYSTEMS.get(START_ID).loaded.bodies, H0 = B0[Math.max(1, B0.findIndex(b => b.id === SYSTEMS.get(START_ID).loaded.system.start && b.port), B0.findIndex(b => b.port))];
     newGame(1, { backdrop: true, space: [H0.x - H0.r * 1.05, H0.y + H0.r * 0.25] });
     zoom = 0.5; setNav(false);
     for (const id of ['pause', 'settings']) $(id).hidden = true;
@@ -890,9 +941,11 @@ CORE_READY.then(CORE => {
   const MS = sim.mission, OF = sim.offer, NM = sim.maxMissions, NO = sim.maxOffers, MSTATE = CORE.MISSION;
   const activeMissions = () => { const a = []; for (let k = 0; k < NM; k++) if (MS.state[k] === MSTATE.active) a.push(k); return a; };
   // a port's name in the current system, or in system s; a mission's destination, with its system if it is another
-  const portName = (j, s) => { const B = (s === undefined || s === sysK ? BODIES : SYSTEMS[s].loaded.bodies)[j]; return !B ? '?' : B.port ? B.port.name : B.name; };
-  const missionDest = k => portName(MS.dest[k], MS.sys[k]) + (MS.sys[k] !== sysK && SYSTEMS[MS.sys[k]] ? ` (${SYSTEMS[MS.sys[k]].loaded.system.name})` : '');
-  const activeHere = () => activeMissions().filter(k => MS.sys[k] === sysK); // the ones bound for this system's ports
+  // a port's name by body, in this system or atlas slot s; a mission's destination, with its system if it is elsewhere
+  const here = () => sim.game.system[0];
+  const portName = (j, s) => { const S = s === undefined || s === here() ? sysRec : slotRec(s), B = S && S.loaded.bodies[j]; return !B ? '?' : B.port ? B.port.name : B.name; };
+  const missionDest = k => portName(MS.dest[k], MS.sys[k]) + (MS.sys[k] !== here() && slotRec(MS.sys[k]) ? ` (${slotRec(MS.sys[k]).loaded.system.name})` : '');
+  const activeHere = () => activeMissions().filter(k => MS.sys[k] === here()); // the ones bound for this system's ports
   // a traffic route's end: a port, or jump zone z (coded -1 - z)
   const endName = c => c < 0 ? `the ${TRAFFIC.zones[-1 - c]} jump zone` : portName(c);
   const cargoText = (tons, g) => `${tons} t ${(GOODS[g] || { name: '?' }).name.toLowerCase()}`;
@@ -1061,7 +1114,8 @@ CORE_READY.then(CORE => {
 
   // ---------- render ----------
   const MAXS = CFG.maxShips;
-  const MAX_STATIONS = Math.max(1, ...SYSTEMS.map(S => S.stations.length)); // every system's were made by layoutSystem
+  // the most stations a system can have: its bodies (the schema's cap) and its environmental stations
+  const MAX_STATIONS = SYSTEM_SCHEMA.properties.bodies.maxItems + MAX_ENVIRONS;
   const VS = { ship: instVAO([4, 2], MAXS), station: instVAO([4, 2], MAX_STATIONS), plume: instVAO([4, 4, 2], MAXS * 12),
     orbiter: instVAO([4, 4], sim.orbitOut.length / 8), ghost: instVAO([4, 4], 8), speck: instVAO([4, 4], MAX_ROCKS) };
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
@@ -1716,22 +1770,34 @@ CORE_READY.then(CORE => {
     if (!assist()) { toast('The autopilot flies under full assist: press Tab'); return; }
     if (command(CMD.autopilot, j) === 0) toast(`Autopilot: flying to ${targetName(navTarget)}`);
   };
-  // The debug jump (the debug screen's jump box, and tests): to system k, at rest over its body j, flying. A logged core
-  // command (core/src/atlas.rs), so saves and replays follow it.
-  function jumpTo(k, j) {
+  // The debug jump (the debug screen's jump box, and tests): to system id (its file's), at rest over its body j,
+  // flying. A logged core command (core/src/atlas.rs), so saves and replays follow it. A system not read yet is read
+  // first (then this returns a promise of the result); one not in the atlas is stored first (storeSystem, logged too).
+  function jumpTo(id, j) {
+    const S = SYSTEMS.get(id), no = r => { toast(`Can't jump there: ${typeof r === 'string' ? r : CORE.RESULT[r] || r}`); return typeof r === 'string' ? 12 : r; };
+    if (!S) return ENTRY.has(id) ? needSystems([id]).then(() => SYSTEMS.has(id) ? jumpTo(id, j) : no(`${id} is unusable`)) : no(`no system ${id}`);
+    // what the core's jump refuses, refused here first: storing a new system lays it out over the live one, which only
+    // the jump puts right
+    const m = sim.mode();
+    if (m === MODE.descending || m === MODE.launching || m === MODE.dead) return no(3);
+    if (!(j >= 0 && j < S.loaded.bodies.length)) return no(12);
+    const k = storeSystem(S);
+    if (k < 0) return no('the atlas is full, with missions bound for every system in it');
     const r = command(CMD.jump, k, j);
-    if (r !== 0) { toast(`Can't jump there: ${CORE.RESULT[r] || r}`); return r; }
-    showSystem(k); closeNotice();
+    if (r !== 0) { console.error(`jump to ${id} refused after storing it: ${CORE.RESULT[r] || r}`); return no(r); }
+    showSystem(S); closeNotice();
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; viewScale = 0;
     toast(`Jumped to ${BODIES[j].name}, ${SYS.name} system`);
     return r;
   }
-  // every place a jump can go: each system's bodies but its star
-  const jumpPlaces = () => SYSTEMS.flatMap((S, k) => S.loaded.bodies.map((b, j) => ({ k, j, id: b.id, place: b.name, port: b.port ? b.port.name : '', kind: b.kind, system: S.loaded.system.name, sysId: S.id })).filter(p => p.j > 0));
+  // every place a jump can go: each read system's bodies but its star (n: the system's place among the flyable ones)
+  const readFlyable = () => FLYABLE.map((id, n) => [SYSTEMS.get(id), n]).filter(([S]) => S);
+  const jumpPlaces = () => readFlyable().flatMap(([S, n]) => S.loaded.bodies.map((b, j) => ({ n, j, id: b.id, place: b.name, port: b.port ? b.port.name : '', kind: b.kind, system: S.loaded.system.name, sysId: S.id })).filter(p => p.j > 0));
   // each system, arriving over its start port (the jump box's *@system)
-  const jumpSystems = () => SYSTEMS.map((S, k) => { const B = S.loaded.bodies, j = Math.max(1, B.findIndex(b => b.id === S.loaded.system.start && b.port), B.findIndex(b => b.port));
-    return { k, j, id: B[j].id, place: B[j].name, port: B[j].port ? B[j].port.name : '', kind: B[j].kind, system: S.loaded.system.name, sysId: S.id }; });
-  debug.setJump({ places: jumpPlaces, systems: jumpSystems, current: () => sysK, go: (k, j) => { const r = jumpTo(k, j); if (r === 0) debug.close(); return r; } });
+  const jumpSystems = () => readFlyable().map(([S, n]) => { const B = S.loaded.bodies, j = Math.max(1, B.findIndex(b => b.id === S.loaded.system.start && b.port), B.findIndex(b => b.port));
+    return { n, j, id: B[j].id, place: B[j].name, port: B[j].port ? B[j].port.name : '', kind: B[j].kind, system: S.loaded.system.name, sysId: S.id }; });
+  debug.setJump({ places: jumpPlaces, systems: jumpSystems, current: () => sysRec.id, prepare: () => needSystems(FLYABLE),
+    go: (id, j) => Promise.resolve(jumpTo(id, j)).then(r => { if (r === 0) debug.close(); return r; }) });
   escapeFlight = () => {
     if (mapOn) { toggleMap(false); return true; }
     if (navTarget) { setTarget(null); toast('Target cleared'); return true; }
@@ -2038,8 +2104,11 @@ CORE_READY.then(CORE => {
   window.__play = {
     sim, IN, CMD, MODE, newGame, exportReplay, command, ECON, showTitle, pauseGame,
     get BODIES() { return BODIES; }, // the current system's
-    // the systems (ids, in atlas order), the one being played, the debug jump and every place it can go
-    systems: () => SYSTEMS.map(S => S.id), system: () => sysK, jump: (k, j) => jumpTo(k, j), places: () => jumpPlaces(),
+    // the flyable systems (ids, the start first), the one being played, the debug jump (a promise if the system must be
+    // read first) and every place it can go in the systems read so far; preload() reads them all; atlas() lists each
+    // slot's system
+    systems: () => FLYABLE.slice(), system: () => sysRec.id, jump: (id, j) => jumpTo(id, j), places: () => jumpPlaces(), preload: () => needSystems(FLYABLE),
+    atlas: () => Array.from({ length: sim.atlasCount() }, (_, k) => (BY_STAR.get(sim.atlasId(k)) || {}).file || null), universe: UNIVERSE,
     // the player's landing or launch sequence now: progress and the drawn pose (null when not in one)
     seq: () => sim.mode() === MODE.descending || sim.mode() === MODE.launching ? playerSeq() : null,
     setNav, trade, repay, showPanel, accept, abandon, setTarget, flyTo, cycleTarget, toggleMap, pickLocation,
@@ -2094,4 +2163,4 @@ CORE_READY.then(CORE => {
   };
   showTitle();
   requestAnimationFrame(frame);
-}).catch(e => { console.error(e); $('glerr').textContent = 'The sim core failed to start: ' + (e.message || e); $('glerr').hidden = false; });
+}).catch(e => { console.error(e); $('glerr').textContent = 'The game failed to start: ' + (e.message || e); $('glerr').hidden = false; });

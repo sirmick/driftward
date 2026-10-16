@@ -1,10 +1,19 @@
 """Assemble src/ into self-contained pages, index.html (the lab) and play.html (the game), with the Rust sim core
-compiled to WASM and inlined into both, and map.html (the star map).
+compiled to WASM and inlined into both, and map.html (the star map). On the way it remakes the universe index
+(src/galaxy/universe.json, tools/universe.py).
 
-Usage: python3 tools/build.py [--skip-core]   (--skip-core reuses the last compiled WASM)
+The game's content reaches the pages as data files (src/data.js; docs/data.md): the universe index, each system's
+file, lore and art manifest, how its content was made, the real stars, the setting and the stories' log. A
+self-contained build (the default, into the repository root) carries every file inline, each in its own script tag,
+so the pages open from disk. A hosted build (--hosted, into dist/ or DIR) writes them to data/ beside the pages,
+which fetch each one when they need it, with art/ copied alongside: serve that directory.
+
+Usage: python3 tools/build.py [--skip-core] [--hosted [DIR]]   (--skip-core reuses the last compiled WASM)
 """
 import base64, json, os, pathlib, shutil, subprocess, sys
 root = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(root / 'tools'))
+import universe
 src = root / 'src'
 core = root / 'core'
 wasm = core / 'target' / 'wasm32-unknown-unknown' / 'release' / 'driftward_core.wasm'
@@ -49,7 +58,7 @@ MODULES = {
     '/*LOOK*/': 'look.js', '/*SHADERS*/': 'shaders.js', '/*GFX*/': 'gfx.js', '/*BAKE*/': 'bake.js', '/*CORE*/': 'core.js',
     '/*FLY*/': 'fly.js', '/*PLANETS*/': 'planets.js', '/*STARS*/': 'stars.js', '/*SUNS*/': 'play/suns.js', '/*STATIONS*/': 'stations.js',
     '/*ASTEROIDS*/': 'asteroids.js', '/*ROCKS*/': 'rocks.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js', '/*DEBUG*/': 'play/debug.js', '/*SHIPYARD*/': 'play/shipyard.js', '/*JITTER*/': 'play/jitter.js',
-    '/*MAP*/': 'map/map.js', '/*MAPPANEL*/': 'map/panel.js', '/*MAPVIEW*/': 'map/view.js',
+    '/*MAP*/': 'map/map.js', '/*MAPPANEL*/': 'map/panel.js', '/*MAPVIEW*/': 'map/view.js', '/*DATA*/': 'data.js',
 }
 
 def inline_modules(script, needed):
@@ -58,79 +67,83 @@ def inline_modules(script, needed):
         script = script.replace(marker, (src / MODULES[marker]).read_text())
     return script
 
-# the game's systems (every file in src/systems/, the start system first), and the schema each is validated (clamped)
-# against at load; the economy (prices by port role); traffic (hulls by culture and role, population weights)
-START_SYSTEM = 'm1.json'
-system_files = sorted((src / 'systems').glob('*.json'), key=lambda f: (f.name != START_SYSTEM, f.name))
+# the system schema each system file is validated (clamped) against at load; the economy (prices by port role, and
+# where and with what a new game starts); traffic (hulls by culture and role, population weights)
+system_files = sorted((src / 'systems').glob('*.json'))
 systems_raw = [json.loads(f.read_text()) for f in system_files]
-systems = json.dumps(systems_raw)
 system_schema = json.dumps(json.loads((src / 'schema' / 'system.schema.json').read_text()))
 economy = json.dumps(json.loads((src / 'economy.json').read_text()))
 traffic = json.dumps(json.loads((src / 'traffic.json').read_text()))
-assert '</script' not in systems + system_schema + economy + traffic
+lore_schema = json.dumps(json.loads((src / 'schema' / 'lore.schema.json').read_text()))
+assert '</script' not in system_schema + economy + traffic + lore_schema
 
-# each system's lore (tools/gen-content.js writes it; absent if there is none yet) and the lore schema, inlined, keyed
-# by system id; the art is not: the page loads the vistas and portraits from art/<id>/ beside it, so the manifest lists
-# only files that exist, and a page without them (opened on its own) shows the procedural backdrop and no portraits
+# ---------- the data files (src/data.js) ----------
 def read_json(f):
     return json.loads(f.read_text()) if f.exists() else None
-lore_map, art_map, log_map = {}, {}, {}
+DATA = {}
+# the universe index (tools/universe.py), remade from src/galaxy/ and the region notes every build
+DATA['universe.json'] = universe.write()
+# each system: its file, its lore (tools/gen-content.js writes it; null if there is none yet) and the art found in
+# art/<id>/ (the page loads the images beside it, so the manifest lists only files that exist; a page without them
+# shows the procedural backdrop and no portraits); and, apart, how its content was made, for the debug screen: the
+# lore run's record (facts, messages, model, cost) and the art log (every image's prompt, model, seed and cost)
 for raw in systems_raw:
-    sid = raw['id']
-    lore_file = src / 'lore' / f'{sid}.json'
-    if lore_file.exists():
-        lore_map[sid] = json.loads(lore_file.read_text())
-    art_dir = root / 'art' / sid
+    sid, art_dir = raw['id'], root / 'art' / raw['id']
     a = {'vistas': {}, 'portraits': {}}
     for f in sorted(art_dir.glob('*.webp')) if art_dir.exists() else []:
         kind, _, name = f.stem.partition('-')
         if kind in ('vista', 'portrait'):
             a[kind + 's'][name] = f.relative_to(root).as_posix()
-    art_map[sid] = a
-    # how the content was made, for the debug screen: the lore run's record (facts, messages, model, cost) and the art
-    # log (every image's prompt, model, seed, reference and cost)
-    log_map[sid] = {'lore': read_json(src / 'lore' / f'{sid}.log.json'), 'art': read_json(art_dir / 'log.json')}
-lore = json.dumps(lore_map)
-lore_schema = json.dumps(json.loads((src / 'schema' / 'lore.schema.json').read_text()))
-art = json.dumps(art_map)
-content_log = json.dumps(log_map)
-assert '</script' not in lore + lore_schema + art + content_log
+    DATA[f'systems/{sid}.json'] = {'system': raw, 'lore': read_json(src / 'lore' / f'{sid}.json'), 'art': a}
+    DATA[f'logs/{sid}.json'] = {'lore': read_json(src / 'lore' / f'{sid}.log.json'), 'art': read_json(art_dir / 'log.json')}
+# the real stars round Sol (tools/hyg.py), for the map
+DATA['stars.json'] = json.loads((src / 'galaxy' / 'stars.json').read_text())
+# the setting (canon for all the lore), and how the stories were written (each call: model, cost, problems, prompt; the
+# setting, sent with every prompt, cut out of them: it is shown once), for the debug screen's Regions tab
+setting_md = (src / 'lore' / 'setting.md').read_text()
+slog = read_json(src / 'galaxy' / 'stories.log.json') or []
+for rec in slog:
+    for msg in rec.get('messages', []): msg['content'] = msg['content'].replace(setting_md, '[the setting: shown once, on the Regions tab]')
+DATA['galaxy-log.json'] = {'setting': setting_md, 'stories': slog}
+DATA = {k: json.dumps(v, ensure_ascii=False, separators=(',', ':')) for k, v in DATA.items()}
+for k, v in DATA.items(): assert '</script' not in v, k
+
+HOSTED = '--hosted' in sys.argv
+out_dir = root
+if HOSTED:
+    i = sys.argv.index('--hosted')
+    out_dir = pathlib.Path(sys.argv[i + 1]).resolve() if i + 1 < len(sys.argv) and not sys.argv[i + 1].startswith('--') else root / 'dist'
+# what a page carries inline: the files it reads (self-contained), or none (hosted: it fetches them from data/)
+def data_tags(names):
+    if HOSTED: return ''
+    return '\n'.join(f'<script type="application/json" data-file="{n}">{DATA[n]}</script>' for n in names)
+GAME_DATA = list(DATA)
+MAP_DATA = ['universe.json', 'stars.json']
 
 def page(template, script):
     t = template.replace('/*COREWASM*/', core_b64).replace('/*CATALOG*/', catalog).replace('/*GEN*/', gen).replace('/*APP*/', script)
-    t = t.replace('/*LORE*/', lore).replace('/*LORESCHEMA*/', lore_schema).replace('/*ART*/', art).replace('/*CONTENTLOG*/', content_log)
-    return t.replace('/*SYSTEMS*/', systems).replace('/*SYSTEMSCHEMA*/', system_schema).replace('/*ECONOMY*/', economy).replace('/*TRAFFIC*/', traffic)
+    return t.replace('/*LORESCHEMA*/', lore_schema).replace('/*SYSTEMSCHEMA*/', system_schema).replace('/*ECONOMY*/', economy).replace('/*TRAFFIC*/', traffic)
 
 # the lab: app.js pulls in the shared kit and every tab
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),
     ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*STARS*/', '/*SCHEMA*/', '/*PLANETS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
-# the game: its template carries the script shell and markers itself
-# the galaxy: the real stars round Sol (tools/hyg.py writes src/galaxy/stars.json) and the game's systems, lanes and
-# factions among them (tools/galaxy.py writes src/galaxy/galaxy.json), for the star map: its own page and the game's
-# debug screen
-galaxy_data = json.loads((src / 'galaxy' / 'stars.json').read_text())
-galaxy_data['game'] = json.loads((src / 'galaxy' / 'galaxy.json').read_text())
-# and its worlds (tools/worlds.py: people, ports, wealth) and stories (tools/stories.py: backstories), where made
-for k, f in (('worlds', 'worlds.json'), ('stories', 'stories.json')):
-    if (src / 'galaxy' / f).exists(): galaxy_data['game'][k] = json.loads((src / 'galaxy' / f).read_text())
-# and the regions' hand-written notes (src/lore/regions/<region>.md), for the debug screen's Regions tab
-galaxy_data['game']['regionNotes'] = {f.stem: f.read_text() for f in sorted((src / 'lore' / 'regions').glob('*.md'))}
-# the setting (canon for all the lore), and how the stories were written (each call: model, cost, problems, prompt; the
-# setting, sent with every prompt, cut out of them: it is shown once)
-setting_md = (src / 'lore' / 'setting.md').read_text()
-galaxy_data['game']['setting'] = setting_md
-if (src / 'galaxy' / 'stories.log.json').exists():
-    slog = json.loads((src / 'galaxy' / 'stories.log.json').read_text())
-    for rec in slog:
-        for msg in rec.get('messages', []): msg['content'] = msg['content'].replace(setting_md, '[the setting: shown once, on the Regions tab]')
-    galaxy_data['game']['storiesLog'] = slog
-galaxy = json.dumps(galaxy_data, ensure_ascii=False, separators=(',', ':'))
-assert '</script' not in galaxy
-game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*SUNS*/', '/*MAP*/', '/*MAPPANEL*/', '/*JITTER*/', '/*PLAY*/']), '').replace('/*GALAXY*/', galaxy)
-starmap = inline_modules((src / 'map' / 'template.html').read_text(), ['/*SHADERS*/', '/*GFX*/', '/*STARS*/', '/*MAP*/', '/*MAPPANEL*/', '/*MAPVIEW*/']).replace('/*GALAXY*/', galaxy)
+# the game and the star map: their templates carry the script shell and markers themselves, and the data loader
+# (src/data.js) first; the files they read inline where the build is self-contained
+game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*DATA*/', '/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*SUNS*/', '/*MAP*/', '/*MAPPANEL*/', '/*JITTER*/', '/*PLAY*/']), '').replace('<!--DATA-->', data_tags(GAME_DATA))
+starmap = inline_modules((src / 'map' / 'template.html').read_text(), ['/*DATA*/', '/*SHADERS*/', '/*GFX*/', '/*STARS*/', '/*MAP*/', '/*MAPPANEL*/', '/*MAPVIEW*/']).replace('<!--DATA-->', data_tags(MAP_DATA))
 
+out_dir.mkdir(parents=True, exist_ok=True)
 for name, html in (('index.html', lab), ('play.html', game), ('map.html', starmap)):
-    (root / name).write_text(html)
+    (out_dir / name).write_text(html)
     print(f'wrote {name} ({len(html):,} bytes)', end='; ')
-print(f"{len(systems_raw)} systems ({', '.join(r['id'] for r in systems_raw)}); lore for {len(lore_map)}; art {sum(len(a['vistas']) for a in art_map.values())} vistas and {sum(len(a['portraits']) for a in art_map.values())} portraits", end='; ')
+if HOSTED:
+    # the data files beside the pages, and the art they load (not the raw originals)
+    for name, text in DATA.items():
+        f = out_dir / 'data' / name
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(text)
+    shutil.copytree(root / 'art', out_dir / 'art', ignore=shutil.ignore_patterns('raw'), dirs_exist_ok=True)
+    print(f'{len(DATA)} data files ({sum(len(v.encode()) for v in DATA.values()):,} bytes) and art/ -> {out_dir}', end='; ')
+U = json.loads(DATA['universe.json'])
+print(f"{len(U['systems'])} systems in the universe, {len(systems_raw)} with files ({', '.join(r['id'] for r in systems_raw)})", end='; ')
 print(f'core {wasm.stat().st_size:,} bytes of WASM')

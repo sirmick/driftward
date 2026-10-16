@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "python3 tools/build.py",
+    "build:hosted": "python3 tools/build.py --hosted",
     "check": "npm run build && node tools/check.js && node tools/validate.js && node tools/core-test.js",
     "test": "node tools/core-test.js",
     "dev": "node tools/dev.js",

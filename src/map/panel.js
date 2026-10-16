@@ -3,7 +3,7 @@
 // tab): find a star, the selection (its class, distance from Sol and from the last star selected, and as a game
 // system who holds it, its lanes and its jumps from Sol), the view's toggles and the legends; and the mouse on the
 // map's surface (drag to orbit, right- or shift-drag to pan, wheel to zoom, click to select, double-click to centre).
-// starMapPanelHtml() is the panel's markup; mountStarMapPanel(root, M, galaxy, surface) wires it, root holding that
+// starMapPanelHtml() is the panel's markup; mountStarMapPanel(root, M, surface) wires it, root holding that
 // markup and surface the element the mouse drives the map from. Needs map.js (and stars.js) in scope.
 function starMapPanelHtml() {
   return `<h2>Find</h2>
@@ -71,7 +71,7 @@ const STAR_MAP_PANEL_CSS = `
 .sm-search { width: 100%; background: #0a0d12; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; color: var(--fg); font: 13px var(--f-body); }
 .sm-search:focus { outline: none; border-color: var(--amber); }`;
 
-function mountStarMapPanel(root, M, galaxy, surface) {
+function mountStarMapPanel(root, M, surface) {
   const q = k => root.querySelector(`[data-m="${k}"]`);
   const stars = M.stars, byName = new Map();
   stars.forEach((s, i) => { byName.set(s.name.toLowerCase(), i); (s.desig || []).forEach(d => byName.has(d.toLowerCase()) || byName.set(d.toLowerCase(), i)); });
@@ -80,7 +80,7 @@ function mountStarMapPanel(root, M, galaxy, surface) {
   const fmt = v => v < 10 ? v.toFixed(2) : v.toFixed(1);
   const GROUPS = { human: 'Human', bloom: 'Bloom', shadow: 'Shadow', glass: 'Glass', drift: 'the Drift' };
   const STATUS = { inhabited: 'inhabited', dead: 'dead (no one lives there)', living: 'a living world', held: 'held by the Shadow', glass: 'gone glass', emptied: 'emptied by the Shadow' };
-  const FACTIONS = (galaxy.game && galaxy.game.factions) || {};
+  const U = M.universe, FACTIONS = U.factions;
   const DEPTHS = ['the fringe', 'the wild', 'the deep', 'the black']; // the Book's depth tiers, two jumps each
   const hex = c => '#' + c.map(v => Math.round(Math.pow(v, 1 / 2.2) * 255).toString(16).padStart(2, '0')).join('');
 
@@ -90,12 +90,12 @@ function mountStarMapPanel(root, M, galaxy, surface) {
     const s = stars[i], T = STAR_CLASSES[s.class], c = M.sys[i], rows = [];
     if (c) {
       rows.push(['System', `${GROUPS[c.group]}${c.ring ? ', ' + c.ring + ' ring' : ''}${c.sector != null ? ', sector ' + (c.sector + 1) : ''}`], ['Status', STATUS[c.status] || c.status]);
-      if (c.region) rows.push(['Region', (galaxy.game.regions || {})[c.region] || c.region]);
+      if (c.region) rows.push(['Region', (U.regions[c.region] || {}).name || c.region]);
       if (c.hazard) rows.push(['Hazard', `a ${(STAR_CLASSES[c.class] || {}).label || c.class}: radiation and a deep well`]);
-      if (c.faction) rows.push(['Held by', FACTIONS[c.faction] || c.faction]);
+      if (M.factionOf(c)) rows.push(['Held by', FACTIONS[c.owner].name]);
     }
     if (full && c) {
-      const w = ((galaxy.game.worlds || {}).systems || {})[c.star];
+      const w = c.world;
       if (w) {
         const n = w.population, people = n >= 1e9 ? (n / 1e9).toFixed(1) + ' billion' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' million' : Math.round(n / 1e3) + ' thousand';
         rows.push(['People', `${people}, ${w.tier}${w.builtworld ? ' with a Builtworld' : ''}`], ['Ports', w.roles.join(', ')],
@@ -113,8 +113,10 @@ function mountStarMapPanel(root, M, galaxy, surface) {
       if (c.jumps != null) rows.push(['Jumps from Sol', String(c.jumps)]);
       if (c.provisional) rows.push(['Name', 'provisional (invented; the lore pass may rename it)']);
     }
-    if (c && c.class) rows.push(['Star', (STAR_CLASSES[c.class] || {}).label || c.class]);
-    if (!(c && c.generated)) rows.push([c && c.class ? 'Catalogue class' : 'Class', T ? T.label : s.class], ['Type', s.spect || 'unknown']);
+    // the galaxy may set a system's star to another class than the catalogue's
+    const reset = c && c.class !== s.class;
+    if (reset) rows.push(['Star', (STAR_CLASSES[c.class] || {}).label || c.class]);
+    if (!(c && c.generated)) rows.push([reset ? 'Catalogue class' : 'Class', T ? T.label : s.class], ['Type', s.spect || 'unknown']);
     rows.push(['From Sol', fmt(s.ly) + ' ly']);
     const p = stars[M.st.prev];
     if (!full && p && p !== s && p.ly) rows.push([`From ${M.nameOf(M.st.prev)}`, fmt(M.distLy(p.pos, s.pos)) + ' ly']);
@@ -142,11 +144,11 @@ function mountStarMapPanel(root, M, galaxy, surface) {
   surface.parentElement.appendChild(modal);
   function openDetail(i) {
     const c = M.sys[i]; if (!c) return;
-    const story = ((galaxy.game.stories || {}).systems || {})[c.star];
+    const story = c.story;
     modal.innerHTML = `<div class="sm-modal-box" role="dialog" aria-label="${esc(M.nameOf(i))}"><button type="button" class="sm-modal-x" aria-label="Close">×</button>`
       + `<p class="sm-sel-name">${esc(M.nameOf(i))}</p><p class="sm-sel-desig">${esc(desig(i))}</p>`
       + `<div class="sm-modal-cols"><dl class="sm-stats">${dl(rowsOf(i, true))}</dl>`
-      + `<div><h2>Story</h2>${story ? `<ul class="sm-story">${story.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : '<p class="sm-more">No story yet (tools/stories.py).</p>'}</div></div></div>`;
+      + `<div><h2>Story</h2>${story ? `<ul class="sm-story">${story.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : '<p class="sm-more">No story yet (tools/stories.py).</p>'}</div></div></div>`;
     modal.hidden = false;
     modal.querySelector('.sm-modal-x').onclick = closeDetail;
   }
@@ -163,13 +165,13 @@ function mountStarMapPanel(root, M, galaxy, surface) {
 
   // ---------- legends: the game's systems by kind (factions with their pieces), the catalogue's classes ----------
   const sysList = M.sys.filter(Boolean);
-  const kinds = [...Object.entries(FACTIONS).map(([k, name]) => [name, c => c.faction === k && c.status === 'inhabited', hex(FACTION_COLOURS[k] || [.5, .5, .5]), k]),
-    ['Human, inhabited', c => c.group === 'human' && c.status === 'inhabited' && !c.faction, '#7fa6ff'], ['Human, dead', c => c.group === 'human' && c.status === 'dead', '#4a5a78'],
+  const kinds = [...Object.entries(FACTIONS).filter(([, f]) => !f.alien).map(([k, f]) => [f.name, c => c.owner === k && c.status === 'inhabited', hex(f.colour), k]),
+    ['Human, inhabited', c => c.group === 'human' && c.status === 'inhabited' && !M.factionOf(c), '#7fa6ff'], ['Human, dead', c => c.group === 'human' && c.status === 'dead', '#4a5a78'],
     ['The Drift (dead)', c => c.group === 'drift', '#8a93a6'], ['Bloom', c => c.group === 'bloom', '#5af080'], ['Shadow', c => c.group === 'shadow', '#ff5a46'], ['Glass', c => c.group === 'glass', '#bff0ff']]
     .filter(([, f]) => sysList.some(f));
   // pieces, for the factions that hold together (the galaxy marks their outlying pieces as exclaves); the scattered
   // ones (the Blackhull havens, the Independents) are scattered by nature
-  const whole = new Set(sysList.filter(c => c.exclave).map(c => c.faction));
+  const whole = new Set(sysList.filter(c => c.exclave).map(c => c.owner));
   const piecesOf = k => k && whole.has(k) ? M.pieces.filter(p => p.region === k && p.size).length : 0;
   q('groups').innerHTML = kinds.map(([label, f, col, k]) => { const n = piecesOf(k);
     return `<label><i style="color:${col}"></i><span>${esc(label)}${n > 1 ? ` <small>(${n} pieces)</small>` : ''}</span><span>${sysList.filter(f).length}</span></label>`; }).join('')

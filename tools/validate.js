@@ -167,6 +167,49 @@ for (const f of fs.existsSync(loreDir) ? fs.readdirSync(loreDir).filter(f => f.e
   } else console.log(`lore/${f}: valid; ${ports.size} ports, ${people.size} people, ${art.filter(a => a.startsWith('vista-')).length} vistas and ${art.filter(a => a.startsWith('portrait-')).length} portraits`);
 }
 
+// the universe index (src/galaxy/universe.json, from tools/universe.py, which the build reruns): valid against its
+// schema; worlds and stories made from the galaxy it was (their recorded hashes match); every reference resolves; and
+// every system file agrees with its entry: name, owner, ring, region and star class, its ports' roles exactly the
+// world's, no port's tier above the system's, and a Builtworld where the world has one
+{
+  const uSchema = JSON.parse(fs.readFileSync(path.join(root, 'src', 'schema', 'universe.schema.json'), 'utf8'));
+  const raw = JSON.parse(fs.readFileSync(path.join(root, 'src', 'galaxy', 'universe.json'), 'utf8'));
+  const uNotes = [], U = clampToSchema(uSchema, raw, '$', uNotes), uBad = uNotes.map(n => `${n.path}: ${n.msg}`);
+  const made = raw.made || {};
+  if (made.worlds !== made.galaxy) uBad.push(`worlds.json was made from galaxy ${made.worlds}, not this one (${made.galaxy}): rerun tools/worlds.py`);
+  const stale = Object.entries(made.stories || {}).filter(([, h]) => h !== made.galaxy).map(([k]) => k);
+  if (stale.length) uBad.push(`stories.json's ${stale.join(', ')} told from another galaxy: rerun tools/stories.py ${stale.join(',')}`);
+  const byId = new Map(), byFile = new Map(), owners = schema.properties.owner.enum, tiers = schema.properties.bodies.items.properties.port.properties.population.enum;
+  for (const k of Object.keys(raw.factions || {})) if (!owners.includes(k) || k === 'none') uBad.push(`faction ${k} is not a system schema owner`);
+  for (const s of raw.systems || []) {
+    if (byId.has(s.id)) uBad.push(`system ${s.id} listed twice`);
+    byId.set(s.id, s);
+    if (!(raw.regions || {})[s.region]) uBad.push(`${s.name} (${s.id}): no region ${s.region}`);
+    if (s.owner !== 'none' && !(raw.factions || {})[s.owner]) uBad.push(`${s.name} (${s.id}): no faction ${s.owner}`);
+    if (s.file) { if (byFile.has(s.file)) uBad.push(`file ${s.file} given to two systems`); byFile.set(s.file, s); }
+  }
+  for (const l of raw.lanes || []) if (!byId.has(l.a) || !byId.has(l.b)) uBad.push(`lane ${l.a}-${l.b}: no such system`);
+  const files = fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.endsWith('.json'));
+  for (const f of files) {
+    const { system, bodies } = loadSystem(JSON.parse(fs.readFileSync(path.join(root, 'src', 'systems', f), 'utf8')), schema, layout);
+    if (!system) continue; // reported above
+    const e = byFile.get(system.id), at = `${f} (${system.id})`;
+    if (!e) { uBad.push(`${at}: no system in the index has file ${system.id}`); continue; }
+    byFile.delete(system.id);
+    for (const [k, mine, theirs] of [['name', system.name, e.name], ['owner', system.owner, e.owner], ['ring', system.ring, e.ring], ['region', system.region, e.region], ['star class', system.star.class, e.class]])
+      if (mine !== theirs) uBad.push(`${at}: ${k} ${mine}, the index says ${theirs}`);
+    const ports = bodies.filter(b => b.port).map(b => b.port), w = e.world;
+    if (!w) { if (ports.length) uBad.push(`${at}: has ports, but the index gives ${e.name} no people`); continue; }
+    const roles = [...new Set(ports.map(p => p.role))].sort(), want = [...new Set(w.roles)].sort();
+    if (roles.join() !== want.join()) uBad.push(`${at}: port roles ${roles.join(', ')}, the index's world has ${want.join(', ')}`);
+    for (const p of ports) if (tiers.indexOf(p.population) > tiers.indexOf(w.tier)) uBad.push(`${at}: ${p.name} is a ${p.population}, above the system's tier (${w.tier})`);
+    if (!!w.builtworld !== ports.some(p => p.builtworld)) uBad.push(`${at}: ${w.builtworld ? 'the index has a Builtworld here and no port is one' : 'a port is a Builtworld, and the index has none here'}`);
+  }
+  for (const [id, e] of byFile) uBad.push(`${e.name} (${e.id}): file ${id}, but src/systems/ has no system ${id}`);
+  if (uBad.length) { bad += uBad.length; uBad.forEach(m => console.log(`universe.json: ${m}`)); }
+  else console.log(`universe.json: valid; ${raw.systems.length} systems (${files.length} with files, each agreeing), ${Object.keys(raw.regions).length} regions, ${raw.lanes.length} lanes; galaxy ${made.galaxy}, worlds and stories made from it`);
+}
+
 // the clamp on bad input: out-of-range numbers clamp, bad enums fall back to defaults, unknown fields drop,
 // a missing required field is fatal
 const notes = [];

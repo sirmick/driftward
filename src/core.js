@@ -32,8 +32,15 @@ const CORE_READY = (async () => {
       // ambient traffic (core/src/traffic.rs): per-ship state, the ship type per role, and the lanes
       traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
       startTraffic: () => X.dw_start_traffic(w), // plan the lanes and seed the steady state, for a new game
-      // the atlas (core/src/atlas.rs): store the live system as system k; load system k as the live one
-      atlasStore: k => X.dw_atlas_store(w, k), atlasLoad: k => X.dw_atlas_load(w, k),
+      // the atlas (core/src/atlas.rs), the systems this game has been to, a slot each by star id: store the live system
+      // as system id in slot k; load slot k as the live one; empty it; the slot holding id (-1: none) and the slot id
+      // would go in (-1: every slot needed); how many are in use and slot k's id
+      atlasStore: (k, id) => X.dw_atlas_store(w, k, id >>> 0), atlasLoad: k => X.dw_atlas_load(w, k), atlasReset: () => X.dw_atlas_reset(w),
+      atlasFind: id => X.dw_atlas_find(w, id >>> 0), atlasSlotFor: id => X.dw_atlas_slot_for(w, id >>> 0),
+      atlasCount: () => groups.atlas.n[0], atlasId: k => groups.atlas_sys.id[k],
+      // slot k's row as bytes (a copy), and a row put back into slot k: what a replay log carries for a store mid-session
+      atlasRow: k => X.dw_atlas_row_save(w, k) ? new Uint8Array(mem.buffer, X.dw_atlas_row_ptr(w), X.dw_atlas_row_len(w)).slice() : null,
+      atlasPut: (k, row) => { new Uint8Array(mem.buffer, X.dw_atlas_row_ptr(w), X.dw_atlas_row_len(w)).set(row); return X.dw_atlas_row_load(w, k); },
       trafficCount: () => X.dw_traffic_count(w),
       // tuning: core.param('damper') / core.param('damper', 0.6); names in core/src/world.rs
       param: (name, v) => { if (!(name in P)) throw new Error('unknown core param ' + name); if (v !== undefined) params[P[name]] = v; return params[P[name]]; },

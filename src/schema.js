@@ -2,8 +2,8 @@
 // Content enters through JSON Schemas (src/schema/*.schema.json): the contract an LLM writes against, and the
 // validator that clamps what it writes before the game uses it (the Book: "output is clamped to schema ranges and
 // enumerations before use"). clampToSchema walks a value against the subset of JSON Schema the schemas use
-// (type, properties, required, items, minItems, maxItems, enum, minimum, maximum, minLength, maxLength, pattern,
-// default) and returns a value that satisfies it, with a note for every change. A missing required field with no
+// (type, properties, additionalProperties, required, items, minItems, maxItems, enum, minimum, maximum, minLength,
+// maxLength, pattern, default) and returns a value that satisfies it, with a note for every change. A missing required field with no
 // default is fatal: the value cannot be used.
 function clampToSchema(schema, value, path, notes) {
   path = path || '$'; notes = notes || [];
@@ -27,7 +27,14 @@ function clampToSchema(schema, value, path, notes) {
         if (v !== undefined) out[k] = v;
         else if ((schema.required || []).includes(k)) notes.push({ path: `${path}.${k}`, msg: 'required', fatal: true });
       }
-      for (const k of Object.keys(value)) if (!(schema.properties || {})[k]) note(`unknown field ${k} dropped`);
+      // a map (additionalProperties: a schema): every other key is an entry of that schema
+      const extra = typeof schema.additionalProperties === 'object' ? schema.additionalProperties : null;
+      for (const k of Object.keys(value)) {
+        if ((schema.properties || {})[k]) continue;
+        if (!extra) { note(`unknown field ${k} dropped`); continue; }
+        const v = clampToSchema(extra, value[k], `${path}.${k}`, notes);
+        if (v !== undefined) out[k] = v;
+      }
       return out;
     }
     case 'array': {

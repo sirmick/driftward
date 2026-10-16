@@ -24,13 +24,14 @@
       "maxLength": 40
     },
     "owner": {
-      "description": "The faction that holds the system (the Book's appendix, by role).",
+      "description": "The faction that holds the system (the Book's appendix, by role): one vocabulary with the universe index (src/galaxy/universe.json), whose owner a system file must match. independent: a world no faction holds; none: unclaimed, nobody's.",
       "enum": [
         "federation",
         "prism",
         "ironhulls",
         "blackhulls",
         "freeflag",
+        "independent",
         "bloom",
         "glass",
         "shadow",
@@ -825,12 +826,19 @@
               },
               "population": {
                 "enum": [
+                  "outwatch",
                   "outpost",
                   "colony",
                   "town",
                   "world"
                 ],
-                "default": "colony"
+                "default": "colony",
+                "description": "The port's settlement tier, from the fewest people to the most (tools/worlds.py's tiers: an outwatch is a few thousand at most, an outpost tens of thousands, a colony up to a million, a town up to a hundred million, a world more). The universe index gives the system's tier, from all its people: no port's may exceed it."
+              },
+              "builtworld": {
+                "type": "boolean",
+                "default": false,
+                "description": "A Builtworld: a whole planet built over into one city, about ten billion people (six in human space; the universe index marks the system). Only on a world-tier port."
               },
               "description": {
                 "type": "string",

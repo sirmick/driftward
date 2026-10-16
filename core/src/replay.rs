@@ -1,35 +1,41 @@
 //! Replays: a snapshot to start from plus a log of what the player did, keyed by world tick: input changes (the
-//! buttons held from that tick on) and commands (land, launch, buy, accept, ...; see port.rs, market.rs and
-//! mission.rs), applied before that tick's step.
+//! buttons held from that tick on), commands (land, launch, buy, accept, ...; see port.rs, market.rs and
+//! mission.rs), and systems the page stored into the atlas mid-session (atlas.rs), applied before that tick's step.
 //! The page records the log as you play; `cargo run --bin replay` reruns it headless.
 
 use crate::world::World;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LogEntry {
     /// From this tick on, the player holds these buttons.
     Input { tick: u64, input: u32 },
     /// At this tick, the page issued this command.
     Command { tick: u64, code: u32, a: i32, b: i32 },
+    /// At this tick, the page stored a system into atlas slot `k`: the slot's row (atlas.rs `atlas_row_get`).
+    Atlas { tick: u64, k: u32, row: Vec<u8> },
 }
 
 impl LogEntry {
-    pub fn tick(&self) -> u64 { match *self { LogEntry::Input { tick, .. } | LogEntry::Command { tick, .. } => tick } }
+    pub fn tick(&self) -> u64 { match *self { LogEntry::Input { tick, .. } | LogEntry::Command { tick, .. } | LogEntry::Atlas { tick, .. } => tick } }
 }
 
-/// Parse a log: `tick input` lines and `tick cmd code a b` lines (decimal; blank lines and # comments ignored).
+/// Parse a log: `tick input` lines, `tick cmd code a b` lines (decimal) and `tick atlas k row` lines (the row in hex);
+/// blank lines and # comments ignored.
 pub fn parse_log(text: &str) -> Result<Vec<LogEntry>, String> {
     let mut out = Vec::new();
     for (n, line) in text.lines().enumerate() {
         let line = line.split('#').next().unwrap_or("").trim();
         if line.is_empty() { continue; }
         let words: Vec<&str> = line.split_whitespace().collect();
-        let bad = || format!("input log line {}: expected `tick input` or `tick cmd code a b`, got `{line}`", n + 1);
+        let bad = || format!("input log line {}: expected `tick input`, `tick cmd code a b` or `tick atlas k row`, got `{}`", n + 1, &line[..line.len().min(80)]);
         let entry = match words.as_slice() {
             [tick, input] => LogEntry::Input { tick: tick.parse().map_err(|_| bad())?, input: input.parse().map_err(|_| bad())? },
             [tick, "cmd", code, a, b] => LogEntry::Command {
                 tick: tick.parse().map_err(|_| bad())?, code: code.parse().map_err(|_| bad())?,
                 a: a.parse().map_err(|_| bad())?, b: b.parse().map_err(|_| bad())?,
+            },
+            [tick, "atlas", k, hex] => LogEntry::Atlas {
+                tick: tick.parse().map_err(|_| bad())?, k: k.parse().map_err(|_| bad())?, row: unhex(hex).ok_or_else(bad)?,
             },
             _ => return Err(bad()),
         };
@@ -38,14 +44,21 @@ pub fn parse_log(text: &str) -> Result<Vec<LogEntry>, String> {
     Ok(out)
 }
 
+/// Bytes from hex (two digits a byte), or None if it isn't.
+fn unhex(s: &str) -> Option<Vec<u8>> {
+    if s.len() % 2 != 0 { return None; }
+    (0..s.len()).step_by(2).map(|i| u8::from_str_radix(s.get(i..i + 2)?, 16).ok()).collect()
+}
+
 /// Step `ticks` times, applying each logged entry on its tick, in order (entries before the start apply at once).
 pub fn run(w: &mut World, log: &[LogEntry], ticks: u64) {
     let mut k = 0;
     for _ in 0..ticks {
         while k < log.len() && log[k].tick() <= w.tick {
-            match log[k] {
-                LogEntry::Input { input, .. } => w.game.input[0] = input,
-                LogEntry::Command { code, a, b, .. } => { w.command(code, a, b); }
+            match &log[k] {
+                LogEntry::Input { input, .. } => w.game.input[0] = *input,
+                LogEntry::Command { code, a, b, .. } => { w.command(*code, *a, *b); }
+                LogEntry::Atlas { k: slot, row, .. } => { w.atlas_row_put(*slot as usize, row); }
             }
             k += 1;
         }
@@ -112,5 +125,8 @@ mod tests {
         assert!(parse_log("12").is_err());
         assert!(parse_log("1 2 3").is_err());
         assert!(parse_log("1 cmd 2").is_err());
+        assert_eq!(parse_log("7 atlas 2 00ff10").unwrap(), vec![LogEntry::Atlas { tick: 7, k: 2, row: vec![0, 255, 16] }]);
+        assert!(parse_log("7 atlas 2 0f1").is_err());
+        assert!(parse_log("7 atlas 2 zz").is_err());
     }
 }

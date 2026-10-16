@@ -24,6 +24,7 @@ import json, math, pathlib, random, sys
 import numpy as np
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from mip import Model
+from universe import galaxy_hash
 
 root = pathlib.Path(__file__).resolve().parent.parent
 G = json.loads((root / 'src' / 'galaxy' / 'galaxy.json').read_text())
@@ -41,7 +42,7 @@ POP_SPAN = {'inner': (9.8, 8.4), 'middle': (9.6, 6.0), 'outer': (8.6, 3.0)}
 # fixed: Sol (Earth's Builtworld and the rest of the system), the March (its region file)
 FIXED_POP = {'Sol': 13e9, 'Brannock': 4e9, 'Ostry': 150e6, 'Calder': 900e6, 'Merrow': 7.5e9, 'Serein': 2.8e9, 'Quire': 600e6}
 STAR_HOME = {'yellow': 1, 'orange': .8, 'white': .6, 'red-dwarf': .2, 'red-giant': .3, 'white-dwarf': 0, 'blue-giant': .1}
-OWNER_POP = {'fed': .3, 'prism': .4, 'iron': .1, 'free': -.8, 'indep': -.7, 'black': -1}
+OWNER_POP = {'federation': .3, 'prism': .4, 'ironhulls': .1, 'freeflag': -.8, 'independent': -.7, 'blackhulls': -1}
 # settlement tiers by people (the Book's, at the setting's scale), and how many ports each has
 TIERS = [('outwatch', 3e3, 1), ('outpost', 3e4, 1), ('colony', 1e6, 2), ('town', 1e8, 2), ('world', math.inf, 3)]
 # the six Builtworlds in human space: Earth, and the great old worlds of the first settlements (Prism's at 61 Cygni);
@@ -49,14 +50,14 @@ TIERS = [('outwatch', 3e3, 1), ('outpost', 3e4, 1), ('colony', 1e6, 2), ('town',
 BUILTWORLDS, BUILTWORLD = ['Sol', 'Alpha Centauri', 'Tau Ceti', 'Epsilon Eridani', 'Procyon', '61 Cygni'], 1e10
 # what each owner likes to build (an objective weight per role), and who may hold a role at all
 FACTION_ROLES = {
-    'fed':   {'agri': 1.2, 'habitat': 1, 'container-port': 1, 'military': 1.2, 'shipyard': .8, 'relay': .8, 'forge': .4, 'research': .5},
-    'iron':  {'mining': 1.5, 'refinery': 1.3, 'forge': 1.2, 'ice': 1, 'gas': 1, 'shipyard': .9, 'habitat': .5},
+    'federation':   {'agri': 1.2, 'habitat': 1, 'container-port': 1, 'military': 1.2, 'shipyard': .8, 'relay': .8, 'forge': .4, 'research': .5},
+    'ironhulls':  {'mining': 1.5, 'refinery': 1.3, 'forge': 1.2, 'ice': 1, 'gas': 1, 'shipyard': .9, 'habitat': .5},
     'prism': {'research': 1.6, 'forge': 1, 'relay': 1, 'habitat': .8, 'shipyard': .5},
-    'free':  {'ice': 1, 'gas': 1, 'agri': .8, 'haven': 1.2, 'mining': .8},
-    'indep': {'mining': 1, 'ice': 1, 'gas': 1, 'agri': .8, 'haven': .6, 'habitat': .4},
-    'black': {'haven': 1.6, 'gas': .6, 'ice': .6},
+    'freeflag':  {'ice': 1, 'gas': 1, 'agri': .8, 'haven': 1.2, 'mining': .8},
+    'independent': {'mining': 1, 'ice': 1, 'gas': 1, 'agri': .8, 'haven': .6, 'habitat': .4},
+    'blackhulls': {'haven': 1.6, 'gas': .6, 'ice': .6},
 }
-ONLY = {'haven': {'free', 'indep', 'black'}, 'military': {'fed', 'iron', 'prism'}, 'research': {'fed', 'prism', 'iron'}}
+ONLY = {'haven': {'freeflag', 'independent', 'blackhulls'}, 'military': {'federation', 'ironhulls', 'prism'}, 'research': {'federation', 'prism', 'ironhulls'}}
 NEEDS = {'food': .5, 'water': .4, 'goods': .3, 'medicine': .2, 'fuel': .25}  # what people (and their ships) use, per unit of a system's size
 # what a port makes of a commodity, per unit of its system's size: staples in bulk (a farm world feeds many), finished
 # goods less; and what a port needs of a commodity it uses
@@ -179,8 +180,8 @@ role_of = {c['star']: [r for r in roles if (c['star'], r) in x and S.on(x[c['sta
 
 # ---------- wealth, security, unrest ----------
 SEC = {'inner': 80, 'middle': 60, 'outer': 35}
-SEC_OWNER = {'fed': 10, 'prism': 8, 'iron': 0, 'free': -15, 'indep': -20, 'black': -30}
-UNREST = {'fed': 20, 'prism': 15, 'iron': 35, 'free': 70, 'indep': 45, 'black': 50}
+SEC_OWNER = {'federation': 10, 'prism': 8, 'ironhulls': 0, 'freeflag': -15, 'independent': -20, 'blackhulls': -30}
+UNREST = {'federation': 20, 'prism': 15, 'ironhulls': 35, 'freeflag': 70, 'independent': 45, 'blackhulls': 50}
 mirror = {c['star'] for c in systems if c['region'] == 'mirrorspace'}
 clamp = lambda v: int(max(0, min(100, round(v))))
 worlds = {}
@@ -188,8 +189,8 @@ for c in settled:
     s, o = c['star'], c.get('faction')
     near_glass = any(n in mirror for n in nb[s])
     sec = SEC[c['ring']] + SEC_OWNER.get(o, 0) + (10 if c.get('front') else 0) - (5 if s in border else 0) + rng.uniform(-6, 6)
-    unrest = UNREST.get(o, 30) + (10 if c['ring'] == 'outer' else 0) + (12 if near_glass and o == 'iron' else 0) + rng.uniform(-8, 8)
-    wealth = 20 + 6 * math.log10(pop[s]) + sum(8 for r in role_of[s] if r in ('research', 'shipyard', 'container-port', 'relay')) - (10 if o in ('free', 'indep', 'black') else 0) + rng.uniform(-5, 5)
+    unrest = UNREST.get(o, 30) + (10 if c['ring'] == 'outer' else 0) + (12 if near_glass and o == 'ironhulls' else 0) + rng.uniform(-8, 8)
+    wealth = 20 + 6 * math.log10(pop[s]) + sum(8 for r in role_of[s] if r in ('research', 'shipyard', 'container-port', 'relay')) - (10 if o in ('freeflag', 'independent', 'blackhulls') else 0) + rng.uniform(-5, 5)
     t = tier(pop[s])
     worlds[str(s)] = {'population': int(pop[s]), 'tier': t[0], **({'builtworld': True} if s in built else {}),
                       'roles': role_of[s], 'wealth': clamp(wealth), 'security': clamp(sec), 'unrest': clamp(unrest)}
@@ -199,7 +200,8 @@ for rg, (ex, im) in ident.items():
     nets = {g: S.value(net(here, g)[0]) + net(here, g)[1] for g in goods}
     trade[rg] = {'exports': [g for g in goods if nets[g] >= EDGE], 'imports': [g for g in goods if nets[g] <= -EDGE],
                  'population': int(sum(pop[c['star']] for c in here))}
-out.write_text(json.dumps({'source': 'tools/worlds.py from galaxy.json; keyed by star id', 'regions': trade, 'systems': worlds}, separators=(',', ':')) + '\n')
+# the galaxy these worlds were made from (tools/universe.py): a galaxy rerun shows them stale until this runs again
+out.write_text(json.dumps({'source': 'tools/worlds.py from galaxy.json; keyed by star id', 'galaxy': galaxy_hash(G), 'regions': trade, 'systems': worlds}, separators=(',', ':')) + '\n')
 
 total = sum(pop.values())
 print(f'worlds: {len(worlds)} settled systems, {total / 1e9:,.0f} billion people -> {out.relative_to(root)}')

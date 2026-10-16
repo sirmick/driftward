@@ -200,6 +200,8 @@ The names are in `REGIONS` in `tools/galaxy.py`. The map names each region on it
 * **Cost:** about $0.07 a region with Sonnet 5.5. The Inner Sphere, the Calder March and the Reach are written; the rest are not yet.
 * **A rerun of the galaxy can rename systems the stories mention:** once stories exist, keep the map, or rewrite the stories.
 
+**The universe index** (`tools/universe.py` → `src/galaxy/universe.json`, remade by every build): the galaxy, worlds, stories and region notes merged into the one file the game loads, each system once by star id, with its owner in the system files' vocabulary (`federation`, `ironhulls`, `prism`, `freeflag`, `blackhulls`, `independent`, an alien power, or `none`; the galaxy uses the same faction keys). Schema: `src/schema/universe.schema.json`. Worlds and stories record the hash of the galaxy they were made from (`galaxy_hash`: every system's star, name, region, owner, ring and status, and the lanes' ends), so after a galaxy rerun `npm run check` fails until `tools/worlds.py` and `tools/stories.py` have been run on the new map. It also checks every system file against its index entry. See `docs/data.md`.
+
 The game's debug screen shows all of it: the **Regions** tab (each region's facts, trade, summary and hand-written notes) and the **Planets** tab (every system's people, ports, wealth, security, unrest and story). On the map, double-click a star for its detail.
 
 ## Running it
@@ -211,7 +213,9 @@ python3 tools/galaxy.py --reuse          # keep the systems in galaxy.json; terr
 python3 tools/galaxy.py --relane         # keep the systems and the cached territories; lanes and Drift (minutes)
 python3 tools/galaxy.py --drift-only     # keep everything; regrow the Drift, names and years (seconds)
 python3 tools/galaxy.py --stage select   # stop after a stage: select, lanes (no factions), or factions (default)
-npm run build                            # then rebuild the pages
+python3 tools/worlds.py                  # then the worlds and stories on the new map (npm run check
+python3 tools/stories.py all             #   fails while they were made from another galaxy)
+npm run build                            # then rebuild the pages (and the universe index)
 ```
 
 **The final run, as committed** (`--time 1200`):

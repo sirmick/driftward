@@ -2,13 +2,11 @@
 // The 3D chart of the stars round Sol (src/galaxy/stars.json, from tools/hyg.py): each star a glow in its class's
 // colour, sized by how bright it really is; the galactic plane as a floor of range rings; a line dropped from every
 // star near the focus to the floor, so its height reads; and names drawn on a 2D canvas over it. The camera orbits a
-// focus point. With the game's systems (galaxy.game, from tools/galaxy.py) it shows those over the faint catalogue:
-// inhabited systems in full, dead ones dimmed, and the jump lanes coloured by who holds their ends. Shared by the map
-// page and, later, the game and the intro, so it takes its canvas, the graphics kit (makeGfx) and the catalogue, and
-// drives nothing else. Needs shaders.js and stars.js in scope.
-// the factions' colours (galaxy.json's faction keys), linear RGB: the Federation blue, the Ironhulls rust, Prism
-// violet, Freeflag gold, the Blackhull havens brown, the Independents slate
-const FACTION_COLOURS = { fed: [.3, .5, 1], iron: [1, .45, .15], prism: [.7, .4, 1], free: [1, .8, .2], black: [.6, .38, .28], indep: [.55, .62, .7] };
+// focus point. With the game's systems (the universe index, src/galaxy/universe.json) it shows those over the faint
+// catalogue: inhabited systems in full, dead ones dimmed, and the jump lanes coloured by who holds their ends. Shared
+// by the map page and the game's debug screen, so it takes its canvas, the graphics kit (makeGfx) and its data
+// ({ catalogue: stars.json, universe }, from src/data.js), and drives nothing else. Needs shaders.js and stars.js in
+// scope. The owners' colours are the index's (its factions: linear RGB).
 // how each star class looks on the map: its colour (saturated, so a red dwarf is red), brightness, size in pixels and
 // shape (the star shader's aShape: 0 a star, 1 a giant's wide halo, 2 a white dwarf's hard point, 3 a pulsar's
 // beams, 4 a black hole)
@@ -26,21 +24,23 @@ const STAR_LOOKS = {
   'black-hole':  { col: [1, .55, .2], k: 1, size: 18, shape: 4 },
   quasar:        { col: [.8, .7, 1], k: 1.4, size: 22, shape: 4 },
 };
-function makeStarMap(G, canvas, labels, galaxy) {
+function makeStarMap(G, canvas, labels, data) {
   const { gl } = G;
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const norm = a => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
-  // the catalogue's stars, and the Drift's generated ones (galaxy.json's generated: the deep Drift, past the catalogue)
-  const game = galaxy.game || { systems: [], lanes: [] };
-  const stars = galaxy.stars.concat(game.generated || []), N = stars.length;
+  // the catalogue's stars, and the Drift's generated ones (the index's generated systems: the deep Drift, past the
+  // catalogue, named by number)
+  const U = data.universe || { systems: [], lanes: [], factions: {}, regions: {} }, FACTIONS = U.factions;
+  const generated = U.systems.filter(c => c.generated).map(c => ({ id: c.id, name: c.name, pos: c.pos, ly: Math.hypot(...c.pos), class: c.class, absmag: c.absmag, catalog: true, generated: true }));
+  const stars = data.catalogue.stars.concat(generated), N = stars.length;
   const P = { star: G.compile(MAP_STAR_VS, MAP_STAR_FS, { aCenter: 1, aCol: 2, aSize: 3, aFlag: 4, aMark: 5, aShape: 6 }), line: G.compile(MAP_LINE_VS, MAP_LINE_FS, { aCol: 1, aFade: 2 }),
     zone: G.compile(MAP_ZONE_VS, MAP_ZONE_FS, { aCenter: 1, aCol: 2, aSize: 3 }) };
-  const RING = 10, OUTER = Math.max(galaxy.range || 80, Math.ceil(Math.max(0, ...(game.generated || []).map(s => s.ly)) / RING) * RING);
+  const RING = 10, OUTER = Math.max(data.catalogue.range || 80, Math.ceil(Math.max(0, ...generated.map(s => s.ly)) / RING) * RING);
   // the game's systems by star index (null for a star that is not one), and its lanes by star index
   const index = new Map(stars.map((s, i) => [s.id, i]));
-  const sys = new Array(N).fill(null), lanes = game.lanes.map(l => ({ a: index.get(l.a), b: index.get(l.b), ly: l.ly, days: l.days, drift: !!l.drift, border: !!l.border }));
-  game.systems.forEach(c => { sys[index.get(c.star)] = c; });
+  const sys = new Array(N).fill(null), lanes = U.lanes.map(l => ({ a: index.get(l.a), b: index.get(l.b), ly: l.ly, days: l.days, drift: !!l.drift, border: !!l.border }));
+  U.systems.forEach(c => { sys[index.get(c.id)] = c; });
   const lanesOf = i => lanes.filter(l => l.a === i || l.b === i).map(l => ({ to: l.a === i ? l.b : l.a, ly: l.ly, days: l.days }));
   // when each system is known (its .known, for the map's year): a settled one from its settling, a Bloom world from
   // its charting, the Shadow's from when it was seen, Sol always; any other (dead, the Drift) from its nearest known
@@ -68,10 +68,11 @@ function makeStarMap(G, canvas, labels, galaxy) {
     return { col: T.col.map(v => v * T.k), size: T.size * Math.max(.8, Math.min(1.35, 1 + .06 * lum)), shape: T.shape };
   };
   const looks = stars.map((s, i) => look(sys[i] && sys[i].class ? sys[i] : s));
-  // who a system counts toward (its faction, or the Bloom, the Shadow or the Glass), and its colour
-  const REGION_COLOURS = { bloom: [.2, 1, .35], shadow: [1, .15, .1], glass: [.6, .9, 1] };
-  const regionOf = c => c && (c.faction || (REGION_COLOURS[c.group] ? c.group : null));
-  const regionCol = k => FACTION_COLOURS[k] || REGION_COLOURS[k];
+  // who a system counts toward (its owner: a faction, or the Bloom, the Shadow or the Glass), and its colour; and the
+  // human faction holding it, if one does
+  const regionOf = c => c && c.owner !== 'none' ? c.owner : null;
+  const regionCol = k => FACTIONS[k] && FACTIONS[k].colour;
+  const factionOf = c => c && FACTIONS[c.owner] && !FACTIONS[c.owner].alien ? c.owner : null;
   // occupied: lived in (a settled human system, a living Bloom world, one the Shadow holds, one gone glass)
   const occupied = c => c && c.status !== 'dead';
 
@@ -138,7 +139,7 @@ function makeStarMap(G, canvas, labels, galaxy) {
     if (g.includes('drift')) return [[.55, .6, .7], (g[0] === g[1] ? .22 : .3) * (1 - .1 * Math.max(A.depth || 1, B.depth || 1))];
     if (l.border) return [[1, .85, .6], .5]; // a choke point: a lane across a border, out of a faction's territory
     const live = (A.status === 'inhabited') + (B.status === 'inhabited');
-    if (A.faction && A.faction === B.faction) return [FACTION_COLOURS[A.faction], [.2, .32, .5][live]];
+    if (factionOf(A) && A.owner === B.owner) return [regionCol(A.owner), [.2, .32, .5][live]];
     return [[.42, .62, 1], [.1, .16, .26][live]];
   };
   // the lanes and the territory clouds follow what is shown (the range, the filters, the year): rebuilt when it changes
@@ -203,7 +204,6 @@ function makeStarMap(G, canvas, labels, galaxy) {
     });
     pieces.sort((a, b) => b.size - a.size);
   }
-  const REGION_NAMES = { ...(game.factions || {}), bloom: 'The Bloom', shadow: 'The Shadow', glass: 'The Glass' };
 
   // ---------- camera: orbit a focus point; yaw round galactic north, pitch above the plane ----------
   const cam = { focus: [0, 0, 0], yaw: -2.2, pitch: .5, dist: 38, fov: 50 * Math.PI / 180 };
@@ -306,9 +306,9 @@ function makeStarMap(G, canvas, labels, galaxy) {
     drawLabels();
   }
 
-  // the named regions (galaxy.json's regions: each system's .region), each named at the middle of its shown systems in
+  // the named regions (the index's regions: each system's .region), each named at the middle of its shown systems in
   // the colour of who holds most of it; worked out again when what is shown changes
-  const REGION_TITLES = game.regions || {};
+  const REGION_TITLES = U.regions;
   let regionLabels = [];
   function placeRegions(on) {
     // each region's shown systems, in the pieces its lanes join (a scattered region, like the Margins or the Drift,
@@ -328,7 +328,7 @@ function makeStarMap(G, canvas, labels, galaxy) {
       const mid = [0, 0, 0], who = {};
       part.forEach(j => { stars[j].pos.forEach((v, d) => { mid[d] += v / part.length; }); const k = regionOf(sys[j]) || 'drift'; who[k] = (who[k] || 0) + 1; });
       const k = Object.entries(who).sort((x, y) => y[1] - x[1])[0][0], col = regionCol(k) || [.75, .8, .9];
-      regionLabels.push({ key: c.region, text: (REGION_TITLES[c.region] || c.region).toUpperCase(), mid, n: part.length,
+      regionLabels.push({ key: c.region, text: ((REGION_TITLES[c.region] || {}).name || c.region).toUpperCase(), mid, n: part.length,
         col: `rgba(${col.map(v => Math.round(150 + 105 * Math.pow(v, 1 / 2.2))).join(',')},.9)` });
     });
     // each region once, on its biggest piece, and again on any other piece of eight or more; the Drift where its
@@ -361,7 +361,7 @@ function makeStarMap(G, canvas, labels, galaxy) {
     else if (st.game && st.regions) for (const pc of pieces) {
       if ((pc.size < 2 && pc.members.length < 4) || pc.members.every(i => flags[i * 4 + 2])) continue;
       const c = regionCol(pc.region).map(v => Math.round(140 + 115 * Math.pow(v, 1 / 2.2)));
-      put(REGION_NAMES[pc.region].toUpperCase(), pc.mid, `600 ${pc.size >= 8 ? 13 : 11}px "Saira Semi Condensed", sans-serif`, `rgba(${c},.8)`, -30, 0, false);
+      put(FACTIONS[pc.region].name.toUpperCase(), pc.mid, `600 ${pc.size >= 8 ? 13 : 11}px "Saira Semi Condensed", sans-serif`, `rgba(${c},.8)`, -30, 0, false);
     }
     const cand = [];
     for (let i = 0; i < N; i++) {
@@ -373,7 +373,7 @@ function makeStarMap(G, canvas, labels, galaxy) {
     }
     cand.sort((a, b) => a[1] - b[1]);
     for (const [i, , minor] of cand.slice(0, 70)) {
-      const fc = st.game && sys[i].faction && sys[i].status === 'inhabited' && FACTION_COLOURS[sys[i].faction];
+      const fc = st.game && factionOf(sys[i]) && sys[i].status === 'inhabited' && regionCol(sys[i].owner);
       const col = fc ? `rgba(${fc.map(v => Math.round(160 + 95 * Math.pow(v, 1 / 2.2))).join(',')},.95)` : minor ? 'rgba(150,165,185,.75)' : 'rgba(205,215,228,.92)';
       put(nameOf(i), stars[i].pos, (minor ? '400 10.5px' : '500 11.5px') + ' "IBM Plex Sans", sans-serif', col, 9, 4, false);
     }
@@ -403,5 +403,5 @@ function makeStarMap(G, canvas, labels, galaxy) {
   function zoom(f) { goal.dist = Math.max(2, Math.min(260, (goal.dist || cam.dist) * f)); }
   function set(k, v) { st[k] = v; if (k === 'range' || k === 'filter' || k === 'game') { if (st.game && st.sel >= 0 && !sys[st.sel]) st.sel = -1; setFlags(); } }
 
-  return { canvas, stars, sys, lanes, pieces, outer: OUTER, lanesOf, nameOf, cam, st, draw, tick, pick, project, select, hover, focusOn, orbit, pan, zoom, set, distLy };
+  return { canvas, universe: U, catalogue: data.catalogue, stars, sys, lanes, pieces, outer: OUTER, factionOf, lanesOf, nameOf, cam, st, draw, tick, pick, project, select, hover, focusOn, orbit, pan, zoom, set, distLy };
 }

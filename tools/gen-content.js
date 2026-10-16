@@ -148,7 +148,7 @@ function bodyFacts(b) {
     surface: b.kind !== 'station' && b.look ? b.look.surface : undefined, looks: bodyLooks(b) || undefined,
     cityLights: b.kind !== 'station' ? !!(b.look && b.look.cityLights) : undefined, station: b.station ? STATION_WORDS[b.station.archetype] : undefined,
     port: b.port ? {
-      name: b.port.name, role: b.port.role, population: b.port.population, services: b.port.services,
+      name: b.port.name, role: b.port.role, population: b.port.population, builtworld: b.port.builtworld || undefined, services: b.port.services,
       description: b.port.description, market: marketOf(b.port),
       routes: Object.fromEntries(others.map((o, i) => [o.port.name, i === 0 ? 'nearest' : i === others.length - 1 ? 'farthest' : 'between']))
     } : undefined
@@ -331,12 +331,13 @@ const factionArt = () => FACTION_ART[SYS.owner] || '';
 const PORTRAIT_STYLE = 'A character portrait in a painterly fantasy-realism style, the classic CRPG portrait look: head and shoulders, three-quarter view, looking at the viewer, dramatic soft key light, a dark, softly painted background. No text, lettering, borders or frames.';
 const bibleText = lore => { const a = lore.artBible; return `Art bible for the ${SYS.name} system. Palette: ${names(a.palette)}. Lighting: ${a.lighting} Architecture: ${a.architecture} Materials: ${a.materials} Mood: ${a.mood} Design language: ${a.design}`; };
 // how busy a port looks, by its population tier: a world of billions is a city to the horizon, not a field and a few towers
-const CROWD = { outpost: ' A small, sparse outpost.', colony: ' A working settlement of a few million.',
+const CROWD = { outwatch: ' A lonely outwatch: a few thousand people at most, and the dark all round.', outpost: ' A small, sparse outpost.', colony: ' A working settlement of a few million.',
   town: ' A busy place of tens or hundreds of millions: built up all round the port, with ships coming and going.',
   world: ' One of the most crowded places in the region, home to billions: city to the horizon, towers and lights everywhere, the sky busy with ships.' };
+const BUILTWORLD_CROWD = ' A Builtworld: the whole planet built over into one city of some ten billion people, no open ground left anywhere, towers to the horizon and the sky thick with ships.';
 function vistaPrompt(lore, b, ref, cross) {
   const p = lore.ports.find(q => q.body === b.id), L = b.look || {}, parent = b.parent && b.parent !== 'star' ? byId(b.parent) : null;
-  const role = b.port.role.replace('-', ' '), crowd = CROWD[b.port.population] || '';
+  const role = b.port.role.replace('-', ' '), crowd = b.port.builtworld ? BUILTWORLD_CROWD : CROWD[b.port.population] || '';
   const where = b.kind === 'station'
     ? `${b.port.name}, the ${role} station of the system, ${STATION_WORDS[b.station.archetype]} in open space between the worlds.${crowd}`
     : `${b.port.name}, the ${role} port of ${b.name}${parent ? `, a moon of ${parent.name}` : ''}.${crowd} ${b.name} is ${bodyLooks(b)}.`;

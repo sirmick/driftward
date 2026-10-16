@@ -1,6 +1,7 @@
 {
   "description": "Each port population tier's weight in the traffic models: the gravity model between ports (local traffic) and how through traffic picks its ports. Who flies is each system's traffic mix (the system file); rates, shares, speeds and distances are core params (core/src/world.rs). environs: the traffic of each environmental station archetype: launches per minute per station (half are ships leaving, half arriving to dock), the share of trips to or from a jump zone (the rest pair with a port, by population), and the mix: lines with a share and weights by class. A line written own.<line> is the station owner's faction's line.",
   "population": {
+    "outwatch": 0.3,
     "outpost": 1,
     "colony": 3,
     "town": 10,
