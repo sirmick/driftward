@@ -45,6 +45,13 @@
         "outer"
       ]
     },
+    "region": {
+      "description": "The region the system belongs to: notes on it and its neighbours are src/lore/regions/<region>.md, which the lore tool sends with the facts.",
+      "type": "string",
+      "pattern": "^[a-z0-9-]*$",
+      "maxLength": 40,
+      "default": ""
+    },
     "description": {
       "type": "string",
       "maxLength": 800,

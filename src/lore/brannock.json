@@ -1,46 +1,49 @@
 {
   "system": "brannock",
   "history": [
-    "Brannock was settled by miners who came for Cinder and stayed because the ore never ran out. The first crews lived in the hulls of the ships that brought them. When the hulls wore out, the crews bolted them to rock and called the result a habitat. Most of the hab rings in the system are still those first hulls, patched so often that nobody can say what is original.",
-    "The rest followed the ore. Tugs hauled it out to Tallow, a grey moon of the gas giant Vast, and a refinery grew there. A yard went up in the girders of Kettle to turn the metal into ships. Halde, with its cold coast and its clouds, became the place where people raised children and spent their wages. It was the only world in the system where a person could walk outside without a suit or a sunscreen.",
-    "The Ironhulls keep Brannock as a working system and have never made it much more. The Federation's navy passes through and takes its cut in inspections. Blackhulls drink in the docks and are not asked about their cargo. Prism's agents come for contracts and leave without friends. Nobody here calls this a golden age, but the lifts still run."
+    "Brannock was settled early in the Rush by belt crews who followed the ore sunk in Cinder, the scorched first world, and then found that Halde, the cold wet third world, would hold more people than any rock could. The crews built the way they always had: a hull welded to a hull, a ring bolted to whatever was solid. Tallow was cut into a grey moon of Vast to refine the ore, and Kettle Yard went up as a cradle of girders to turn the metal into ships. Nobody drew a plan. The system grew where the next weld would hold, and it shows.",
+    "When the Federation turned from opening the frontier to taxing it, Brannock sold its ore at inner-ring prices and watched the money go elsewhere. Its crews were among those who shut the lanes in the Charter Strikes, and when the Ironhull Compact came out of that, the Compact put its local office on Halde. Brannock has been the March's Ironhull hub ever since. The navy inspects every ore hauler that leaves, and Brannock has never forgiven it. Blackhulls drink in the docks, and nobody asks them to leave.",
+    "The last years have been heavy. Since 2524 the families out of Varrow have come through Ostry and settled on Halde, in emptied towers and borrowed habs, and they have told nobody much about what they saw. The navy wants Kettle Yard's refitted haulers for the Shadow front, and the yard is slow to deliver. The wider Compact is angry at the silence over Varrow and Hesk. Brannock shows it the way it shows everything, by getting on with the work and saying what it thinks about it."
   ],
-  "culture": "People in Brannock measure each other by what they can fix. A good welder gets a drink bought for her, and a clean-handed visitor gets a look. They speak shortly, swear mildly, and tease newcomers with the old names, rusters and rockheads, until the newcomer answers in kind. Then the teasing stops. Outsiders are tolerated if they pay, and trusted if they turn up with the right part at the right time. Nothing is thrown away. A broken thing is a future patch, and a dead ship is a shopping list.",
+  "culture": "Brannock talks flat and fast, and trusts hands over words. Ask anyone here whether they have ever fixed a hull, a lift or a filter, because the answer sorts you. They call themselves Ironhulls, or rusters among friends, and take rockhead as an insult only from a stranger. The Federation is the navy, the tin, the inspectors, and is dealt with politely and not forgiven. Prism is the lender, spoken of quietly because half the crews owe it. Halde people are a little soft in Cinder's eyes, and Cinder people are a little mad in Halde's. Outsiders get a fair price and a hard look. Varrow is not a subject anyone raises at table, but every table has a place laid for it.",
   "artBible": {
     "palette": [
-      "#c8661e",
-      "#4a3a33",
-      "#7a5a46",
-      "#5e5953",
-      "#1d4f7a",
-      "#d8cba8"
+      "#c4631f",
+      "#7a3b1c",
+      "#3b2a22",
+      "#8d8a86",
+      "#d9a35c",
+      "#6d8fa8"
     ],
-    "lighting": "Low orange starlight from a dim sun, and sodium lamps that turn every shadow brown. Welding arcs flash blue-white in the gloom. Refinery flares throw moving orange light across grey surfaces.",
-    "architecture": "Modular boxes and drums welded to girders or bolted to bare rock. Hab rings are clamped onto cliffs and asteroids. Walkways are added wherever someone needed one, and ladders and cable runs cross every wall.",
-    "materials": "Rust-streaked plate, weld seams left visible, riveted patches in mismatched greys and browns. Cable, chain, scored steel, stained concrete, and cracked sealant gone yellow.",
-    "mood": "Tired, practical, and warm at the edges. It is a place where hard work is done and nobody is impressed by it.",
-    "design": "Ironhull design is welded, modular, rusted and patched. Every structure has been repaired many times, and the repairs are never hidden. Sodium-lamp orange marks everything that is lit, and hab rings are bolted straight onto rock."
+    "lighting": "Low orange light from the star, and the harder sodium-lamp orange of work lamps and refinery flares, with deep shadow and black sky wherever there is no air. Halde is the exception: cold pale daylight under cloud, warm lit windows at dusk.",
+    "architecture": "Modular and welded. Arcologies stacked up cold valleys, tunnel towns cut into rock, refinery towers and dome roofs, and a yard of open girders. Hab rings are bolted straight onto stone, and nothing is ever finished, only extended.",
+    "materials": "Rusted plate, weld seams, scorched steel, patch panels in mismatched paint, ceramic lining, cable bundles, soot and slag, sodium glass, hand-stencilled numbers.",
+    "mood": "Hard, tired and stubborn. Working people who are proud of what they build and tired of being taxed for it. Dry humour, grime and a thread of grief for Varrow.",
+    "design": "Ironhull design: welded, modular, rusted and patched, sodium-lamp orange, hab rings bolted to rock. Everything is repaired rather than replaced. Tools and clothes carry visible mends, and ownership is marked with stencil, tag or weld."
   },
   "ports": [
     {
       "body": "cinder",
       "description": [
-        "Cinder Deep is a mine and nothing else. The planet sits too close to its star, so the day side cooks, and the crews live and work on the night side. The shafts follow the ore into the rock, and the tunnels bend with the seams. They were never drawn up, only dug. The hab modules sit in the tunnel mouths like barnacles, their plating scorched at one end and frosted at the other.",
-        "The ore goes up the lift to waiting tugs, and the tugs bring back what the crews cannot make. Food, water and spare parts come down, and so do consumer goods and medicine. Anyone who arrives with a hold full of those is welcome. Anyone who wants ore will find it cheap here, with no one making a fuss about it.",
-        "The air smells of hot dust and machine oil. Nobody here is sentimental about the place, but they do not leave it either."
+        "Cinder Deep is a set of shafts sunk into a world that sits too close to its star. The day side cooks, so nobody lives on it. The crews live and work on the night side, in tunnel towns that follow the ore, and when a seam runs out the town moves. Lifts carry the ore up to waiting tugs. Food, water and spare parts come down, and the people here pay dearly for every one of them.",
+        "The towns are hot rock, cable and orange lamps. Walls are shored with salvaged plate, and ventilation hums and rattles in the background of every conversation. A glittering haze of orbital debris rings the world and catches the starlight at dawn. Higher up, the rust-red rock of Cinder Tailings circles in a thick cloud that tug pilots respect and landlubbers have never seen up close."
       ],
       "places": [
         {
-          "name": "The Lift Head",
-          "text": "A gantry of black girders where the ore cars unload onto the tugs. It is the loudest place on the planet and the best place to find a hauler who needs a hand."
+          "name": "Shaft Four Head",
+          "text": "The wide mouth of the busiest shaft, with a lift cage, a tag board for each shift, and a bench where families wait. The board is checked more often than the news."
         },
         {
-          "name": "Shaft Nine Canteen",
-          "text": "A long low room cut into the rock, with a cooling duct that rattles overhead. The coffee is bad, the water is rationed, and there is always someone asleep at a table."
+          "name": "The Cold Room",
+          "text": "A bar cut into a cooled side tunnel, the only place in the town where the air is not warm. Drinks come in tin cups, and nobody lingers over them."
         },
         {
-          "name": "Spares Cage",
-          "text": "A wire-fronted store of salvaged parts, run by crews who will happily take your old pump in exchange for a worse one."
+          "name": "Lift Yard",
+          "text": "Where ore goes up to the tugs. Sparks, noise, and a rail where off-shift crews watch the loads go and gamble on which will stick."
+        },
+        {
+          "name": "Orderly Row",
+          "text": "A short tunnel of clinic rooms with orange doors. It is always busy, and it is always short of medicine."
         }
       ],
       "people": [
@@ -48,53 +51,57 @@
           "id": "marit-vosk",
           "name": "Marit Vosk",
           "role": "shift boss, Shaft Four",
-          "text": "She has worked the night-side seams since she was a girl and treats the dark as her own. She remembers every crew that left and every one that did not come back.",
-          "line": "If you've brought water, sit down and I'll buy. If you haven't, sit down anyway, and you can explain yourself.",
+          "text": "Marit has run Shaft Four longer than most of her crew have been alive. She wears her dead brother's steel tag, welded from a bracket, and does not discuss it. She knows where every seam turns and who has dust in their lungs.",
+          "line": "Sit if you're buying. Ore's cheap down here, everything else is dear, and I'm tired of telling people that's a coincidence.",
           "look": "A woman in her fifties, broad and weathered, with a grey crop and soot worked into her knuckles. She wears a patched orange coverall with a heat-scorched collar and a lamp strapped to her forehead. A welded steel tag hangs from a bootlace around her neck."
         },
         {
           "id": "dennick-ashe",
           "name": "Dennick Ashe",
           "role": "tug pilot",
-          "text": "He flies ore from the lift head to the refinery and back. He knows the routes better than the charts do, and trusts neither.",
-          "line": "Cinder's ore is the cheapest thing in the system. The food I bring down is the dearest, and nobody's complained yet.",
+          "text": "Dennick hauls ore from the lifts up through the Tailings to the forges and the yards beyond. He claims he can read a rock cloud like a face. The burn was a lift accident, and he tells it differently every time.",
+          "line": "The Tailings are thick, but they're honest. You hit a rock, you know why. Unlike the people at Calder, when they hold a cargo.",
           "look": "A lean man in his thirties with a sunburned neck and sharp eyes, in a flight jacket with the sleeves cut off. A long burn scar runs up his left forearm. He keeps a cold pipe in his teeth."
         },
         {
           "id": "oyelaran-pike",
           "name": "Oyelaran Pike",
           "role": "clinic orderly",
-          "text": "He runs the only clinic on the night side, with a cabinet of medicine that is never quite full. He asks every pilot who comes in what they are carrying.",
-          "line": "Medicine, if you've got it. Or water. Or a kind word, but I'd rather have the medicine.",
+          "text": "Pike has patched Cinder's lungs and burns since before the current shaft bosses were hired. He came here late in life from the Halde side, and he stayed because nobody else would. He is soft-spoken and exhausted, and there is no one to relieve him.",
+          "line": "Dust, heat and not enough medicine. That's the whole chart. If you're carrying any, don't tell me. Tell the front desk, before I start hoping.",
           "look": "A tall, stooped man in his sixties with dark skin, grey stubble and tired kind eyes. He wears a stained white apron over an orange coverall and has reading glasses pushed up into his hair."
         }
       ],
       "rumors": [
-        "They say the Blackhulls drop cargo at the far shafts when the Federation patrols come near, and nobody asks who collects it.",
-        "A survey crew went down a dead shaft last year and came up quiet. Now the shaft is welded shut and nobody will say why.",
-        "Prism sent a clean-suited man to look at the ore seams. He left in a hurry, and the crews are still arguing about why."
+        "Tug crews swear a seam in the Tailings gives off a hum at the edge of hearing. Old hands put it down to rock settling, and new hands stop talking about it.",
+        "A shift boss on the far side says her crew found a sealed cut that no survey ever recorded, with weld marks that were not Ironhull. She had it filled in, and the filling was not neat.",
+        "Families out of Varrow arrive on Halde with bundles of Cinder-made tools. They say their old shafts are still lit, though nobody is down there."
       ],
-      "vista": "A night-side field of black rock under a thin amber haze. Welded orange-lit hab modules cling to the tunnel mouths in the foreground, scorched at one end and frosted at the other. Ore cars run on rails toward a tall girder lift that rises into a dark sky. A faint orange glow along the horizon marks the day side and the unseen star."
+      "vista": "Cinder at dawn, on the terminator where the night side ends, from the landing field: a flat plain of dark brown dust and rust-brown rock, tan ridges at the edge, and the mouth of a shaft lit sodium orange with a lift tower and sagging cables. A thin burnt orange haze lies over everything. Above, a glittering haze of orbital debris crosses the black sky like a scatter of embers, and low on the horizon the orange star is just rising over the crater rim."
     },
     {
       "body": "halde",
       "description": [
-        "Halde Landing is the only real town in Brannock. Terraces of habitat blocks step down a cold coast, each one welded to the last and painted whatever colour was left over. The landing field is cut into the cliffs above them. Under low cloud and a pale orange sun, the sea below is a hard blue, and the beaches are grey and cold.",
-        "Most of the system's people live here, and most of its money changes hands in the market halls beside the field. Consumer goods are cheap in them and food is dear. The halls sell everything the mines and the yards cannot make: cloth, crockery, music, toys. The stall holders will tell you with a straight face that all of it was made locally.",
-        "Evenings on the terraces are loud. Shift crews come in from the other worlds, the bars fill, and the lamps come on in sodium orange, one block after another down the cliff."
+        "Halde is Brannock's world and nearly everyone's home: navy-blue seas, olive lowlands and cream highlands snowed on the peaks, all under drifting white cloud. Along the cold coast and up every river valley, arcologies stand stacked and ledged, joined by walkways and cables, with the cloud sitting low over the towers and the lights never out. The sky is a pale, cool blue, and at dusk the windows warm up one by one. Storms roll in off the sea with lightning in them.",
+        "Halde Landing is the field above the coast, and it is a city of its own: ground crews, customs houses, tea stalls and tool vendors, lodging for crews between runs. Most of the system's money changes hands in the market halls beside it, loud with factors and hauliers. Consumer goods come cheap here, and food is dear. Federation-flagged rings and an Ironhull container port turn above, and the Compact's local office sits in a grey block near the gate.",
+        "Halde has taken in the people from Varrow, millions of them, in emptied towers and borrowed habs. The new families queue at the clinics and the halls, and nobody is rude to them. Nobody asks them questions either."
       ],
       "places": [
         {
           "name": "The Market Halls",
-          "text": "Long welded sheds beside the field, stacked with goods and crowded with bargaining. The roof leaks in three places and everyone knows which."
+          "text": "A row of long iron-roofed halls beside the field, loud from first lamp to last. Factors shout, tablets pass hands, and a lot of the system's business is done with a nod."
         },
         {
-          "name": "Cliff Stairs",
-          "text": "A zigzag of steel steps between the landing field and the lowest terrace. Locals climb them without noticing. Visitors stop halfway."
+          "name": "Compact Office",
+          "text": "The Ironhull Compact's local offices, a plain grey block with a flag nobody has repainted in years. The queue outside is long and mostly patient."
         },
         {
-          "name": "The Cold Coast Bar",
-          "text": "A long room bolted to the cliff edge, with a window that looks out over the grey sea. It is full from the end of the day shift until very late."
+          "name": "Borrowed Tower",
+          "text": "An emptied residential tower where Varrow families have been housed, with laundry on every balcony and names chalked beside the doors."
+        },
+        {
+          "name": "The Long Quay",
+          "text": "Landing-field dockside where haulers wait for inspection. The Federation holds the far end, and the Ironhulls the near, and the two sides do not mix."
         }
       ],
       "people": [
@@ -102,53 +109,57 @@
           "id": "ines-calloway",
           "name": "Ines Calloway",
           "role": "market hall factor",
-          "text": "She buys and sells for half the stalls in the halls. She says she is retired, and nobody believes her.",
-          "line": "Food's dear this season and goods are cheap. Funny how it's always the other way round for the people who buy.",
+          "text": "Ines brokers cargo and gossip in equal measure from a stall at the foot of the third hall. She will find you a buyer, a bunk or a cousin. She likes to say she has never lied, only waited to be asked.",
+          "line": "Consumer goods go cheap here, love, and food's dear, so the sums are easy. Sit down, I'll find you something that makes them harder.",
           "look": "A woman in her forties, short and round, with bright eyes, dark curls tied in a scarf, and rings on every finger. She wears a quilted orange jacket patched at the elbows. A pencil is always behind her ear."
         },
         {
           "id": "tobiah-rune",
           "name": "Tobiah Rune",
           "role": "dock inspector",
-          "text": "He checks cargo on the field for the town council. He is honest, which makes him rare, and tired, which makes him polite.",
-          "line": "I don't care what you carry, as long as it's what the manifest says it is. That's the whole job.",
+          "text": "Tobiah works for the Compact, not the navy, and is careful to say so. He inspects hulls and papers on the Ironhull side of the quay and tries to keep the Federation's inspectors from finding more than they should. He is tired and scrupulously fair.",
+          "line": "Your papers will be read twice, once by me and once by them. I'd rather you were boring for both of us. It's quicker.",
           "look": "A man in his late fifties, thin and stooped, with a grey moustache and a weathered, careful face. He wears a council-issue coat in faded rust with a clipboard strapped to the forearm."
         },
         {
           "id": "wren-adeyemi",
           "name": "Wren Adeyemi",
           "role": "ex-Freeflag deckhand",
-          "text": "She left a rebel ship under circumstances she describes only as 'a disagreement about the food.' She now drinks quietly and listens a lot.",
-          "line": "I've seen what the Federation does to a quiet system. Brannock's quiet. Enjoy it.",
+          "text": "Wren served on a converted freighter under a painted flag and came to Halde when the ship was lost, or so she says. She does not talk about Tarrow, though she watches the news for it. The cloth at her wrist is from her old ship's flag.",
+          "line": "I don't fly for anyone now. Ask me about the outer ring and I'll tell you it's loud. Ask me about Varrow and I'll buy you a drink.",
           "look": "A woman in her late twenties, wiry, with close-cropped hair dyed a faded green and a sharp, watchful face. She wears a salvaged flight vest over a plain shirt. A torn strip of dark cloth is knotted around her wrist."
         }
       ],
       "rumors": [
-        "The Federation navy wants a permanent post on Halde. The council keeps losing the paperwork.",
-        "A trader swears he saw a Glass relay beacon blinking out past the gas giant. Nobody else has.",
-        "Someone in the market halls is selling goods with no stamp on them. The council pretends not to see it."
+        "Navy inspectors are being sent outward faster than they can be replaced. The ones left on the quay are young, and in a hurry to be somewhere else.",
+        "Somebody on the Varrow side keeps getting messages on their old home terminal. They all say the same thing: that everything is fine.",
+        "Wren's old crew is meant to have a friend in the Compact office. Nobody will say which desk."
       ],
-      "vista": "A landing field cut into pale cliffs, its pad lights glowing orange against a cloudy sky of blue-grey and low gold. Terraces of welded habitat blocks step down toward a cold dark-blue sea, their lamps just coming on. The market halls are long rusted sheds at the field's edge. A slow orange sun sits low behind the cloud."
+      "vista": "Halde Landing seen from the field at dusk: a broad apron of wet grey plating with haulers on cradles and sodium lamps coming on. Beyond the market halls the city runs to the horizon: arcologies by the thousand climb the cold coast and every valley behind it, ledge on ledge, windows lit warm, cloud low across their tops, traffic streaming between them. To the left the navy-blue sea meets olive lowland, and above everything the pale sky blue deepens toward evening, with a spark of lightning far out over the water."
     },
     {
       "body": "tallow",
       "description": [
-        "Tallow is a small grey moon of Vast, and almost everything on it is a refinery. Tall towers burn off their waste in orange flares, and Vast hangs overhead, huge and banded, adding its own warm light. The domes are patched and re-patched, and the streets between them run with condensation. The light never quite gets to grey.",
-        "Ore from Cinder comes in raw and leaves as metal, and the air in the dome tastes of it. Metals and chemicals are cheap here, and everything the refiners need to keep working is dear: ore, water, food. The crews have a habit of tallying what each pilot brings in without saying it aloud.",
-        "It is a small colony, close-knit and short-tempered. The work is hot, loud and dull, and the people accept that. Visitors are fine so long as they do not stand in the way of a ladle."
+        "Tallow Works is a refinery dome on a small grey moon of Vast. Towers throw flame at the black sky and light the dust orange. Vast hangs overhead, banded tan and rust brown, with lightning flickering on its night side. Ore comes in raw from Cinder and goes out as metal, and the air in the dome tastes of it: hot iron, sulphur and ozone, in every cup of tea.",
+        "The town runs on shifts and furnaces, with narrow streets between processing halls, stairwells bolted to the outside of towers, and a market where the people pay dear for ore, water and food. Metals and chemicals are cheap here, which everyone remarks on and no one gets rich from. Rings of debris glitter around the moon, and the refinery stations hang in Vast's orbit like lamps.",
+        "Tallow is quieter than Halde and angrier than Cinder. The people who work the towers have been breathing slag for a generation and have strong views about the Federation's inspections, which slow the ore going out and the water coming in."
       ],
       "places": [
         {
-          "name": "The Casting Floor",
-          "text": "A vast shed where molten metal is poured into moulds. It is hot and deafening, and the whole colony gathers to watch when the big pours begin."
+          "name": "Tower Row",
+          "text": "The main street between the oldest refinery towers, where every wall is warm and every doorway has a soot line. Shift horns carry from one end to the other."
         },
         {
-          "name": "Flare Street",
-          "text": "The main way through the dome, lit all night by the orange of the burn-offs. Stalls selling hot food and bad coffee line both sides."
+          "name": "The Assay Hall",
+          "text": "A glass-fronted workshop where chemists test what comes off the furnaces. It is the cleanest room on the moon and the only one with a door that shuts."
         },
         {
-          "name": "Vast Watch",
-          "text": "A patched observation blister on the dome's top, where off-shift workers sit and look at the gas giant. Someone has painted a small arrow on the floor: 'You are here.'"
+          "name": "Flare Stairs",
+          "text": "A long iron stair up the side of the dome, where off-shift crews watch the flares against Vast. Someone has painted a rule on the bottom step: no spitting."
+        },
+        {
+          "name": "The Slag Tap",
+          "text": "A bar built into an old cooling tank, with a ring of benches round a heated floor. Foremen drink here, and so do the people who owe them."
         }
       ],
       "people": [
@@ -156,45 +167,49 @@
           "id": "hollis-brandt",
           "name": "Hollis Brandt",
           "role": "refinery foreman",
-          "text": "He has run the main stack for longer than most of the crew has been alive. He says he will retire when the refinery does.",
-          "line": "Bring ore and water and I'll talk all day. Bring neither and I've got a stack to mind.",
+          "text": "Hollis has run the furnace halls since before the navy's inspections began. He is blunt, patient with apprentices and not with fools. He keeps every hand's name in a ledger and has lost people he hasn't forgotten.",
+          "line": "We need ore, water and food, and we send out metal. That's Tallow in a breath. You want a seat, buy something wet.",
           "look": "A heavy man in his sixties with a bald head, a grey beard stained at the edges, and deep lines around his eyes. He wears a heat-blackened apron over a patched orange coverall, and his left glove is welded at the cuff."
         },
         {
           "id": "sadie-quill",
           "name": "Sadie Quill",
           "role": "chemical assayer",
-          "text": "She tests every batch that leaves the moon and refuses to sign off on a bad one. Her stamp is respected from Cinder to Kettle.",
-          "line": "Don't ask me whether it's good. Ask me whether it's good enough, and I'll tell you honestly.",
+          "text": "Sadie tests every batch that leaves the works and is good enough to be disliked for it. She is dry and precise and has little patience for sloppy labelling. She has noticed that some of the Quire shipments are not what the manifests say.",
+          "line": "Chemicals are cheap on Tallow, and I can tell you why they're cheap. Don't ask me to tell you what's in half of them.",
           "look": "A narrow woman in her thirties with sharp features, dark hair under a respirator hood, and ink-stained fingers. She wears a stained white lab coat over orange work trousers and keeps a row of vials clipped to her belt."
         }
       ],
       "rumors": [
-        "The Bloom has been seen, they say, far out past Vast. No one on Tallow will say it aloud, but the night crews keep a lamp lit.",
-        "Prism offered the refinery a new process and the foreman threw the offer into a smelter.",
-        "A Blackhull ship came in with a hold of nothing and left with a hold of metal. The tally sheet disagrees with itself."
+        "Hollis's crew say that Vast gives off a pulse some nights, a flicker in the lightning that comes in rhythm. The relay station says it is a fault.",
+        "A hauler captain swears he saw a ship in formation, running dark through the Scree with every light matched to the next. When he hailed, it answered in perfect order, and he does not say what it said.",
+        "The Federation relay above Vast has been receiving messages it will not discuss. Tallow's technicians say they heard it first."
       ],
-      "vista": "A grey cratered moonscape under a huge banded sky of cream and brown, where Vast fills a third of the heavens. Refinery towers rise from the dome complex, their flares throwing orange light on rust-streaked plating and wet grey rock. The landing field is a flat of scorched concrete with welded pipe-racks and cable runs across it."
+      "vista": "A refinery dome on the grey moon, seen from the landing pad: ashen plains of bare grey rock and dust (no snow, no ice) and crater rims under a black sky, with refinery towers throwing orange flares that light the dust and the dome roof. Vast fills the upper sky, banded tan and rust brown with cream storms and lightning along its dark edge; it is not Jupiter, and has no great red spot. A glittering haze of orbital debris arcs overhead, and the small stairs and gantries of the town glow sodium orange beneath it."
     },
     {
       "body": "kettle",
       "description": [
-        "Kettle Yard is a cradle of girders, and the Ironhulls build and patch their hulls inside it. The station is welded together from whatever the last yards left behind: old gantries, scrapped ring sections, a crane arm from some forgotten dock. It has never been finished, and nobody expects it to be.",
-        "Metal comes in from Tallow, and ships go out. The yard pays well for metals, alloys and components, since a hull is only as good as its stock. It has little to say about water or medicine, which it does not trade. Everything else passes through, one way or another.",
-        "Arcs flash all through the cradle, and the sound of hammering carries even through the corridors. It is an honest place. A ship built here may be ugly, but it will hold."
+        "Kettle Yard is a cradle of girders in orbit, where the Ironhulls build and patch their ships. It was welded together from whatever earlier yards left behind, and it is extended whenever someone has a spare plate and a free afternoon. Metal comes in from Tallow, and hulls go out. Cranes swing slowly across the open frame, and sparks fall away into the dark in all directions.",
+        "The yard is dear on metals, alloys and components, and has nothing cheap to offer except a place to work. Crews live in bolted modules along the spine: bunks, a canteen, a clinic, a chapel the size of a cupboard. Shipwrights have a saying that a hull is never done, only late. Right now there are navy requisition orders on the purser's desk for refitted haulers, and the yard is slow in filling them.",
+        "Blackhulls drink here as they do in all Brannock's docks, and nobody asks them to leave. A man with a clean coat and a black band on his sleeve sits near the bar most evenings, and the welders do not look at him, which is a kind of manners."
       ],
       "places": [
         {
           "name": "The Cradle",
-          "text": "The great open frame where hulls are built. Half-finished ships hang in it like ribs, with welders crawling over them on tethers."
+          "text": "The great open frame where hulls are built. At any hour there are lamps burning in it and somebody hanging from a line, arguing with a seam."
         },
         {
-          "name": "Scrap Hall",
-          "text": "A long gallery of salvaged plate, tubing and frame, sorted by weight and rust. The yard hands buy from it by eye."
+          "name": "Purser's Hatch",
+          "text": "A small counter with a barred window where the yard's accounts are kept. The queue is long, and the answers are short."
         },
         {
-          "name": "The Tether",
-          "text": "A bar on the cradle's rim, named for the safety line the welders clip on before they come in. Nobody has ever stopped doing it."
+          "name": "The Bolt",
+          "text": "The yard's bar, bolted to the spine and shaking whenever a hull is moved. It is warm, loud and sells nothing fancy."
+        },
+        {
+          "name": "Refit Bay Nine",
+          "text": "A bay for converted haulers, where gun mounts are being welded onto freighters. The yard says it is for the Shadow. The Federation says it is for the navy."
         }
       ],
       "people": [
@@ -202,33 +217,33 @@
           "id": "gideon-marsh",
           "name": "Gideon Marsh",
           "role": "master welder",
-          "text": "He has laid seams on half the hulls that fly out of Brannock. He can tell a Kettle weld from across a dock.",
-          "line": "Pretty doesn't hold, friend. Ugly holds. Look at the seam, not the paint.",
+          "text": "Gideon has laid seams on half the hulls that leave Kettle Yard, and he can tell you which. He is proud, unhurried and unafraid of the navy's deadlines. He has trained a generation of welders and still checks their work.",
+          "line": "A good seam outlasts the man who laid it. A bad one outlasts the navy's patience. Sit down, I'll tell you which sort you're riding on.",
           "look": "A stocky man in his fifties with a shaved head, a broken nose, and forearms scarred by sparks. He wears a leather-patched orange apron and a flip-up welder's visor pushed back on his head."
         },
         {
           "id": "petra-lindqvist",
           "name": "Petra Lindqvist",
           "role": "yard purser",
-          "text": "She tracks every plate and bolt that enters the cradle. She is small and brisk, and she is never wrong about the stock.",
-          "line": "You want a refit? Tell me what you've got first. Then we'll discuss what you want.",
+          "text": "Petra keeps the yard's books and its secrets, which here are the same thing. She knows who is short of what, who owes Prism, and which navy order is late. Metals, alloys and components are dear on her ledger, and she sees why.",
+          "line": "Metals, alloys, components, we pay dear for all of them, and the navy wants its refits by yesterday. If you're hauling any of it, I'll listen.",
           "look": "A slight woman in her forties with straight black hair in a tight knot, tired eyes, and quick hands. She wears a patched coverall in faded orange with a tablet strapped to her wrist and a pencil through her hair."
         },
         {
           "id": "joss-harker",
           "name": "Joss Harker",
           "role": "Blackhull go-between",
-          "text": "He sits in the corner of The Tether and arranges things. He is polite, and nobody has ever seen him pay for a drink.",
-          "line": "Plenty of work out there for a pilot who doesn't ask the wrong questions. I can point you at some.",
+          "text": "Joss carries messages and favours between the yard's crews and cousins in the dark. He is polite, and he is a little too patient. The black band on his sleeve is stitched, not printed, and nobody here says anything about it.",
+          "line": "I'm just a man who knows a man. Everyone here has cousins. Mine happen to fly further out.",
           "look": "A lean man in his thirties with a narrow smile, slicked dark hair, and a coat too clean for the station. A thin black band is stitched into his sleeve, and he turns a steel washer over and over in his fingers."
         }
       ],
       "rumors": [
-        "They say a new hull is under way in the deepest part of the cradle, and the yard hands who work on it do not talk at the bar.",
-        "The Federation wanted to inspect the yard's books. Petra Lindqvist gave them very thorough books indeed.",
-        "A Freeflag cutter limped in last month with its hull cut open, and left again before anyone had finished the welding."
+        "Some of the refits at the yard are going out with more guns than the navy's orders asked for. Nobody has seen a manifest.",
+        "A cradle crew found a section of old girder with a Blackhull stencil under three coats of Ironhull paint. They painted over it again and said nothing.",
+        "Yard hands say the navy will take every hauler Brannock can build and give none of them back. Somebody has started a pool on how long that takes."
       ],
-      "vista": "A great open cradle of rusted girders, with half-built hulls hanging in the frame and welding arcs flashing blue-white across them. Sodium lamps wash the plating orange. Beyond the open dock, a dim orange star burns low and the scorched curve of Cinder hangs in the dark. Docking arms and patched gantries cross the foreground."
+      "vista": "The Kettle Yard dock, seen from a berth on the spine: a crowded frame of rusted girders and welded modules, lit with sodium lamps and crossed by cranes and cables. Half-built hulls hang in the cradle with weld sparks falling away from them. Beyond the open frame, the orange star burns low and large, and Cinder hangs small and far off in the black sky, a scorched brown disc with a faint glitter of debris round it."
     }
   ]
 }

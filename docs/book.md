@@ -1115,7 +1115,8 @@ Each milestone adds to the one before and ends with an exit test:
 * Decided: balanced loop between trade and combat; death reloads the last landing save, and insurance covers escorts and holdings; single-player first, built so a shared galaxy can come later; time advances 1 day per landing, in proportion to lane length on jumps, and in real time in flight.  
 * Build staging: see the Build staging chapter.  
 * Decided (former opens): whole-system traffic with distance-based fidelity; field repair is free; onboard refining as a lossy outfit; a light spine of about five gated beats; NPC hails and the LLM budget and offline fallback as described in Traffic and Content pipeline.  
-* Tone, names and lore (outside this book).
+* Decided: the first full map is about 100 playable systems, the Federation's, the Ironhulls' and Prism's (about 45, 35 and 20); the rest of humanity's 150 or so (Freeflag, Blackhull havens and 20 to 30 marginal systems), the Bloom's 30-odd charted systems, the Shadow's 20-odd and the Glass's four are background first, made playable later. The counts are canon in `src/lore/setting.md`.  
+* Tone, names and lore (outside this book; the setting is `src/lore/setting.md`).
 
 ## **Appendix: setting facts mechanisms depend on**
 

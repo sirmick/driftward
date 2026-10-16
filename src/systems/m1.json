@@ -3,6 +3,7 @@
   "name": "Brannock",
   "owner": "ironhulls",
   "ring": "middle",
+  "region": "calder-march",
   "description": "An Ironhull system of the middle ring: an orange star, a scorched mining world, a cloudy habitat world where most of its people live, a gas giant whose moon refines what the mines dig up, and a shipyard station where the Ironhulls weld their hulls.",
   "star": {
     "name": "Brannock",
@@ -36,7 +37,7 @@
       "port": {
         "name": "Cinder Deep",
         "role": "mining",
-        "population": "outpost",
+        "population": "town",
         "services": [
           "market",
           "missions",
@@ -44,7 +45,7 @@
           "refuel",
           "repair"
         ],
-        "description": "Shafts sunk into a world too close to its star. The day side cooks; the crews live and work on the night side, in tunnels that follow the ore. Ore goes up the lift to waiting tugs; food, water and spare parts come down."
+        "description": "Shafts sunk into a world too close to its star. The day side cooks; the crews live and work on the night side, in tunnel towns that follow the ore. Ore goes up the lifts to waiting tugs; food, water and spare parts come down."
       },
       "environs": [
         {
@@ -77,12 +78,12 @@
         "cityLights": 1,
         "lightning": 0.225,
         "debris": 0.75,
-        "orbitTraffic": 0.75
+        "orbitTraffic": 1.25
       },
       "port": {
         "name": "Halde Landing",
         "role": "habitat",
-        "population": "town",
+        "population": "world",
         "services": [
           "market",
           "missions",
@@ -90,7 +91,7 @@
           "refuel",
           "repair"
         ],
-        "description": "The system's only real town: terraces of habitat blocks along a cold coast, a landing field cut into the cliffs above them. Most of Brannock's people live here, and most of its money changes hands in the market halls by the field."
+        "description": "Brannock's world, and home to nearly all its people: arcologies stacked along a cold coast and up every river valley, the cloud low over the towers, the lights never out. The landing fields are a city of their own above the coast, and most of the system's money changes hands in the market halls beside them."
       },
       "environs": [
         {
@@ -165,7 +166,7 @@
       "port": {
         "name": "Tallow Works",
         "role": "refinery",
-        "population": "colony",
+        "population": "town",
         "services": [
           "market",
           "missions",

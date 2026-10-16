@@ -29,6 +29,7 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
       const sv = (b.port && b.port.services) || [];
       if (new Set(sv).size !== sv.length) notes.push({ path: `${at}.port.services`, msg: 'a service listed twice', fatal: false });
     }
+    if (system.region && !fs.existsSync(path.join(root, 'src', 'lore', 'regions', `${system.region}.md`))) notes.push({ path: '$.region', msg: `no src/lore/regions/${system.region}.md`, fatal: false });
     const rocky = b => b.kind === 'belt' || b.kind === 'field';
     for (const e of bodies.filter(b => b.env)) for (const o of bodies) {
       if (o === e || rocky(o)) continue;

@@ -36,7 +36,7 @@ function makeDebug(ctx) {
     shared[kind] = { n: artFiles.filter(f => f.kind === kind && f.rec.prompt).length, paras: [...count].filter(([p, c]) => c > 1 && !isBible(p)) };
   }
   const ownPart = f => paras(f.rec.prompt).filter(p => !isBible(p) && !shared[f.kind].paras.some(([q]) => q === p)).join('\n\n');
-  const artMeta = f => `<small>seed ${e(f.rec.seed)} · ${money(f.rec.cost)}${f.rec.seconds ? ` · ${f.rec.seconds} s` : ''}${f.rec.date !== artDate ? ` · ${e(f.rec.date)}` : ''} · ${f.rec.reference ? `reference ${e(f.rec.reference)}` : 'no reference'}${f.rec.model !== artModel ? ` · ${e(f.rec.model)}` : ''}</small>`;
+  const artMeta = f => `<small>seed ${e(f.rec.seed)} · ${money(f.rec.cost)}${f.rec.seconds ? ` · ${f.rec.seconds} s` : ''}${f.rec.date !== artDate ? ` · ${e(f.rec.date)}` : ''} · ${f.rec.reference ? `reference ${e(f.rec.reference)}` : 'no reference'}${f.rec.model !== artModel ? ` · ${e(f.rec.model)}` : ''}${f.rec.size ? ` · ${e(f.rec.size)}` : ''}${f.rec.provider ? ` · via ${e(f.rec.provider)}` : ''}</small>`;
   const artModels = [...new Set(artFiles.map(f => f.rec.model).filter(Boolean))], artModel = artModels[0];
   const artDates = [...new Set(artFiles.map(f => f.rec.date).filter(Boolean))].sort(), artDate = artDates.length === 1 ? artDates[0] : null;
   const artCost = artFiles.reduce((n, f) => n + (f.rec.cost || 0), 0);
@@ -49,7 +49,7 @@ function makeDebug(ctx) {
     const facts = LL && LL.facts, factOf = id => facts && facts.bodies.find(b => b.id === id);
     const header = `<div class="dbg-head-line">`
       + `<span><b>${e(SYS.name)}</b> <code>${e(SYS.id)}</code></span>`
-      + `<span>lore ${LL ? `${e(LL.model)} · ${LL.sent ? e(LL.date) : `prompt recorded ${e(LL.date)}`} · ${money(LL.cost)}` : '<span class="warn">none</span>'}</span>`
+      + `<span>lore ${LL ? `${e(LL.model)}${LL.provider ? ` via ${e(LL.provider)}` : ''} · ${LL.sent ? e(LL.date) : `prompt recorded ${e(LL.date)}`} · ${money(LL.cost)}` : '<span class="warn">none</span>'}</span>`
       + `<span>art ${artFiles.length ? `${e(artModels.join(', '))} · ${artFiles.length} images · ${artDates.map(e).join(' to ')} · ${money(artCost)}` : '<span class="warn">none</span>'}</span>`
       + `<span>total ${money((LL ? LL.cost || 0 : 0) + artCost)}</span></div>`
       + (LL && !LL.sent ? `<p class="dbg-note warn">${e(LL.note || 'The lore prompt below was recorded after the fact, not as sent.')}</p>` : '')

@@ -4,7 +4,9 @@
 //
 //   lore  one text call for the whole system (so its ports agree): history, culture, the art bible, and per port a
 //         description, notable places, people, rumors and what its vista shows -> src/lore/<id>.json, clamped by
-//         the game's own validator (src/schema.js) against src/schema/lore.schema.json
+//         the game's own validator (src/schema.js) against src/schema/lore.schema.json; the facts include the
+//         system's belts and fields, and src/lore/setting.md (the universe's backstory and recent events, by hand)
+//         goes with them when it exists, and the system's region notes (src/lore/regions/<region>.md)
 //   art   from the lore: a painted vista per port and a portrait per person -> art/<id>/*.webp, with every prompt,
 //         model, seed and cost in art/<id>/log.json. The start port's vista goes first and is the style reference
 //         for the other vistas (the Book: the first approved vista); likewise the first portrait for the portraits.
@@ -12,12 +14,15 @@
 //   all   lore, then art
 //
 // Usage: node tools/gen-content.js <lore|art|all> [--system m1] [--only id,id] [--force] [--dry]
-//          [--text-model M] [--image-model M] [--seed N]
+//          [--text-model M] [--vista-model M] [--portrait-model M] [--vista-size S] [--portrait-size S]
+//          [--image-model M] [--image-size 1K|2K|4K] [--seed N]
 //   --only   port body ids and person ids to (re)generate; art only
 //   --force  regenerate what exists (lore always regenerates)
 //   --dry    print the prompts; no calls, no key needed
 //   --save   with lore --dry: record the prompt in src/lore/<id>.log.json, unsent (a real lore run always records it)
 //   --no-ref paint without the style reference (when an image copies the reference's layout, not just its style)
+//   --keep-people  with lore: keep the current lore's people (id, name, role, look: their portraits are painted), at
+//            the same ports; the model rewrites who they are and what they say, and everything else
 // The key: OPENROUTER_API_KEY, else openrouter.token here (gitignored), else ~/openrouter.token. Images are
 // converted to WebP with Python's Pillow; the raw PNGs stay in art/<id>/raw/ (gitignored).
 'use strict';
@@ -31,17 +36,32 @@ const argv = process.argv.slice(2), cmd = argv[0];
 const opt = (name, def) => { const i = argv.indexOf('--' + name); return i < 0 ? def : argv[i + 1]; };
 const flag = name => argv.includes('--' + name);
 if (!['lore', 'art', 'all'].includes(cmd)) { console.log(fs.readFileSync(__filename, 'utf8').split('\n').filter(l => l.startsWith('//')).map(l => l.slice(3)).join('\n')); process.exit(cmd ? 1 : 0); }
-const DRY = flag('dry'), FORCE = flag('force'), NO_REF = flag('no-ref'), ONLY = opt('only') ? new Set(opt('only').split(',')) : null;
+const KEEP_PEOPLE = flag('keep-people'), DRY = flag('dry'), FORCE = flag('force'), NO_REF = flag('no-ref'), ONLY = opt('only') ? new Set(opt('only').split(',')) : null;
 const TEXT_MODEL = opt('text-model', 'anthropic/claude-sonnet-5.5');
-const IMAGE_MODEL = opt('image-model', 'google/gemini-3.1-flash-image');
+// Each kind of image has its own model and size (size: 1K, 2K or 4K, for models that take it, Gemini's; null, the
+// model's default): vistas are big and seen full screen, so a high-quality model at 2K; portraits are small, so a cheap
+// one. --image-model and --image-size set both kinds; --vista-model, --portrait-model, --vista-size and --portrait-size
+// one kind.
+const IMAGE = {
+  vista: { model: opt('vista-model', opt('image-model', 'google/gemini-3-pro-image')), size: opt('vista-size', opt('image-size', '2K')) },
+  portrait: { model: opt('portrait-model', opt('image-model', 'google/gemini-3.1-flash-image')), size: opt('portrait-size', opt('image-size', null)) }
+};
 const WORKERS = 3;
 
 // ---------- the system and its facts ----------
 const sysFile = `src/systems/${opt('system', 'm1')}.json`;
 const sysSchema = readJSON('src/schema/system.schema.json'), loreSchema = readJSON('src/schema/lore.schema.json');
 const { system: SYS, bodies: ALL_BODIES, notes: sysNotes } = loadSystem(readJSON(sysFile), sysSchema);
-// asteroid belts and fields are not in the facts yet: the lore was written before them
-const BODIES = ALL_BODIES.filter(b => b.kind !== 'belt' && b.kind !== 'field');
+// asteroid belts and fields have facts of their own (beltFacts), not a body's
+const BODIES = ALL_BODIES.filter(b => b.kind !== 'belt' && b.kind !== 'field'), BELTS = ALL_BODIES.filter(b => b.kind === 'belt' || b.kind === 'field');
+// the universe's backstory and recent events (src/lore/setting.md, written by hand): canon every system's lore agrees
+// with, sent whole with the facts; absent, the lore leans on the factions alone
+const settingFile = path.join(root, 'src', 'lore', 'setting.md');
+const SETTING = fs.existsSync(settingFile) ? fs.readFileSync(settingFile, 'utf8').trim() : '';
+// the system's region (src/lore/regions/<region>.md, by hand): its systems, populations and what flows between them
+const regionFile = SYS.region ? path.join(root, 'src', 'lore', 'regions', `${SYS.region}.md`) : null;
+if (regionFile && !fs.existsSync(regionFile)) { console.error(`gen-content: ${SYS.id} names region ${SYS.region}, but ${path.relative(root, regionFile)} is missing`); process.exit(1); }
+const REGION = regionFile ? fs.readFileSync(regionFile, 'utf8').trim() : '';
 if (!SYS) { console.error(`${sysFile} is unusable:`, sysNotes); process.exit(1); }
 const ECON = readJSON('src/economy.json');
 const loreFile = path.join(root, 'src', 'lore', `${SYS.id}.json`), artDir = path.join(root, 'art', SYS.id);
@@ -113,15 +133,17 @@ function marketOf(port) {
 // never sizes or distances: order out from the star, size among the bodies, and each route as near or far.
 const fromStar = BODIES.filter(b => b.kind !== 'star' && (!b.parent || b.parent === 'star')).sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y));
 const sizeWord = b => b.kind === 'station' ? 'a station' : b.r >= 2500 ? 'giant' : b.r >= 1200 ? 'large' : b.r >= 800 ? 'middling' : 'small';
+const STATION_WORDS = { ring: 'a habitat ring', port: 'a container port', forge: 'a forge', refinery: 'a refinery', shipyard: 'a shipyard', relay: 'a relay array' };
 const ORDINAL = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
 function bodyFacts(b) {
   const parent = b.parent && b.parent !== 'star' ? byId(b.parent) : null, d = o => Math.hypot(o.x - b.x, o.y - b.y);
   const others = ports.filter(o => o !== b).sort((x, y) => d(x) - d(y));
   return {
     id: b.id, name: b.name, kind: b.kind, orbits: parent ? parent.name : SYS.star.name,
-    position: parent ? `a moon of ${parent.name}` : `the ${ORDINAL[fromStar.indexOf(b)]} body out from the star`, size: sizeWord(b),
-    surface: b.look && b.look.surface, looks: bodyLooks(b) || undefined,
-    cityLights: !!(b.look && b.look.cityLights), station: b.station ? b.station.archetype : undefined,
+    position: b.env ? `a station orbiting ${parent.name}, not open to visiting ships` : parent ? (b.kind === 'station' ? `a station orbiting ${parent.name}` : `a moon of ${parent.name}`) : `the ${ORDINAL[fromStar.indexOf(b)]} body out from the star`, size: sizeWord(b),
+    owner: b.env ? FACTIONS[b.env.brand][0] : undefined,
+    surface: b.kind !== 'station' && b.look ? b.look.surface : undefined, looks: bodyLooks(b) || undefined,
+    cityLights: b.kind !== 'station' ? !!(b.look && b.look.cityLights) : undefined, station: b.station ? STATION_WORDS[b.station.archetype] : undefined,
     port: b.port ? {
       name: b.port.name, role: b.port.role, population: b.port.population, services: b.port.services,
       description: b.port.description, market: marketOf(b.port),
@@ -129,12 +151,32 @@ function bodyFacts(b) {
     } : undefined
   };
 }
+// Belts and fields: where (between which bodies, or round which), what the rocks are, how crowded, and which port routes
+// cross a belt; like the bodies, no sizes or distances
+const ROCK_WORDS = { carbon: 'dark carbon-rich rubble', silicate: 'stony silicate rock', metal: 'metallic nickel-iron', basalt: 'dark basalt', iron: 'rust-red iron-rich rock',
+  olivine: 'green olivine', icy: 'dirty ice', crystal: 'violet crystal', gold: 'gold-veined rock', cobalt: 'blue cobalt-veined rock' };
+function beltFacts(k) {
+  const parent = k.parent && k.parent !== 'star' ? byId(k.parent) : null, belt = k.kind === 'belt';
+  const R = belt ? k.r : Math.hypot(k.x - (parent ? parent.x : 0), k.y - (parent ? parent.y : 0));
+  const around = parent ? BODIES.filter(b => b.parent === parent.id) : fromStar, dist = b => Math.hypot(b.x - (parent ? parent.x : 0), b.y - (parent ? parent.y : 0));
+  const inner = around.filter(b => dist(b) < R).sort((a, b) => dist(b) - dist(a))[0], outer = around.filter(b => dist(b) > R).sort((a, b) => dist(a) - dist(b))[0];
+  const between = inner && outer ? `between ${inner.name} and ${outer.name}` : inner ? `beyond ${inner.name}` : outer ? `inside ${outer.name}'s orbit` : '';
+  const where = belt ? (parent ? `a ring of rock circling ${parent.name}` : `a ring of rock round ${SYS.star.name}, ${between}`) : (parent ? `a cluster of rock circling ${parent.name}` : `a cluster of rock on its own orbit, ${between}`);
+  const centre = parent || { x: 0, y: 0 }, r = b => Math.hypot(b.x - centre.x, b.y - centre.y);
+  const crossedBy = belt ? ports.flatMap((p, i) => ports.slice(i + 1).filter(q => (r(p) - R) * (r(q) - R) < 0).map(q => `${p.port.name} to ${q.port.name}`)) : [];
+  return {
+    id: k.id, name: k.name, kind: k.kind, where, rocks: k.belt.rocks.map(t => ROCK_WORDS[t]),
+    crowding: k.belt.density < 0.3 ? 'scattered' : k.belt.density < 0.7 ? 'loose' : 'thick', sizes: 'mostly boulders and small rocks, a few as big as a station',
+    crossedBy: crossedBy.length ? crossedBy : undefined
+  };
+}
 const facts = {
-  era: 'about 500 years in the future',
+  era: 'the year 2526, about 500 years in the future',
   system: { id: SYS.id, name: SYS.name, description: SYS.description, ring: RING[SYS.ring], star: `${SYS.star.name}, ${STAR_WORDS[SYS.star.class]}` },
   owner: { name: FACTIONS[SYS.owner][0], what: FACTIONS[SYS.owner][1], designLanguage: FACTIONS[SYS.owner][2] },
   otherFactions: Object.entries(FACTIONS).filter(([k]) => k !== SYS.owner && k !== 'none').map(([, f]) => `${f[0]}: ${f[1]}`),
   bodies: BODIES.filter(b => b.kind !== 'star').map(bodyFacts),
+  beltsAndFields: BELTS.length ? BELTS.map(beltFacts) : undefined,
   ports: ports.map(b => b.id)
 };
 
@@ -155,7 +197,7 @@ async function chat(body, tries = 3) {
       const d = await r.json();
       if (d.error) { last = JSON.stringify(d.error).slice(0, 300); }
       else if (!d.choices || !d.choices[0]) last = 'no choices in response';
-      else return { msg: d.choices[0].message, cost: (d.usage && d.usage.cost) || 0 };
+      else return { msg: d.choices[0].message, cost: (d.usage && d.usage.cost) || 0, provider: d.provider || null, model: d.model || body.model };
     } catch (e) { last = String(e); }
     await new Promise(res => setTimeout(res, 4000 * (a + 1)));
   }
@@ -166,18 +208,42 @@ async function chat(body, tries = 3) {
 const LORE_RULES = `You write the lore for one star system of Driftward, an Escape Velocity-style space trading game. The simulation decides; you narrate.
 Rules:
 - Everything you write must agree with the facts given: bodies, ports, roles, populations, what each market sells cheap and pays well for, distances. Keep each port's authored description true; you expand it, you do not contradict it.
-- Write no prices, credit amounts, quantities or game rules, and no sizes, distances or travel times in units: the facts give only order and comparison. People may say what is cheap or dear at their own port, as the market facts list it, but never compare one port's prices with another's. Rumors are colour: they hint at the wider setting but promise no mission, reward or mechanic.
+- Write no prices, credit amounts, quantities or game rules, and no sizes, distances or travel times in units: the facts give only order and comparison. The one exception is people: populations may be mentioned roughly, as the region gives them ("billions on Halde"). People may say what is cheap or dear at their own port, as the market facts list it, but never compare one port's prices with another's. Rumors are colour: they hint at the wider setting but promise no mission, reward or mechanic.
 - Tone: grounded, worn, working-class science fiction; specific and sensory; dry humour allowed; no grand prophecy, no chosen ones. Plain prose in British English. Names should feel lived-in, not fantasy.
 - The owning faction's design language shapes everything people build here.
+- Belts and fields are part of the system: people know them, name places in them, work or avoid them, and tell rumors about them, as the facts make plausible. Nobody mines them yet in a way the facts don't support; they are no port.
+- When the region is given, it is canon too: this system's population and its neighbours, trade and troubles as it describes them. The facts still decide the bodies and ports.
+- When the setting is given, it is canon: agree with it, use its names and dates, and let its recent events reach this system as far as news, trade and travel would carry them, coloured by who hears them (in rumors, in people's lines, in the history's last years). Don't retell it wholesale or move its events here.
 - "vista" describes the painting on the port screen: the view from the landing field or dock, foreground to sky, matching the body's colours and the star's light, with nothing that contradicts the flight view of the body (its surface type, colours and atmosphere). Moons show their parent in the sky.
 - "look" describes a person for a portrait painter: face, age, build, clothes, one telling detail; the design language shows in their clothes and gear.
 - Person ids are lowercase-hyphenated and unique across the system.
 Answer with one JSON object and nothing else, conforming to this JSON Schema:
 `;
+// --keep-people: the people to keep, by port body id (read from the current lore before it is replaced)
+const KEPT = KEEP_PEOPLE ? (() => {
+  if (!fs.existsSync(loreFile)) { console.error(`gen-content: --keep-people, but there is no ${path.relative(root, loreFile)}`); process.exit(1); }
+  return new Map(JSON.parse(fs.readFileSync(loreFile, 'utf8')).ports.map(p => [p.body, p.people.map(({ id, name, role, look }) => ({ id, name, role, look }))]));
+})() : null;
+const keptText = () => KEPT ? `\n\nKeep these people, at these ports, with exactly these ids, names, roles and looks (their portraits are already painted). Rewrite who they are ("text") and what they say ("line") to fit everything above, but never against their look: their sex, age, build, face and clothes are as the look says, since the portrait shows them. Add no one, drop no one:\n${JSON.stringify(Object.fromEntries(KEPT), null, 1)}` : '';
+// the kept people's problems in an answer (missing, extra or moved); then their fixed fields are put back exactly
+function keptProblems(lore) {
+  if (!KEPT) return [];
+  const out = [];
+  for (const p of lore.ports) {
+    const want = KEPT.get(p.body) || [], ids = p.people.map(q => q.id);
+    for (const k of want) if (!ids.includes(k.id)) out.push(`$.ports[${p.body}]: person ${k.id} (${k.name}) is missing`);
+    for (const id of ids) if (!want.some(k => k.id === id)) out.push(`$.ports[${p.body}]: person ${id} is not one of the people to keep here`);
+  }
+  return out;
+}
+function putBackKept(lore) {
+  if (!KEPT) return;
+  for (const p of lore.ports) for (const q of p.people) { const k = (KEPT.get(p.body) || []).find(k => k.id === q.id); if (k) Object.assign(q, { name: k.name, role: k.role, look: k.look }); }
+}
 function lorePrompt(feedback) {
   return [
     { role: 'system', content: LORE_RULES + JSON.stringify(loreSchema) },
-    { role: 'user', content: `The facts:\n${JSON.stringify(facts, null, 1)}\n\nWrite the lore for system "${SYS.id}", with one entry in "ports" for each of these bodies: ${facts.ports.join(', ')}.` + (feedback ? `\n\nYour last answer had these problems; fix them:\n${feedback}` : '') }
+    { role: 'user', content: (SETTING ? `The setting:\n${SETTING}\n\n` : '') + (REGION ? `The region:\n${REGION}\n\n` : '') + `The facts:\n${JSON.stringify(facts, null, 1)}\n\nWrite the lore for system "${SYS.id}", with one entry in "ports" for each of these bodies: ${facts.ports.join(', ')}.` + keptText() + (feedback ? `\n\nYour last answer had these problems; fix them:\n${feedback}` : '') }
   ];
 }
 function parseJSON(text) {
@@ -199,22 +265,25 @@ async function genLore() {
     if (flag('save')) { writeLoreLog({ sent: false, note: 'Recorded with --dry --save: the prompt as the tool builds it now, not necessarily the one the lore was written from.' }); console.log(`wrote ${path.relative(root, loreLogFile)} (unsent)`); }
     return null;
   }
-  let feedback = '', total = 0;
+  let feedback = '', total = 0, served = {};
   const attempts = [], t0 = Date.now();
   for (let attempt = 1; attempt <= 3; attempt++) {
     const t = Date.now();
-    const { msg, cost } = await chat(Object.assign({ model: TEXT_MODEL, messages: lorePrompt(feedback) }, LORE_PARAMS));
-    total += cost;
+    const { msg, cost, provider, model } = await chat(Object.assign({ model: TEXT_MODEL, messages: lorePrompt(feedback) }, LORE_PARAMS));
+    total += cost; served = { provider, servedModel: model };
     let raw;
-    try { raw = parseJSON(msg.content); } catch (e) { attempts.push({ cost, problems: [`not valid JSON: ${e.message}`] }); feedback = `not valid JSON: ${e.message}`; console.log(`lore attempt ${attempt}: ${feedback}`); continue; }
+    try { raw = parseJSON(msg.content); } catch (e) { attempts.push({ cost, provider, problems: [`not valid JSON: ${e.message}`] }); feedback = `not valid JSON: ${e.message}`; console.log(`lore attempt ${attempt}: ${feedback}`); continue; }
     const { lore, notes } = loadLore(raw, loreSchema, SYS);
     notes.forEach(n => console.log(`  ${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`));
-    attempts.push({ cost, problems: notes.map(n => `${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`) });
-    if (!lore || notes.some(n => /no lore for port|dropped/.test(n.msg))) { feedback = notes.map(n => `${n.path}: ${n.msg}`).join('\n'); console.log(`lore attempt ${attempt}: ${notes.length} problem(s), retrying`); continue; }
+    attempts.push({ cost, provider, problems: notes.map(n => `${n.fatal ? 'FATAL' : 'clamped'} ${n.path}: ${n.msg}`) });
+    const kept = lore ? keptProblems(lore) : [];
+    if (kept.length) { kept.forEach(k => console.log(`  ${k}`)); attempts[attempts.length - 1].problems.push(...kept); }
+    if (!lore || kept.length || notes.some(n => /no lore for port|dropped/.test(n.msg))) { feedback = [...notes.map(n => `${n.path}: ${n.msg}`), ...kept].join('\n'); console.log(`lore attempt ${attempt}: ${notes.length + kept.length} problem(s), retrying`); continue; }
+    putBackKept(lore);
     fs.mkdirSync(path.dirname(loreFile), { recursive: true });
     fs.writeFileSync(loreFile, JSON.stringify(lore, null, 2) + '\n');
-    writeLoreLog({ sent: true, cost: total, seconds: Math.round((Date.now() - t0) / 1000), attempts, feedback });
-    console.log(`wrote ${path.relative(root, loreFile)}: ${lore.ports.length} ports, ${lore.ports.reduce((n, p) => n + p.people.length, 0)} people (${TEXT_MODEL}, ${((Date.now() - t) / 1000).toFixed(0)} s, $${total.toFixed(3)})`);
+    writeLoreLog({ sent: true, ...served, cost: total, seconds: Math.round((Date.now() - t0) / 1000), attempts, feedback });
+    console.log(`wrote ${path.relative(root, loreFile)}: ${lore.ports.length} ports, ${lore.ports.reduce((n, p) => n + p.people.length, 0)} people (${TEXT_MODEL} via ${served.provider || 'unknown provider'}, ${((Date.now() - t) / 1000).toFixed(0)} s, $${total.toFixed(3)})`);
     return lore;
   }
   throw new Error('lore: no usable answer in 3 attempts');
@@ -224,12 +293,16 @@ async function genLore() {
 const VISTA_STYLE = 'A painted vista for the landing screen of a space trading game: futuristic, painterly, a cinematic matte painting with visible brushwork, wide 16:9. No text, lettering, logos, UI, borders or frames.';
 const PORTRAIT_STYLE = 'A character portrait in a painterly fantasy-realism style, the classic CRPG portrait look: head and shoulders, three-quarter view, looking at the viewer, dramatic soft key light, a dark, softly painted background. No text, lettering, borders or frames.';
 const bibleText = lore => { const a = lore.artBible; return `Art bible for the ${SYS.name} system. Palette: ${names(a.palette)}. Lighting: ${a.lighting} Architecture: ${a.architecture} Materials: ${a.materials} Mood: ${a.mood} Design language: ${a.design}`; };
+// how busy a port looks, by its population tier: a world of billions is a city to the horizon, not a field and a few towers
+const CROWD = { outpost: ' A small, sparse outpost.', colony: ' A working settlement of a few million.',
+  town: ' A busy place of tens or hundreds of millions: built up all round the port, with ships coming and going.',
+  world: ' One of the most crowded places in the region, home to billions: city to the horizon, towers and lights everywhere, the sky busy with ships.' };
 function vistaPrompt(lore, b, ref) {
   const p = lore.ports.find(q => q.body === b.id), L = b.look || {}, parent = b.parent && b.parent !== 'star' ? byId(b.parent) : null;
-  const an = w => (/^[aeiou]/.test(w) ? 'an ' : 'a ') + w;
+  const role = b.port.role.replace('-', ' '), crowd = CROWD[b.port.population] || '';
   const where = b.kind === 'station'
-    ? `${b.port.name}, ${an(b.port.population)} ${b.port.role} station (a ${b.station.archetype}) in open space between the worlds.`
-    : `${b.port.name}, ${an(b.port.population)} ${b.port.role} port on ${b.name}${parent ? `, a moon of ${parent.name}` : ''}. ${b.name} is ${bodyLooks(b)}.`;
+    ? `${b.port.name}, the ${role} station of the system, ${STATION_WORDS[b.station.archetype]} in open space between the worlds.${crowd}`
+    : `${b.port.name}, the ${role} port of ${b.name}${parent ? `, a moon of ${parent.name}` : ''}.${crowd} ${b.name} is ${bodyLooks(b)}.`;
   const sky = parent && parent.look ? ` ${parent.name}, ${bodyLooks(parent)}, hangs huge in the sky.` : '';
   return [VISTA_STYLE, bibleText(lore), `The place: ${where}${sky} The light comes from ${STAR_WORDS[SYS.star.class]}.`, `The scene: ${p.vista}`,
     'Composition: keep the left two fifths of the image darker and calmer, with no focal point there, because the port\'s text panel is drawn over it; the main interest sits right of centre.',
@@ -240,13 +313,14 @@ function portraitPrompt(lore, b, q, ref) {
     'The background is the dim bar of the port, out of focus, in the system\'s palette.',
     ref ? 'The attached image is the style reference for this system\'s portraits: match its painting style, framing, light and finish, but paint this person, not the reference\'s subject.' : ''].filter(Boolean).join('\n\n');
 }
-async function image(prompt, aspect, seed, refPng) {
+async function image(kind, prompt, aspect, seed, refPng) {
+  const { model: IMAGE_MODEL, size: IMAGE_SIZE } = IMAGE[kind];
   const content = [{ type: 'text', text: prompt }];
   if (refPng) content.push({ type: 'image_url', image_url: { url: 'data:image/png;base64,' + refPng.toString('base64') } });
   for (let a = 0; a < 3; a++) {
-    const { msg, cost } = await chat({ model: IMAGE_MODEL, modalities: ['image', 'text'], image_config: { aspect_ratio: aspect }, seed, messages: [{ role: 'user', content }] });
+    const { msg, cost, provider, model } = await chat({ model: IMAGE_MODEL, modalities: ['image', 'text'], image_config: Object.assign({ aspect_ratio: aspect }, IMAGE_SIZE ? { image_size: IMAGE_SIZE } : {}), seed, messages: [{ role: 'user', content }] });
     const img = (msg.images || [])[0];
-    if (img) return { png: Buffer.from(img.image_url.url.split(',', 2)[1], 'base64'), cost };
+    if (img) return { png: Buffer.from(img.image_url.url.split(',', 2)[1], 'base64'), cost, provider, servedModel: model };
     console.log(`  no image in the answer (${String(msg.content || '').slice(0, 120)}); retrying`);
   }
   throw new Error('image: no image in 3 attempts');
@@ -279,13 +353,13 @@ async function genArt(lore) {
   let total = 0, made = 0;
   const run = async (job, refJob) => {
     const ref = refJob && job !== refJob && !NO_REF ? path.join(rawDir, refJob.name + '.png') : null, prompt = job.make(!!ref), spec = ART[job.kind];
-    if (DRY) { console.log(`--- ${job.name}${ref ? ` (reference ${refJob.name})` : ''} ---\n${prompt}\n`); return; }
+    if (DRY) { console.log(`--- ${job.name}${ref ? ` (reference ${refJob.name})` : ''}: ${IMAGE[job.kind].model}${IMAGE[job.kind].size ? ` at ${IMAGE[job.kind].size}` : ''} ---\n${prompt}\n`); return; }
     const t = Date.now(), seed = seedOf(job.name);
-    const { png, cost } = await image(prompt, spec.aspect, seed, ref && fs.existsSync(ref) ? fs.readFileSync(ref) : null);
+    const { png, cost, provider, servedModel } = await image(job.kind, prompt, spec.aspect, seed, ref && fs.existsSync(ref) ? fs.readFileSync(ref) : null);
     const rawFile = path.join(rawDir, job.name + '.png'), outFile = path.join(artDir, job.name + '.webp');
     fs.writeFileSync(rawFile, png);
     toWebp(rawFile, outFile, spec.w, spec.h, spec.q);
-    log[job.name + '.webp'] = { prompt, model: IMAGE_MODEL, seed, reference: ref ? refJob.name + '.webp' : null, cost, seconds: Math.round((Date.now() - t) / 1000), date: new Date().toISOString().slice(0, 10) };
+    log[job.name + '.webp'] = { prompt, model: IMAGE[job.kind].model, provider, servedModel, size: IMAGE[job.kind].size || undefined, seed, reference: ref ? refJob.name + '.webp' : null, cost, seconds: Math.round((Date.now() - t) / 1000), date: new Date().toISOString().slice(0, 10) };
     total += cost; made++;
     console.log(`  ${path.relative(root, outFile)}  ${(fs.statSync(outFile).size / 1024).toFixed(0)} KB  $${cost.toFixed(3)}  ${((Date.now() - t) / 1000).toFixed(0)} s`);
   };
@@ -300,7 +374,7 @@ async function genArt(lore) {
   }
   if (DRY) return;
   fs.writeFileSync(logFile, JSON.stringify(Object.fromEntries(Object.entries(log).sort()), null, 1) + '\n');
-  console.log(`art: ${made} image(s), $${total.toFixed(2)} (${IMAGE_MODEL})`);
+  console.log(`art: ${made} image(s), $${total.toFixed(2)} (vistas ${IMAGE.vista.model}, portraits ${IMAGE.portrait.model})`);
 }
 
 (async () => {
