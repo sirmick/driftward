@@ -82,6 +82,9 @@ debug.setYard(yard);
 const starKit = makeStarKit(gl, compile, draw);
 const sunGallery = makeSunGallery({ gl, P: G.P, draw: G.draw, kit: starKit, target: () => G.targets.scene });
 debug.setSuns(sunGallery);
+// the galaxy (src/galaxy/: the real stars round Sol and the game's systems, lanes and factions) for the debug screen's
+// Map tab, built when the tab first opens
+debug.setStarMap(labels => { const galaxy = JSON.parse($('galaxy').textContent); return Object.assign(makeStarMap(G, canvas, labels, galaxy), { galaxy }); });
 const nSizes = catalog.sizes.length;
 const types = [];
 catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
@@ -792,6 +795,8 @@ CORE_READY.then(CORE => {
     if (yv) { yard.render((now - t0) / 1000, yv.cells, yv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     const sv = debug.sunView(); // and its Suns tab, the star gallery
     if (sv) { sunGallery.render((now - t0) / 1000, sv.cells, sv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
+    const mv = debug.mapView(); // and its Map tab, the star map
+    if (mv) { mv.tick(dt); mv.draw(bloomOn ? 0.8 : 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     // nothing to see under the port's painted vista, the map, the debug screen or the pause menu: the canvas keeps
     // its last frame (pause shows it frozen behind the menu), and the GPU rests
     const covered = ($('vista').classList.contains('on') && !document.body.classList.contains('vista-framed')) || mapOn || debug.isOpen() || (paused && !titleUp());

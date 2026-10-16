@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driftward: star map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* The star map on its own: the 3D chart full-window, names on a 2D canvas over it, and a panel for the selection
+   and the view's controls. */
+:root {
+  color-scheme: dark;
+  --bg: #07090c; --rail: #0c1015; --line: #1e2630; --fg: #dbe0e7; --muted: #8a95a4; --amber: #e2b866;
+  --f-display: "Saira Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--f-body); overflow: hidden; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+#view, #labels { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#view { outline: none; cursor: grab; }
+#labels { pointer-events: none; }
+.panel {
+  position: fixed; top: 14px; right: 14px; width: 300px; max-height: calc(100% - 28px); overflow: auto;
+  background: rgba(12, 16, 21, .88); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
+}
+.panel h1 { margin: 0 0 2px; font: 700 17px/1.1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+.panel .note { margin: 0; color: var(--muted); font-size: 12.5px; }
+.panel a { color: var(--amber); }
+[hidden] { display: none !important; }
+#glerr { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<canvas id="view" tabindex="0" aria-label="Star map"></canvas>
+<canvas id="labels"></canvas>
+<div id="glerr" hidden>The star map needs WebGL2, which this browser didn't provide.</div>
+
+<aside class="panel">
+  <h1>Star map</h1>
+  <p class="note">The real stars within 80 light years of Sol (100 toward the galactic core), from the HYG database, and the game's systems and jump lanes among them. The floor is the galactic plane. F: centre on the selection · H: back to Sol · <a href="play.html">Play</a> · <a href="index.html">Lab</a></p>
+  <div id="sm-panel" class="sm-panel"></div>
+</aside>
+
+<script id="galaxy" type="application/json">/*GALAXY*/</script>
+<script>
+(function () {
+'use strict';
+/*SHADERS*/
+/*GFX*/
+/*STARS*/
+/*MAP*/
+/*MAPPANEL*/
+/*MAPVIEW*/
+})();
+</script>
+</body>
+</html>

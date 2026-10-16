@@ -877,3 +877,59 @@ void main(){
   }
   o = vec4(emis, absorb);
 }`;
+
+// ---------- the star map (src/map/map.js): stars as camera-facing glows, and the chart's lines ----------
+// Each star is an instanced quad of a fixed size in pixels (scaled a little by nearness), so a far star stays a point
+// and a near one a bead; flags: x hover, y selected, z dimmed (outside the shown range or filtered out), w a dead
+// system (smaller, and greyed).
+const MAP_STAR_VS = `#version 300 es
+in vec2 aPos; in vec3 aCenter; in vec3 aCol; in float aSize; in vec4 aFlag;
+uniform mat4 uVP; uniform vec2 uRes; uniform vec3 uEye; uniform float uPx;
+out vec2 vQ; out vec3 vCol; out vec4 vFlag;
+void main(){
+  vec4 c = uVP*vec4(aCenter,1.);
+  float near = clamp(30./max(distance(uEye, aCenter), 1.), .55, 2.2);
+  float px = aSize*uPx*near*(1. + aFlag.x*.5 + aFlag.y*.8)*(aFlag.z > .5 ? .6 : 1.)*(aFlag.w > .5 ? .7 : 1.);
+  vQ = aPos; vCol = aCol; vFlag = aFlag;
+  gl_Position = c + vec4(aPos*px/uRes*2.*c.w, 0., 0.);
+}`;
+const MAP_STAR_FS = `#version 300 es
+precision highp float; in vec2 vQ; in vec3 vCol; in vec4 vFlag; out vec4 o;
+void main(){
+  float r = length(vQ);
+  float g = exp(-r*r*55.)*5. + exp(-r*9.)*.45;
+  float ring = (vFlag.y > .5 ? 1. : vFlag.x*.6)*smoothstep(.05,0.,abs(r-.62))*1.4;
+  float k = vFlag.z > .5 ? .12 : 1.;
+  vec3 col = vFlag.w > .5 ? mix(vec3(dot(vCol, vec3(.3,.5,.2))), vCol, .35)*.45 : vCol;
+  o = vec4((col*g*k + vec3(1.,.82,.45)*ring)*(1.-smoothstep(.85,1.,r)), 0.);
+}`;
+// Lines (the galactic-plane grid, drop lines, routes) with per-vertex colour; the far ones fade, and a line whose
+// aFade.x is set fades by the distance of its star (the floor point under it at aFade.y's height) from the focus.
+const MAP_LINE_VS = `#version 300 es
+in vec3 aPos; in vec4 aCol; in vec2 aFade;
+uniform mat4 uVP; uniform vec3 uEye, uFocus; uniform float uFocusR, uFar;
+out vec4 vCol;
+void main(){
+  float a = aCol.a*(1. - smoothstep(uFar*.45, uFar, distance(uEye, aPos)));
+  if (aFade.x > .5) a *= 1. - smoothstep(uFocusR*.6, uFocusR, distance(uFocus, vec3(aPos.xy, aFade.y)));
+  vCol = vec4(aCol.rgb*a, 0.);
+  gl_Position = uVP*vec4(aPos,1.);
+}`;
+const MAP_LINE_FS = `#version 300 es
+precision highp float; in vec4 vCol; out vec4 o; void main(){ o = vCol; }`;
+// Territory clouds: a soft sphere of a faction's colour round each system it holds, a camera-facing quad sized in
+// light years (uRight, uUp: the view's axes), so overlapping clouds make one region; faded near the eye, so flying
+// through one does not wash out the view.
+const MAP_ZONE_VS = `#version 300 es
+in vec2 aPos; in vec3 aCenter; in vec3 aCol; in float aSize;
+uniform mat4 uVP; uniform vec3 uRight, uUp, uEye;
+out vec2 vQ; out vec3 vCol;
+void main(){
+  vQ = aPos;
+  float near = smoothstep(aSize*.6, aSize*2.5, distance(uEye, aCenter));
+  vCol = aCol*near;
+  gl_Position = uVP*vec4(aCenter + (uRight*aPos.x + uUp*aPos.y)*aSize, 1.);
+}`;
+const MAP_ZONE_FS = `#version 300 es
+precision highp float; in vec2 vQ; in vec3 vCol; out vec4 o; uniform float uK;
+void main(){ float r2 = dot(vQ, vQ); o = vec4(vCol*exp(-r2*3.)*(1. - smoothstep(.8, 1., r2))*uK, 0.); }`;

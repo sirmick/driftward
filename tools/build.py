@@ -1,5 +1,5 @@
-"""Assemble src/ into two self-contained pages, index.html (the lab) and play.html (the game), with the Rust sim
-core compiled to WASM and inlined into both.
+"""Assemble src/ into self-contained pages, index.html (the lab) and play.html (the game), with the Rust sim core
+compiled to WASM and inlined into both, and map.html (the star map).
 
 Usage: python3 tools/build.py [--skip-core]   (--skip-core reuses the last compiled WASM)
 """
@@ -49,6 +49,7 @@ MODULES = {
     '/*LOOK*/': 'look.js', '/*SHADERS*/': 'shaders.js', '/*GFX*/': 'gfx.js', '/*BAKE*/': 'bake.js', '/*CORE*/': 'core.js',
     '/*FLY*/': 'fly.js', '/*PLANETS*/': 'planets.js', '/*STARS*/': 'stars.js', '/*SUNS*/': 'play/suns.js', '/*STATIONS*/': 'stations.js',
     '/*ASTEROIDS*/': 'asteroids.js', '/*ROCKS*/': 'rocks.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js', '/*DEBUG*/': 'play/debug.js', '/*SHIPYARD*/': 'play/shipyard.js', '/*JITTER*/': 'play/jitter.js',
+    '/*MAP*/': 'map/map.js', '/*MAPPANEL*/': 'map/panel.js', '/*MAPVIEW*/': 'map/view.js',
 }
 
 def inline_modules(script, needed):
@@ -104,9 +105,17 @@ def page(template, script):
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),
     ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*STARS*/', '/*SCHEMA*/', '/*PLANETS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
 # the game: its template carries the script shell and markers itself
-game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*SUNS*/', '/*JITTER*/', '/*PLAY*/']), '')
+# the galaxy: the real stars round Sol (tools/hyg.py writes src/galaxy/stars.json) and the game's systems, lanes and
+# factions among them (tools/galaxy.py writes src/galaxy/galaxy.json), for the star map: its own page and the game's
+# debug screen
+galaxy_data = json.loads((src / 'galaxy' / 'stars.json').read_text())
+galaxy_data['game'] = json.loads((src / 'galaxy' / 'galaxy.json').read_text())
+galaxy = json.dumps(galaxy_data, ensure_ascii=False, separators=(',', ':'))
+assert '</script' not in galaxy
+game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*SUNS*/', '/*MAP*/', '/*MAPPANEL*/', '/*JITTER*/', '/*PLAY*/']), '').replace('/*GALAXY*/', galaxy)
+starmap = inline_modules((src / 'map' / 'template.html').read_text(), ['/*SHADERS*/', '/*GFX*/', '/*STARS*/', '/*MAP*/', '/*MAPPANEL*/', '/*MAPVIEW*/']).replace('/*GALAXY*/', galaxy)
 
-for name, html in (('index.html', lab), ('play.html', game)):
+for name, html in (('index.html', lab), ('play.html', game), ('map.html', starmap)):
     (root / name).write_text(html)
     print(f'wrote {name} ({len(html):,} bytes)', end='; ')
 print(f"{len(systems_raw)} systems ({', '.join(r['id'] for r in systems_raw)}); lore for {len(lore_map)}; art {sum(len(a['vistas']) for a in art_map.values())} vistas and {sum(len(a['portraits']) for a in art_map.values())} portraits", end='; ')

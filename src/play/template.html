@@ -238,6 +238,11 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 body.dbg-clear > :not(#debug):not(#view) { visibility: hidden; }
 body.dbg-clear #debug { background: rgba(7,9,12,0); }
 body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
+.dbg-map { grid-column: 1 / -1; position: relative; min-height: 0; }
+.dbg-map-surface { position: absolute; inset: 0; cursor: grab; }
+.dbg-map-panel { position: absolute; top: 12px; right: 14px; width: 300px; max-height: calc(100% - 24px); overflow: auto; padding: 4px 16px 14px;
+  background: rgba(12, 16, 21, .88); border: 1px solid var(--line); border-radius: 8px; }
+.dbg-map-labels { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
 .dbg-yard { grid-column: 1 / -1; overflow-y: auto; min-height: 0; padding: 0 16px 30px; }
 .dbg-yard-bar { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 0; background: rgba(7,9,12,.94); border-bottom: 1px solid var(--line); font: 500 12px var(--f-mono); color: var(--muted); }
 .dbg-yard-bar label { display: flex; align-items: center; gap: 6px; color: var(--fg); }
@@ -409,6 +414,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 <script id="lore-schema" type="application/json">/*LORESCHEMA*/</script>
 <script id="art" type="application/json">/*ART*/</script>
 <script id="content-log" type="application/json">/*CONTENTLOG*/</script>
+<script id="galaxy" type="application/json">/*GALAXY*/</script>
 <script id="gen">/*GEN*/</script>
 <script>
 (function () {
@@ -424,6 +430,8 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 /*DEBUG*/
 /*SHIPYARD*/
 /*SUNS*/
+/*MAP*/
+/*MAPPANEL*/
 /*JITTER*/
 /*PLAY*/
 })();

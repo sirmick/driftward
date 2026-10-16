@@ -8,6 +8,10 @@ A running list of places, people and things the game refers to but has not named
 | :-- | :-- | :-- | :-- |
 | Five core-world Federation ports, ranked by dock size (smallest first) | The Federation civilian line's "-Max" classes (see roster.md): each class is the biggest hull its port's docks take | Barnard's Star, Wolf 359, Epsilon Eridani, Tau Ceti, Alpha Centauri (the capital, the biggest dock) | Open: placeholders from real nearby stars |
 
+## Systems on the galaxy map
+
+Every system on the map (src/galaxy/galaxy.json) has a name. The inner ring keeps its stars' real names; farther out, tools/galaxy_names.py invents names in the owning faction's style for more and more of the settled systems (and a few dead ones, as prospectors' claims), and the map marks each invented name **provisional**. Settle one by adding it to the table below and to the pools there; the Glass's four (Varrow, Hesk, Lucerne, Facet) and Corran come from the setting, Lucerne and Facet provisionally.
+
 ## Settled
 
 | Name | What | Used in |

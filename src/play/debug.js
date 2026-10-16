@@ -11,6 +11,8 @@
 //   Suns     this system's stars and one of each of the twelve classes, drawn behind the tab by the game's star kit
 //            (src/stars.js, src/play/suns.js); click one to open it in the builder, whose sliders edit the system
 //            file's star entry (the JSON to copy into it). The lab's old Suns tab.
+//   Map      the galaxy in 3D (src/map/map.js, as map.html shows it): the real stars round Sol, the game's systems,
+//            lanes and faction territories (src/galaxy/), drawn behind the tab with the map's panel (src/map/panel.js).
 // The header's jump box takes the player to any planet, moon, station, belt or field in any system: place@system.
 // tools/gen-content.js records how content was made; the build inlines the records. Everything else here is read-only.
 function makeDebug(ctx) {
@@ -284,7 +286,33 @@ function makeDebug(ctx) {
     return sections(S);
   }
 
-  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }];
+  // ---------- Map: the star map, drawn in the game's canvas behind the tab; its names on a canvas of the tab's own ----------
+  let makeMap = null, starMap = null, mapPanel = null;
+  const mapLabels = document.createElement('canvas');
+  mapLabels.className = 'dbg-map-labels'; mapLabels.hidden = true; el.prepend(mapLabels);
+  function mapTab() {
+    if (!makeMap) return '<p class="dbg-note">The star map starts with the game.</p>';
+    return `<div class="dbg-map"><div class="dbg-map-surface"></div><aside class="dbg-map-panel sm-panel">${starMapPanelHtml()}</aside></div>`;
+  }
+  function mountMap(pane) {
+    if (!makeMap) return;
+    if (!starMap) { // built the first time the tab opens: its buffers and shaders are no cost to a game that never looks
+      starMap = makeMap(mapLabels);
+      const style = document.createElement('style'); style.textContent = STAR_MAP_PANEL_CSS; document.head.appendChild(style);
+    }
+    mapPanel = mountStarMapPanel(pane.querySelector('.dbg-map-panel'), starMap, starMap.galaxy, pane.querySelector('.dbg-map-surface'));
+  }
+  // the map, for the game's frame to draw (null unless the Map tab is up)
+  function mapView() {
+    const on = !el.hidden && tab === 'map' && !!starMap;
+    mapLabels.hidden = !on;
+    if (!on) return null;
+    const v = document.getElementById('view');
+    if (mapLabels.width !== v.width || mapLabels.height !== v.height) { mapLabels.width = v.width; mapLabels.height = v.height; }
+    return starMap;
+  }
+
+  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }, { id: 'map', name: 'Map', render: mapTab, mount: mountMap, clear: true }];
   let tab = TABS[0].id;
   const cache = new Map();
   function show(id) {
@@ -360,6 +388,8 @@ function makeDebug(ctx) {
     setYard(y) { yard = y; },
     yardView,
     setSuns(g) { gallery = g; }, // the Suns tab's gallery (src/play/suns.js), bound once the game's GL is up
-    sunView
+    sunView,
+    setStarMap(f) { makeMap = f; }, // labels canvas -> the star map (makeStarMap), bound once the game's GL is up
+    mapView
   };
 }

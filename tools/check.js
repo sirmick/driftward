@@ -1,5 +1,5 @@
 // Boots index.html's app script against a stub WebGL2 context, captures every shader it compiles, adds the star kit's
-// (src/stars.js: the game and its debug screen draw stars, the lab no longer does), and validates each with
+// (src/stars.js: the game and its debug screen draw stars, the lab no longer does) and the star map's, and validates each with
 // glslangValidator. Usage: npm run check (after npm run build)
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process'), os = require('os');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
@@ -38,6 +38,10 @@ if (!window.__fly) errs.push('flight mode did not start');
   const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
   const S = new Function(src('shaders.js') + src('stars.js').replace(/\nif \(typeof module[\s\S]*$/, '') + '\nreturn STAR_SHADERS();')();
   shaders.push({ type: consts.VERTEX_SHADER, src: S.vs }, { type: 0, src: S.fs }, { type: 0, src: S.hole }, { type: 0, src: S.flare });
+}
+{ // the star map's (src/map/map.js: only map.html draws it)
+  const M = new Function(fs.readFileSync(path.join(__dirname, '..', 'src', 'shaders.js'), 'utf8') + '\nreturn [MAP_STAR_VS, MAP_STAR_FS, MAP_LINE_VS, MAP_LINE_FS, MAP_ZONE_VS, MAP_ZONE_FS];')();
+  M.forEach((src, i) => shaders.push({ type: i % 2 ? 0 : consts.VERTEX_SHADER, src }));
 }
 const bin = path.join(__dirname, '..', 'node_modules', 'glslang-validator-prebuilt-predownloaded', 'bin', 'glslangValidator.' + (process.platform === 'win32' ? 'exe' : process.platform));
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'driftward-'));

@@ -51,6 +51,7 @@ Flight controls: W/S set speed (assist on) or main/reverse thrust (assist off), 
 ```
 index.html          built lab page (open this)
 play.html           built game page (or this)
+map.html            built star map page: the real stars within 80 ly of Sol, in 3D
 core/               the sim core, a Rust crate (WASM for the pages, native for tests and replays)
   src/world.rs      column groups, tuning params, the fixed-step clock and tick pipeline, handles, state hash
   src/flight.rs     flight physics stages: assist control, gas fields, steering, forces, integration, engines
@@ -85,6 +86,9 @@ src/
   economy.json      commodities, price tiers by port role, the starting credits and debt
   traffic.json      traffic hulls by culture and role, population weights for the flows
   play/             the game page: template.html, play.js, debug.js (the debug screen), shipyard.js and suns.js (its Ships and Suns tabs)
+  map/              the star map: map.js (the 3D chart) and panel.js (its side panel and mouse), shared by the map page
+                    (template.html, view.js) and the game's debug screen (its Map tab)
+  galaxy/           stars.json: every star system within 80 ly of Sol, from the HYG database (tools/hyg.py); galaxy.json: the game's systems, lanes and factions (tools/galaxy.py)
   stars.js          the twelve star classes (looks, light, radius, well, hazard), and the star kit: star, pulsar and black hole shaders, lens flare
   catalog.json      size classes, the factions and their lines, station archetypes and heavy hulls
   gen.js            ship and station assembly and baking (pure JS, runs in workers and Node)
@@ -96,8 +100,8 @@ src/
   template.html     lab page shell and styles
 art/                painted port vistas and portraits per system (WebP, from tools/gen-content.js; the game loads them beside play.html)
 tools/
-  build.py          compiles core/ to WASM and assembles it with src/ into index.html and play.html
-  check.js          boots the lab against a stub WebGL context and validates every shader it compiles, and the star kit's
+  build.py          compiles core/ to WASM and assembles it with src/ into index.html, play.html and map.html
+  check.js          boots the lab against a stub WebGL context and validates every shader it compiles, and the star kit's and the star map's
   core-test.js      core unit tests, native vs WASM state hashes, and a WASM session replayed natively
   fly-smoke.py      drives the lab's Fly tab in headless Chromium: speeds, seeded replay, clock rate
   dev.js            the dev server (npm run dev): rebuilds and live-reloads, takes each page's console into .dev/frontend.log, and keeps state reports in .dev/reports/ (the Send state button, = or F8 on a page; curl localhost:8000/__ask asks every open page for one)
@@ -106,6 +110,10 @@ tools/
   exit-test.py      M1's exit test: a trade and a delivery end to end in the game page, then save, reload and replay (in the page and natively) reach the same state
   play-smoke.py     drives the game page: start landed, the market, ambient traffic, the mission board and a delivery, flight, a port visit, save and load, a browser session replayed natively
   validate.js       validates every system file and its lore against their schemas, and checks the clamp itself
+  hyg.py            pulls the HYG star catalogue and writes src/galaxy/stars.json (positions, classes, names)
+  galaxy.py         chooses the game's systems, lanes and factions among those stars as MIPs (needs scipy), into src/galaxy/galaxy.json
+  galaxy_names.py   the systems' provisional names: real near Sol, invented in each faction's style farther out
+  mip.py            the small modelling layer galaxy.py uses over scipy's HiGHS solver, with an infeasibility finder
   gen-content.js    writes a system's lore and paints its vistas and portraits via OpenRouter (offline; the output is committed)
   dev.js            dev server: rebuilds on change, live-reloads both pages
   preview.js        CPU bake of the whole catalog to a PNG grid
