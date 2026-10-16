@@ -20,6 +20,7 @@ function starMapPanelHtml() {
     <label><input type="checkbox" data-t="game" checked> Game systems</label>
     <label><input type="checkbox" data-t="lanes" checked> Lanes</label>
     <label><input type="checkbox" data-t="regions" checked> Territories</label>
+    <label><input type="checkbox" data-t="areas" checked> Regions</label>
     <label><input type="checkbox" data-t="labels" checked> Names</label>
     <label><input type="checkbox" data-t="drops"> Drop lines</label>
     <label><input type="checkbox" data-t="grid" checked> Plane</label>
@@ -29,7 +30,7 @@ function starMapPanelHtml() {
   <div class="sm-legend" data-m="groups"></div>
   <h2>Classes</h2>
   <div class="sm-legend" data-m="classes"></div>
-  <p class="sm-keys">Drag: orbit · right-drag or shift-drag: pan<br>Wheel: zoom · click: select · double-click: centre</p>
+  <p class="sm-keys">Drag: orbit · right-drag or shift-drag: pan<br>Wheel: zoom · click: select · double-click: its detail</p>
   <p class="sm-credit">Star data: HYG database v4.1, David Nash (astronexus), CC BY-SA 4.0.</p>`;
 }
 
@@ -53,6 +54,19 @@ const STAR_MAP_PANEL_CSS = `
 .sm-legend label { display: contents; cursor: pointer; }
 .sm-legend small { color: var(--muted); }
 .sm-keys { margin: 12px 0 0; color: var(--muted); font: 11.5px/1.6 var(--f-mono); }
+.sm-more { color: var(--muted); font: 11.5px var(--f-mono); }
+.sm-modal { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(4, 6, 9, .45); }
+.sm-modal[hidden] { display: none; }
+.sm-modal-box { position: relative; width: min(920px, 92vw); max-height: 86vh; overflow: auto; padding: 18px 22px 20px;
+  background: rgba(12, 16, 21, .96); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 16px 48px rgba(0,0,0,.6); }
+.sm-modal-box h2 { margin: 0 0 8px; font: 600 12px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.sm-modal-x { position: absolute; top: 8px; right: 12px; background: none; border: 0; color: var(--muted); font: 22px/1 var(--f-body); cursor: pointer; }
+.sm-modal-x:hover { color: var(--amber); }
+.sm-modal-cols { display: grid; grid-template-columns: minmax(260px, 1fr) 1.4fr; gap: 22px; margin-top: 10px; }
+.sm-modal .sm-story { font-size: 13.5px; padding-left: 18px; }
+.sm-modal .sm-story li { margin: 0 0 7px; }
+.sm-story { margin: 0; padding-left: 14px; font: 12.5px/1.45 var(--f-body); }
+.sm-story li { margin: 0 0 4px; }
 .sm-credit { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
 .sm-search { width: 100%; background: #0a0d12; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; color: var(--fg); font: 13px var(--f-body); }
 .sm-search:focus { outline: none; border-color: var(--amber); }`;
@@ -70,38 +84,75 @@ function mountStarMapPanel(root, M, galaxy, surface) {
   const DEPTHS = ['the fringe', 'the wild', 'the deep', 'the black']; // the Book's depth tiers, two jumps each
   const hex = c => '#' + c.map(v => Math.round(Math.pow(v, 1 / 2.2) * 255).toString(16).padStart(2, '0')).join('');
 
-  // ---------- the selection ----------
-  function showSel() {
-    const s = stars[M.st.sel]; if (!s) return;
-    const T = STAR_CLASSES[s.class], p = stars[M.st.prev], c = M.sys[M.st.sel];
-    q('sel-name').textContent = M.nameOf(M.st.sel);
-    q('sel-desig').textContent = [...new Set([s.name, ...(s.desig || [])])].filter(d => d !== M.nameOf(M.st.sel)).join(' · ');
-    const rows = [];
+  // ---------- the selection: the panel's short card, and the full detail a double-click opens ----------
+  // a system's rows: where and what it is (the panel), then its people, ports, history and story (the detail too)
+  function rowsOf(i, full) {
+    const s = stars[i], T = STAR_CLASSES[s.class], c = M.sys[i], rows = [];
     if (c) {
       rows.push(['System', `${GROUPS[c.group]}${c.ring ? ', ' + c.ring + ' ring' : ''}${c.sector != null ? ', sector ' + (c.sector + 1) : ''}`], ['Status', STATUS[c.status] || c.status]);
+      if (c.region) rows.push(['Region', (galaxy.game.regions || {})[c.region] || c.region]);
+      if (c.hazard) rows.push(['Hazard', `a ${(STAR_CLASSES[c.class] || {}).label || c.class}: radiation and a deep well`]);
       if (c.faction) rows.push(['Held by', FACTIONS[c.faction] || c.faction]);
+    }
+    if (full && c) {
+      const w = ((galaxy.game.worlds || {}).systems || {})[c.star];
+      if (w) {
+        const n = w.population, people = n >= 1e9 ? (n / 1e9).toFixed(1) + ' billion' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' million' : Math.round(n / 1e3) + ' thousand';
+        rows.push(['People', `${people}, ${w.tier}${w.builtworld ? ' with a Builtworld' : ''}`], ['Ports', w.roles.join(', ')],
+          ['Wealth, security, unrest', `${w.wealth}, ${w.security}, ${w.unrest}`]);
+      }
       if (c.settled) rows.push(['Settled', String(c.settled)]);
       if (c.charted) rows.push(['Charted', `${c.charted} (contact with the Bloom, 2376)`]);
       if (c.emptied) rows.push(['Emptied', String(c.emptied)]);
       if (c.seen) rows.push(['Shadow seen', `from ${c.seen}`]);
       if (c.lost) rows.push(['Went glass', String(c.lost)]);
       if (c.front) rows.push(['The front', 'faces the Shadow']);
-      if (c.provisional) rows.push(['Name', 'provisional (invented; the lore pass may rename it)']);
-      if (c.exclave) rows.push(['Apart', `a ${c.exclave}, cut off from the main body`]);
+      if (c.exclave) rows.push(['Apart', `${/^[aeiou]/.test(c.exclave) ? 'an' : 'a'} ${c.exclave}, cut off from the main body`]);
       if (c.gateway) rows.push(['Gateway', 'a lane into the open Drift']);
       if (c.depth) rows.push(['Drift depth', `${c.depth} (${DEPTHS[Math.min(4, Math.ceil(c.depth / 2)) - 1]})${c.generated ? ', uncharted' : ''}`]);
       if (c.jumps != null) rows.push(['Jumps from Sol', String(c.jumps)]);
-      if (c.class) rows.push(['Star set to', (STAR_CLASSES[c.class] || {}).label || c.class]);
+      if (c.provisional) rows.push(['Name', 'provisional (invented; the lore pass may rename it)']);
     }
-    if (c && c.generated) rows.push(['From Sol', fmt(s.ly) + ' ly']);
-    else rows.push([c && c.class ? 'Catalogue class' : 'Class', T ? T.label : s.class], ['Type', s.spect || 'unknown'], ['From Sol', fmt(s.ly) + ' ly']);
-    if (p && p !== s && p.ly) rows.push([`From ${M.nameOf(M.st.prev)}`, fmt(M.distLy(p.pos, s.pos)) + ' ly']);
-    rows.push(['Above plane', (s.pos[2] >= 0 ? '+' : '') + s.pos[2].toFixed(1) + ' ly']);
-    if (s.absmag != null && !(c && c.generated)) rows.push(['Brightness', (Math.pow(10, -0.4 * (s.absmag - 4.83))).toPrecision(2) + ' × Sol']);
-    (s.companions || []).forEach((cp, i) => rows.push([i ? '' : 'Companions', `${cp.name} (${(STAR_CLASSES[cp.class] || {}).label || cp.class})`]));
-    if (c) M.lanesOf(M.st.sel).sort((a, b) => a.ly - b.ly).forEach((l, i) => rows.push([i ? '' : 'Lanes', `${M.nameOf(l.to)}: ${fmt(l.ly)} ly, ${l.days} d`]));
-    q('sel-stats').innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+    if (c && c.class) rows.push(['Star', (STAR_CLASSES[c.class] || {}).label || c.class]);
+    if (!(c && c.generated)) rows.push([c && c.class ? 'Catalogue class' : 'Class', T ? T.label : s.class], ['Type', s.spect || 'unknown']);
+    rows.push(['From Sol', fmt(s.ly) + ' ly']);
+    const p = stars[M.st.prev];
+    if (!full && p && p !== s && p.ly) rows.push([`From ${M.nameOf(M.st.prev)}`, fmt(M.distLy(p.pos, s.pos)) + ' ly']);
+    if (full) {
+      rows.push(['Above plane', (s.pos[2] >= 0 ? '+' : '') + s.pos[2].toFixed(1) + ' ly']);
+      if (s.absmag != null && !(c && c.generated)) rows.push(['Brightness', (Math.pow(10, -0.4 * (s.absmag - 4.83))).toPrecision(2) + ' × Sol']);
+      (s.companions || []).forEach((cp, n) => rows.push([n ? '' : 'Companions', `${cp.name} (${(STAR_CLASSES[cp.class] || {}).label || cp.class})`]));
+    }
+    if (c) M.lanesOf(i).sort((a, b) => a.ly - b.ly).forEach((l, n) => rows.push([n ? '' : 'Lanes', `${M.nameOf(l.to)}: ${fmt(l.ly)} ly, ${l.days} d`]));
+    return rows;
   }
+  const dl = rows => rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+  const desig = i => [...new Set([stars[i].name, ...(stars[i].desig || [])])].filter(d => d !== M.nameOf(i)).join(' · ');
+  function showSel() {
+    if (!stars[M.st.sel]) return;
+    q('sel-name').textContent = M.nameOf(M.st.sel);
+    q('sel-desig').textContent = desig(M.st.sel);
+    q('sel-stats').innerHTML = dl(rowsOf(M.st.sel, false))
+      + (M.sys[M.st.sel] ? `<dt></dt><dd class="sm-more">double-click the star for its detail</dd>` : '');
+  }
+  // the detail: a box over the map with everything about the system and its story; Esc, the close button or a click
+  // outside it closes it
+  const modal = document.createElement('div');
+  modal.className = 'sm-modal'; modal.hidden = true;
+  surface.parentElement.appendChild(modal);
+  function openDetail(i) {
+    const c = M.sys[i]; if (!c) return;
+    const story = ((galaxy.game.stories || {}).systems || {})[c.star];
+    modal.innerHTML = `<div class="sm-modal-box" role="dialog" aria-label="${esc(M.nameOf(i))}"><button type="button" class="sm-modal-x" aria-label="Close">×</button>`
+      + `<p class="sm-sel-name">${esc(M.nameOf(i))}</p><p class="sm-sel-desig">${esc(desig(i))}</p>`
+      + `<div class="sm-modal-cols"><dl class="sm-stats">${dl(rowsOf(i, true))}</dl>`
+      + `<div><h2>Story</h2>${story ? `<ul class="sm-story">${story.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : '<p class="sm-more">No story yet (tools/stories.py).</p>'}</div></div></div>`;
+    modal.hidden = false;
+    modal.querySelector('.sm-modal-x').onclick = closeDetail;
+  }
+  function closeDetail() { modal.hidden = true; }
+  modal.addEventListener('pointerdown', e => { if (e.target === modal) closeDetail(); });
+  window.addEventListener('keydown', e => { if (!modal.hidden && e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); closeDetail(); } }, true);
   const gameBox = root.querySelector('[data-t="game"]');
   function choose(i, centre) {
     if (i < 0) return;
@@ -127,12 +178,12 @@ function mountStarMapPanel(root, M, galaxy, surface) {
   const hidden = new Set(), counts = {};
   stars.forEach(s => { counts[s.class] = (counts[s.class] || 0) + 1; });
   q('classes').innerHTML = STAR_ORDER.filter(c => counts[c]).map(c => {
-    const col = blackbody(STAR_CLASSES[c].temp || 5800).map(v => Math.round(Math.pow(v, 1 / 2.2) * 255));
+    const col = (STAR_LOOKS[c] || { col: [1, 1, 1] }).col.map(v => Math.round(Math.pow(v, 1 / 2.2) * 255));
     return `<label><input type="checkbox" data-c="${c}" checked hidden><i style="color:rgb(${col})"></i><span>${esc(STAR_CLASSES[c].label)}</span><span>${counts[c]}</span></label>`;
   }).join('');
-  // the year: history played back; a system shows once it was settled or charted, the Shadow from 2519
+  // the year: history played back; a system shows once it is known (map.js: settled, charted, seen, or reached)
   const NOW = 2526;
-  const seenBy = (c, y) => !c || y >= NOW || (c.settled ? c.settled <= y : c.group === 'bloom' ? y >= (c.charted || 2376) : c.group === 'shadow' ? y >= (c.seen || 2519) : true);
+  const seenBy = (c, y) => !c || y >= NOW || (c.known != null && c.known <= y);
   function applyFilter() {
     const named = q('named').checked, y = +q('year').value;
     M.set('filter', hidden.size || named || y < NOW ? (s, c) => !hidden.has(s.class) && (!named || !s.catalog || (c && c.name !== s.name)) && seenBy(c, y) : null);
@@ -160,7 +211,8 @@ function mountStarMapPanel(root, M, galaxy, surface) {
 
   // ---------- the mouse on the map's surface ----------
   let drag = null;
-  const at = e => { const r = surface.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  // where the pointer is on the map's canvas (stars are drawn there; the surface may sit elsewhere, under a header)
+  const at = e => { const r = M.canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   surface.addEventListener('contextmenu', e => e.preventDefault());
   surface.addEventListener('pointerdown', e => {
     surface.setPointerCapture(e.pointerId);
@@ -173,7 +225,7 @@ function mountStarMapPanel(root, M, galaxy, surface) {
     if (drag.moved) drag.pan ? M.pan(dx, dy) : M.orbit(dx, dy);
   });
   surface.addEventListener('pointerup', e => { if (drag && !drag.moved) choose(M.pick(...at(e))); drag = null; surface.style.cursor = ''; });
-  surface.addEventListener('dblclick', e => { const i = M.pick(...at(e)); if (i >= 0) choose(i, true); });
+  surface.addEventListener('dblclick', e => { const i = M.pick(...at(e)); if (i >= 0) { choose(i); openDetail(i); } });
   surface.addEventListener('wheel', e => { e.preventDefault(); M.zoom(Math.exp(e.deltaY * .0012)); }, { passive: false });
-  return { choose, home() { choose(0); M.focusOn([0, 0, 0], 38); }, centre() { if (M.st.sel >= 0) M.focusOn(stars[M.st.sel].pos); } };
+  return { choose, openDetail, closeDetail, home() { choose(0); M.focusOn([0, 0, 0], 38); }, centre() { if (M.st.sel >= 0) M.focusOn(stars[M.st.sel].pos); } };
 }

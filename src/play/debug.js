@@ -11,6 +11,10 @@
 //   Suns     this system's stars and one of each of the twelve classes, drawn behind the tab by the game's star kit
 //            (src/stars.js, src/play/suns.js); click one to open it in the builder, whose sliders edit the system
 //            file's star entry (the JSON to copy into it). The lab's old Suns tab.
+//   Regions  the galaxy's named regions (src/galaxy/): each one's facts, trade and summary, its hand-written notes
+//            (src/lore/regions/), and its systems, each a link to the Planets tab.
+//   Planets  every system, region by region: its people, ports, wealth, security and unrest, and its backstory
+//            bullets; a system's name opens it on the Map tab.
 //   Map      the galaxy in 3D (src/map/map.js, as map.html shows it): the real stars round Sol, the game's systems,
 //            lanes and faction territories (src/galaxy/), drawn behind the tab with the map's panel (src/map/panel.js).
 // The header's jump box takes the player to any planet, moon, station, belt or field in any system: place@system.
@@ -286,6 +290,116 @@ function makeDebug(ctx) {
     return sections(S);
   }
 
+  // ---------- Regions: every named region, its facts, notes, and systems with their stories ----------
+  let galaxyData = null, pendingStar = null;
+  const galaxy = () => galaxyData || (galaxyData = JSON.parse(document.getElementById('galaxy').textContent));
+  // a little markdown, for the regions' notes: headings, tables, lists, bold, paragraphs
+  function md(src) {
+    const inline = s => e(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
+    return src.split(/\n\s*\n/).map(block => {
+      const lines = block.trim().split('\n');
+      if (/^#{1,4} /.test(lines[0])) return lines.map(l => { const m = l.match(/^(#+) (.*)/); return m ? `<p class="dbg-sub">${inline(m[2])}</p>` : `<p>${inline(l)}</p>`; }).join('');
+      if (lines.every(l => l.trim().startsWith('|'))) {
+        const rows = lines.filter(l => !/^\|\s*:?-/.test(l.trim())).map(l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()));
+        return `<table class="dbg-grid"><thead><tr>${rows[0].map(c => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      }
+      if (lines.every(l => /^\s*[-*] /.test(l))) return `<ul>${lines.map(l => `<li>${inline(l.replace(/^\s*[-*] /, ''))}</li>`).join('')}</ul>`;
+      return `<p>${inline(lines.join(' '))}</p>`;
+    }).join('');
+  }
+  const STATUS_NAME = { inhabited: 'settled', dead: 'dead', living: 'a living Bloom world', held: 'held by the Shadow', glass: 'gone glass', emptied: 'emptied by the Shadow' };
+  // the galaxy's regions, biggest first, each with its systems (most people first, the dead after)
+  const people = n => n >= 1e9 ? `${(n / 1e9).toFixed(1)} billion` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} million` : n >= 1e3 ? `${Math.round(n / 1e3)} thousand` : String(n);
+  function regionData() {
+    const G = galaxy().game;
+    const W = G.worlds || { systems: {}, regions: {} }, ST = G.stories || { systems: {}, regions: {} }, names = G.regions || {};
+    const by = {};
+    G.systems.forEach(c => { (by[c.region] = by[c.region] || []).push(c); });
+    const order = Object.keys(names).filter(k => by[k]).sort((a, b) => ((W.regions[b] || {}).population || 0) - ((W.regions[a] || {}).population || 0) || by[b].length - by[a].length);
+    for (const k of order) by[k].sort((a, b) => ((W.systems[b.star] || {}).population || 0) - ((W.systems[a.star] || {}).population || 0) || (a.status === 'dead') - (b.status === 'dead'));
+    return { G, W, ST, names, by, order, fac: G.factions || {}, notes: G.regionNotes || {} };
+  }
+  function regionsTab() {
+    let R;
+    try { R = regionData(); } catch (err) { return '<p class="dbg-note">No galaxy in this build.</p>'; }
+    const { G, W, ST, names, by, order, fac, notes } = R;
+    const told = k => by[k].filter(c => ST.systems[c.star]).length;
+    const list = order.map(k => {
+      const sys = by[k], settled = sys.filter(c => c.status === 'inhabited'), tr = W.regions[k] || {}, story = ST.regions[k];
+      const owners = {}; settled.forEach(c => { owners[c.faction] = (owners[c.faction] || 0) + 1; });
+      const facts = kv([
+        ['Systems', `${sys.length} (${settled.length} settled${sys.length - settled.length ? `, ${sys.length - settled.length} other` : ''})`],
+        ['People', tr.population ? people(tr.population) : ''],
+        ['Held by', Object.entries(owners).sort((a, b) => b[1] - a[1]).map(([f, n]) => `${e(fac[f] || f)} ${n}`).join(', ')],
+        ['Exports', (tr.exports || []).map(e).join(', ')], ['Imports', (tr.imports || []).map(e).join(', ')],
+        ['Stories', `${told(k)} of ${sys.length} systems${story ? ` · ${e(story.model)} · ${e(story.date)}` : ''}`]]);
+      const summary = story && story.summary.length ? `<p class="dbg-sub">Summary</p><ul>${story.summary.map(b => `<li>${e(b)}</li>`).join('')}</ul>` : '<p class="dbg-note">No summary yet (tools/stories.py).</p>';
+      const authored = notes[k] ? fold('Hand-written notes (src/lore/regions/' + e(k) + '.md)', md(notes[k]), true) : '';
+      const links = `<p class="dbg-sub">Systems (${sys.length})</p><ul class="dbg-syslist">${sys.map(c => `<li><button type="button" class="dbg-link${c.status === 'dead' ? ' dead' : ''}" data-planet="${c.star}" title="Open on the Planets tab">${e(c.name)}</button>`
+        + ` <small>${e(c.faction ? fac[c.faction] : STATUS_NAME[c.status] || c.status)}${c.status === 'dead' && c.faction ? ', dead' : ''}</small></li>`).join('')}</ul>`;
+      return { id: 'rg-' + k, title: names[k], body: facts + summary + authored + links };
+    });
+    const total = Object.values(W.regions).reduce((n, r) => n + (r.population || 0), 0);
+    const top = `<div class="dbg-head-line"><span><b>Regions</b></span><span>${order.length} regions · ${G.systems.length} systems · ${people(total)} people in the regions with trade</span>`
+      + `<span>stories for ${Object.keys(ST.systems).length} systems in ${Object.keys(ST.regions).length} regions</span><span>tools/galaxy.py, worlds.py, stories.py; docs/galaxy.md</span></div>`;
+    return sections(list, top);
+  }
+  function mountRegions(pane) {
+    pane.querySelectorAll('.dbg-link[data-planet]').forEach(b => { b.onclick = () => { pendingPlanet = +b.dataset.planet; show('planets'); }; });
+  }
+
+  // ---------- Planets: every system, region by region, with its content ----------
+  let pendingPlanet = null;
+  const hexOf = c => '#' + c.map(v => Math.round(Math.pow(Math.min(1, v), 1 / 2.2) * 255).toString(16).padStart(2, '0')).join('');
+  const comName = id => ((econ.commodities || []).find(c => c.id === id) || { name: id }).name.toLowerCase();
+  function roleTip(r) {  // a port role: what it makes and what it needs (src/economy.json)
+    const R = (econ.roles || {})[r] || {}, of = t => Object.keys(R).filter(k => R[k] === t).map(comName);
+    return `${r}: makes ${of('low').join(', ') || 'nothing to sell'}${of('high').length ? `; needs ${of('high').join(', ')}` : ''}`;
+  }
+  function planetsTab() {
+    let R;
+    try { R = regionData(); } catch (err) { return '<p class="dbg-note">No galaxy in this build.</p>'; }
+    const { G, W, ST, names, by, order, fac } = R;
+    const list = order.map(k => {
+      const rows = by[k].map(c => {
+        const w = W.systems[c.star], s = ST.systems[c.star];
+        const tags = [[c.hazard, 'hazard', 'A hazard star: radiation and a deep well'], [c.front, 'front', 'Faces the Shadow: the front the navy holds'],
+          [c.exclave, c.exclave, `Cut off from ${fac[c.faction] || 'its owner'}'s main territory`], [c.gateway, 'gateway', 'Has a lane into the open Drift'],
+          [w && w.builtworld, 'Builtworld', 'A whole planet built over into one city: one of six in human space'],
+          [c.provisional, 'provisional', 'An invented name: the lore pass may rename it']].filter(x => x[0]);
+        const year = c.settled ? [c.settled, 'Settled'] : c.charted ? [c.charted, 'Charted by human surveyors (Bloom contact 2376)'] : c.emptied ? [c.emptied, 'Emptied by the Shadow'] : c.lost ? [c.lost, 'Went glass'] : c.seen ? [c.seen, 'The Shadow seen here from'] : null;
+        const who = c.faction ? fac[c.faction] : STATUS_NAME[c.status] || c.status;
+        const col = FACTION_COLOURS[c.faction];
+        const sysTip = [`${c.status}${c.ring ? `, ${c.ring} ring` : ''}`, c.class && `star set to ${c.class}`, c.jumps != null && `${c.jumps} jumps from Sol`, c.depth && `Drift depth ${c.depth}`].filter(Boolean).join(' · ');
+        return `<tr id="dbg-pl-${c.star}"><td><button type="button" class="dbg-link${c.status === 'dead' ? ' dead' : ''}" data-star="${c.star}" title="${e(sysTip)} · click: open on the Map">${e(c.name)}</button>`
+          + `${tags.length ? `<div class="dbg-chips">${tags.map(([, n, tip]) => `<span class="dbg-chip tag" title="${e(tip)}">${e(n)}</span>`).join('')}</div>` : ''}</td>`
+          + `<td title="${e(who)}">${col ? `<span class="dbg-dot" style="background:${hexOf(col)}"></span>` : ''}${e(who)}</td>`
+          + `<td class="n" title="${w ? e(`${w.population.toLocaleString()} people: ${w.tier}`) : ''}">${w ? `${e(people(w.population))}<br><small>${e(w.tier)}</small>` : ''}</td>`
+          + `<td>${w ? `<div class="dbg-chips">${w.roles.map(r => `<span class="dbg-chip" title="${e(roleTip(r))}">${e(r)}</span>`).join('')}</div>` : ''}</td>`
+          + (w ? [['wealth', w.wealth], ['security', w.security], ['unrest', w.unrest]].map(([n, v]) => `<td class="n"><span class="dbg-meter ${n}" style="--v:${v}%" title="${e(`${n[0].toUpperCase() + n.slice(1)} ${v} of 100`)}">${v}</span></td>`).join('') : '<td></td><td></td><td></td>')
+          + `<td class="n"${year ? ` title="${e(year[1])}"` : ''}>${year ? e(year[0]) : ''}</td>`
+          + `<td>${s ? `<ul class="dbg-bullets">${s.bullets.map(b => `<li>${e(b)}</li>`).join('')}</ul>` : ''}</td></tr>`;
+      }).join('');
+      const head = [['System', 'Its name: hover for its star and place, click to open it on the Map'], ['Held by', 'The faction that holds it, or what it is'],
+        ['People', 'Its people and settlement tier (tools/worlds.py)'], ['Ports', 'Its ports\' economic roles: hover one for what it makes and needs'],
+        ['Wealth', 'Wealth, 0 to 100'], ['Security', 'Security, 0 to 100: patrols and law'], ['Unrest', 'Unrest, 0 to 100: how close it is to trouble'],
+        ['Year', 'When it was settled (or charted, emptied, lost)'], ['Story', 'Its backstory (tools/stories.py)']];
+      const table = `<table class="dbg-grid dbg-planets"><colgroup><col class="c-sys"><col class="c-who"><col class="c-pop"><col class="c-ports"><col class="c-m"><col class="c-m"><col class="c-m"><col class="c-year"><col class="c-story"></colgroup>`
+        + `<thead><tr>${head.map(([h, tip], n) => `<th${n === 2 || (n >= 4 && n <= 7) ? ' class="n"' : ''} title="${e(tip)}">${e(h)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+      return { id: 'pl-' + k, title: names[k], body: table };
+    });
+    const top = `<div class="dbg-head-line"><span><b>Planets</b></span><span>${G.systems.length} systems in ${order.length} regions · ${Object.keys(W.systems).length} settled</span>`
+      + `<span>people, ports and wealth from tools/worlds.py · stories from tools/stories.py · a name opens the system on the Map</span></div>`;
+    return sections(list, top);
+  }
+  function mountPlanets(pane) {
+    pane.querySelectorAll('.dbg-link[data-star]').forEach(b => { b.onclick = () => { pendingStar = +b.dataset.star; show('map'); }; });
+    if (pendingPlanet != null) { // a system picked on the Regions tab
+      const row = pane.querySelector(`#dbg-pl-${pendingPlanet}`); pendingPlanet = null;
+      if (row) { row.scrollIntoView({ block: 'center' }); row.classList.add('dbg-hit'); }
+    }
+  }
+
   // ---------- Map: the star map, drawn in the game's canvas behind the tab; its names on a canvas of the tab's own ----------
   let makeMap = null, starMap = null, mapPanel = null;
   const mapLabels = document.createElement('canvas');
@@ -301,6 +415,10 @@ function makeDebug(ctx) {
       const style = document.createElement('style'); style.textContent = STAR_MAP_PANEL_CSS; document.head.appendChild(style);
     }
     mapPanel = mountStarMapPanel(pane.querySelector('.dbg-map-panel'), starMap, starMap.galaxy, pane.querySelector('.dbg-map-surface'));
+    if (pendingStar != null) { // a system picked on the Regions tab
+      const i = starMap.stars.findIndex(s => s.id === pendingStar); pendingStar = null;
+      if (i >= 0) mapPanel.choose(i, true);
+    }
   }
   // the map, for the game's frame to draw (null unless the Map tab is up)
   function mapView() {
@@ -312,7 +430,7 @@ function makeDebug(ctx) {
     return starMap;
   }
 
-  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }, { id: 'map', name: 'Map', render: mapTab, mount: mountMap, clear: true }];
+  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }, { id: 'regions', name: 'Regions', render: regionsTab, mount: mountRegions, fixed: true }, { id: 'planets', name: 'Planets', render: planetsTab, mount: mountPlanets, fixed: true }, { id: 'map', name: 'Map', render: mapTab, mount: mountMap, clear: true }];
   let tab = TABS[0].id;
   const cache = new Map();
   function show(id) {

@@ -88,7 +88,7 @@ src/
   play/             the game page: template.html, play.js, debug.js (the debug screen), shipyard.js and suns.js (its Ships and Suns tabs)
   map/              the star map: map.js (the 3D chart) and panel.js (its side panel and mouse), shared by the map page
                     (template.html, view.js) and the game's debug screen (its Map tab)
-  galaxy/           stars.json: every star system within 80 ly of Sol, from the HYG database (tools/hyg.py); galaxy.json: the game's systems, lanes and factions (tools/galaxy.py)
+  galaxy/           stars.json: every star system within 80 ly of Sol, from the HYG database (tools/hyg.py); galaxy.json: the game's systems, lanes, factions and regions (tools/galaxy.py); worlds.json and stories.json: their people, economies and backstories
   stars.js          the twelve star classes (looks, light, radius, well, hazard), and the star kit: star, pulsar and black hole shaders, lens flare
   catalog.json      size classes, the factions and their lines, station archetypes and heavy hulls
   gen.js            ship and station assembly and baking (pure JS, runs in workers and Node)
@@ -111,7 +111,10 @@ tools/
   play-smoke.py     drives the game page: start landed, the market, ambient traffic, the mission board and a delivery, flight, a port visit, save and load, a browser session replayed natively
   validate.js       validates every system file and its lore against their schemas, and checks the clamp itself
   hyg.py            pulls the HYG star catalogue and writes src/galaxy/stars.json (positions, classes, names)
-  galaxy.py         chooses the game's systems, lanes and factions among those stars as MIPs (needs scipy), into src/galaxy/galaxy.json
+  galaxy.py         chooses the game's systems, lanes and factions among those stars as MIPs (needs scipy), into src/galaxy/galaxy.json;
+                    how and why: docs/galaxy.md
+  worlds.py         each settled system's people, ports (a balanced economy, as a MIP) and wealth, security, unrest -> src/galaxy/worlds.json
+  stories.py        bullet-point backstories, a region at a time, by a model through OpenRouter -> src/galaxy/stories.json
   galaxy_names.py   the systems' provisional names: real near Sol, invented in each faction's style farther out
   mip.py            the small modelling layer galaxy.py uses over scipy's HiGHS solver, with an infeasibility finder
   gen-content.js    writes a system's lore and paints its vistas and portraits via OpenRouter (offline; the output is committed)

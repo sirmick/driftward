@@ -1,0 +1,380 @@
+{
+ "regions": {
+  "inner-sphere": {
+   "summary": [
+    "The Inner Sphere is the oldest settled space there is: twelve inhabited systems, about 85 billion people, and six Builtworld cities among them, all within a few jumps of Sol.",
+    "It lives on what it makes and eats: food, alloys, goods and medicine go out, while water, metals, fuel, chemicals and components come in, mostly from the Concord Worlds and the middle ring.",
+    "Federation navy yards at Alpha Centauri, Epsilon Eridani, Procyon and Tau Ceti hold it together, and they are now being stripped for ships and crews to feed the Shadow front.",
+    "Prism holds 61 Cygni and Struve 2398 A as company towns inside Federation space, with the rest of Prism Incorporate behind them, and nobody here forgets whose cores fly their ships."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "calder-march": {
+   "summary": [
+    "The Calder March, which Ironhull crews call the Seam, is six old, crowded systems on the inner edge of the middle ring, where Compact, Federation and Prism space meet.",
+    "Ore and metals go inward through Calder's inspections, food goes out from Merrow, water and fuel from Ostry, and medicine and credit from Serein. The debts flow back.",
+    "Navigation cores from Quire go inward under escort, so the March's own yards run short while the most valuable cargo around passes through them.",
+    "Lanes lead to the Anvil, to Prism's inner systems, and to Varrow and Facet, both under quarantine as glass. Nobody in the March likes to look that way for long.",
+    "It has been policed, taxed and argued over for a century and never fought over. The navy is leaving for the Shadow front, and what holds the Seam together is habit."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  },
+  "reach": {
+   "summary": [
+    "The Reach is fourteen outer-ring systems, about fourteen million people, strung along lanes of two to three days and every one of them flying the Freeflag colours.",
+    "Its ice and gas ports ship water, fuel and chemicals outward, and it lives on imported food, components, medicine and whatever else the smugglers can get past the navy.",
+    "Most of it was settled between 2328 and 2406 by ice crews and debtors, then taken over by Freeflag, whose havens turned old ice towns into refit yards.",
+    "Four systems, Strike, Last Light, Hope and Remembrance, open towards the Drift, and eighteen dead systems around them make every lane a choke point someone can watch.",
+    "Federation patrols are thin, Prism's debts are still owed, and Ironhull crews from the Anvil trade here with more sympathy than the Compact admits."
+   ],
+   "model": "anthropic/claude-sonnet-5.5",
+   "date": "2026-10-16"
+  }
+ },
+ "systems": {
+  "0": {
+   "bullets": [
+    "Every jump lane in human space is measured from here, and the torch that scattered people across the Solar System in 2076 is still taught in schools as the day it all began.",
+    "One planet has been built over into a single city of about 13 billion, and the habitats, container-port, relay and shipyard keep six lanes busy.",
+    "Unrest is low and security is the highest anywhere, but the quarantine of the Glass systems is only ever described here as a hazard notice, and clerks have learned to stop asking.",
+    "The shipyard is now receiving navy requisition orders for Ironhull refits, and a captain who knows which hull numbers are on the list could sell that to someone."
+   ],
+   "region": "inner-sphere"
+  },
+  "71456": {
+   "bullets": [
+    "Alpha Centauri was settled in 2182, six years after the Valhalla Result, and today an entire planet there has been built over into a city of about 12 billion.",
+    "Its military port makes it a fleet base as much as a shipyard town, and half the container traffic out of Sol is sorted here.",
+    "The navy has been taking crews from the docks for the Shadow front, and families who no longer hear from their sailors have started gathering at the gates.",
+    "Dockhands say the base is pulling in ships faster than the yard can refit them, and a hauler with spare repair crews could name its own terms."
+   ],
+   "region": "inner-sphere"
+  },
+  "87665": {
+   "bullets": [
+    "Barnard's Star, a red dwarf, was settled in 2178 as a farm world, and its fields and habitats still grow food for the cities nearer Sol.",
+    "With about 836 million people it is the poorest of the inner worlds, and the farmers have a long list of grievances about contract prices.",
+    "Water and fuel arrive late and cost more every season, and the unrest here is among the highest in the region, though nobody has so far done more than complain.",
+    "A grain broker on the container dock is quietly buying up harvest futures from farmers who fear a requisition, and she needs a ship that doesn't file its manifests."
+   ],
+   "region": "inner-sphere"
+  },
+  "118720": {
+   "bullets": [
+    "Wolf 359 was settled in 2184 by agricultural crews, and the red dwarf's dim light still shapes the long, pale-leaved crops the farms are known for.",
+    "Its relay and container-port make it the Federation's gate to the Concord Worlds, with lanes running to both Gl 473A and GJ 3622.",
+    "Security here is among the heaviest anywhere, with patrols boarding any ship coming in from the Concord side, and the rumour is that they're hunting for smuggled data, not goods.",
+    "Inspectors have a habit of losing sealed containers in transit, and a captain with a clean paper trail could find out who benefits."
+   ],
+   "region": "inner-sphere"
+  },
+  "32263": {
+   "bullets": [
+    "Sirius was settled in 2176, the year of the Valhalla Result, and its older families still claim to have been first out of Sol on jump drives.",
+    "Under its white sun, farms and habitats share the world with a relay that carries traffic from Procyon, Ross 614 and Kapteyn's Star on to Sol.",
+    "It is prosperous and orderly, but the relay is crowded with navy signals nobody will explain, and the Concord lanes feel uncomfortably close to the front.",
+    "A relay technician has been logging messages that vanish from the queue before they reach Sol, and wants someone to carry the copies out."
+   ],
+   "region": "inner-sphere"
+  },
+  "16496": {
+   "bullets": [
+    "Epsilon Eridani was settled in 2186, and a whole planet has since been built over into a city of 13 billion beneath an orange sun.",
+    "Its shipyard and military port make it one of the navy's biggest bases, with a lane to Keid in the Concord Worlds for fleet supply.",
+    "Yard workers have been told to refit and ready every hull they can for the Shadow front, and the overtime is making them as resentful as it makes them rich.",
+    "Some of the ships coming into the yard are Ironhull haulers taken on requisition, and their crews are drinking in the lower docks with plenty to say."
+   ],
+   "region": "inner-sphere"
+  },
+  "103879": {
+   "bullets": [
+    "61 Cygni was founded by Halcyon in 2218, and today the whole Builtworld is a Prism holding of about 11 billion people who are employees, tenants or both.",
+    "Its forge, research and relay ports make it the sort of place where navigation cores might be made, though Prism has never said which ones.",
+    "Since the recall of certain navigation cores, associates here speak very carefully, and the city has gone quiet in the way a workplace does before bad news.",
+    "A researcher is said to be looking for a captain with no Prism contracts who can carry a recalled core out of the city without registering it."
+   ],
+   "region": "inner-sphere"
+  },
+  "37173": {
+   "bullets": [
+    "Procyon was settled in 2188, and its Builtworld, home to about 13 billion people, grew up around a naval anchorage that never closed.",
+    "Its military port and relay make it the Federation's gate toward Luyten's Star, GJ 1111 and the Concord Worlds, and convoys form up here before the long runs.",
+    "The navy has been requisitioning civilian ships from the docks for the Shadow front, and the dockside crowds are angrier than the security numbers suggest.",
+    "A hauler captain with a requisition notice is selling his berth to anyone who can get him out of the system before the navy collects."
+   ],
+   "region": "inner-sphere"
+  },
+  "91484": {
+   "bullets": [
+    "Struve 2398 A was settled by Prism in 2216 and has never been anything else: a world of about 1.5 billion people in company housing under an orange sun.",
+    "Its forge, habitat and research ports work for Prism alone, and the lanes lead onward into Prism Incorporate at GJ 1245A and Alsafi.",
+    "Since the quarantine and the recall, hiring has been frozen and shifts cut, and workers say supervisors have started leaving certain research wings unlit.",
+    "A shift foreman will pay to have a sealed crate of foundry tooling moved off-world before the next audit, and he won't say what's in it."
+   ],
+   "region": "inner-sphere"
+  },
+  "108526": {
+   "bullets": [
+    "Epsilon Indi was settled late, in 2241, by farm crews who wanted a world of their own, and it is still the smallest inner world at about 310 million people.",
+    "Its agri and container ports feed the Concord lanes toward Lacaille 8760 and Gl 832, and the military port keeps a garrison large for a farm town.",
+    "Farmers resent the garrison's grain levies, and unrest is higher than any other inner world except Barnard's Star, with the navy's requisitions making it worse.",
+    "The garrison commander is quietly selling off surplus fuel to anyone who won't ask where it came from, and a trader could make friends or enemies with that."
+   ],
+   "region": "inner-sphere"
+  },
+  "8087": {
+   "bullets": [
+    "Tau Ceti was settled in 2194, and a planet there has been built over into a single city of about 14 billion, the largest in human space.",
+    "Its shipyard and military port are among the busiest anywhere, with lanes to Gl 54.1, Gl 65A and Epsilon Eridani all within two days.",
+    "Everything here is rich and secure on the surface, but the yard is running three shifts on Shadow-front refits, and the strain shows in the lower decks.",
+    "Yard inspectors have been finding hulls with nav cores that don't match their records, and a captain with a Prism receipt might learn why."
+   ],
+   "region": "inner-sphere"
+  },
+  "82472": {
+   "bullets": [
+    "HIP 82724 was settled in 2204 as a farm and freight world, and today about 3.9 billion people live under its yellow sun.",
+    "Its agri, container and relay ports serve five lanes, four of them into the Concord Worlds and one back to Alpha Centauri, making it a busy crossroads.",
+    "Prosperous and tightly policed, it nonetheless sees too much traffic from the Concord side for the harbourmasters to inspect, and the backlog grows each week.",
+    "A harbourmaster's clerk is selling clearance slots to captains who can pay in kind, and sooner or later somebody in uniform will notice."
+   ],
+   "region": "inner-sphere"
+  },
+  "1472": {
+   "bullets": [
+    "Groombridge 34 is a red dwarf with nobody living there; Prism holds it for its position, a lane junction between Ross 248 and Achird in Prism Incorporate.",
+    "It also has a lane to The Lighthouse across the border into Lighthouse Run, which makes this dead system a choke point that Prism would rather keep quiet."
+   ],
+   "region": "inner-sphere"
+  },
+  "83688": {
+   "bullets": [
+    "Ice crews of the belt tradition settled Ostry in 2282, cutting towns into an ice moon because a red dwarf gave them nothing warmer.",
+    "Ostry sells water and fuel to the whole March and buys everything else. Most of its 150 million people live under the ice and know each other's families.",
+    "Its people are closer to the Blackhulls than the Compact admits, and a Blackhull hull in the tug yards draws a shrug rather than a report.",
+    "Most of the people who got out of Varrow came through here, and the quarantine picket at the jump zone is watched like a dog that has bitten someone.",
+    "Plenty of Varrow's crews left debts, kin and unanswered questions behind, and a captain who carries a message across the picket would find buyers under the ice."
+   ],
+   "region": "calder-march"
+  },
+  "80105": {
+   "bullets": [
+    "Halcyon Dynamics terraformed Serein from 2301 as a company world, and it is still Prism's seat in the March: white towers, managed gardens, orbital clinics.",
+    "Its 2.8 billion people are associates, their families and the staff who serve them. Everything is clean, quiet and expensive, and the politeness has an edge.",
+    "Prism's statement on the 2524 quarantine was issued here, and every associate repeats it word for word, down to the pauses.",
+    "Serein holds the debts of half the Ironhull crews in the March, and since Varrow fell some of those debtors cannot be found, though the ledgers stay open.",
+    "The research ports are busy while the recall of navigation cores goes on. A captain who is asked to carry a sealed case to Serein should ask what is in it, and expect no answer."
+   ],
+   "region": "calder-march"
+  },
+  "86509": {
+   "bullets": [
+    "Halcyon built the first foundries on Quire's scorched inner world in 2284, and worker domes and orbital habitats grew up on the night side to serve them.",
+    "Quire forges navigation cores, the most valuable cargo in the March, and its relay port sends them inward under heavy guard rather than to the local yards.",
+    "Quire was sister plant to the foundry that went glass in 2524. Output is down, and staff on fixed contracts are rotated out faster than anyone explains.",
+    "Its 600 million people are quiet because they have contracts to keep. Rotated-out staff talk freely in Merrow's bars about what the sister plant was making before it went silent."
+   ],
+   "region": "calder-march"
+  },
+  "119126": {
+   "bullets": [
+    "Farmers and a Federation charter settled Merrow in 2294 to feed the mining systems, and it is still the only world in the March where food grows in the open.",
+    "About 7.5 billion people live here, nearly half the March, in farm towns, processing cities and container ports that ship food to everyone, Ironhull and Prism alike.",
+    "Merrow is comfortable and a little smug, but the war levy has gone up twice and evacuees from the Shadow front are filling its towns faster than it can house them.",
+    "The lane to Facet, a system gone glass, is only 1.7 days away. Merrow's navy base is cut off from the Federation core, and farmers who watch the lane are not reassured.",
+    "Evacuees and locals are competing for harvest work and housing, and a captain hauling relief cargo might find who gets it a bigger fight than the hauling."
+   ],
+   "region": "calder-march"
+  },
+  "81753": {
+   "bullets": [
+    "The navy settled Calder in 2292 as a base to watch the Seam, and the cities on its thin-aired, dry world grew up round the station like moss round a post.",
+    "Calder Station holds the picket squadron, customs and the Compact's levy office, and every Ironhull cargo going inward passes through its inspections.",
+    "The navy is being pulled to the Shadow front, and the junior officers left behind are overworked, touchy and inclined to find something wrong with any hold.",
+    "Calder's lane to Varrow is closed as glass, and the picket crews who supply the Ostry quarantine talk freely in the station's bars about what they have been told not to say."
+   ],
+   "region": "calder-march"
+  },
+  "119090": {
+   "bullets": [
+    "Mining crews settled Brannock in 2293 under company charters, working the scorched world Cinder and gas giant Vast, and Halde's arcologies later took in the March's biggest crowd.",
+    "It is the Ironhulls' hub in the March: ore from Cinder, metals from Tallow's refinery, hulls from Kettle Yard, all sent inward under the Federation's inspectors, whom Brannock resents.",
+    "Blackhulls drink in its docks and the dock police look elsewhere, in the way a family treats a cousin who is in trouble.",
+    "Some two million Varrow crew and kin now live on Halde in emptied towers and borrowed habs, angry about the cover-up and unsure whom to blame for it.",
+    "Kettle Yard has navy orders to refit haulers for the front and is slow to fill them. Yard hands will quietly fit guns for the right captain and the wrong flag."
+   ],
+   "region": "calder-march"
+  },
+  "97725": {
+   "bullets": [
+    "Alshain was set up in 2365 as an outwatch, a handful of crews holding a beacon and a watch post on the lane to the dead orange star Gl 735.",
+    "Two thousand people now live here, and the haven is the only thing of value: a place where raiders can patch hulls without being asked what for.",
+    "Security is close to nothing and unrest runs high, since the Freeflag flags went up and the Federation stopped sending anything but warnings.",
+    "Ships keep arriving from Gl 735 with their transponders dark, which should be impossible for a system with nobody in it, and the watchers are not agreed on who they are."
+   ],
+   "region": "reach"
+  },
+  "79431": {
+   "bullets": [
+    "Standfast was settled in 2328 around 18 Scorpii, when the Rush still paid for ice and nobody expected the contracts to run out.",
+    "The name dates from when the first contract failed and the colonists voted to stay and keep digging, which is why it later made an easy Freeflag town.",
+    "About 123 thousand people live here, cutting water from the ice and patching Freeflag converted freighters in the haven berths.",
+    "Three of its four lanes lead into dead systems, so every arrival from there is either salvage or trouble and is treated as both.",
+    "A runner out of GJ 3937, whose red giant is a poor place to hide, is said to have come back with cargo nobody will name."
+   ],
+   "region": "reach"
+  },
+  "76816": {
+   "bullets": [
+    "Openhand began as an ice town in 2338 on a promise of no questions asked, and four million people have since taken it at its word.",
+    "Its ice moves down the lanes to Standfast and Reckoning, and the haven turns away nobody with a hull to repair and a reason to leave.",
+    "Unrest is among the highest in the Reach because the town is crowded, the medicine runs short, and the Federation notices it more than the smaller colonies.",
+    "Captains running medicine here are not asked where they got it, only how much, and the clinic queues are what settle the answer."
+   ],
+   "region": "reach"
+  },
+  "95152": {
+   "bullets": [
+    "Mutual was settled in 2371 by an ice co-operative, and its founding charter, still pinned up in the dock office, makes every worker a part-owner of the hull.",
+    "About 137 thousand people live here, running ice and the haven berths on shared accounts that Freeflag command has found very convenient.",
+    "Security is among the lowest in the Reach and unrest the highest, since the co-op wants a vote and Freeflag wants ice delivered.",
+    "The lane to Gl 735 is a choke point both Mutual and Alshain watch, and the co-op watch crews do not agree on what they have seen come through it."
+   ],
+   "region": "reach"
+  },
+  "67063": {
+   "bullets": [
+    "Shoulder, settled in 2353 around Tau Boötis, takes its name from the way the three lanes into it seem to lean on the one into Footwall.",
+    "About 234 thousand people cut ice and keep a haven, and the town does well enough that its unrest sounds like grievance more than hunger.",
+    "Freeflag treats it as a working crossroads, with the Drift lane to the dead system GJ 3790 the only one that ever gets quiet.",
+    "Ships leave for Footwall, a dead system Freeflag nonetheless holds, and come back with their holds sealed and their crews saying very little."
+   ],
+   "region": "reach"
+  },
+  "88469": {
+   "bullets": [
+    "Two Hundred was settled in 2348 as a gas-scooping town at 99 Herculis, and took its present name after Tarrow, in 2499, for the people vented there.",
+    "Three million people scoop fuel here and run a haven, and the fuel feeds most of the converted freighters in the north of the Reach.",
+    "Security is thin and unrest high, and the town has never forgiven the navy for Tarrow, so Federation ships are not served here at any price.",
+    "A lane runs to Dawnward in the Beacon Cells, and the fuel convoys that take it travel with armed escorts nobody has ever seen paid."
+   ],
+   "region": "reach"
+  },
+  "77565": {
+   "bullets": [
+    "Reckoning is an outwatch of about a thousand people, put on the lane to Vug Reach in 2356 to keep an eye on a brown dwarf nobody can settle.",
+    "It cuts ice and has no haven, which suits it, as the quiet gives the few crews who pass through somewhere to be unobserved.",
+    "Unrest is very high for so small a place, because everyone there is a debtor or a deserter and the nearest help is three days off.",
+    "A ship that comes in from Vug Reach, where nobody lives, is welcomed with caution, and the watch crews keep a log of each one."
+   ],
+   "region": "reach"
+  },
+  "64587": {
+   "bullets": [
+    "Common was settled in 2358 as a shared outpost at 59 Virginis, where the founders pooled their claims and called the pool the common.",
+    "About eight thousand people live here, and its single haven keeps the outpost supplied by repairing Freeflag raiders and asking for food in return.",
+    "Unrest is very high and security low, since the outpost is too small to defend and too useful to be left alone.",
+    "The lane to GJ 1172 leads into the dead Drift, and people say supplies come and go that way at night, with nobody willing to say whose."
+   ],
+   "region": "reach"
+  },
+  "98504": {
+   "bullets": [
+    "Kinship, settled in 2375 at 15 Sagittae, was founded by ice-crew families who had followed each other out from the same dying belt station.",
+    "About four thousand people live here and cut ice for Last Light and Mutual, in a place where nearly everyone is related and not always happily.",
+    "Security is low and the lane to dead Kettle is a choke point with nothing to watch it but the families themselves.",
+    "Two more dead systems lie behind Kettle, and the families disagree about whether the ships they sometimes see out there are salvagers, ghosts or a mistake."
+   ],
+   "region": "reach"
+  },
+  "64037": {
+   "bullets": [
+    "Diadem was settled in 2361 as a gas town, where the first scoops hung over the giant like a ring of lights and gave the place its name.",
+    "Two million people now scoop fuel and keep a haven, and the fuel is a large part of what keeps Freeflag hulls moving.",
+    "Unrest is high but the town is not poor, and what it resents is the Federation's habit of calling its fuel contraband.",
+    "The lane to the dead Drift system GJ 3790 is rarely used, and a few fuel haulers swear that someone keeps it clear all the same."
+   ],
+   "region": "reach"
+  },
+  "75083": {
+   "bullets": [
+    "Strike was settled in 2372 and renamed after the Charter Strikes, when ice crews from the middle ring came through with nowhere to go and stayed.",
+    "About 31 thousand people live here, running ice and a haven, and it is the Reach's main door into the open Drift.",
+    "Security is the lowest in the Reach, because the lane to Tarn leads straight to the Ironhull Compact and the Compact's crews are welcome.",
+    "Compact crews from Tarn bring news of Varrow and Hesk and the families who were told nothing, and Strike is where that anger gets turned into Freeflag recruits."
+   ],
+   "region": "reach"
+  },
+  "97365": {
+   "bullets": [
+    "Last Light was settled in 2406, long after the Rush ran out of money, by crews who had lost everything in the strikes and were running short of places to try.",
+    "About four million people live here and cut ice and keep a haven, and it is the largest of the Reach's Drift gateways.",
+    "Unrest is high, because most of its families were driven out of somewhere, and few of them are inclined to trust a Federation ship or a Prism ledger.",
+    "Ships come in from HIP 97051, a dead Shoals system, without registry or cargo manifests, and Last Light asks no more about them than it does about anyone else."
+   ],
+   "region": "reach"
+  },
+  "91756": {
+   "bullets": [
+    "Hope was settled in 2391, in the middle of the Charter Strikes, by a crew who called their ice claim Hope because it was the only cheerful word on the filing form.",
+    "About 326 thousand people cut ice and keep a haven, which makes Hope a larger place than its name or its security would suggest.",
+    "Unrest is among the highest in the Reach, since Hope is a way out towards the Drift and every Federation ship that stops there has an opinion on it.",
+    "The lane to HIP 90265 leads into a dead Shoals system, and it is said that Freeflag keeps a supply cache there that it would rather the Federation did not find."
+   ],
+   "region": "reach"
+  },
+  "73768": {
+   "bullets": [
+    "Remembrance was settled in 2374 as an outpost at 45 Boötis, and its name came from the list of dead crew painted on the first dock wall.",
+    "About seven thousand people live here, and the single haven serves ships passing between Strike and the dead Shoals system GJ 3853.",
+    "Security is thin and unrest very high, and the outpost keeps its list of names up to date, which now includes people killed by the Federation.",
+    "Captains passing through are asked to add a name, and a few say the wall has started to include names of people who are not dead yet."
+   ],
+   "region": "reach"
+  },
+  "92580": {
+   "bullets": [
+    "Gl 735 is an orange star in the middle ring that nobody has settled, and its only lanes lead to Alshain and Mutual, two Freeflag systems that watch it.",
+    "Nobody is meant to live there, and the two systems that border it disagree on what has been coming out of it."
+   ],
+   "region": "reach"
+  },
+  "70252": {
+   "bullets": [
+    "Footwall is a yellow star with no settlement, yet Freeflag holds it, and it sits on the lane between Shoulder and the Ironhull system Arcturus.",
+    "Nobody lives there, but Shoulder's ships go in empty and come out sealed, so it is plainly being used for something."
+   ],
+   "region": "reach"
+  },
+  "79191": {
+   "bullets": [
+    "Sharjah is a red dwarf, flare-prone and dim, and nobody has lived there because the star punishes habitats and offers little ice in return.",
+    "The only useful lane runs to Standfast, so the system sees traffic only from salvagers and from crews who have a reason to be out of sight."
+   ],
+   "region": "reach"
+  },
+  "98478": {
+   "bullets": [
+    "Kettle is an orange star with no settlement, and it sits at the end of Kinship's lane, a choke point that leads on to two more dead systems.",
+    "Nobody lives there, but the short lanes to Gl 777A and HIP 101516 make it a handy place to lie quiet, and a few ships do."
+   ],
+   "region": "reach"
+  },
+  "119061": {
+   "bullets": [
+    "GJ 3937 is a red giant, swollen and unstable, and it is the Reach's real hazard, with radiation and heat that kill any habitat built near it.",
+    "Its only useful lane leads to Standfast, and Standfast's crews keep it as a choke point that nobody has ever been tempted to cross."
+   ],
+   "region": "reach"
+  },
+  "80400": {
+   "bullets": [
+    "Vug Reach is a brown dwarf, too dim to warm a habitat and too far from anything to be worth an ice claim, so nobody lives there.",
+    "Its lane to Reckoning is a choke point, and Reckoning's watch crews log every ship that comes out of it, because very few have a reason to go in."
+   ],
+   "region": "reach"
+  }
+ }
+}

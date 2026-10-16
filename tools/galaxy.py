@@ -117,6 +117,7 @@ CONTACT, BLOOM_CHARTED, SHADOW_SEEN, GLASS_LOST = 2376, 2410, 2519, 2524
 MARCH = [('brannock', 'Brannock', 'orange', 'iron'), ('calder', 'Calder', 'white', 'fed'), ('merrow', 'Merrow', 'yellow', 'fed'),
          ('serein', 'Serein', 'yellow', 'prism'), ('quire', 'Quire', 'white', 'prism'), ('ostry', 'Ostry', 'red-dwarf', 'iron')]
 MARCH_LY = (18, 34)
+MARCH_REACH = 24  # Ironhull inhabited systems Brannock must join, through the Compact's own, beyond itself
 GLASS = ['Varrow', 'Hesk', 'Lucerne', 'Facet']  # the two Ironhull systems, then Prism's research world and its foundry
 # factions: the setting's count of inhabited systems, the rings they may lie in, at least how many in the home ring,
 # and whether their territory holds together (each piece of it beyond the first costs PIECE_COST; the Blackhull havens
@@ -141,6 +142,26 @@ SECTORS = 8
 # off that bearing (radians) times the weight; the Ironhulls hold the March's side of the middle ring, Freeflag the
 # outer ring beyond them (the strikes made them cousins), Prism's company worlds lean the same way, toward Serein
 BEARINGS = {'iron': ('brannock', 2.0), 'free': ('brannock', 1.5), 'prism': ('serein', .6)}
+# the regions: every system belongs to one, named here; built after the lanes (see the region stage below)
+REGIONS = {
+    'inner-sphere': 'The Inner Sphere', 'concord': 'The Concord Worlds', 'long-watch': 'The Long Watch',
+    'calder-march': 'The Calder March', 'mirrorspace': 'Mirrorspace', 'prism-inc': 'Prism Incorporate',
+    'prism-research': 'Prism Research', 'anvil': 'The Anvil', 'iron-outposts': 'The Ironhull Outposts', 'reach': 'The Reach',
+    'cells': 'The Cells', 'margins': 'The Margins', 'blackspace': 'Blackspace', 'garden': 'The Garden', 'hedge': 'The Hedge',
+    'blightspace': 'Blightspace', 'corran-gate': 'Corran Gate', 'lighthouse-run': 'Lighthouse Run',
+    'furnace-deeps': 'The Furnace Deeps', 'the-maw': 'The Maw', 'beacon-cells': 'Beacon Cells', 'the-sink': 'The Sink',
+    'drift': 'The Drift', 'shoals': 'The Shoals', 'black-shelf': 'The Black Shelf', 'long-dark': 'The Long Dark',
+    'far-lanterns': 'The Far Lanterns', 'outer-dark': 'The Outer Dark', 'farthest-reach': 'The Farthest Reach',
+}
+INNER_SPHERE_LY = 12.5   # the Inner Sphere: human space this near Sol, whoever holds it
+LONG_WATCH = 55          # the Long Watch: the Federation's systems within this angle (degrees) of the Shadow, past 20 ly
+HEDGE_SHARE = .35        # the Hedge: the Bloom's share farthest (in jumps) from human space, the part it has closed
+OPEN_DRIFT = ['shoals', 'black-shelf', 'long-dark', 'far-lanterns', 'outer-dark', 'farthest-reach']  # by open sector, in turn
+# hazard stars: a few catalogue stars made into hazards (nobody knows them), each where it matters, a region named
+# round it: (name, class, where, region)
+HAZARDS = [('The Lighthouse', 'pulsar', 'lighthouse', 'lighthouse-run'), ('The Furnace', 'wolf-rayet', 'furnace', 'furnace-deeps'),
+           ('The Beacon', 'blue-giant', 'beacon', 'beacon-cells'), ('The Metronome', 'pulsar', 'metronome', 'corran-gate'),
+           ('The Sink', 'black-hole', 'sink', 'the-sink'), ('The Maw', 'black-hole', 'maw', 'the-maw')]
 # what a piece of a faction's territory apart from its main body is
 EXCLAVE = {'fed': 'navy base', 'iron': 'outpost', 'prism': 'company world', 'free': 'rebel cell'}
 # the deep Drift: depth by jumps from human space; at each depth how many systems a system spawns (on average), how
@@ -365,6 +386,24 @@ elif STAGE == 'factions':
                 if (j, i) in g: expr[g[j, i]] = expr.get(g[j, i], 0) + 1
                 if (i, j) in g: expr[g[i, j]] = expr.get(g[i, j], 0) - 1
             f.add(expr, lo=0, tag=f'{k} held together')
+    # the March is the Ironhulls' way in to the rest of the Compact (its region file): Brannock reaches, through
+    # Ironhull systems, at least MARCH_REACH of the Compact's inhabited systems; a flow from Brannock, each system it
+    # reaches taking a unit
+    bran = march[[m_[0] for m_ in MARCH].index('brannock')]
+    gb, zb = {}, {i: f.var(f'zb{i}', 0, 1) for i in human if i != bran}
+    for i, v in zb.items(): f.add({v: 1, own[i, 'iron']: -1}, hi=0)
+    for a, b in E:
+        if a in hset and b in hset:
+            for s_, t_ in ((a, b), (b, a)):
+                gb[s_, t_] = f.var(f'gb{s_},{t_}', 0, M)
+                f.add({gb[s_, t_]: 1, own[s_, 'iron']: -M}, hi=0); f.add({gb[s_, t_]: 1, own[t_, 'iron']: -M}, hi=0)
+    for i in zb:  # inflow - outflow = what i takes
+        expr = {zb[i]: -1}
+        for j in near[i]:
+            if (j, i) in gb: expr[gb[j, i]] = expr.get(gb[j, i], 0) + 1
+            if (i, j) in gb: expr[gb[i, j]] = expr.get(gb[i, j], 0) - 1
+        f.eq(expr, 0, tag='the March joins the Compact')
+    f.add({zb[i]: 1 for i in inh if i in zb}, lo=MARCH_REACH, tag='the March joins the Compact')
     # the open Drift: sectors whose edge the Bloom and the Shadow do not hold, at least MIN_OPEN open; each frontier
     # faction designates the same number of gateways, systems of its own that could have a lane into an open sector's
     # Drift (the lane model gives each one, and no other system, such a lane)
@@ -627,6 +666,93 @@ front = {i for i in role if role[i] in ('inh', 'dead') and any(role[j] == 'shado
 emptied = emptied[::-1]
 reserve('Corran')
 for n_, i in enumerate(emptied): names[i] = 'Corran' if n_ == 0 else name('emptied')
+
+# ---------- hazard stars, and the regions ----------
+main = lambda i, k: owner.get(i) == k and i not in exclave  # in faction k's main body
+centre = lambda ks: np.mean([P[i] for i in ks], axis=0) if ks else np.zeros(3)
+dead_cat = [i for i in role if role[i] == 'dead' and stars[i].get('catalog')]
+hazard = {}  # star index (or 'g<n>' for a grown Drift star) -> (name, class)
+def pick(cands, anchor):
+    cands = [i for i in cands if i not in hazard]
+    return min(cands, key=lambda i: np.linalg.norm(P[i] - anchor)) if cands else None
+corran = emptied[0] if emptied else None
+where = {
+    'lighthouse': lambda: pick([i for i in dead_cat if any(owner.get(j) == 'fed' for j in lane_nb[i]) and any(owner.get(j) == 'prism' for j in lane_nb[i])]
+                               or [i for i in dead_cat if any(owner.get(j) == 'prism' for j in lane_nb[i])], np.zeros(3)),
+    'furnace': lambda: pick([i for i in dead_cat if main(i, 'iron')], centre([i for i in role if main(i, 'iron')])),
+    'beacon': lambda: pick([i for i in dead_cat if main(i, 'free') or any(main(j, 'free') for j in lane_nb[i])], centre([i for i in role if main(i, 'free')])),
+    'metronome': lambda: pick([i for i in dead_cat if any(j in front or role[j] == 'shadow' for j in lane_nb[i])], P[corran] if corran is not None else np.zeros(3)),
+    'sink': lambda: pick([i for i in dead_cat if i not in owner and any(owner.get(j) == 'indep' for j in lane_nb[i])], centre([i for i in role if owner.get(i) == 'indep'])),
+}
+for hname, hclass, rule, _ in HAZARDS:
+    if rule in where:
+        i = where[rule]()
+        if i is not None: hazard[i] = (hname, hclass); names[i] = hname; reserve(hname)
+# the Maw: a grown Drift star four or five jumps out, in the open Drift
+deep = [n for n, g_ in enumerate(grown) if g_['depth'] in (4, 5) and g_['sector'] in open_sectors]
+if deep:
+    mid = np.mean([pos[f'g{n}'] for n in deep], axis=0)
+    maw = min(deep, key=lambda n: np.linalg.norm(pos[f'g{n}'] - mid))
+    hazard[f'g{maw}'] = ('The Maw', 'black-hole'); grown[maw]['name'] = 'The Maw'
+
+# the regions: each system's from what it is (the March, the Glass, the Inner Sphere, a faction's main body or its
+# pieces apart, the Bloom, the Shadow, the Drift by sector), then the hazards' round them, then any system left (an
+# unclaimed dead one) takes the region of its nearest neighbour along the lanes
+region = {}
+shadow_u = np.array(SHADOW_CENTRE) / np.linalg.norm(SHADOW_CENTRE)
+open_name = {s_: OPEN_DRIFT[n % len(OPEN_DRIFT)] for n, s_ in enumerate(sorted(open_sectors))}
+bloom_hops = {}
+front_ = [i for i in role if role[i] in ('inh', 'dead', 'glass')]
+for i in front_: bloom_hops[i] = 0
+while front_:
+    nxt = []
+    for a in front_:
+        for b in lane_nb[a]:
+            if role[b] in ('bloom', 'bdead') and b not in bloom_hops: bloom_hops[b] = bloom_hops[a] + 1; nxt.append(b)
+    front_ = nxt
+bloom_sys = sorted((i for i in role if role[i] in ('bloom', 'bdead')), key=lambda i: bloom_hops.get(i, 99))
+hedge = set(bloom_sys[int(len(bloom_sys) * (1 - HEDGE_SHARE)):])
+for i, r_ in role.items():
+    o = owner.get(i)
+    if i in march: region[i] = 'calder-march'
+    elif r_ == 'glass': region[i] = 'mirrorspace'
+    elif r_ in ('inh', 'dead') and LY[i] <= INNER_SPHERE_LY: region[i] = 'inner-sphere'
+    elif r_ in ('bloom', 'bdead'): region[i] = 'hedge' if i in hedge else 'garden'
+    elif r_ == 'shadow': region[i] = 'corran-gate' if i in emptied else 'blightspace'
+    elif r_ == 'drift': region[i] = open_name.get(int(sector[i]), 'drift')
+    elif o == 'fed' and main(i, 'fed'):
+        ang = np.degrees(np.arccos(np.clip(P[i] @ shadow_u / max(LY[i], 1e-9), -1, 1)))
+        region[i] = 'long-watch' if ang < LONG_WATCH and LY[i] > 20 else 'concord'
+    elif o == 'prism': region[i] = 'prism-inc' if main(i, 'prism') else 'prism-research'
+    elif o == 'iron': region[i] = 'anvil' if main(i, 'iron') else 'iron-outposts'
+    elif o == 'free': region[i] = 'reach' if main(i, 'free') else 'cells'
+    elif o == 'indep': region[i] = 'margins'
+    elif o == 'black': region[i] = 'blackspace'
+for i in front: region[i] = 'corran-gate'
+for i, (hname, _) in hazard.items():  # a hazard and its neighbours in its kind of space
+    if isinstance(i, str): continue
+    rk = next(h[3] for h in HAZARDS if h[0] == hname)
+    region[i] = rk
+    for j in lane_nb[i]:
+        if role[j] in ('inh', 'dead') and j not in march and LY[j] > INNER_SPHERE_LY: region[j] = rk
+left = [i for i in role if i not in region]
+while left:  # the rest from their nearest neighbour with a region
+    took = {i: next((region[j] for j in sorted(lane_nb[i], key=lambda j: D[i, j]) if j in region), None) for i in left}
+    for i, rk in took.items():
+        if rk: region[i] = rk
+    if all(rk is None for rk in took.values()):
+        for i in left: region[i] = 'drift' if role[i] == 'drift' else 'margins'
+    left = [i for i in role if i not in region]
+# the grown Drift: by sector, the Maw round its black hole (two jumps)
+grown_region = {}
+for n, g_ in enumerate(grown): grown_region[n] = open_name.get(g_['sector'], 'drift')
+if deep:
+    gnb = {}
+    for a, b in grown_lanes: gnb.setdefault(a, set()).add(b); gnb.setdefault(b, set()).add(a)
+    ring_ = {f'g{maw}'}
+    for _ in range(2): ring_ |= {b for a in ring_ for b in gnb.get(a, ())}
+    for k in ring_:
+        if isinstance(k, str): grown_region[int(k[1:])] = 'the-maw'
 # invented names: settled systems more often the farther out, in their owner's style; now and then a dead one; the
 # Bloom's worlds by their surveyors' names
 # a star with a proper name keeps it (Capella, Arcturus); one known by a designation (a catalogue number, or a Bayer
@@ -655,6 +781,7 @@ charted = {i: CONTACT + round((BLOOM_CHARTED - CONTACT) * n / max(1, len(bloom_o
 # a catalogue star's class, set by its role (the March's by its system file); a named star keeps its own
 crng = random.Random(2526)
 def set_class(i):
+    if i in hazard: return hazard[i][1]
     if not stars[i].get('catalog'): return None
     if i in march: return MARCH[march.index(i)][2]
     w = ROLE_CLASSES[role[i]]
@@ -663,6 +790,8 @@ systems = []
 for i in sorted(role, key=lambda i: LY[i]):
     c = {'star': stars[i]['id'], 'name': names.get(i, stars[i]['name']), 'group': GROUP[role[i]], 'status': STATUS[role[i]]}
     if i in names and names[i] != stars[i]['name'] and i not in march: c['provisional'] = True  # an invented name
+    c['region'] = region.get(i, 'drift')
+    if i in hazard: c['hazard'] = True
     if i in emptied: c['status'] = 'emptied'; c['emptied'] = EMPTIED_YEARS[emptied.index(i)]
     elif role[i] == 'shadow': c['seen'] = SHADOW_SEEN
     if i in front: c['front'] = True
@@ -675,15 +804,17 @@ for i in sorted(role, key=lambda i: LY[i]):
     if i in hops and lanes: c['jumps'] = hops[i]
     if role[i] == 'drift': c['sector'] = int(sector[i]); c['depth'] = depth.get(i, 1)
     if i in exclave: c['exclave'] = exclave[i]
-    if i in march: c['system'] = MARCH[march.index(i)][0]; c['region'] = 'calder-march'
+    if i in march: c['system'] = MARCH[march.index(i)][0]
     if i in owner: c['faction'] = owner[i]
     if any(i in g for g in gateways.values()): c['gateway'] = True
     systems.append(c)
-for g_ in grown:  # the grown Drift: generated stars, their classes by the Drift's mix
+for n_, g_ in enumerate(grown):  # the grown Drift: generated stars, their classes by the Drift's mix
     w = ROLE_CLASSES['drift']; cls = crng.choices(list(w), weights=list(w.values()))[0]
+    if f'g{n_}' in hazard: cls = hazard[f'g{n_}'][1]
     g_.update({'class': cls, 'absmag': ABSMAG[cls], 'catalog': True, 'generated': True})
     systems.append({'star': g_['id'], 'name': g_['name'], 'group': 'drift', 'status': 'dead', 'generated': True,
-                    'sector': g_['sector'], 'depth': g_['depth'], 'class': cls, 'absmag': ABSMAG[cls]})
+                    'sector': g_['sector'], 'depth': g_['depth'], 'class': cls, 'absmag': ABSMAG[cls], 'region': grown_region[n_],
+                    **({'hazard': True} if f'g{n_}' in hazard else {})})
 lo_ly = min((D[a, b] for a, b in lanes), default=0)
 days = lambda ly: round(1 + 2 * min(1, (ly - lo_ly) / (REACH['outer'] - lo_ly)), 1)
 lane_list = [{'a': stars[a]['id'], 'b': stars[b]['id'], 'ly': round(float(D[a, b]), 2), 'days': days(D[a, b])} for a, b in lanes]
@@ -695,7 +826,8 @@ for a, b in grown_lanes:  # Drift lanes shift (the Book): the map marks them
     ly = float(np.linalg.norm(pos[a] - pos[b]))
     lane_list.append({'a': gid(a), 'b': gid(b), 'ly': round(ly, 2), 'days': days(ly), 'drift': True})
 meta = {'source': 'tools/galaxy.py from stars.json; star ids are stars.json ids', 'stage': STAGE,
-        'factions': {k: v['name'] for k, v in FACTIONS.items()}, 'sectors': SECTORS, 'openSectors': open_sectors}
+        'factions': {k: v['name'] for k, v in FACTIONS.items()}, 'sectors': SECTORS, 'openSectors': open_sectors,
+        'regions': {k: REGIONS[k] for k in sorted(set(region.values()) | set(grown_region.values()))}}
 out.write_text(json.dumps(meta)[:-1] + ',\n"generated":[\n' + ',\n'.join(json.dumps(g_, separators=(',', ':')) for g_ in grown) + '\n],\n"systems":[\n' + ',\n'.join(json.dumps(c, ensure_ascii=False, separators=(',', ':')) for c in systems)
                + '\n],\n"lanes":[\n' + ',\n'.join(json.dumps(l, separators=(',', ':')) for l in lane_list) + '\n]}\n')
 
@@ -719,6 +851,11 @@ if owner:
         pc_txt = f", in {pieces[k]} piece{'s' if pieces[k] > 1 else ''}" if k in pieces else ''
         print(f"  {spec['name']:<18} inhabited {sum(rings.values())} ({', '.join(f'{r} {n}' for r, n in rings.items())}), dead claimed {dead}{pc_txt}{gw_txt}")
     print('  open Drift sectors:', open_sectors, '; border lanes (choke points):', sum(1 for l in lane_list if l.get('border')))
+if region:
+    from collections import Counter
+    rc = Counter(c['region'] for c in systems)
+    print('  regions:', ', '.join(f"{REGIONS[k]} {n}" for k, n in rc.most_common()))
+    print('  hazards:', ', '.join(f"{h[0]} ({h[1]}) at {stars[i]['name'] if not isinstance(i, str) else grown[int(i[1:])]['id']}" for i, h in hazard.items()))
 if grown:
     from collections import Counter
     dc = Counter(c['depth'] for c in systems if c['group'] == 'drift')

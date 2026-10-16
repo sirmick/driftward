@@ -110,6 +110,11 @@ lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').
 # debug screen
 galaxy_data = json.loads((src / 'galaxy' / 'stars.json').read_text())
 galaxy_data['game'] = json.loads((src / 'galaxy' / 'galaxy.json').read_text())
+# and its worlds (tools/worlds.py: people, ports, wealth) and stories (tools/stories.py: backstories), where made
+for k, f in (('worlds', 'worlds.json'), ('stories', 'stories.json')):
+    if (src / 'galaxy' / f).exists(): galaxy_data['game'][k] = json.loads((src / 'galaxy' / f).read_text())
+# and the regions' hand-written notes (src/lore/regions/<region>.md), for the debug screen's Regions tab
+galaxy_data['game']['regionNotes'] = {f.stem: f.read_text() for f in sorted((src / 'lore' / 'regions').glob('*.md'))}
 galaxy = json.dumps(galaxy_data, ensure_ascii=False, separators=(',', ':'))
 assert '</script' not in galaxy
 game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*SUNS*/', '/*MAP*/', '/*MAPPANEL*/', '/*JITTER*/', '/*PLAY*/']), '').replace('/*GALAXY*/', galaxy)

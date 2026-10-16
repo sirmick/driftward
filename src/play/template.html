@@ -238,6 +238,29 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 body.dbg-clear > :not(#debug):not(#view) { visibility: hidden; }
 body.dbg-clear #debug { background: rgba(7,9,12,0); }
 body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
+.dbg-link { background: none; border: 0; padding: 0; color: var(--amber); font: 600 12.5px var(--f-mono); cursor: pointer; text-align: left; }
+.dbg-link:hover { text-decoration: underline; }
+.dbg-regions td { max-width: 640px; }
+.dbg-syslist { columns: 4 220px; column-gap: 24px; list-style: none; margin: 0; padding: 0; }
+.dbg-syslist li { break-inside: avoid; padding: 2px 0; }
+.dbg-syslist small { color: var(--muted); }
+.dbg-planets { table-layout: fixed; width: 100%; }
+.dbg-planets col.c-sys { width: 170px; } .dbg-planets col.c-who { width: 150px; } .dbg-planets col.c-pop { width: 110px; }
+.dbg-planets col.c-ports { width: 190px; } .dbg-planets col.c-m { width: 64px; } .dbg-planets col.c-year { width: 56px; }
+.dbg-planets th { cursor: help; }
+.dbg-planets tbody tr:hover td { background: rgba(226,184,102,.05); }
+.dbg-planets td { overflow-wrap: anywhere; }
+.dbg-chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+.dbg-chip { display: inline-block; padding: 1px 6px; border: 1px solid var(--line); border-radius: 9px; background: #121821; font: 500 11px var(--f-mono); color: #c4ccd6; cursor: help; }
+.dbg-chip.tag { border-color: rgba(226,184,102,.4); color: var(--amber); }
+.dbg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.dbg-meter { display: inline-block; min-width: 40px; padding: 1px 4px; border-radius: 3px; cursor: help;
+  background: linear-gradient(90deg, var(--m) var(--v), rgba(255,255,255,.05) var(--v)); }
+.dbg-meter.wealth { --m: rgba(226,184,102,.35); } .dbg-meter.security { --m: rgba(110,160,230,.35); } .dbg-meter.unrest { --m: rgba(240,120,100,.4); }
+.dbg-link.dead { color: var(--muted); font-weight: 500; }
+.dbg-hit td { background: rgba(226,184,102,.1); }
+.dbg-bullets { margin: 0; padding-left: 16px; font: 12.5px/1.45 var(--f-body); color: #c4ccd6; }
+.dbg-bullets li { margin: 0 0 3px; }
 .dbg-map { grid-column: 1 / -1; position: relative; min-height: 0; }
 .dbg-map-surface { position: absolute; inset: 0; cursor: grab; }
 .dbg-map-panel { position: absolute; top: 12px; right: 14px; width: 300px; max-height: calc(100% - 24px); overflow: auto; padding: 4px 16px 14px;

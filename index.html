@@ -5206,28 +5206,54 @@ void main(){
 
 // ---------- the star map (src/map/map.js): stars as camera-facing glows, and the chart's lines ----------
 // Each star is an instanced quad of a fixed size in pixels (scaled a little by nearness), so a far star stays a point
-// and a near one a bead; flags: x hover, y selected, z dimmed (outside the shown range or filtered out), w a dead
-// system (smaller, and greyed).
+// and a near one a bead, drawn from its class's template (map.js STAR_LOOKS): its colour, and its shape (aShape: 0 a
+// star, 1 a giant's wide halo, 2 a white dwarf's hard point, 3 a pulsar's beams, 4 a black hole's dark core in its
+// disk). aMark: an occupied system's halo, a soft glow in its owner's colour (alpha 0: none). Flags: x hover, y selected, z dimmed
+// (outside the shown range, filtered out, or not yet known in the year shown), w a dead system (smaller, greyed).
 const MAP_STAR_VS = `#version 300 es
-in vec2 aPos; in vec3 aCenter; in vec3 aCol; in float aSize; in vec4 aFlag;
+in vec2 aPos; in vec3 aCenter; in vec3 aCol; in float aSize; in vec4 aFlag; in vec4 aMark; in float aShape;
 uniform mat4 uVP; uniform vec2 uRes; uniform vec3 uEye; uniform float uPx;
-out vec2 vQ; out vec3 vCol; out vec4 vFlag;
+out vec2 vQ; out vec3 vCol; out vec4 vFlag; out float vPx; out float vGrow; out vec4 vMark; flat out int vShape;
 void main(){
   vec4 c = uVP*vec4(aCenter,1.);
-  float near = clamp(30./max(distance(uEye, aCenter), 1.), .55, 2.2);
-  float px = aSize*uPx*near*(1. + aFlag.x*.5 + aFlag.y*.8)*(aFlag.z > .5 ? .6 : 1.)*(aFlag.w > .5 ? .7 : 1.);
-  vQ = aPos; vCol = aCol; vFlag = aFlag;
+  float near = clamp(30./max(distance(uEye, aCenter), 1.), .6, 2.2);
+  float px = aSize*uPx*near*(aFlag.z > .5 ? .6 : 1.)*(aFlag.w > .5 ? .6 : 1.)*(1. + aFlag.x*.4);
+  // a quad grown to hold the rings round it (the star itself drawn tighter inside, to keep its size)
+  float grow = aFlag.y > .5 ? max(2.4, 52./px) : aMark.a > .5 && aFlag.z < .5 ? max(1.5, 20./px) : 1.;
+  px *= grow;
+  vQ = aPos; vCol = aCol; vFlag = aFlag; vPx = px; vGrow = grow; vMark = aMark; vShape = int(aShape + .5);
   gl_Position = c + vec4(aPos*px/uRes*2.*c.w, 0., 0.);
 }`;
 const MAP_STAR_FS = `#version 300 es
-precision highp float; in vec2 vQ; in vec3 vCol; in vec4 vFlag; out vec4 o;
+precision highp float; in vec2 vQ; in vec3 vCol; in vec4 vFlag; in float vPx; in float vGrow; in vec4 vMark; flat in int vShape;
+out vec4 o; uniform float uTime;
 void main(){
-  float r = length(vQ);
-  float g = exp(-r*r*55.)*5. + exp(-r*9.)*.45;
-  float ring = (vFlag.y > .5 ? 1. : vFlag.x*.6)*smoothstep(.05,0.,abs(r-.62))*1.4;
+  float r = length(vQ), q = r*vGrow; // q: the star's own radius, whatever the quad holds round it
+  vec3 col = vCol;
+  // the star: a core whitening only at its heart, so its colour shows, and a halo of its colour
+  float core = exp(-q*q*22.), halo = exp(-q*5.5)*.6;
+  if (vShape == 1) halo = exp(-q*3.5)*.85;                      // a giant: wide and soft
+  if (vShape == 2) { core = exp(-q*q*70.); halo = exp(-q*10.)*.4; } // a white dwarf: hard and small
+  vec3 c = col*(core*2. + halo) + vec3(1.)*pow(core, 3.)*.9;
+  if (vShape == 3) { // a pulsar: two crossed beams
+    float b = exp(-abs(vQ.x*vGrow)*40.)*exp(-abs(vQ.y*vGrow)*2.5) + exp(-abs(vQ.y*vGrow)*40.)*exp(-abs(vQ.x*vGrow)*2.5);
+    c += col*b*1.2;
+  }
+  if (vShape == 4) { // a black hole: dark at the middle, its disk a hot ring
+    float disk = exp(-pow((q - .2)/.06, 2.))*2.2;
+    c = vec3(1., .55, .2)*disk + vec3(.9, .4, .15)*exp(-q*7.)*.25*(1. - exp(-q*q*400.));
+  }
   float k = vFlag.z > .5 ? .12 : 1.;
-  vec3 col = vFlag.w > .5 ? mix(vec3(dot(vCol, vec3(.3,.5,.2))), vCol, .35)*.45 : vCol;
-  o = vec4((col*g*k + vec3(1.,.82,.45)*ring)*(1.-smoothstep(.85,1.,r)), 0.);
+  if (vFlag.w > .5) c = mix(vec3(dot(c, vec3(.3,.5,.2))), c, .75)*.45; // dead: dim, a little greyed, its colour kept
+  c *= k;
+  float w = 1.4/max(vPx, 1.);
+  // an occupied system: a crisp ring in its owner's colour
+  if (vMark.a > .5 && vFlag.z < .5) c += vMark.rgb*exp(-pow((r - .3)/.28, 2.))*.42; // a soft halo of its owner's colour
+  // the selection: a solid ring and one pulsing outward; hovering: a faint ring
+  if (vFlag.y > .5) c += vec3(1.,.82,.45)*(smoothstep(w*2., 0., abs(r - .42))*2.2
+      + smoothstep(w*2., 0., abs(r - mix(.45, .95, fract(uTime*.6))))*1.6*(1. - fract(uTime*.6)));
+  else c += vec3(1.,.82,.45)*vFlag.x*.8*smoothstep(w*2., 0., abs(r - .9));
+  o = vec4(c*(1. - smoothstep(.88, 1., r)), 0.);
 }`;
 // Lines (the galactic-plane grid, drop lines, routes) with per-vertex colour; the far ones fade, and a line whose
 // aFade.x is set fades by the distance of its star (the floor point under it at aFade.y's height) from the focus.
