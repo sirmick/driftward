@@ -527,6 +527,7 @@ CORE_READY.then(CORE => {
   const t0 = performance.now();
   function frame(now) {
     requestAnimationFrame(frame);
+    const c0 = performance.now(); // the frame's CPU time, by section, for the jitter probe
     const dt = last ? Math.min(0.25, (now - last) / 1000) : 1 / 60; last = now; frameDt = dt;
     fpsAcc += dt; fpsN++; if (fpsAcc > 0.5) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
     sim.checkViews();
@@ -539,6 +540,7 @@ CORE_READY.then(CORE => {
       ran = sim.due(dt);
       for (let n = ran; n > 0; n--) sim.step();
     }
+    const c1 = performance.now();
     sim.interpolate();
     const mode = sim.mode();
     if (mode !== lastMode) { onMode(mode, lastMode); lastMode = mode; }
@@ -555,12 +557,17 @@ CORE_READY.then(CORE => {
     // its last frame (pause shows it frozen behind the menu), and the GPU rests
     const covered = ($('vista').classList.contains('on') && !document.body.classList.contains('vista-framed')) || mapOn || debug.isOpen() || (paused && !titleUp());
     gpuPoll();
+    const c2 = performance.now();
     if (!covered || sceneStale) { const q = gpuBegin(); render((now - t0) / 1000, camX, camY); gpuEnd(q); sceneStale = false; }
     if (mode === MODE.flying && !paused && !covered) JIT.record({ dt, ticks: ran, alpha: sim.alpha(), px: SH.rx[0], py: SH.ry[0], cx: camX, cy: camY, scale, h: canvas.height }, SH, sim.count(), jitState);
     else JIT.reset();
+    const c3 = performance.now();
     drawHUD();
-    hx.setTransform(dpr, 0, 0, dpr, 0, 0); JIT.draw(hx, 12, H - stripH - 222, 520, 210, now);
+    hx.setTransform(dpr, 0, 0, dpr, 0, 0); JIT.draw(hx, 12, H - stripH - 262, 640, 250, now);
+    const c4 = performance.now();
     drawMap();
+    const c5 = performance.now();
+    JIT.cpuTime({ total: c5 - c0, sim: c1 - c0, render: c3 - c2, hud: c4 - c3, map: c5 - c4 });
   }
 
   // the game mode changed: show or hide the port screen, autosave on landing
