@@ -5259,13 +5259,15 @@ function makeGfx(canvas) {
   }
   function freeRT(r) { if (r) { gl.deleteTexture(r.t); gl.deleteFramebuffer(r.f); } }
 
-  // the scene target (HDR when float targets work) and the bloom chain of six half-size levels
+  // the scene target (HDR when float targets work) and the bloom chain of six half-size levels. renderScale (0 to 1)
+  // draws the scene at that fraction of the canvas's size, which the composite scales back up: a slow GPU's knob
   const targets = { scene: null, chain: [] };
-  function buildTargets() {
+  function buildTargets(renderScale) {
+    const rs = Math.min(1, Math.max(0.25, renderScale || 1)), sw = Math.max(1, Math.round(canvas.width * rs)), sh = Math.max(1, Math.round(canvas.height * rs));
     freeRT(targets.scene); targets.chain.forEach(freeRT); targets.chain = [];
-    targets.scene = makeRT(canvas.width, canvas.height);
-    if (!targets.scene.ok && HDR) { HDR = false; freeRT(targets.scene); targets.scene = makeRT(canvas.width, canvas.height); }
-    let w = canvas.width, h = canvas.height;
+    targets.scene = makeRT(sw, sh);
+    if (!targets.scene.ok && HDR) { HDR = false; freeRT(targets.scene); targets.scene = makeRT(sw, sh); }
+    let w = sw, h = sh;
     for (let i = 0; i < 6; i++) { w = Math.max(1, w >> 1); h = Math.max(1, h >> 1); targets.chain.push(makeRT(w, h)); }
     return targets;
   }
@@ -5275,13 +5277,13 @@ function makeGfx(canvas) {
   function postProcess(bloom, debug) {
     const { scene, chain } = targets;
     gl.bindVertexArray(null);
-    const RW = canvas.width, RH = canvas.height;
+    const RW = canvas.width, RH = canvas.height, SW = scene.w, SH = scene.h; // the screen, and the scene as drawn
     const useBloom = bloom > 0.001;
     if (useBloom) {
       gl.useProgram(P.bright.p);
       gl.bindFramebuffer(gl.FRAMEBUFFER, chain[0].f); gl.viewport(0, 0, chain[0].w, chain[0].h);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, scene.t);
-      gl.uniform1i(P.bright.u.uSrc, 0); gl.uniform2f(P.bright.u.uTexel, 1 / RW, 1 / RH); gl.uniform1f(P.bright.u.uThresh, HDR ? 0.9 : 0.7);
+      gl.uniform1i(P.bright.u.uSrc, 0); gl.uniform2f(P.bright.u.uTexel, 1 / SW, 1 / SH); gl.uniform1f(P.bright.u.uThresh, HDR ? 0.9 : 0.7);
       draw();
       gl.useProgram(P.down.p); gl.uniform1i(P.down.u.uSrc, 0);
       for (let i = 1; i < chain.length; i++) {

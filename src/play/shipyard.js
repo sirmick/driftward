@@ -45,7 +45,7 @@ function makeShipyard(o) {
   const HU = new Float32Array(32).map((v, i) => i % 4 === 2 ? -1 : 0), NOL = new Float32Array(64);
   // cells: [{ el, b, z }]; opts: { throttle, shields, trueScale, hover }
   function render(t, cells, opts) {
-    const canvas = gl.canvas, RW = canvas.width, RH = canvas.height, dpr = RW / canvas.clientWidth;
+    const canvas = gl.canvas, RW = o.target().w, RH = o.target().h, dpr = RW / canvas.clientWidth; // the scene target (it may be drawn below the canvas's resolution)
     const vis = [];
     let maxExt = 1;
     for (const c of cells) {

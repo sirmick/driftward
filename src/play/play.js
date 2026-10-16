@@ -162,8 +162,17 @@ function resize() {
   stripH = document.querySelector('.strip').getBoundingClientRect().height;
   canvas.width = Math.max(1, Math.round(W * dpr)); canvas.height = Math.max(1, Math.round(H * dpr));
   hud.width = canvas.width; hud.height = canvas.height;
-  G.buildTargets();
+  G.buildTargets(renderScale);
   frameVista();
+}
+// The scene's resolution, as a fraction of the canvas's (G.buildTargets): fixed by the quality setting, or on Auto
+// (quality 0) stepped by the frame loop's governor (renderGovernor) when the GPU can't keep up
+let renderScale = 1;
+const RS_STEPS = [1, 0.85, 0.75, 0.62, 0.5];
+function setRenderScale(rs) {
+  const want = SETTINGS.quality > 0 ? SETTINGS.quality : (rs || renderScale);
+  if (want === renderScale && G.targets.scene) return;
+  renderScale = want; G.buildTargets(renderScale); sceneStale = true;
 }
 // The port's painted vista fills the screen while that stretches it no more than VISTA_STRETCH times its own pixels
 // (real device pixels: a high-DPI screen counts double). Past that it would go soft, so it becomes a framed picture
@@ -198,8 +207,8 @@ let assistMode = 0, zoom = 1, bloomOn = true, nanView = 0, navOn = false;
 const assist = () => assistMode === 0;
 function setNav(on) { navOn = on; $('b-nav').setAttribute('aria-pressed', String(on)); }
 // settings, kept in this browser; a new game starts from the assist level and overlay chosen here
-const SETTINGS = Object.assign({ bloom: 1, nav: 0, assist: 0, debug: 1 }, (() => { try { return JSON.parse(localStorage.getItem('driftward.settings') || '{}'); } catch (e) { return {}; } })());
-function applySettings() { bloomOn = !!SETTINGS.bloom; sceneStale = true; }
+const SETTINGS = Object.assign({ bloom: 1, nav: 0, assist: 0, debug: 1, quality: 0 }, (() => { try { return JSON.parse(localStorage.getItem('driftward.settings') || '{}'); } catch (e) { return {}; } })());
+function applySettings() { bloomOn = !!SETTINGS.bloom; sceneStale = true; setRenderScale(); }
 applySettings();
 // the shell's screens over the game: the title, the pause menu, settings (on top of either)
 const shellOpen = () => ['settings', 'pause', 'title'].find(id => !$(id).hidden) || null;
@@ -493,11 +502,11 @@ CORE_READY.then(CORE => {
   $('p-title').onclick = () => showTitle();
   function openSettings() {
     $('s-bloom').value = String(SETTINGS.bloom); $('s-nav').value = String(SETTINGS.nav);
-    $('s-assist').value = String(SETTINGS.assist); $('s-debug').value = String(SETTINGS.debug);
+    $('s-assist').value = String(SETTINGS.assist); $('s-debug').value = String(SETTINGS.debug); $('s-quality').value = String(SETTINGS.quality);
     $('settings').hidden = false; $('s-done').focus();
   }
   function closeSettings() { $('settings').hidden = true; if (!shellOpen()) canvas.focus(); }
-  for (const k of ['bloom', 'nav', 'assist', 'debug']) $('s-' + k).onchange = e => {
+  for (const k of ['bloom', 'nav', 'assist', 'debug', 'quality']) $('s-' + k).onchange = e => {
     SETTINGS[k] = +e.target.value; localStorage.setItem('driftward.settings', JSON.stringify(SETTINGS)); applySettings();
   };
   $('t-settings').onclick = openSettings; $('p-settings').onclick = openSettings; $('s-done').onclick = closeSettings;
@@ -522,7 +531,35 @@ CORE_READY.then(CORE => {
   function gpuPoll() {
     if (!TQ) return;
     if (gl.getParameter(TQ.GPU_DISJOINT_EXT)) { tqFree.push(...tqLive.splice(0)); return; } // the timer was disturbed: drop them
-    while (tqLive.length && gl.getQueryParameter(tqLive[0], gl.QUERY_RESULT_AVAILABLE)) { const q = tqLive.shift(); JIT.gpu(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6); tqFree.push(q); }
+    while (tqLive.length && gl.getQueryParameter(tqLive[0], gl.QUERY_RESULT_AVAILABLE)) { const q = tqLive.shift(), ms = gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6; JIT.gpu(ms); gov.gpu = ms; tqFree.push(q); }
+  }
+  // Auto resolution (quality setting Auto): the scene drops a step (RS_STEPS) when, over the last 90 drawn frames,
+  // more than 3% ran late, or where the GPU can be timed, when it takes over 92% of a frame; it climbs a step after
+  // a calm spell (no late frames, and room on the GPU where it is timed), waiting twice as long each time a climb
+  // had to be undone straight away, so it settles instead of see-sawing. The display's frame time is the quickest
+  // the page has seen (each window's third-quickest frame, the lowest so far), so it works at any refresh rate and a
+  // GPU that never keeps up (every frame late, at a steady 30 fps) still reads as late.
+  const gov = { dts: new Float64Array(90), n: 0, gpu: NaN, at: 0, calmSince: 0, backoff: 4000, lastUp: -1e9, display: Infinity };
+  function renderGovernor(now, dt) {
+    if (SETTINGS.quality > 0) return;
+    gov.dts[gov.n++ % 90] = dt * 1000;
+    if (gov.n < 90 || now - gov.at < 1000) return;
+    const v = Array.from(gov.dts).sort((a, b) => a - b);
+    gov.display = Math.max(4, Math.min(gov.display, v[2]));
+    const interval = gov.display, late = v.filter(x => x > interval * 1.5).length / v.length;
+    const gpuBusy = gov.gpu === gov.gpu && gov.gpu > interval * 0.92, i = Math.max(0, RS_STEPS.indexOf(renderScale));
+    if ((late > 0.03 || gpuBusy) && i < RS_STEPS.length - 1) {
+      if (now - gov.lastUp < 6000) gov.backoff = Math.min(120000, gov.backoff * 2); // the last climb didn't hold
+      setRenderScale(RS_STEPS[i + 1]); gov.at = gov.calmSince = now; gov.n = 0;
+      console.info(`render resolution ${Math.round(renderScale * 100)}% (${Math.round(late * 100)}% of frames late, display ${interval.toFixed(1)} ms${gov.gpu === gov.gpu ? `, gpu ${gov.gpu.toFixed(1)} ms` : ''})`);
+      return;
+    }
+    if (late > 0.01 || gpuBusy) { gov.calmSince = now; gov.at = now; return; }
+    const room = !(gov.gpu === gov.gpu) || (i > 0 && gov.gpu * (RS_STEPS[i - 1] / renderScale) ** 2 < interval * 0.8);
+    if (i > 0 && now - gov.calmSince > gov.backoff && room) {
+      setRenderScale(RS_STEPS[i - 1]); gov.at = gov.calmSince = gov.lastUp = now; gov.n = 0;
+      console.info(`render resolution ${Math.round(renderScale * 100)}% (calm for ${(gov.backoff / 1000).toFixed(0)} s)`);
+    }
   }
   const t0 = performance.now();
   function frame(now) {
@@ -558,7 +595,9 @@ CORE_READY.then(CORE => {
     const covered = ($('vista').classList.contains('on') && !document.body.classList.contains('vista-framed')) || mapOn || debug.isOpen() || (paused && !titleUp());
     gpuPoll();
     const c2 = performance.now();
-    if (!covered || sceneStale) { const q = gpuBegin(); render((now - t0) / 1000, camX, camY); gpuEnd(q); sceneStale = false; }
+    const drew = !covered || sceneStale;
+    if (drew) { const q = gpuBegin(); render((now - t0) / 1000, camX, camY); gpuEnd(q); sceneStale = false; }
+    if (drew && !covered && !paused) renderGovernor(now, dt);
     if (mode === MODE.flying && !paused && !covered) JIT.record({ dt, ticks: ran, alpha: sim.alpha(), px: SH.rx[0], py: SH.ry[0], cx: camX, cy: camY, scale, h: canvas.height }, SH, sim.count(), jitState);
     else JIT.reset();
     const c3 = performance.now();
@@ -959,7 +998,10 @@ CORE_READY.then(CORE => {
     plumeInst[o + 8] = RCS; plumeInst[o + 9] = 0;
     return nPl + 1;
   }
-  function setView(prog, RW, RH, cx, cy) { gl.useProgram(prog.p); gl.uniform2f(prog.u.uRes, RW, RH); gl.uniform2f(prog.u.uCam, cx, cy); gl.uniform1f(prog.u.uScale, scale); }
+  // GL draws in scene-target pixels: the canvas's at renderScale (sceneScale is scale at that resolution); the HUD,
+  // culling and world sizes stay in canvas terms (scale)
+  let sceneScale = 1;
+  function setView(prog, RW, RH, cx, cy) { gl.useProgram(prog.p); gl.uniform2f(prog.u.uRes, RW, RH); gl.uniform2f(prog.u.uCam, cx, cy); gl.uniform1f(prog.u.uScale, sceneScale); }
   function render(t, cx, cy) {
     const RW = canvas.width, RH = canvas.height, T0 = types[SH.kind[0]], live = Math.min(MAXS, sim.count());
     const mode = sim.mode();
@@ -974,14 +1016,15 @@ CORE_READY.then(CORE => {
     scale = viewScale;
     sunFrom(cx, cy, sunCam); const sl = Math.hypot(sunCam[0], sunCam[1]) || 1;
     const halfW = RW / scale / 2, halfH = RH / scale / 2;
+    const TW = G.targets.scene.w, TH = G.targets.scene.h, ss = sceneScale = scale * TW / RW; // the scene target, and px per m in it
     gl.bindVertexArray(null);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, G.targets.scene.f); gl.viewport(0, 0, RW, RH);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, G.targets.scene.f); gl.viewport(0, 0, TW, TH);
     gl.disable(gl.BLEND);
     gl.useProgram(P.bg.p);
-    gl.uniform2f(P.bg.u.uRes, RW, RH); gl.uniform1f(P.bg.u.uTime, t);
+    gl.uniform2f(P.bg.u.uRes, TW, TH); gl.uniform1f(P.bg.u.uTime, t);
     gl.uniform3fv(P.bg.u.uStar, star.col); gl.uniform3fv(P.bg.u.uNeb, star.neb);
     gl.uniform2f(P.bg.u.uSunDir, sunCam[0] / sl, sunCam[1] / sl);
-    gl.uniform2f(P.bg.u.uOff, cx * scale * 0.04, cy * scale * 0.04);
+    gl.uniform2f(P.bg.u.uOff, cx * ss * 0.04, cy * ss * 0.04);
     // dim the stars round the (up to four) nearest worlds whose debris could be on screen
     { let nd = 0; dimU.fill(0);
       const rank = p => Math.hypot(p.x - cx, p.y - cy) / p.r;
@@ -993,27 +1036,27 @@ CORE_READY.then(CORE => {
         while (k > 0 && rank(WORLDS[nearW[k - 1]]) > rank(p)) { nearW[k] = nearW[k - 1]; k--; }
         nearW[k] = w; if (nd < 4) nd++;
       }
-      for (let k = 0; k < nd; k++) { const p = WORLDS[nearW[k]]; dimU[k * 4] = (p.x - cx) * scale + RW / 2; dimU[k * 4 + 1] = (p.y - cy) * scale + RH / 2; dimU[k * 4 + 2] = p.r * scale; }
+      for (let k = 0; k < nd; k++) { const p = WORLDS[nearW[k]]; dimU[k * 4] = (p.x - cx) * ss + TW / 2; dimU[k * 4 + 1] = (p.y - cy) * ss + TH / 2; dimU[k * 4 + 2] = p.r * ss; }
       gl.uniform4fv(P.bg.u.uDim, dimU); gl.uniform1i(P.bg.u.uDimN, nd); }
     draw();
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
     // the star
     if (Math.abs(STAR.x - cx) < halfW + STAR.r * 2.4 && Math.abs(STAR.y - cy) < halfH + STAR.r * 2.4) {
-      setView(FP.star, RW, RH, cx, cy);
+      setView(FP.star, TW, TH, cx, cy);
       const u = FP.star.u;
       gl.uniform2f(u.uC, STAR.x, STAR.y); gl.uniform1f(u.uR, STAR.r); gl.uniform3fv(u.uCol, starCol);
-      gl.uniform1f(u.uTime, t); gl.uniform1f(u.uPx, 1 / (STAR.r * scale));
+      gl.uniform1f(u.uTime, t); gl.uniform1f(u.uPx, 1 / (STAR.r * ss));
       draw();
     }
     // planets and moons, each lit from the star's direction
-    setView(FP.planet, RW, RH, cx, cy);
+    setView(FP.planet, TW, TH, cx, cy);
     { const u = FP.planet.u;
       gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
       for (const p of WORLDS) {
         if (Math.abs(p.x - cx) > halfW + p.r * p.ext || Math.abs(p.y - cy) > halfH + p.r * p.ext) continue;
         gl.uniform3fv(u.uSun, sunFrom(p.x, p.y, sunAt));
-        gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * scale));
+        gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * ss)); // detail follows the scene's pixels
         bindPlanet(gl, u, p.pu); planetClock(gl, u, t, p.pu.seed);
         draw();
       } }
@@ -1022,7 +1065,7 @@ CORE_READY.then(CORE => {
     { const n = sim.orbitEval((sim.tick() + sim.alpha()) * sim.DT, STAR.x, STAR.y, cx, cy, halfW, halfH, 0.06 / scale);
       if (n) {
         gl.blendFunc(gl.ONE, gl.ONE);
-        setView(FP.orbiter, RW, RH, cx, cy);
+        setView(FP.orbiter, TW, TH, cx, cy);
         const u = FP.orbiter.u, O = sim.orbitOut, px = 1 / scale;
         gl.uniform1f(u.uTime, t); gl.uniform3fv(u.uSunCol, sunCol);
         gl.bindVertexArray(VS.orbiter.vao); upload(VS.orbiter, O, n);
@@ -1055,7 +1098,7 @@ CORE_READY.then(CORE => {
       const S = STATIONS[k];
       if (!stationReady(S) || Math.abs(S.x - cx) > halfW + S.half * S.scale || Math.abs(S.y - cy) > halfH + S.half * S.scale) continue;
       const u = FP.ship.u;
-      if (!stUp) { setView(FP.ship, RW, RH, cx, cy); gl.bindVertexArray(VS.station.vao); upload(VS.station, stInst, STATIONS.length); gl.uniform1i(u.uLN, 0); stUp = true; }
+      if (!stUp) { setView(FP.ship, TW, TH, cx, cy); gl.bindVertexArray(VS.station.vao); upload(VS.station, stInst, STATIONS.length); gl.uniform1i(u.uLN, 0); stUp = true; }
       shipUniforms(u, sunFrom(S.x, S.y, sunAt), t);
       bindLook(u, S.s, S.half, S.brand);
       pointAt(VS.station, k);
@@ -1121,7 +1164,7 @@ CORE_READY.then(CORE => {
     }
     if (nPl) {
       gl.blendFunc(gl.ONE, gl.ONE);
-      setView(FP.plume, RW, RH, cx, cy);
+      setView(FP.plume, TW, TH, cx, cy);
       const u = FP.plume.u; gl.uniform1f(u.uTime, t);
       gl.bindVertexArray(VS.plume.vao); upload(VS.plume, plumeInst, nPl);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nPl);
@@ -1145,7 +1188,7 @@ CORE_READY.then(CORE => {
     }
     if (acc) {
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-      setView(FP.ship, RW, RH, cx, cy);
+      setView(FP.ship, TW, TH, cx, cy);
       const u = FP.ship.u;
       shipUniforms(u, sunCam, t);
       gl.uniform4fv(u.uLP, LP); gl.uniform4fv(u.uLC, LC); gl.uniform1i(u.uLN, nL);
@@ -1164,7 +1207,7 @@ CORE_READY.then(CORE => {
     }
     if (sheaths.length) {
       gl.blendFunc(gl.ONE, gl.ONE);
-      setView(FP.sheath, RW, RH, cx, cy);
+      setView(FP.sheath, TW, TH, cx, cy);
       const u = FP.sheath.u;
       gl.uniform1f(u.uTime, t); gl.uniform1i(u.uX, 0); gl.activeTexture(gl.TEXTURE0);
       for (const [i, q] of sheaths) {
@@ -1208,7 +1251,7 @@ CORE_READY.then(CORE => {
       [`DAY ${sim.day()}  ·  ${fmtCr(sim.credits())} CR  ·  HOLD ${sim.holdUsed()}/${holdCap()} T`, '#dbe0e7'],
       [`SPD ${sp.toFixed(0).padStart(4)} / ${topNow.toFixed(0)} m/s${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, wk < -0.03 ? '#e08a4a' : wk > 0.03 ? '#7fd08a' : '#dbe0e7'],
       [`HDG ${hd.toFixed(0).padStart(3, '0')}°  ${ASSIST[assistMode].hud}${burn ? '  BURN' : ''}`, burn ? '#e2b866' : assistMode ? '#c8a27a' : '#8a95a4'],
-      [`${T0.name.toUpperCase()}${SETTINGS.debug ? `  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps` : ''}`, '#8a95a4']
+      [`${T0.name.toUpperCase()}${SETTINGS.debug ? `  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps${renderScale < 1 ? `  res ${Math.round(renderScale * 100)}%` : ''}` : ''}`, '#8a95a4']
     ];
     hx.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle';
     // under the nearest-body line: the autopilot, then the active missions with days left
@@ -1635,7 +1678,7 @@ CORE_READY.then(CORE => {
       const modeName = Object.keys(MODE).find(k => MODE[k] === sim.mode());
       return {
         game: { probe: window.__play.probe(), mode: modeName, zoom, viewScale, assist: assistMode, bloom: bloomOn, fps: Math.round(fps * 10) / 10,
-          camera: [camX, camY], canvas: [canvas.width, canvas.height], settings: SETTINGS, traffic: tr, shipsLive: sim.count(),
+          camera: [camX, camY], canvas: [canvas.width, canvas.height], renderScale, scene: [G.targets.scene.w, G.targets.scene.h], settings: SETTINGS, traffic: tr, shipsLive: sim.count(),
           // the page's own UI (HTML, which the screenshot can't show): what is open
           ui: { port: !$('port').hidden ? $('port-name').textContent : null, panel: panelOpen(), map: mapOn, debug: debug.isOpen(), shell: shellOpen(),
             vista: $('vista').classList.contains('on') ? (document.body.classList.contains('vista-framed') ? 'framed' : 'full screen') : null, nav: navOn, jitterOverlay: !!JIT.shown,
