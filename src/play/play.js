@@ -239,6 +239,7 @@ const shellOpen = () => ['settings', 'pause', 'title'].find(id => !$(id).hidden)
 $('b-nav').onclick = () => { setNav(!navOn); canvas.focus(); };
 window.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) { if (e.code === 'Escape') e.target.blur(); return; }
+  if (barrierUp()) { e.preventDefault(); return; } // the world is stopped while the system's ships and stations bake
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
   // the debug screen takes every key but its own: backquote opens and closes it, as does Esc
   if (e.code === 'Backquote' && !e.repeat) { if (debug.isOpen()) debug.close(); else { debug.open(); keys.clear(); } e.preventDefault(); return; }
@@ -304,7 +305,7 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
 let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false;
-let pauseGame = () => {}, shellBack = () => {}, jitterToggle = () => false;
+let pauseGame = () => {}, shellBack = () => {}, jitterToggle = () => false, barrierUp = () => false;
 // Esc steps back: a sequence skips; in port, an open panel closes; in flight, the map closes, then the target
 // clears; otherwise the game pauses
 function onEscape() {
@@ -480,6 +481,31 @@ CORE_READY.then(CORE => {
     startBody = Math.max(1, BODIES.findIndex(b => b.id === SYS.start && b.port), BODIES.findIndex(b => b.port));
     bakeKinds = mixKinds();
     systemViews();
+    raiseBarrier();
+  }
+  // The system barrier: the world stops (the clock holds; the scene keeps drawing, blurred) behind a small dialog until
+  // the system's stations, the hulls its traffic flies and the player's own are baked. The bakes themselves still run
+  // on the worker pool as they always did; this only waits for them. A bake that fails counts as done, so it can't hang.
+  let barrier = null; // { keys, total } while up
+  const FACTION_NAME = { federation: 'The Federation', prism: 'Prism', ironhulls: 'The Ironhull Compact', blackhulls: 'The Blackhulls', freeflag: 'Freeflag', bloom: 'The Bloom', glass: 'The Glass', shadow: 'The Shadow', none: 'Unclaimed' };
+  const PLURAL = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  function raiseBarrier() {
+    const st = [...new Set(STATIONS.map(T => T.key))], hulls = [...new Set([...bakeKinds, SH.kind[0]].map(k => types[k] && types[k].key).filter(Boolean))];
+    hulls.forEach((key, n) => { const T = types.find(t => t.key === key); if (T) typeReady(T); }); // queue any not yet asked for
+    barrier = { keys: [...st, ...hulls], total: st.length + hulls.length, st: st.length, hulls: hulls.length };
+    $('barrier-title').textContent = SYS.name;
+    $('barrier-sub').textContent = [FACTION_NAME[SYS.owner] || '', SYS.ring ? `${SYS.ring} ring` : ''].filter(Boolean).join(' · ');
+    checkBarrier();
+  }
+  barrierUp = () => !!barrier;
+  const baked = key => { const s = baker.ships.get(key); return !!(s && ((s.ready && s.tex) || s.error)); };
+  function checkBarrier() {
+    if (!barrier) return;
+    const done = barrier.keys.filter(baked).length;
+    if (done >= barrier.total) { barrier = null; $('barrier').hidden = true; return; }
+    $('barrier').hidden = false;
+    $('barrier-fill').style.width = `${Math.round(100 * done / barrier.total)}%`;
+    $('barrier-note').textContent = `Baking ${PLURAL(barrier.st, 'station')} and ${PLURAL(barrier.hulls, 'hull')}: ${done} of ${barrier.total}`;
   }
 
   // replay recording: the snapshot at the start of the session plus every input change since
@@ -503,6 +529,7 @@ CORE_READY.then(CORE => {
     sim.game.credits[0] = ECON.start.credits; sim.game.debt[0] = ECON.start.debt; // a used ship and a debt to a lender
     sim.postBoards();
     sim.startTraffic(); // ambient traffic, already mid-flow
+    raiseBarrier(); // again, now the player's hull is known
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; // the next frame shows the port screen if landed
     navTarget = null; viewScale = 0; // the view snaps rather than glides to a new game
     if (sim.game.auto) sim.game.auto[0] = 0;
@@ -684,7 +711,8 @@ CORE_READY.then(CORE => {
     // bake the traffic hulls up front (behind the start port's screen), not when the first one flies into view
     for (const k of bakeKinds) typeReady(types[k]);
     let ran = 0;
-    if (!paused && !debug.isOpen()) { // paused (or debugging): the clock stops (the replay log is by tick, so a pause leaves no trace)
+    checkBarrier();
+    if (!paused && !debug.isOpen() && !barrier) { // paused, debugging or behind the system barrier: the clock stops (the replay log is by tick, so a pause leaves no trace)
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
       ran = sim.due(dt);
@@ -1912,7 +1940,7 @@ CORE_READY.then(CORE => {
         save: b64(r.save), inputs: r.log
       };
     },
-    probe: () => ({ tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
+    probe: () => ({ barrier: !!barrier, tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
       credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap() }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {
