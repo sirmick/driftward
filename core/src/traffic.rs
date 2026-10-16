@@ -358,12 +358,35 @@ impl World {
             n_pts = MAX_PTS;
         } else {
             let [mut a, w, mut e] = self.route_ends(from, to);
-            // jump zones are wide: arrive and leave anywhere in them
+            // jump zones are wide: arrive and leave anywhere in them; a port's disc too, so ships lift off and set down
+            // all over it rather than at the one spot facing the other end
             let spread = self.p(P::jump_spread);
             if let End::Jump(_) = from { let (r, t) = (spread * self.rng.next_f64().sqrt(), self.rng.range(0.0, TAU)); a = (a.0 + cos(t) * r, a.1 + sin(t) * r); }
             if let End::Jump(_) = to { let (r, t) = (spread * self.rng.next_f64().sqrt(), self.rng.range(0.0, TAU)); e = (e.0 + cos(t) * r, e.1 + sin(t) * r); }
-            pts[..3].copy_from_slice(&[a, w, e]);
-            n_pts = 3;
+            if let End::Body(j) = from { a = self.spot(j, a); }
+            if let End::Body(j) = to { e = self.spot(j, e); }
+            // the path: bowed sideways into an arc or an S through two waypoints, a ship's own, unless a body is in the
+            // way (then the detour's waypoint, as before) or the bow would bring one too close
+            let skip = |x: End| match x { End::Body(j) => j, End::Jump(_) => usize::MAX };
+            let ends = [skip(from), skip(to)];
+            let straight = self.detour(a, e, ends).is_none();
+            let (dx, dy) = (e.0 - a.0, e.1 - a.1);
+            let len = hypot(dx, dy).max(1.0);
+            let (nx, ny) = (-dy / len, dx / len);
+            let (b1, b2) = (self.rng.range(-0.3, 0.3), if self.rng.next_f64() < 0.5 { self.rng.range(-0.3, 0.3) } else { 0.0 });
+            let (t1, t2) = (self.rng.range(0.25, 0.4), self.rng.range(0.6, 0.75));
+            let b2 = if b2 == 0.0 { b1 * self.rng.range(0.5, 1.0) } else { b2 }; // same side: an arc; either side: an S
+            let w1 = (a.0 + dx * t1 + nx * len * b1, a.1 + dy * t1 + ny * len * b1);
+            let w2 = (a.0 + dx * t2 + nx * len * b2, a.1 + dy * t2 + ny * len * b2);
+            let clear = |p: (f64, f64), q: (f64, f64)| self.detour(p, q, ends).is_none();
+            if straight && clear(a, w1) && clear(w1, w2) && clear(w2, e) {
+                pts[..4].copy_from_slice(&[a, w1, w2, e]);
+                n_pts = 4;
+            } else {
+                let w = if straight { ((a.0 + e.0) / 2.0, (a.1 + e.1) / 2.0) } else { w };
+                pts[..3].copy_from_slice(&[a, w, e]);
+                n_pts = 3;
+            }
         }
         let pts = &pts[..n_pts];
         let mut len = 0.0;
@@ -376,6 +399,14 @@ impl World {
         pts.len()
     }
     fn pt(&self, k: usize, i: usize) -> (f64, f64) { let b = k * MAX_PTS + i; (self.route.x[b], self.route.y[b]) }
+    /// A ship's own spot on body j's disc near `p` (the point facing the route's other end): turned up to 50 degrees
+    /// round the body and from a tenth to over half its radius in, so still inside its landing zone.
+    fn spot(&mut self, j: usize, p: (f64, f64)) -> (f64, f64) {
+        let (cx, cy, r) = (self.bodies.x[j], self.bodies.y[j], self.bodies.r[j]);
+        let a = atan2(p.1 - cy, p.0 - cx) + self.rng.range(-0.87, 0.87);
+        let d = r * self.rng.range(0.1, 0.55);
+        (cx + cos(a) * d, cy + sin(a) * d)
+    }
 
     /// A new ship of a stream from `from` to `to`, its type drawn from the stream's mix (or the loiter row given).
     /// From a port it lifts off (T_LAUNCH); from a jump zone it arrives already cruising.
@@ -383,7 +414,8 @@ impl World {
         let m = match row { Some(m) => m, None => self.pick_mix(if stream == LOCAL { MIX_LOCAL } else { MIX_THROUGH })? };
         let k = self.free_slot()?;
         let kind = self.mix.kind[m];
-        let cruise = self.types.vmax[kind as usize] * if stream == LOITER { self.p(P::loiter_cruise) } else { self.p(P::traffic_cruise) };
+        // each ship its own pace, a little under or over the stream's
+        let cruise = self.types.vmax[kind as usize] * if stream == LOITER { self.p(P::loiter_cruise) } else { self.p(P::traffic_cruise) } * self.rng.range(0.85, 1.1);
         self.build_route(k, from, to);
         let (a, b) = (self.pt(k, 0), self.pt(k, 1));
         let s = &mut self.ships;
@@ -657,6 +689,26 @@ mod tests {
         }
         // about 60 launches in two minutes at 0.5 a second, half each way, some through the jump zones
         assert!(out > 10 && inbound > 10 && jump > 5, "out {out} in {inbound} jump {jump}");
+    }
+
+    #[test]
+    fn ships_on_one_lane_take_their_own_routes() {
+        // the station port (3) to planet 2: nothing in the way, so each ship lifts off from its own spot, bows its own
+        // way and keeps clear of every body
+        let mut w = world(4);
+        let (mut starts, mut bowed) = (Vec::new(), 0);
+        for _ in 0..12 {
+            let k = w.spawn(LOCAL, End::Body(3), End::Body(2), None).expect("a slot");
+            let n = w.traffic.npts[k] as usize;
+            starts.push(w.pt(k, 0));
+            if n == 4 { bowed += 1; }
+            for i in 1..n { assert!(w.detour(w.pt(k, i - 1), w.pt(k, i), [3, 2]).is_none(), "leg {i} of ship {k} runs into a body"); }
+            let (a, e) = (w.pt(k, 0), w.pt(k, n - 1));
+            assert!(hypot(a.0, a.1 - 12_000.0) < 300.0 * 0.6 && hypot(e.0 - 15_000.0, e.1) < 800.0 * 0.6, "ends inside the ports' landing zones");
+        }
+        starts.sort_by(|p, q| p.0.total_cmp(&q.0));
+        starts.dedup_by(|p, q| hypot(p.0 - q.0, p.1 - q.1) < 1.0);
+        assert!(starts.len() >= 10 && bowed >= 8, "{} distinct starts, {bowed} of 12 bowed", starts.len());
     }
 
     #[test]
