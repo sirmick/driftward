@@ -372,8 +372,8 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
     const hx = -Math.sin(sAng[0]), hy = Math.cos(sAng[0]);
     if (state.flightModel === 'assist') {
       // assist on: W/S move a set speed along the nose; the controller holds it and cancels drift
-      const cap = T.vmax * (sBurn[0] ? 1.3 : 1);
-      if (up) pl.set = Math.min(cap, pl.set + T.accel * (sBurn[0] ? 1.7 : 1) * dt);
+      const cap = T.vmax * (sBurn[0] ? sim.param('burn_cap') : 1);
+      if (up) pl.set = Math.min(cap, pl.set + T.accel * (sBurn[0] ? sim.param('burn_accel') : 1) * dt);
       if (down) pl.set = Math.max(0, pl.set - T.accel * dt);
       if (!sBurn[0] && pl.set > T.vmax) pl.set = Math.max(T.vmax, pl.set - T.accel * 0.6 * dt);
       control(0, hx * pl.set, hy * pl.set, null);

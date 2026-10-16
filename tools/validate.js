@@ -29,6 +29,27 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
       const sv = (b.port && b.port.services) || [];
       if (new Set(sv).size !== sv.length) notes.push({ path: `${at}.port.services`, msg: 'a service listed twice', fatal: false });
     }
+    // the stars: a companion clear of the first star and inside the jump zones; hazard zones clear of every port and
+    // of the jump zones (arrivals start there)
+    const stars = bodies.filter(b => b.kind === 'star'), spread = 2500;
+    if (stars[1] && Math.hypot(stars[1].x, stars[1].y) < stars[0].r * 2 + stars[1].r * 2) notes.push({ path: '$.star.companion.orbit.radius', msg: `the companion is within two radii of the first star`, fatal: true });
+    if (stars[1] && Math.hypot(stars[1].x, stars[1].y) + stars[1].r > jump) notes.push({ path: '$.star.companion', msg: `reaches past the jump radius (${jump} m)`, fatal: true });
+    for (const st of stars.filter(b => b.hazard > 0)) {
+      const at = st.id === 'star' ? '$.star.hazard' : '$.star.companion.hazard';
+      if (Math.hypot(st.x, st.y) + st.hazard > jump - spread) notes.push({ path: at, msg: `the ${st.hazard} m hazard zone reaches the jump zones (${jump} m out)`, fatal: true });
+      for (const o of bodies.filter(o => o.port)) if (Math.hypot(o.x - st.x, o.y - st.y) - o.r < st.hazard) notes.push({ path: at, msg: `the hazard zone covers the port ${o.id}`, fatal: true });
+    }
+    // moving stations: every station round a planet or moon circles it, paced as real orbits are, so their orbits may
+    // sweep through other bodies and each other (nothing collides; it is only drawn on top). What must hold is that
+    // nothing circles a station (stations move), and that port stations start clear of each other (environmental ones
+    // are checked above)
+    for (const m of bodies.filter(b => b.motion)) {
+      const at = m.env ? `$.bodies[${m.parent}].environs` : `$.bodies[${m.id}]`;
+      for (const o of bodies) {
+        if (o.parent === m.id && o.kind !== 'belt' && o.kind !== 'field') notes.push({ path: at, msg: `${o.id} circles it, and stations move`, fatal: true });
+        if (!m.env && o.kind === 'station' && !o.env && o.id > m.id && Math.hypot(o.x - m.x, o.y - m.y) - o.r - m.r < 100) notes.push({ path: at, msg: `${o.id} is within ${Math.round(Math.hypot(o.x - m.x, o.y - m.y) - o.r - m.r)} m of it`, fatal: true });
+      }
+    }
     if (system.region && !fs.existsSync(path.join(root, 'src', 'lore', 'regions', `${system.region}.md`))) notes.push({ path: '$.region', msg: `no src/lore/regions/${system.region}.md`, fatal: false });
     const rocky = b => b.kind === 'belt' || b.kind === 'field';
     for (const e of bodies.filter(b => b.env)) for (const o of bodies) {
@@ -154,7 +175,7 @@ const out = clampToSchema(schema, {
   bodies: [{ id: 'a', name: 'A', kind: 'planet', orbit: { radius: 100, angle: 45 }, radius: 500, colour: 'red', look: { palette: ['#123456'] } }]
 }, '$', notes);
 const expect = [
-  ['$.ring', n => n.fatal], ['$.star.class', n => !n.fatal && out.star.class === 'yellow'], ['$.star.radius', n => !n.fatal && out.star.radius === 6000],
+  ['$.ring', n => n.fatal], ['$.star.class', n => !n.fatal && out.star.class === 'yellow'], ['$.star.radius', n => !n.fatal && out.star.radius === 8000],
   ['$.bodies[0].orbit.radius', n => !n.fatal && out.bodies[0].orbit.radius === 1500], ['$.bodies[0]', n => /colour/.test(n.msg)],
   ['$.bodies[0].look.palette', n => !n.fatal && out.bodies[0].look.palette.length === 3]
 ];

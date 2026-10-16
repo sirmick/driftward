@@ -63,6 +63,28 @@ pub unsafe extern "C" fn dw_place_body(w: *mut World, j: u32, parent: u32, radiu
     unsafe { world(w) }.place_body(j as usize, parent as usize, radius, angle_deg);
 }
 
+/// Set body `j` turning on its orbit, once every `period` seconds (negative: clockwise; 0: still). motion.rs.
+/// # Safety
+/// See `world`; `j` must be below the body capacity.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_body_motion(w: *mut World, j: u32, period: f64) { unsafe { world(w) }.body_motion(j as usize, period) }
+
+/// What refuelling (CMD_REFUEL) or repair (CMD_REPAIR) would cost in full at the port the player is landed at, in
+/// credits; 0 if there is nothing to do. service.rs.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_service_cost(w: *mut World, code: u32) -> u32 {
+    let w = unsafe { world(w) };
+    if code == crate::service::CMD_REFUEL { w.refuel_cost((w.game.at[0].max(0) as usize).min(w.n_bodies.saturating_sub(1))) } else { w.repair_cost() }
+}
+
+/// Radiation at (x, y): the share of a sound hull lost a second (service.rs).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_radiation(w: *mut World, x: f64, y: f64) -> f64 { unsafe { world(w) }.radiation(x, y) }
+
 /// # Safety
 /// See `world`.
 #[unsafe(no_mangle)]
@@ -228,15 +250,16 @@ pub unsafe extern "C" fn dw_orbit_add(w: *mut World, body: u32, kind: u32, count
 }
 
 /// Add `count` ferries (orbit.rs: specks shuttling back and forth, for looks) on a route near body `body` between
-/// (ax, ay) and (bx, by), each end spread by up to spread_a and spread_b metres; returns how many fit.
+/// (ax, ay) and (bx, by) (where they are at time 0), each end spread by up to spread_a and spread_b metres, the route
+/// ends turning about the body with their stations, at spin_a and spin_b rad/s; returns how many fit.
 /// # Safety
 /// See `world`.
 #[unsafe(no_mangle)]
 #[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn dw_orbit_ferries(w: *mut World, body: u32, ax: f64, ay: f64, bx: f64, by: f64, spread_a: f64, spread_b: f64, count: u32, seed: u32) -> u32 {
+pub unsafe extern "C" fn dw_orbit_ferries(w: *mut World, body: u32, ax: f64, ay: f64, bx: f64, by: f64, spread_a: f64, spread_b: f64, spin_a: f64, spin_b: f64, count: u32, seed: u32) -> u32 {
     let w = unsafe { world(w) };
     if body as usize >= w.n_bodies { return 0; }
-    w.orbit.add_ferries(body as usize, ax, ay, bx, by, spread_a, spread_b, count as usize, seed) as u32
+    w.orbit.add_ferries(body as usize, ax, ay, bx, by, spread_a, spread_b, spin_a, spin_b, count as usize, seed) as u32
 }
 
 /// Place the orbiters near the view at time `t` and write the visible ones to the "orbit/out" column; returns the count.

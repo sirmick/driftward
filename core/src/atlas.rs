@@ -10,9 +10,9 @@
 
 use crate::cols::soa;
 use crate::market::MAX_GOODS;
-use crate::port::{BODY_BELT, MODE_DESCENDING, MODE_FLYING, MODE_LAUNCHING, NO_SUCH_BODY, OK, WRONG_MODE};
+use crate::port::{BODY_BELT, MODE_DEAD, MODE_DESCENDING, MODE_FLYING, MODE_LAUNCHING, NO_SUCH_BODY, OK, WRONG_MODE};
 use crate::traffic::MAX_MIX;
-use crate::world::{World, P};
+use crate::world::{World, DT, P};
 
 /// Systems the atlas holds.
 pub const MAX_SYSTEMS: usize = 8;
@@ -29,7 +29,10 @@ soa! {
 
 soa! {
     /// Per system and body (system * max_bodies + body): the live body columns that are content (world.rs Bodies).
-    pub struct AtlasBodies { x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8, env: u8, env_rate: f64, env_jump: f64 }
+    pub struct AtlasBodies {
+        x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8, env: u8, env_rate: f64, env_jump: f64,
+        reach: f64, hazard: f64, rad: f64, svc: u8, fuel_price: u32, orb_p: i16, orb_r: f64, orb_a: f64, orb_w: f64,
+    }
 }
 
 soa! {
@@ -53,11 +56,14 @@ impl World {
         let (b, a) = (&self.bodies, &mut self.atlas_bodies);
         for j in 0..mb {
             let o = k * mb + j;
-            if j < nb {
-                (a.x[o], a.y[o], a.r[o], a.g[o], a.pop[o]) = (b.x[j], b.y[j], b.r[j], b.g[j], b.pop[j]);
-                (a.kind[o], a.port[o], a.env[o], a.env_rate[o], a.env_jump[o]) = (b.kind[j], b.port[j], b.env[j], b.env_rate[j], b.env_jump[j]);
+            let j = if j < nb { j } else { usize::MAX }; // past the system's bodies: zeros
+            let f = |c: &[f64]| if j == usize::MAX { 0.0 } else { c[j] };
+            (a.x[o], a.y[o], a.r[o], a.g[o], a.pop[o], a.env_rate[o], a.env_jump[o]) = (f(&b.x), f(&b.y), f(&b.r), f(&b.g), f(&b.pop), f(&b.env_rate), f(&b.env_jump));
+            (a.reach[o], a.hazard[o], a.rad[o], a.orb_r[o], a.orb_a[o], a.orb_w[o]) = (f(&b.reach), f(&b.hazard), f(&b.rad), f(&b.orb_r), f(&b.orb_a), f(&b.orb_w));
+            if j == usize::MAX {
+                (a.kind[o], a.port[o], a.env[o], a.svc[o], a.fuel_price[o], a.orb_p[o]) = (0, 0, 0, 0, 0, -1);
             } else {
-                (a.x[o], a.y[o], a.r[o], a.g[o], a.pop[o], a.kind[o], a.port[o], a.env[o], a.env_rate[o], a.env_jump[o]) = (0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0.0, 0.0);
+                (a.kind[o], a.port[o], a.env[o], a.svc[o], a.fuel_price[o], a.orb_p[o]) = (b.kind[j], b.port[j], b.env[j], b.svc[j], b.fuel_price[j], b.orb_p[j]);
             }
         }
         let n = mb * MAX_GOODS;
@@ -86,9 +92,16 @@ impl World {
             let o = k * mb + j;
             (b.x[j], b.y[j], b.r[j], b.g[j], b.pop[j]) = (a.x[o], a.y[o], a.r[o], a.g[o], a.pop[o]);
             (b.kind[j], b.port[j], b.env[j], b.env_rate[j], b.env_jump[j]) = (a.kind[o], a.port[o], a.env[o], a.env_rate[o], a.env_jump[o]);
+            (b.reach[j], b.hazard[j], b.rad[j], b.svc[j], b.fuel_price[j]) = (a.reach[o], a.hazard[o], a.rad[o], a.svc[o], a.fuel_price[o]);
+            (b.orb_p[j], b.orb_r[j], b.orb_a[j], b.orb_w[j]) = (a.orb_p[o], a.orb_r[o], a.orb_a[o], a.orb_w[o]);
+            (b.vx[j], b.vy[j]) = (0.0, 0.0); // still, unless its orbit moves it (below): none of the last system's motion stays
             b.env_next[j] = 0.0;
         }
         self.n_bodies = nb;
+        // moving bodies to where they are now, at rest in the render history (a jump or a new game snaps the view)
+        self.orbit_bodies(self.tick as f64 * DT);
+        let b = &mut self.bodies;
+        for j in 0..mb { (b.prev_x[j], b.prev_y[j], b.rx[j], b.ry[j]) = (b.x[j], b.y[j], b.x[j], b.y[j]); }
         let n = mb * MAX_GOODS;
         self.market.price[..n].copy_from_slice(&self.atlas_market.price[k * n..(k + 1) * n]);
         for m in 0..MAX_MIX {
@@ -116,7 +129,7 @@ impl World {
     /// The debug jump: to system `k`, at rest over its body `b`, flying. Not during a landing or launch.
     pub fn jump_to(&mut self, k: i32, b: i32) -> i32 {
         let mode = self.mode();
-        if mode == MODE_DESCENDING || mode == MODE_LAUNCHING { return WRONG_MODE; }
+        if mode == MODE_DESCENDING || mode == MODE_LAUNCHING || mode == MODE_DEAD { return WRONG_MODE; }
         let Some(k) = usize::try_from(k).ok().filter(|&k| k < self.atlas_count()) else { return NO_SUCH_BODY };
         let Some(b) = usize::try_from(b).ok().filter(|&b| b < self.atlas_sys.bodies[k] as usize) else { return NO_SUCH_BODY };
         let Ok(i) = usize::try_from(self.game.player[0]) else { return NO_SUCH_BODY };
@@ -134,10 +147,11 @@ impl World {
         self.seed_traffic();
         // the player, flying, at rest over the body (as CMD_TELEPORT puts them)
         let at = self.arrival(b);
+        let (bvx, bvy) = (self.bodies.vx[b], self.bodies.vy[b]);
         let s = &mut self.ships;
         s.alive[i] = 1;
         (s.x[i], s.y[i]) = at;
-        s.vx[i] = 0.0; s.vy[i] = 0.0; s.av[i] = 0.0;
+        s.vx[i] = bvx; s.vy[i] = bvy; s.av[i] = 0.0; // at rest over it, moving with it if it moves
         self.slot_reset(i, false);
         self.game.mode[0] = MODE_FLYING;
         self.game.at[0] = b as i16;
@@ -205,6 +219,21 @@ mod tests {
         w.bodies.kind[2] = BODY_BELT;
         assert_eq!(w.arrival(2), (w.bodies.x[2], w.bodies.y[2] - w.bodies.r[2]));
         assert_eq!(w.command(CMD_JUMP, 1, 3), NO_SUCH_BODY);
+    }
+
+    #[test]
+    fn a_systems_moving_body_leaves_no_motion_behind() {
+        let mut w = two_systems();
+        // system 1's body 1 orbits; system 0's body 1 holds still
+        w.atlas_load(1);
+        w.place_body(1, 0, 15_000.0, 0.0);
+        w.body_motion(1, 600.0);
+        assert!(w.atlas_store(1));
+        w.atlas_load(1);
+        for _ in 0..10 { w.step(); }
+        assert!(w.bodies.vx[1].hypot(w.bodies.vy[1]) > 100.0);
+        w.atlas_load(0);
+        assert_eq!((w.bodies.vx[1], w.bodies.vy[1]), (0.0, 0.0));
     }
 
     #[test]

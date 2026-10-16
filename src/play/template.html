@@ -62,6 +62,7 @@ button { font: inherit; color: inherit; }
 .port-services button span { color: var(--muted); font: 400 11px var(--f-mono); text-transform: none; letter-spacing: 0; }
 .port-services button:hover:not(:disabled) { border-color: var(--amber); }
 .port-services button:disabled { cursor: default; color: var(--muted); }
+#svc-launch { grid-column: 1 / -1; }
 .port-services button.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
 .port-day { margin: 18px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
 .port-money { margin: 6px 0 0; color: var(--fg); font: 500 12px var(--f-mono); }
@@ -124,15 +125,24 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 #loc .r { color: var(--muted); font-size: 11px; }
 #loc .tag { margin-left: 4px; padding: 0 4px; border-radius: 3px; font-size: 9.5px; letter-spacing: .06em; color: #7fd08a; border: 1px solid rgba(127,208,138,.45); }
 #loc .tag.m { color: #8fd3ff; border-color: rgba(143,211,255,.5); }
+#loc .tag.h { color: var(--bad); border-color: rgba(240,138,114,.5); }
 #map { position: fixed; left: 0; top: 0; width: 100%; cursor: crosshair; }
 /* the shell: the title over a live view of the system, the pause menu, settings */
 .shell { position: fixed; inset: 0; display: grid; align-items: center; padding: 24px 6vw; }
 #title { background: linear-gradient(90deg, rgba(7,9,12,.9) 0%, rgba(7,9,12,.6) 40%, rgba(7,9,12,0) 72%); }
 #pause, #settings { background: rgba(7,9,12,.7); justify-items: center; }
 /* the system barrier: the world stopped and blurred behind a small dialog while the system's ships and stations bake */
-#barrier, #notice { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65); background: rgba(7,9,12,.25); }
-#barrier[hidden], #notice[hidden] { display: none; }
-#notice { z-index: 19; }
+#barrier, #notice, #lost { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65); background: rgba(7,9,12,.25); }
+#barrier[hidden], #notice[hidden], #lost[hidden] { display: none; }
+#notice, #lost { z-index: 19; }
+#lost { background: rgba(40,8,8,.35); }
+#lost-title { margin: 2px 0 2px; font: 700 22px/1.1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--bad); }
+#lost-sub { margin: 0 0 12px; color: var(--muted); font: 500 12px var(--f-mono); }
+#lost-text { margin: 0 0 14px; color: #c4ccd6; font-size: 13.5px; line-height: 1.5; }
+#lost .barrier-box { display: grid; gap: 8px; }
+#lost button { width: 100%; background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; color: var(--fg); font: 600 13px var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+#lost button.primary { border-color: var(--amber); color: var(--amber); }
+#lost button small { color: var(--muted); font: 500 11px var(--f-mono); margin-left: 6px; text-transform: none; }
 .notice-box { min-width: 380px; }
 #notice-title { margin: 2px 0 2px; font: 700 22px/1.1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--amber); }
 #notice-sub { margin: 0 0 10px; color: var(--muted); font: 500 12px var(--f-mono); }
@@ -247,6 +257,17 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 .dbg-ship .lbl b { font: 700 13.5px var(--f-display); letter-spacing: .04em; }
 .dbg-ship .lbl small { color: var(--muted); font: 500 10.5px var(--f-mono); }
 .dbg-ship .lbl .seed { color: #6f7b8a; }
+.dbg-sun-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.dbg-sun-cols { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; height: calc(100vh - 130px); padding-top: 10px; }
+.dbg-sun-big { border: 1px solid rgba(30,38,48,.7); border-radius: 8px; min-height: 360px; }
+.dbg-sun-panel { overflow-y: auto; background: rgba(12,16,21,.92); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.dbg-sun-panel h4 { margin: 0 0 2px; font: 700 18px/1.1 var(--f-display); letter-spacing: .03em; }
+.dbg-sun-row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 70px; align-items: center; gap: 8px; padding: 2px 0; font: 500 12px var(--f-mono); color: var(--fg); }
+.dbg-sun-row select { grid-column: span 2; background: #0d1219; border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; color: var(--fg); font: inherit; }
+.dbg-sun-row output { color: var(--muted); text-align: right; }
+.dbg-sun-acts { display: flex; gap: 8px; margin: 10px 0 6px; }
+.dbg-sun-acts button { background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; font: 600 12px var(--f-display); letter-spacing: .05em; text-transform: uppercase; color: var(--fg); }
+.dbg-sun-acts button:hover { border-color: var(--amber); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -268,7 +289,8 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
       <button type="button" id="svc-trade" aria-pressed="false">Trade<span>T</span></button>
       <button type="button" id="svc-board" aria-pressed="false">Mission board<span>M</span></button>
       <button type="button" id="svc-bar" aria-pressed="false">Bar<span>B</span></button>
-      <button type="button" disabled>Refuel &amp; repair<span>later</span></button>
+      <button type="button" id="svc-refuel">Refuel<span id="svc-refuel-k">F</span></button>
+      <button type="button" id="svc-repair">Repair<span id="svc-repair-k">R</span></button>
       <button type="button" id="svc-wait">Wait a day<span>W</span></button>
       <button type="button" id="svc-launch" class="primary">Launch<span>L</span></button>
     </div>
@@ -318,6 +340,11 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 <section id="notice" hidden role="dialog" aria-label="Delivery complete">
   <div class="barrier-box notice-box"><p class="barrier-kicker" id="notice-kicker">Delivery complete</p><h3 id="notice-title"></h3><p id="notice-sub"></p>
     <div id="notice-rows"></div><p id="notice-total"></p><button type="button" id="notice-ok">Continue <small>Enter</small></button></div>
+</section>
+<section id="lost" hidden role="dialog" aria-label="Ship lost">
+  <div class="barrier-box"><p class="barrier-kicker">Ship lost</p><h3 id="lost-title"></h3><p id="lost-sub"></p><p id="lost-text"></p>
+    <button type="button" class="primary" id="lost-reload">Reload the last landing <small>Enter</small></button>
+    <button type="button" id="lost-title-btn">Quit to title</button></div>
 </section>
 <section id="title" class="shell" hidden aria-label="Title">
   <div class="shell-card">
@@ -392,9 +419,11 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 /*ROCKS*/
 /*BAKE*/
 /*CORE*/
+/*STARS*/
 /*SCHEMA*/
 /*DEBUG*/
 /*SHIPYARD*/
+/*SUNS*/
 /*JITTER*/
 /*PLAY*/
 })();

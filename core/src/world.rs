@@ -43,6 +43,8 @@ soa! {
         prev_x: f64, prev_y: f64, prev_ang: f64,
         // interpolated render pose, f32 for direct GPU upload
         rx: f32, ry: f32, ra: f32,
+        // hull points left (service.rs): radiation in a hazard zone wears it down; at zero the ship is lost
+        hull: f64,
         alive: u8,
         // 1 while traffic.rs moves the ship along its route (on rails, or held for a launch or landing); the flight
         // stages skip it
@@ -60,16 +62,27 @@ soa! {
 
 soa! {
     /// Ship types (one per brand x size): flight stats from the catalog. `well` is how strongly gravity wells
-    /// affect the hull (0 not at all; fighters about .35, capital ships about .75); `cargo` is the hold, in tons.
-    pub struct Types { accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32 }
+    /// affect the hull (0 not at all; fighters about .35, capital ships about .75); `cargo` is the hold, in tons;
+    /// `hull` the hull's points when sound; `fuel` the tank, in tons (service.rs).
+    pub struct Types { accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32, hull: f64, fuel: f64 }
 }
 
 soa! {
-    /// Bodies (the star, planets, moons, stations): position, radius, well strength g (relative to the g_ref param),
+    /// Bodies (the stars, planets, moons, stations): position, radius, well strength g (relative to the g_ref param),
     /// population weight (traffic flows: 0 for no one), kind (port.rs BODY_*), and whether it has a port to land at.
     /// An environmental station (no port, round a world) has env, its mix group plus one (traffic.rs MIX_ENV rows),
     /// and launches ships at env_rate a second (next at env_next), env_jump of them to or from a jump zone.
-    pub struct Bodies { x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8, env: u8, env_rate: f64, env_next: f64, env_jump: f64 }
+    /// `reach`: how far its well reaches, in radii (0: the well_reach param; compact stars reach much further).
+    /// A hazard zone (service.rs; the exotic stars') is `hazard` metres round it, where radiation wears a hull down by
+    /// up to `rad` of its sound points a second, most at the centre. A port's services (service.rs SVC_* bits) and
+    /// its fuel price, credits a ton.
+    /// Its orbit (motion.rs): `orb_r` metres from body `orb_p` (-1: none) at `orb_a` radians at time 0, turning
+    /// `orb_w` radians a second (0: it holds still); its velocity, and its previous-tick and render positions.
+    pub struct Bodies {
+        x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8, env: u8, env_rate: f64, env_next: f64, env_jump: f64,
+        reach: f64, hazard: f64, rad: f64, svc: u8, fuel_price: u32,
+        orb_p: i16, orb_r: f64, orb_a: f64, orb_w: f64, vx: f64, vy: f64, prev_x: f64, prev_y: f64, rx: f64, ry: f64,
+    }
 }
 
 soa! {
@@ -81,10 +94,12 @@ soa! {
     /// a launch hands the ship back moving along the unit vector (hand_x, hand_y) at hand_v m/s, written when it starts
     /// (port.rs `launch_velocity`), so the page draws the sequence toward the velocity the core will give.
     /// The player (player.rs): the ship slot flown (-1 for none: the Fly tab drives its player from JS), the assist
-    /// set speed (m/s), and the buttons held this tick. `system`: the atlas system being played (atlas.rs).
+    /// set speed (m/s), and the buttons held this tick. `system`: the atlas system being played (atlas.rs). `fuel`:
+    /// tons in the tank (service.rs). (fvx, fvy): the velocity full assist holds the set speed relative to, a moving
+    /// port's as the ship nears it (player.rs `frame`), written each tick.
     pub struct Game {
         mode: u8, at: i16, timer: f64, curl: u8, day: u32, credits: u32, debt: u32, auto: i16, aim_x: f64, aim_y: f64,
-        hand_x: f64, hand_y: f64, hand_v: f64, player: i32, set: f64, input: u32, system: u8,
+        hand_x: f64, hand_y: f64, hand_v: f64, player: i32, set: f64, input: u32, system: u8, fuel: f64, fvx: f64, fvy: f64,
     }
 }
 
@@ -158,8 +173,8 @@ soa! {
 params! {
     rev = 0.5;            "reverse thrust as a fraction of main"
     rcs = 0.3;            "lateral thrust as a fraction of main"
-    burn_accel = 1.7;     "burner thrust multiplier"
-    burn_cap = 1.3;       "burner speed cap multiplier"
+    burn_accel = 2.5;     "burner thrust multiplier (the burner adds acceleration, not top speed)"
+    burn_cap = 1.0;       "burner speed cap multiplier (1: the burner keeps the hull's top speed)"
     turn_slew = 8.0;      "angular acceleration, in units of the type's turn rate per second"
     lat_cap = 0.6;        "lateral taper cap as a fraction of the speed cap"
     damper = 0.2;         "inertial damper rate above the speed limit, per second (slow, so a slingshot's boost lasts)"
@@ -202,6 +217,9 @@ params! {
     loiter_turns = 1.25;  "mean number of turns a loitering ship flies round its port before landing"
     loiter_cruise = 0.45; "loitering ships fly at this fraction of their top speed"
     env_trip = 90.0;      "a typical environmental station trip, seconds (seeds the ships already under way at a new game)"
+    burn_secs = 300.0;    "seconds of burner a full tank lasts"
+    repair_cost = 2.0;    "credits a hull point costs to repair"
+    match_reach = 4.0;    "full assist and the autopilot match a moving port's velocity within this many of its radii (fading in from there to half as near)"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -364,12 +382,16 @@ impl World {
     pub fn reset_clock(&mut self) { self.acc = 0.0; }
 
     /// Place body j on its orbit: `radius` from body `parent` (place the parent first) at `angle_deg` degrees, with
-    /// the core's own trig, so a system lays out bit for bit the same in every browser and natively. Its x and y
-    /// are all it writes; the orbit itself is content, not state.
+    /// the core's own trig, so a system lays out bit for bit the same in every browser and natively. It writes the
+    /// position and the orbit (still: `body_motion` sets it turning, motion.rs).
     pub fn place_body(&mut self, j: usize, parent: usize, radius: f64, angle_deg: f64) {
-        let (s, c) = sin_cos(angle_deg * PI / 180.0);
-        self.bodies.x[j] = self.bodies.x[parent] + c * radius;
-        self.bodies.y[j] = self.bodies.y[parent] + s * radius;
+        let a = angle_deg * PI / 180.0;
+        let (s, c) = sin_cos(a);
+        let b = &mut self.bodies;
+        b.x[j] = b.x[parent] + c * radius;
+        b.y[j] = b.y[parent] + s * radius;
+        (b.orb_p[j], b.orb_r[j], b.orb_a[j], b.orb_w[j], b.vx[j], b.vy[j]) = (if parent == j { -1 } else { parent as i16 }, radius, a, 0.0, 0.0, 0.0);
+        (b.prev_x[j], b.prev_y[j], b.rx[j], b.ry[j]) = (b.x[j], b.y[j], b.x[j], b.y[j]);
     }
 
     // ---------- clock ----------
@@ -390,18 +412,20 @@ impl World {
     // ---------- tick pipeline ----------
 
     /// One fixed step of everything the core owns. Stages, in order:
+    /// bodies (moving stations along their orbits, carrying what is docked at them, motion.rs),
     /// game (descent and launch sequences, see port.rs),
     /// player (this tick's input bitmask into commands, when a player slot is set),
     /// traffic (arrivals, launches and landings, rails, and the AI flying ambient ships near the player),
     /// control (assist turns desired velocity into actuator commands), fields (gas at each ship),
     /// steer (angular motion), forces (thrust, drag, gravity), integrate (velocity, dampers, position),
-    /// engines (glow). Trading and the day's costs are commands, applied between ticks (market.rs). Decide (AI) and the systems after motion still run in JS around this call.
+    /// engines (glow), ships (the burner's fuel, hazards' radiation, a hull lost; service.rs). Trading and the day's costs are commands, applied between ticks (market.rs). Decide (AI) and the systems after motion still run in JS around this call.
     pub fn step(&mut self) {
         let n = self.count;
         let s = &mut self.ships;
         s.prev_x[..n].copy_from_slice(&s.x[..n]);
         s.prev_y[..n].copy_from_slice(&s.y[..n]);
         s.prev_ang[..n].copy_from_slice(&s.ang[..n]);
+        self.move_bodies();
         self.step_game();
         player::control(self);
         self.step_traffic();
@@ -411,10 +435,11 @@ impl World {
         flight::forces(self);
         flight::integrate(self);
         flight::engines(self);
+        self.step_ships();
         self.tick += 1;
     }
 
-    /// Write the interpolated render pose (prev -> current at alpha) for every slot.
+    /// Write the interpolated render pose (prev -> current at alpha) for every slot and body.
     pub fn interpolate(&mut self) {
         let a = self.alpha();
         let s = &mut self.ships;
@@ -422,6 +447,11 @@ impl World {
             s.rx[i] = (s.prev_x[i] + (s.x[i] - s.prev_x[i]) * a) as f32;
             s.ry[i] = (s.prev_y[i] + (s.y[i] - s.prev_y[i]) * a) as f32;
             s.ra[i] = wrap(s.prev_ang[i] + wrap(s.ang[i] - s.prev_ang[i]) * a) as f32;
+        }
+        let b = &mut self.bodies;
+        for j in 0..self.n_bodies {
+            b.rx[j] = b.prev_x[j] + (b.x[j] - b.prev_x[j]) * a;
+            b.ry[j] = b.prev_y[j] + (b.y[j] - b.prev_y[j]) * a;
         }
     }
 
@@ -464,7 +494,7 @@ impl World {
         eat(self.game.timer[0].to_bits());
         eat(self.game.credits[0] as u64 | (self.game.debt[0] as u64) << 32);
         eat(self.game.auto[0] as u16 as u64 | (self.game.curl[0] as u64) << 16 | (self.game.system[0] as u64) << 24);
-        for v in [self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0]] { eat(v.to_bits()); }
+        for v in [self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0], self.game.fuel[0]] { eat(v.to_bits()); }
         // tuning and the system: a live param change or a moved body shows in the hash at once
         for &p in &self.params { eat(p.to_bits()); }
         for j in 0..self.n_bodies { eat(self.bodies.x[j].to_bits()); eat(self.bodies.y[j].to_bits()); eat(self.bodies.r[j].to_bits()); eat(self.bodies.g[j].to_bits()); }
@@ -490,7 +520,7 @@ impl World {
             eat(s.rail[i] as u64 | (t.role[i] as u64) << 8 | (t.phase[i] as u64) << 16 | (t.leg[i] as u64) << 24 | (t.to[i] as u16 as u64) << 32);
             if t.role[i] != 0 { for col in [&t.timer, &t.s, &t.age] { eat(col[i].to_bits()); } }
             if s.alive[i] == 0 { continue; }
-            for col in [&s.x, &s.y, &s.vx, &s.vy, &s.ang, &s.av, &s.turn_in, &s.main, &s.lat, &s.thr, &s.gas_h, &s.gas_d, &s.gas_i] {
+            for col in [&s.x, &s.y, &s.vx, &s.vy, &s.ang, &s.av, &s.turn_in, &s.main, &s.lat, &s.thr, &s.gas_h, &s.gas_d, &s.gas_i, &s.hull] {
                 eat(col[i].to_bits());
             }
         }

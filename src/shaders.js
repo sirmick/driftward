@@ -1,6 +1,6 @@
 // ======================= SHADERS =======================
 // GLSL sources shared by the lab (index.html) and the game (play.html). Plain strings, compiled by each page's
-// graphics kit (gfx.js). Lab-only shaders for planets, suns and stations live in their own modules; asteroids in rocks.js, shared.
+// graphics kit (gfx.js). Lab-only shaders for planets and stations live in their own modules; the stars' in stars.js and asteroids' in rocks.js, shared.
 
 // ---------- common: noise, full-screen pass, starfield ----------
 const NOISE = `
@@ -817,33 +817,6 @@ void main(){
     col += mix(vec3(1.), tint, .6)*uSunCol*g*(exp(-d2/(px*px*.6))*(1.5 + 2.5*big) + (sp + st)*big);  // a twinkle stays a point; a flare blooms
   }
   o = vec4(col, 0.);
-}`;
-// A star, in world space on a quad 2.4 radii wide: a granulated, limb-darkened disc, HDR-bright so it blooms, inside
-// a corona that streams outward. uCol is the star's linear colour.
-const STARBODY_VS = `#version 300 es
-in vec2 aPos;
-${WORLD_POS}
-uniform vec2 uC; uniform float uR;
-out vec2 vQ;
-void main(){ vQ = aPos*2.4; gl_Position = clipOf(uC + aPos*uR*2.4); }`;
-const STARBODY_FS = `#version 300 es
-precision highp float; in vec2 vQ; out vec4 o;
-uniform vec3 uCol; uniform float uTime, uPx;
-${NOISE}
-void main(){
-  float r = length(vQ), a = atan(vQ.y, vQ.x);
-  float rr = max(r, 1.);
-  float cor = (exp(-(rr-1.)*3.)*.7 + exp(-(rr-1.)*11.)*1.6) * (.75 + .5*fbm(vec2(a*2.6, rr*1.4 - uTime*.08)));
-  cor *= 1. - smoothstep(1.9, 2.4, r);
-  vec3 col = uCol*cor;
-  float aa = 1. - smoothstep(1. - uPx*1.5, 1., r);
-  if (r < 1.) {
-    float z = sqrt(1. - r*r);
-    float gran = fbm(vQ*16./(.35 + z) + vec2(uTime*.04, -uTime*.03));
-    vec3 disc = uCol*(3.2 + 1.6*gran)*(.42 + .58*pow(z, .55));
-    col = mix(col, disc, aa);
-  }
-  o = vec4(col, aa);
 }`;
 // The plasma sheath a ship wears on descent and launch (the Book's landing sequence): a glow that hugs the hull's
 // silhouette, read from the bake's distance field, so it fits every generated shape. Red-hot, white at the nose,

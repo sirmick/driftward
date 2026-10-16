@@ -107,8 +107,8 @@ impl World {
         [a, wp, e]
     }
 
-    /// A waypoint round the body that intrudes deepest into its clearance circle (the star's 2 radii, others' 1.6)
-    /// along the straight line from `a` to `e`, if any. Bodies in `skip`, any whose clearance holds `a` (the one being
+    /// A waypoint round the body that intrudes deepest into its clearance circle (the star's 2 radii, others' 1.6, or
+    /// a little past its hazard zone if it has one: service.rs) along the straight line from `a` to `e`, if any. Bodies in `skip`, any whose clearance holds `a` (the one being
     /// left), and belts and fields (ships fly through them), are ignored. Traffic routes and the player's autopilot
     /// both steer by it.
     pub fn detour(&self, a: (f64, f64), e: (f64, f64), skip: [usize; 2]) -> Option<(f64, f64)> {
@@ -118,7 +118,7 @@ impl World {
         let mut worst: Option<(f64, f64, f64, f64, f64, f64)> = None; // intrusion, closest point x, y, centre x, y, clearance
         for j in 0..self.n_bodies {
             if skip.contains(&j) || b.kind[j] == BODY_BELT || b.kind[j] == BODY_FIELD { continue; }
-            let clear = b.r[j] * if b.kind[j] == BODY_STAR { 2.0 } else { 1.6 };
+            let clear = (b.r[j] * if b.kind[j] == BODY_STAR { 2.0 } else { 1.6 }).max(b.hazard[j] * 1.1);
             if hypot(a.0 - b.x[j], a.1 - b.y[j]) < clear { continue; }
             let t = (((b.x[j] - a.0) * sx + (b.y[j] - a.1) * sy) / len2).clamp(0.0, 1.0);
             let (px, py) = (a.0 + sx * t, a.1 + sy * t);
@@ -410,7 +410,7 @@ impl World {
 
     /// A new ship of a stream from `from` to `to`, its type drawn from the stream's mix (or the loiter row given).
     /// From a port it lifts off (T_LAUNCH); from a jump zone it arrives already cruising.
-    fn spawn(&mut self, stream: u8, from: End, to: End, row: Option<usize>) -> Option<usize> {
+    pub(crate) fn spawn(&mut self, stream: u8, from: End, to: End, row: Option<usize>) -> Option<usize> {
         let m = match row { Some(m) => m, None => self.pick_mix(if stream == LOCAL { MIX_LOCAL } else { MIX_THROUGH })? };
         let k = self.free_slot()?;
         let kind = self.mix.kind[m];
@@ -419,7 +419,7 @@ impl World {
         self.build_route(k, from, to);
         let (a, b) = (self.pt(k, 0), self.pt(k, 1));
         let s = &mut self.ships;
-        s.alive[k] = 1; s.rail[k] = 1; s.kind[k] = kind;
+        s.alive[k] = 1; s.rail[k] = 1; s.kind[k] = kind; s.hull[k] = self.types.hull[kind as usize];
         s.x[k] = a.0; s.y[k] = a.1; s.vx[k] = 0.0; s.vy[k] = 0.0; s.av[k] = 0.0;
         s.ang[k] = atan2(-(b.0 - a.0), b.1 - a.1);
         s.turn_in[k] = 0.0; s.main[k] = 0.0; s.lat[k] = 0.0; s.thr[k] = 0.0; s.burn[k] = 0; s.rot[k] = 0; s.ctl[k] = 1;
@@ -470,11 +470,13 @@ impl World {
         }
         let d = hypot(dx, dy).max(1e-6);
         let cruise = self.traffic.cruise[k];
+        // a loiter round a moving station goes round with it (motion.rs carries the loop), so moves with it too
+        let (bvx, bvy) = match (self.traffic.role[k], End::of(self.traffic.from[k])) { (LOITER, End::Body(j)) => (self.bodies.vx[j], self.bodies.vy[j]), _ => (0.0, 0.0) };
         let sh = &mut self.ships;
         sh.x[k] = x;
         sh.y[k] = y;
-        sh.vx[k] = dx / d * cruise;
-        sh.vy[k] = dy / d * cruise;
+        sh.vx[k] = dx / d * cruise + bvx;
+        sh.vy[k] = dy / d * cruise + bvy;
         sh.ang[k] = atan2(-dx, dy);
         sh.av[k] = 0.0;
         sh.thr[k] = 0.5;
@@ -546,7 +548,7 @@ impl World {
         }
     }
 
-    fn despawn(&mut self, k: usize) {
+    pub(crate) fn despawn(&mut self, k: usize) {
         self.ships.alive[k] = 0;
         self.ships.rail[k] = 0;
         self.traffic.role[k] = 0;
@@ -622,14 +624,16 @@ impl World {
         };
         // brake to half the landing limit by `stop` metres out, then creep in; land once inside 1.5 x stop and slow
         // (always inside the landing zone: stations 0.6 radii, planets 0.95)
+        // (relative to the port: a moving station's velocity fades in as the ship nears it, motion.rs)
         let limit = if self.bodies.kind[to] == BODY_STATION { self.p(P::dock_speed) } else { self.p(P::land_speed) };
         let stop = (self.bodies.r[to] * 0.25).max(80.0);
-        let sp = hypot(self.ships.vx[k], self.ships.vy[k]);
+        let (fx, fy) = self.frame_of(to, self.ships.x[k], self.ships.y[k]);
+        let sp = hypot(self.ships.vx[k] - self.bodies.vx[to], self.ships.vy[k] - self.bodies.vy[to]);
         if d < stop * 1.5 && sp < limit { self.land(k); return; }
         let brake = self.types.accel[self.ships.kind[k] as usize] * 0.35;
         let v = cruise.min((2.0 * brake * (d - stop).max(0.0)).sqrt() * 0.8).max(limit * 0.5) / d.max(1e-6);
-        self.ships.want_vx[k] = dx * v;
-        self.ships.want_vy[k] = dy * v;
+        self.ships.want_vx[k] = fx + dx * v;
+        self.ships.want_vy[k] = fy + dy * v;
     }
 }
 
@@ -720,6 +724,19 @@ mod tests {
         let [_, wp, _] = w.route(1, 3);
         let mid = (-7_500.0, 6_000.0);
         assert!(hypot(wp.0 - mid.0, wp.1 - mid.1) < 300.0, "{wp:?}"); // nothing in the way: straight
+    }
+
+    #[test]
+    fn routes_keep_clear_of_a_hazard_zone() {
+        let mut w = world(1);
+        w.bodies.hazard[0] = 9000.0; // the star at the origin, now an exotic: a 9 km zone, far past its 2 radii
+        let [a, wp, e] = w.route(1, 2);
+        for (p, q) in [(a, wp), (wp, e)] {
+            // the closest each leg comes to the star
+            let (dx, dy) = (q.0 - p.0, q.1 - p.1);
+            let t = ((-p.0 * dx - p.1 * dy) / (dx * dx + dy * dy)).clamp(0.0, 1.0);
+            assert!(hypot(p.0 + dx * t, p.1 + dy * t) > 9000.0, "a leg passes {} m from the star", hypot(p.0 + dx * t, p.1 + dy * t));
+        }
     }
 
     #[test]

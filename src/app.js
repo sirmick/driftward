@@ -11,7 +11,7 @@ const state = {
   view: 'grid', brand: catalog.brands[0].id, size: catalog.sizes[2].id,
   map: 0, spin: true, trueScale: false, shadow: true, pl: true,
   sunAz: 135, sunEl: 35, star: 'sol', seed: 'kestrel-7',
-  planetSeed: 'set-1', planetFocus: -1, sunSeed: 's1', sunFocus: -1, stSeed: 'stations-1', stFocus: -1, hvSeed: 'heavies-1', hvFocus: -1, astSeed: 'rocks-1', astFocus: -1, hoverItem: -1, sunOff: [-0.17, 0.12], flares: true,
+  planetSeed: 'set-1', planetFocus: -1, stSeed: 'stations-1', stFocus: -1, hvSeed: 'heavies-1', hvFocus: -1, astSeed: 'rocks-1', astFocus: -1, hoverItem: -1,
   flyBrand: 'prism.military', flySize: 'c1', traffic: 60, zoom: 1, flightModel: 'assist', pirates: false, env: 'mixed', solarFlares: true,
   throttle: 0.6, bloom: 0.9, lightsN: 4, shields: true, shieldIdle: 0.3, barrage: false, click: 'inspect',
   mouse: null, hoverKey: null, editBrand: catalog.brands[0].id
@@ -95,26 +95,6 @@ function layout() {
       const hv = document.createElement('div'); hv.className = 'hover-box'; hv.id = 'hover-box'; hv.hidden = true; ov.appendChild(hv);
     }
   }
-  else if (state.view === 'suns') {
-    const n = SUNS ? SUNS.count() : 0;
-    if (state.sunFocus >= 0) {
-      const cell = Math.min(W, H);
-      cells.push({ sun: state.sunFocus, x: 0, y: 0, cell, cx: W / 2, cy: H / 2 });
-      const info = SUNS && SUNS.label(state.sunFocus);
-      if (info) { const d = document.createElement('div'); d.className = 'detail-cap'; d.innerHTML = `<span>${escapeHtml(info.kind)}</span><b>${escapeHtml(info.name)}</b><small>Drag the star to sweep the lens flare</small>`; ov.appendChild(d); }
-    } else {
-      const cols = W > 1100 ? 4 : W > 640 ? 3 : 2, rows = Math.ceil(n / cols);
-      const cell = Math.max(60, Math.min((W - 16) / cols, (H - 16) / rows));
-      const gx = (W - cell * cols) / 2, gy = Math.max(8, (H - cell * rows) / 2);
-      for (let k = 0; k < n; k++) {
-        const c = k % cols, r = Math.floor(k / cols);
-        cells.push({ sun: k, x: gx + c * cell, y: gy + r * cell, cell, cx: gx + (c + 0.5) * cell, cy: gy + (r + 0.46) * cell });
-        const info = SUNS.label(k);
-        if (info) { const d = document.createElement('div'); d.className = 'pl-label'; d.style.left = (gx + c * cell) + 'px'; d.style.width = cell + 'px'; d.style.top = (gy + (r + 1) * cell - 24) + 'px'; d.innerHTML = `<b>${escapeHtml(info.kind)}</b><small>${escapeHtml(info.name)}</small>`; ov.appendChild(d); }
-      }
-      const hv = document.createElement('div'); hv.className = 'hover-box'; hv.id = 'hover-box'; hv.hidden = true; ov.appendChild(hv);
-    }
-  }
   else if (state.view === 'planets') {
     const n = 12;
     if (state.planetFocus >= 0) {
@@ -166,7 +146,6 @@ function layout() {
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function updateHint() {
   if (GENERIC[state.view]) { const G = GENERIC[state.view]; $('hint').textContent = state[G.focus] >= 0 ? G.one : G.grid; return; }
-  if (state.view === 'suns') { $('hint').textContent = state.sunFocus >= 0 ? 'Drag the star to move it · the lens flare follows' : 'Click a star to open it in the builder'; return; }
   if (state.view === 'planets') { $('hint').textContent = state.planetFocus >= 0 ? 'Drag to move the sun · edit this planet in the side panel' : 'Click a planet to edit it · drag to move the sun'; return; }
   if (state.view === 'fly') { $('hint').textContent = 'W S speed · A D turn · Shift burn · Space fire · Tab contact · C cold · P ping · F assist · wheel zoom'; return; }
   const fire = state.view === 'detail' || state.click === 'fire';
@@ -217,11 +196,6 @@ function frame(now) {
     const G = GENERIC[state.view], M = G.mod();
     if (M) { try { M.frame(now); } catch (e) { console.error(e); $('hint').textContent = state.view + ' failed: ' + (e.message || e); } }
     else $('hint').textContent = state.view + ' failed to start: ' + G.err();
-    requestAnimationFrame(frame); return;
-  }
-  if (state.view === 'suns') {
-    if (SUNS) { try { SUNS.frame(now); } catch (e) { console.error(e); SUNS_ERR = String(e.message || e); SUNS = null; } }
-    if (!SUNS) $('hint').textContent = 'Suns failed to start: ' + SUNS_ERR;
     requestAnimationFrame(frame); return;
   }
   if (state.view === 'planets') {
@@ -387,9 +361,9 @@ function postProcess() { G.postProcess(state.bloom); }
 
 /*CORE*/
 /*FLY*/
+/*STARS*/
 /*SCHEMA*/
 /*PLANETS*/
-/*SUNS*/
 /*STATIONS*/
 /*ASTEROIDS*/
 
@@ -424,17 +398,13 @@ canvas.addEventListener('pointermove', e => {
   state.mouse = { x, y };
   if (drag) {
     if (Math.hypot(x - drag.x, y - drag.y) > 5) drag.moved = true;
-    if (drag.moved) { if (state.view === 'suns' && state.sunFocus >= 0) state.sunOff = [(x - W / 2) / W, (H / 2 - y) / H]; else setSunFromPointer(x, y); }
+    if (drag.moved) setSunFromPointer(x, y);
   }
   if (GENERIC[state.view]) {
     const fk = state[GENERIC[state.view].focus], c = fk < 0 ? cellAt(x, y) : null, hb = $('hover-box');
     state.hoverItem = c ? c.item : -1;
     if (hb) { if (c) { hb.hidden = false; hb.style.left = c.x + 'px'; hb.style.top = c.y + 'px'; hb.style.width = hb.style.height = c.cell + 'px'; } else hb.hidden = true; }
     canvas.style.cursor = drag && drag.moved ? 'grabbing' : c ? 'pointer' : 'crosshair';
-  } else if (state.view === 'suns') {
-    const c = state.sunFocus < 0 ? cellAt(x, y) : null, hb = $('hover-box');
-    if (hb) { if (c) { hb.hidden = false; hb.style.left = c.x + 'px'; hb.style.top = c.y + 'px'; hb.style.width = hb.style.height = c.cell + 'px'; } else hb.hidden = true; }
-    canvas.style.cursor = drag && drag.moved ? 'grabbing' : c ? 'pointer' : (state.sunFocus >= 0 ? 'grab' : 'crosshair');
   } else if (state.view === 'planets') {
     const c = state.planetFocus < 0 ? cellAt(x, y) : null, hb = $('hover-box');
     if (hb) { if (c) { hb.hidden = false; hb.style.left = c.x + 'px'; hb.style.top = c.y + 'px'; hb.style.width = hb.style.height = c.cell + 'px'; } else hb.hidden = true; }
@@ -456,7 +426,6 @@ canvas.addEventListener('pointerup', e => {
   if (state.view === 'fly') return;
   const r = canvas.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
   if (drag && !drag.moved && GENERIC[state.view]) { const G = GENERIC[state.view], M = G.mod(), c = cellAt(x, y); if (c && state[G.focus] < 0 && M) M.focus(c.item); drag = null; return; }
-  if (drag && !drag.moved && state.view === 'suns') { const c = cellAt(x, y); if (c && state.sunFocus < 0 && SUNS) SUNS.focus(c.sun); drag = null; return; }
   if (drag && !drag.moved && state.view === 'planets') { const c = cellAt(x, y); if (c && state.planetFocus < 0 && PLAN) PLAN.focus(c.planet); drag = null; return; }
   if (drag && !drag.moved) {
     const c = cellAt(x, y);
@@ -476,12 +445,10 @@ function setView(v) {
   state.view = v;
   $('fly-panel').hidden = v !== 'fly';
   $('planet-panel').hidden = v !== 'planets';
-  $('sun-panel').hidden = v !== 'suns';
   $('station-panel').hidden = v !== 'stations';
   $('heavy-panel').hidden = v !== 'heavies';
   $('asteroid-panel').hidden = v !== 'asteroids';
   if (GENERIC[v] && GENERIC[v].mod()) GENERIC[v].mod().sync();
-  if (v === 'suns' && SUNS) SUNS.sync();
   document.querySelectorAll('[data-hide]').forEach(el => { el.hidden = el.dataset.hide.split(' ').includes(v); });
   if (v === 'planets' && PLAN) PLAN.sync();
   $('touch').hidden = v !== 'fly';

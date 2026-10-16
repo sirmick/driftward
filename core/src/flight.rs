@@ -106,14 +106,15 @@ pub fn steer(w: &mut World) {
 }
 
 /// The well field at (x, y): a vector pointing into the wells, its length the strength there. Each body adds its
-/// strength (g / g_ref) times an influence that is 1 at and below the surface and eases to 0 at `reach` radii,
-/// faded out near the very centre (where "inward" stops meaning anything).
+/// strength (g / g_ref) times an influence that is 1 at and below the surface and eases to 0 at `reach` radii (or the
+/// body's own reach, if it has one: a compact star's well reaches many of its radii), faded out near the very centre
+/// (where "inward" stops meaning anything).
 pub(crate) fn well_field(b: &crate::world::Bodies, nb: usize, x: f64, y: f64, reach: f64, g_ref: f64) -> (f64, f64) {
     let (mut wx, mut wy) = (0.0, 0.0);
     for j in 0..nb {
         let (dx, dy) = (b.x[j] - x, b.y[j] - y);
         let (d, r) = (hypot(dx, dy), b.r[j]);
-        let edge = r * reach;
+        let edge = r * if b.reach[j] > 0.0 { b.reach[j] } else { reach };
         if d >= edge || d < 1e-6 { continue; }
         let q = if d <= r { 1.0 } else { 1.0 - (d - r) / (edge - r) };
         let k = q * q * (3.0 - 2.0 * q) * (d / (0.3 * r)).min(1.0) * b.g[j] / g_ref;
@@ -257,16 +258,16 @@ mod tests {
     }
 
     #[test]
-    fn burner_raises_the_cap_and_dampers_bleed_it_back() {
-        let mut w = one_ship();
-        w.ships.main[0] = 1.0;
-        w.ships.burn[0] = 1;
-        run(&mut w, 30.0);
-        assert!(speed(&w) > 240.0 && speed(&w) < 260.0, "{}", speed(&w));
-        w.ships.burn[0] = 0;
-        w.ships.main[0] = 0.0;
-        run(&mut w, 20.0);
-        assert!(speed(&w) < 205.0, "{}", speed(&w));
+    fn the_burner_adds_thrust_not_top_speed() {
+        let (mut plain, mut burn) = (one_ship(), one_ship());
+        plain.ships.main[0] = 1.0;
+        (burn.ships.main[0], burn.ships.burn[0]) = (1.0, 1);
+        run(&mut plain, 0.25);
+        run(&mut burn, 0.25);
+        let k = burn.p(P::burn_accel);
+        assert!((speed(&burn) / speed(&plain) - k).abs() < 0.1, "{} vs {}", speed(&burn), speed(&plain)); // far below the cap: k times the thrust
+        run(&mut burn, 30.0);
+        assert!(speed(&burn) < 200.0 && speed(&burn) > 195.0, "{}", speed(&burn)); // and the same cap
     }
 
     #[test]
@@ -381,6 +382,17 @@ mod tests {
         w.ships.x[0] = -1.0e6; // far from the well: the dampers take it back to the flat cap
         run(&mut w, 30.0);
         assert!(speed(&w) < 92.0, "{}", speed(&w));
+    }
+
+    #[test]
+    fn a_compact_stars_well_reaches_its_own_radii() {
+        let mut w = in_a_well(5000.0, 60.0, 200.0, 0.5); // ten radii out: past the usual three
+        w.step();
+        assert_eq!(w.ships.well[0], 0.0);
+        let mut w = in_a_well(5000.0, 60.0, 200.0, 0.5);
+        w.bodies.reach[0] = 20.0;
+        w.step();
+        assert!(w.ships.well[0] > 0.1 && w.ships.ax[0] < 0.0, "{} {}", w.ships.well[0], w.ships.ax[0]);
     }
 
     #[test]

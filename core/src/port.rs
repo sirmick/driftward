@@ -11,10 +11,14 @@
 //! a short descent; landed, the player is safe and flight is paused for them; each landing advances the clock by
 //! a day, and so does waiting in port, which costs a docking fee. Stations need a slower approach than planets
 //! (clamps, not a descent). Landing delivers the missions bound for the port. Trading commands are in market.rs,
-//! mission commands in mission.rs.
+//! mission commands in mission.rs, refuelling and repair in service.rs.
+//!
+//! A moving station (motion.rs) carries the ship docked at it, and its sequences, along with it; "slow" means slow
+//! relative to it, and a launch hands back control moving with it.
 
 use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL, NO_CREDITS};
 use crate::mission::{CMD_ABANDON, CMD_ACCEPT};
+use crate::service::{CMD_REFUEL, CMD_REPAIR};
 use crate::math::{atan2, hypot};
 use crate::world::{World, DT, P};
 
@@ -22,6 +26,8 @@ pub const MODE_FLYING: u8 = 0;
 pub const MODE_DESCENDING: u8 = 1;
 pub const MODE_LANDED: u8 = 2;
 pub const MODE_LAUNCHING: u8 = 3;
+/// The ship is lost (service.rs): the page reloads the last landing's save. No command works.
+pub const MODE_DEAD: u8 = 4;
 
 pub const BODY_STAR: u8 = 0;
 pub const BODY_PLANET: u8 = 1;
@@ -66,7 +72,7 @@ impl World {
     pub fn mode(&self) -> u8 { self.game.mode[0] }
     pub fn day(&self) -> u32 { self.game.day[0] }
 
-    /// The port the player is over, if any, and whether they are slow enough to land there.
+    /// The port the player is over, if any, and whether they are slow enough (relative to it) to land there.
     pub fn port_below(&self) -> Option<(usize, bool)> {
         let i = usize::try_from(self.game.player[0]).ok().filter(|&i| i < self.count)?;
         let (s, b) = (&self.ships, &self.bodies);
@@ -78,7 +84,7 @@ impl World {
         }
         let (j, _) = best?;
         let limit = if b.kind[j] == BODY_STATION { self.p(P::dock_speed) } else { self.p(P::land_speed) };
-        Some((j, s.vx[i].hypot(s.vy[i]) <= limit)) // bodies hold still in M1, so this is speed relative to the port
+        Some((j, (s.vx[i] - b.vx[j]).hypot(s.vy[i] - b.vy[j]) <= limit))
     }
 
     /// Apply a command now (between ticks). Returns OK or why not.
@@ -127,6 +133,7 @@ impl World {
             }
             CMD_BUY | CMD_SELL | CMD_REPAY => self.trade(code, a, b),
             CMD_ACCEPT | CMD_ABANDON => self.mission_command(code, a),
+            CMD_REFUEL | CMD_REPAIR => self.service(code),
             CMD_AUTOPILOT => {
                 if mode != MODE_FLYING { return WRONG_MODE; }
                 if a < -1 || a >= self.n_bodies as i32 { return NO_SUCH_BODY; }
@@ -137,9 +144,10 @@ impl World {
                 if mode != MODE_FLYING { return WRONG_MODE; }
                 let (Some(j), Ok(i)) = (usize::try_from(a).ok().filter(|&j| j < self.n_bodies), usize::try_from(self.game.player[0])) else { return NO_SUCH_BODY };
                 let at = self.arrival(j);
+                let (bvx, bvy) = (self.bodies.vx[j], self.bodies.vy[j]);
                 let s = &mut self.ships;
                 (s.x[i], s.y[i]) = at;
-                s.vx[i] = 0.0; s.vy[i] = 0.0; s.av[i] = 0.0;
+                s.vx[i] = bvx; s.vy[i] = bvy; s.av[i] = 0.0; // at rest relative to it
                 self.game.set[0] = 0.0;
                 self.slot_reset(i, false);
                 OK
@@ -167,7 +175,9 @@ impl World {
 
     /// Where a launch hands back control at the port it left: the direction (a unit vector) and speed. From a planet
     /// or moon, along the curl (the tangent round the body's centre) at a share of the hull's top speed; from a
-    /// station, straight out from its centre, slowly.
+    /// station, straight out from its centre, slowly, plus the station's own velocity if it moves (the velocity it
+    /// will have when the launch ends: an orbit's speed is steady, and in M1's slow orbits its direction turns a
+    /// fraction of a degree in a launch).
     pub fn launch_velocity(&self) -> (f64, f64, f64) {
         let j = self.game.at[0] as usize;
         let Ok(i) = usize::try_from(self.game.player[0]) else { return (0.0, 1.0, 0.0) };
@@ -175,7 +185,11 @@ impl World {
         let d = hypot(rx, ry);
         let (ux, uy) = if d < 1.0 { (1.0, 0.0) } else { (rx / d, ry / d) };
         let ccw = if self.game.curl[0] == 0 { 1.0 } else { -1.0 };
-        if self.bodies.kind[j] == BODY_STATION && d >= 1.0 { return (ux, uy, self.p(P::launch_speed)); }
+        if self.bodies.kind[j] == BODY_STATION && d >= 1.0 {
+            let (vx, vy) = (ux * self.p(P::launch_speed) + self.bodies.vx[j], uy * self.p(P::launch_speed) + self.bodies.vy[j]);
+            let v = hypot(vx, vy);
+            return if v < 1e-9 { (ux, uy, 0.0) } else { (vx / v, vy / v, v) };
+        }
         let vmax = self.types.vmax[self.ships.kind[i] as usize];
         (-uy * ccw, ux * ccw, vmax * self.p(P::launch_frac))
     }
@@ -204,6 +218,12 @@ impl World {
                     self.game.timer[0] = 0.0;
                     self.game.mode[0] = MODE_FLYING;
                     let (tx, ty, v) = (self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0]);
+                    let j = self.game.at[0] as usize;
+                    // the velocity relative to the port: a moving station's own is added to the hand-off (port.rs
+                    // `launch_velocity`), and the nose and the assist's set speed are the ship's own
+                    let (bvx, bvy) = (self.bodies.vx[j], self.bodies.vy[j]);
+                    let (rvx, rvy) = (tx * v - bvx, ty * v - bvy);
+                    let rv = hypot(rvx, rvy);
                     if let Ok(i) = usize::try_from(self.game.player[0]) {
                         let s = &mut self.ships;
                         s.alive[i] = 1;
@@ -211,12 +231,12 @@ impl World {
                         // cruise (player.rs), and with assist off the dampers bleed it
                         s.vx[i] = tx * v;
                         s.vy[i] = ty * v;
-                        s.ang[i] = atan2(-tx, ty);
+                        s.ang[i] = if rv > 1e-9 { atan2(-rvx, rvy) } else { atan2(-tx, ty) };
                         s.av[i] = 0.0;
                         s.prev_x[i] = s.x[i];
                         s.prev_y[i] = s.y[i];
                         s.prev_ang[i] = s.ang[i];
-                        self.game.set[0] = v;
+                        self.game.set[0] = rv;
                     }
                 }
             }

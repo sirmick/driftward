@@ -47,7 +47,7 @@ gen = (src / 'gen.js').read_text()
 # Script modules, inlined at their /*MARKER*/ in a page's script (order of inclusion is the page's choice).
 MODULES = {
     '/*LOOK*/': 'look.js', '/*SHADERS*/': 'shaders.js', '/*GFX*/': 'gfx.js', '/*BAKE*/': 'bake.js', '/*CORE*/': 'core.js',
-    '/*FLY*/': 'fly.js', '/*PLANETS*/': 'planets.js', '/*SUNS*/': 'suns.js', '/*STATIONS*/': 'stations.js',
+    '/*FLY*/': 'fly.js', '/*PLANETS*/': 'planets.js', '/*STARS*/': 'stars.js', '/*SUNS*/': 'play/suns.js', '/*STATIONS*/': 'stations.js',
     '/*ASTEROIDS*/': 'asteroids.js', '/*ROCKS*/': 'rocks.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js', '/*DEBUG*/': 'play/debug.js', '/*SHIPYARD*/': 'play/shipyard.js', '/*JITTER*/': 'play/jitter.js',
 }
 
@@ -102,9 +102,9 @@ def page(template, script):
 
 # the lab: app.js pulls in the shared kit and every tab
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),
-    ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*SCHEMA*/', '/*PLANETS*/', '/*SUNS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
+    ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*STARS*/', '/*SCHEMA*/', '/*PLANETS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
 # the game: its template carries the script shell and markers itself
-game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*JITTER*/', '/*PLAY*/']), '')
+game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*SHIPYARD*/', '/*SUNS*/', '/*JITTER*/', '/*PLAY*/']), '')
 
 for name, html in (('index.html', lab), ('play.html', game)):
     (root / name).write_text(html)

@@ -530,6 +530,13 @@ function bake(ship, brand, size) {
       let spec = p.paint === -2 ? 1.0 : st.material.spec;
       let er = 0, eg = 0, eb = 0, dh = 0;
       const vn = ly / Math.max(hld, 1e-3);
+      // where the detail patterns are laid: the part's own frame, but a round part (a ring, a disc) in polar terms, so
+      // its plates run round it in courses, a whole number to each, rather than in a grid laid across it. ar: distance
+      // from its centre; ath: the angle round it, -pi..pi
+      const round = p.prim === 'ring' || p.prim === 'circle', ar = round ? Math.hypot(lx, ly) : 0, ath = round ? Math.atan2(ly, lx) : 0;
+      // a course of plates `w` metres wide at radius r: how many fit round it, and the plate number (with its fraction)
+      // at this angle, offset by `off` plates
+      const course = (r, w, off) => { const n = Math.max(3, Math.round(2 * Math.PI * r / w)), u = (ath / (2 * Math.PI) + 0.5) * n + off; return { n, u }; };
       const mixc = (c, m) => { cr += (c[0] - cr) * m; cg += (c[1] - cg) * m; cb += (c[2] - cb) * m; };
       const mulc = m => { cr *= m; cg *= m; cb *= m; };
       const emit = (c, m) => { er += c[0] * m; eg += c[1] * m; eb += c[2] * m; };
@@ -547,8 +554,15 @@ function bake(ship, brand, size) {
         const S = D.panelSpacing, f = fade(S);
         if (f > 0) {
           const asp = D.panelAspect || 1, S2 = S * asp;
-          const yy = ly / S + (p.seedI % 97) * 0.13, row = Math.floor(yy), fy = yy - row;
-          const xx = (lx + h2(row, 3, p.seedI) * S2) / S2, col = Math.floor(xx), fx = xx - col;
+          let yy, row, fy, xx, col, fx;
+          if (round) { // courses round the part, outward from its centre
+            yy = ar / S; row = Math.floor(yy); fy = yy - row;
+            const c = course(Math.max(S, (row + 0.5) * S), S2, h2(row, 3, p.seedI));
+            xx = c.u; col = Math.floor(xx); fx = xx - col; col = ((col % c.n) + c.n) % c.n;
+          } else {
+            yy = ly / S + (p.seedI % 97) * 0.13; row = Math.floor(yy); fy = yy - row;
+            xx = (lx + h2(row, 3, p.seedI) * S2) / S2; col = Math.floor(xx); fx = xx - col;
+          }
           const e = Math.min(Math.min(fy, 1 - fy), Math.min(fx, 1 - fx) * asp);
           const lw = Math.max(pxd * 0.7, S * 0.03) / S;
           if (t > Math.min(S * 0.2, inRd * 0.4)) {
@@ -561,7 +575,9 @@ function bake(ship, brand, size) {
       if ((D.patches || 0) > 0 && p.det.panel) {
         const Sx = 3.0, Sy = 2.2, f = fade(Sx);
         if (f > 0) {
-          const ux = lx / Sx + (p.seedI % 13) * 0.37, uy = ly / Sy, cx = Math.floor(ux), cy = Math.floor(uy);
+          let ux, uy, cx, cy;
+          if (round) { uy = ar / Sy; cy = Math.floor(uy); const c = course(Math.max(Sy, (cy + 0.5) * Sy), Sx, (p.seedI % 13) * 0.37); ux = c.u; cx = Math.floor(ux); cx = ((cx % c.n) + c.n) % c.n; ux = cx + (c.u - Math.floor(c.u)); }
+          else { ux = lx / Sx + (p.seedI % 13) * 0.37; uy = ly / Sy; cx = Math.floor(ux); cy = Math.floor(uy); }
           const hh = h2(cx, cy, p.seedI + 5);
           if (hh < D.patches) {
             const fx = ux - cx, fy = uy - cy, inset = 0.12;
@@ -576,7 +592,7 @@ function bake(ship, brand, size) {
       if (p.det.rivets && (D.rivets || 0) > 0) {
         const S = 0.8, f = fade(S);
         if (f > 0 && Math.abs(t - 0.45) < 0.22) {
-          const fx = frac(lx / S) - 0.5, fy = frac(ly / S) - 0.5;
+          const fx = frac((round ? ath * ar : lx) / S) - 0.5, fy = frac((round ? ar : ly) / S) - 0.5; // round: along and across its courses
           const rd = Math.hypot(fx, fy) * S;
           if (rd < 0.17) { const g = f * (1 - rd / 0.17); dh += pxd * 0.9 * g; mulc(1 + 0.15 * g); }
         }
@@ -610,11 +626,12 @@ function bake(ship, brand, size) {
         if (Math.abs(t - ai) < aw / 2) { emit(accent, 1.1); mixc(accent, 0.3); }
       }
       // windows
-      if (p.det.windows && (D.windows || 0) > 0 && Math.abs(vn) < 0.82) {
+      // (a round part's run along its rim, all the way round)
+      if (p.det.windows && (D.windows || 0) > 0 && (round || Math.abs(vn) < 0.82)) {
         const wi = Math.min(1.2, inRd * 0.4), ww = 0.45, S = 1.5, f = fade(ww * 2);
         if (f > 0 && Math.abs(t - wi) < Math.max(ww, pxd) / 2) {
-          const cell = Math.floor(ly / S), fy = frac(ly / S);
-          if (fy > 0.25 && fy < 0.75 && h2(cell, Math.sign(lx) + 2, p.seedI) < D.windows) emit(windowC, 0.95 * f);
+          const along = round ? ath * ar : ly, cell = Math.floor(along / S), fy = frac(along / S);
+          if (fy > 0.25 && fy < 0.75 && h2(cell, round ? 2 : Math.sign(lx) + 2, p.seedI) < D.windows) emit(windowC, 0.95 * f);
         }
       }
       // lamps

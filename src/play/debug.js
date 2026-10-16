@@ -8,6 +8,9 @@
 //   Traffic  the traffic mix (local, through, loiter) against what is flying now, by stream and by row.
 //   Ships    every faction line's hulls in every class, drawn behind the tab by the shipyard (src/play/shipyard.js)
 //            with plumes and shields: click a hull for a new seed, shift-click for the one before.
+//   Suns     this system's stars and one of each of the twelve classes, drawn behind the tab by the game's star kit
+//            (src/stars.js, src/play/suns.js); click one to open it in the builder, whose sliders edit the system
+//            file's star entry (the JSON to copy into it). The lab's old Suns tab.
 // The header's jump box takes the player to any planet, moon, station, belt or field in any system: place@system.
 // tools/gen-content.js records how content was made; the build inlines the records. Everything else here is read-only.
 function makeDebug(ctx) {
@@ -120,7 +123,9 @@ function makeDebug(ctx) {
     const S = [], add = (id, title, body) => S.push({ id, title, body }), fmt = n => Math.round(n).toLocaleString('en-US');
     add('ship', 'Ship', kv([['type', `<b>${e(d.ship.name)}</b> <small>slot 0 · type ${d.ship.kind}</small>`], ['length', `${d.ship.length} m`],
       ['acceleration', `${d.ship.accel.toFixed(1)} m/s²`], ['turn', `${d.ship.turn.toFixed(2)} rad/s`], ['top speed', `${d.ship.vmax.toFixed(0)} m/s`],
-      ['gravity well', `${d.ship.well} <small>(how hard wells pull it and bend its top speed)</small>`], ['hold', `${d.ship.cargo} t`]]));
+      ['gravity well', `${d.ship.well} <small>(how hard wells pull it and bend its top speed)</small>`], ['hold', `${d.ship.cargo} t`],
+      ['hull', `${Math.round(d.ship.hull)} of ${Math.round(d.ship.hullCap)} points${d.ship.radiation > 0 ? ` <small class="warn">losing ${(d.ship.radiation * 100).toFixed(1)}% a second to radiation</small>` : ''}`],
+      ['fuel', `${d.ship.fuel.toFixed(2)} of ${d.ship.fuelCap.toFixed(1)} t <small>(the burner empties a full tank in two minutes)</small>`]]));
     add('flight', 'Flight', kv([['mode', e(d.mode)], ['assist', e(d.assist)], ['at', e(d.at || '')], ['below', e(d.below || 'no port')],
       ['position', `${fmt(d.x)}, ${fmt(d.y)} m`], ['velocity', `${d.v.toFixed(1)} m/s <small>(${d.vx.toFixed(1)}, ${d.vy.toFixed(1)})</small>`],
       ['heading', `${d.heading.toFixed(1)}° <small>spin ${d.av.toFixed(3)} rad/s</small>`], ['set speed', `${d.set.toFixed(0)} m/s`], ['autopilot', e(d.auto || 'off')]]));
@@ -186,6 +191,78 @@ function makeDebug(ctx) {
     return { cells, opts: yardOpts };
   }
 
+  // ---------- Suns: cells the gallery draws stars behind; one open in the builder ----------
+  let gallery = null, sunCells = [], sunEdit = null; // sunEdit: { entry, name, from } while the builder is open
+  const sunOpts = { flares: true, clipTop: 0 };
+  const fmtM = m => m >= 1000 ? `${(m / 1000).toFixed(m >= 10000 ? 0 : 1)} km` : `${Math.round(m)} m`;
+  const sunSub = entry => { const G = starGame(entry), T = STAR_CLASSES[entry.class]; return `${e(T.cls)} · r ${fmtM(G.radius)} · well ${G.gravity}${G.hazard ? ` · hazard ${fmtM(G.hazard)}` : ''}`; };
+  // a star entry as a system file would write it: class and seed, and only the look values that differ from what the
+  // class and seed give
+  function sunJson(entry) {
+    const base = starLook({ class: entry.class, seed: entry.seed }), look = {};
+    for (const [k, v] of Object.entries(entry.look || {})) if (starApplies(k, entry.class) && Math.abs(v - base[k]) > 1e-6) look[k] = Math.round(v * 1000) / 1000;
+    const out = Object.assign({}, entry.name ? { name: entry.name } : {}, { class: entry.class, seed: entry.seed });
+    for (const k of ['radius', 'gravity', 'hazard', 'orbit']) if (entry[k] !== undefined) out[k] = entry[k];
+    if (Object.keys(look).length) out.look = look;
+    return out;
+  }
+  const sunCell = (k, name, entry) => `<div class="dbg-ship dbg-sun" data-k="${k}" title="${e(name)}: open in the builder"><div class="lbl"><b>${e(name)}</b><small>${sunSub(entry)}</small></div></div>`;
+  function sunsTab() {
+    if (!gallery) return '<p class="dbg-note">The star kit starts with the game.</p>';
+    const SYS = current().loaded.system;
+    sunCells = [];
+    const add = (name, entry, from) => { sunCells.push({ name, entry, from, look: starLook(entry) }); return sunCells.length - 1; };
+    if (sunEdit) {
+      const { entry } = sunEdit, k = add(sunEdit.name, entry, sunEdit.from), T = STAR_CLASSES[entry.class], L = sunCells[k].look;
+      return `<div class="dbg-yard dbg-sun-edit"><div class="dbg-yard-bar"><button type="button" id="sn-back">← All stars</button>`
+        + `<label><input type="checkbox" id="sn-flares"${sunOpts.flares ? ' checked' : ''}> Lens flare</label>`
+        + `<span class="hint">${e(sunEdit.from)} · edits stay here: copy the JSON into the system file's star</span></div>`
+        + `<div class="dbg-sun-cols"><div class="dbg-sun-big" data-k="${k}"></div><div class="dbg-sun-panel">`
+        + `<h4>${e(sunEdit.name)}</h4><p class="dbg-note">${e(T.label)} · ${sunSub(entry)}</p>`
+        + `<label class="dbg-sun-row">Class <select id="sn-class">${STAR_ORDER.map(c => `<option value="${c}"${c === entry.class ? ' selected' : ''}>${e(STAR_CLASSES[c].label)} (${e(STAR_CLASSES[c].cls)})</option>`).join('')}</select></label>`
+        + `<label class="dbg-sun-row">Seed <input type="range" id="sn-seed" min="0" max="100" step="1" value="${entry.seed}"><output>${entry.seed}</output></label>`
+        + Object.keys(STAR_RANGES).filter(k => k !== 'radius' && starApplies(k, entry.class)).map(k => { const R = STAR_RANGES[k];
+          return `<label class="dbg-sun-row">${e(STAR_LABELS[k])} <input type="range" data-p="${k}" min="${R[0]}" max="${R[1]}" step="${R[2]}" value="${L[k]}"><output>${e(R[3](L[k]))}</output></label>`; }).join('')
+        + `<div class="dbg-sun-acts"><button type="button" id="sn-reset">Class look</button><button type="button" id="sn-copy">Copy JSON</button></div>`
+        + `<pre class="dbg-json" id="sn-json">${e(JSON.stringify(sunJson(entry), null, 1))}</pre></div></div></div>`;
+    }
+    const own = [['', SYS.star], [' (companion)', SYS.star.companion]].filter(([, st]) => st).map(([tag, st]) => sunCell(add(st.name + tag, JSON.parse(JSON.stringify(st)), `${SYS.name}'s star`), st.name + tag, st)).join('');
+    const every = STAR_ORDER.map(c => { const entry = { class: c, seed: 1, look: {} }; return sunCell(add(STAR_CLASSES[c].label, entry, 'a class preset'), STAR_CLASSES[c].label, entry); }).join('');
+    return `<div class="dbg-yard"><div class="dbg-yard-bar"><label><input type="checkbox" id="sn-flares"${sunOpts.flares ? ' checked' : ''}> Lens flares</label>`
+      + `<span class="hint">Click a star to open it in the builder · the twelve classes are the system file's star.class (src/stars.js)</span></div>`
+      + `<p class="dbg-sub">The ${e(SYS.name)} system</p><div class="dbg-sun-grid">${own}</div>`
+      + `<p class="dbg-sub">Every class</p><div class="dbg-sun-grid">${every}</div></div>`;
+  }
+  function mountSuns(pane) {
+    const fl = pane.querySelector('#sn-flares'); if (fl) fl.onchange = ev => { sunOpts.flares = ev.target.checked; };
+    pane.querySelectorAll('.dbg-sun').forEach(el => { el.onclick = () => { const c = sunCells[+el.dataset.k]; sunEdit = { name: c.name, from: c.from, entry: JSON.parse(JSON.stringify(Object.assign({ seed: 1, look: {} }, c.entry))) }; show('suns'); }; });
+    if (!sunEdit) return;
+    const E = sunEdit.entry, cell = () => sunCells[0], json = () => { pane.querySelector('#sn-json').textContent = JSON.stringify(sunJson(E), null, 1); };
+    pane.querySelector('#sn-back').onclick = () => { sunEdit = null; show('suns'); };
+    pane.querySelector('#sn-class').onchange = ev => { E.class = ev.target.value; E.look = {}; delete E.radius; delete E.gravity; delete E.hazard; show('suns'); };
+    // the seed varies the class's look under any values set here: drawn as it moves, the sliders caught up on release
+    const seed = pane.querySelector('#sn-seed');
+    seed.oninput = ev => { E.seed = +ev.target.value; cell().look = starLook(E); seed.nextElementSibling.textContent = E.seed; json(); };
+    seed.onchange = () => show('suns');
+    pane.querySelector('#sn-reset').onclick = () => { E.look = {}; show('suns'); };
+    pane.querySelectorAll('input[data-p]').forEach(inp => { inp.oninput = ev => {
+      const k = inp.dataset.p; E.look = E.look || {}; E.look[k] = +ev.target.value; cell().look = starLook(E);
+      inp.nextElementSibling.textContent = STAR_RANGES[k][3](+ev.target.value); json(); }; });
+    pane.querySelector('#sn-copy').onclick = ev => {
+      const txt = JSON.stringify(sunJson(E), null, 1);
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { ev.target.textContent = 'Copied'; }, () => { window.prompt('The star entry, for the system file:', txt); });
+      setTimeout(() => { ev.target.textContent = 'Copy JSON'; }, 1500);
+    };
+  }
+  // the cells on show and their looks, for the game's frame to draw (null unless the Suns tab is up)
+  function sunView() {
+    if (el.hidden || tab !== 'suns' || !gallery) return null;
+    const cells = [...el.querySelectorAll('.dbg-sun, .dbg-sun-big')].map(c => ({ el: c, look: sunCells[+c.dataset.k].look, big: c.classList.contains('dbg-sun-big') }));
+    const bar = el.querySelector('.dbg-yard-bar');
+    sunOpts.clipTop = bar ? bar.getBoundingClientRect().bottom : 0;
+    return { cells, opts: sunOpts };
+  }
+
   // ---------- Traffic: live, rebuilt each time the tab shows ----------
   function trafficTab() {
     const d = live && live();
@@ -207,7 +284,7 @@ function makeDebug(ctx) {
     return sections(S);
   }
 
-  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }];
+  const TABS = [{ id: 'content', name: 'Content', render: content, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }];
   let tab = TABS[0].id;
   const cache = new Map();
   function show(id) {
@@ -281,6 +358,8 @@ function makeDebug(ctx) {
     setJump(j) { jump = j; }, // { places(), systems(), current(), go(k, j) }, bound once the core has loaded
     setLive(fn) { live = fn; }, // the Player tab's source, bound once the core has loaded
     setYard(y) { yard = y; },
-    yardView
+    yardView,
+    setSuns(g) { gallery = g; }, // the Suns tab's gallery (src/play/suns.js), bound once the game's GL is up
+    sunView
   };
 }

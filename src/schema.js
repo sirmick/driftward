@@ -58,8 +58,10 @@ function clampToSchema(schema, value, path, notes) {
   }
 }
 
-// A star system, validated and laid out: the star at the origin, every body placed by its orbit (moons and
-// stations around their parent), parents before children, with what the core and the renderer need. The game
+// A star system, validated and laid out: the star at the origin (and a binary's companion on its orbit from it), every
+// body placed by its orbit (moons and stations around their parent), parents before children, with what the core and
+// the renderer need. A star body carries its full look (src/stars.js starLook) and its game numbers (starGame: radius,
+// gravity, the well's reach, and an exotic's hazard zone). The game
 // re-places bodies with the core's own trig (World::place_body) so a layout is bit-identical across browsers. Returns { system, bodies, notes };
 // system is null if the file is unusable.
 // Environmental stations (a body's environs) become station bodies after every other, each placed round its world
@@ -69,20 +71,31 @@ function clampToSchema(schema, value, path, notes) {
 // with a note. Their bake seeds come in two variants per archetype and owner, so they share bakes. Asteroid belts
 // and fields come after them.
 const MAX_ENVIRONS = 24;
+// the star classes (src/stars.js): one script in the pages, a module in Node's tools
+const STAR_LIB = typeof starGame === 'function' ? { starGame, starLook } : require('./stars.js');
 function loadSystem(raw, schema, opts) {
   opts = opts || {};
   const notes = [];
   const sys = clampToSchema(schema, raw, '$', notes);
   if (!sys || notes.some(n => n.fatal)) return { system: null, bodies: [], notes };
-  const STAR_LOOK = { 'red-dwarf': 'red', orange: 'orange', yellow: 'sol', white: 'white', 'blue-giant': 'blue' };
   const placed = new Map(), bodies = [];
   // a station body's build, its defaults from the schema whether or not the file has a station block; the seed
   // defaults to the body's id
   const stationSchema = schema.properties.bodies.items.properties.station;
   const stationOf = b => { const st = clampToSchema(stationSchema, b.station || {}, `$.bodies[${b.id}].station`, notes); if (!st.seed) st.seed = b.id; return st; };
-  // the star is body 0
-  bodies.push({ id: 'star', name: sys.star.name, kind: 'star', x: 0, y: 0, r: sys.star.radius, g: sys.star.gravity, starClass: sys.star.class, look: STAR_LOOK[sys.star.class] });
-  placed.set('', bodies[0]);
+  // the star is body 0; a binary's companion body 1, on its orbit from it
+  const starBody = (st, id, x, y, extra) => { const G = STAR_LIB.starGame(st); return Object.assign({ id, name: st.name, kind: 'star', x, y, r: G.radius, g: G.gravity, reach: G.reach, hazard: G.hazard, rad: G.rad, starClass: st.class, star: STAR_LIB.starLook(st) }, extra); };
+  bodies.push(starBody(sys.star, 'star', 0, 0, { port: null }));
+  placed.set('', bodies[0]); placed.set('star', bodies[0]);
+  const C = sys.star.companion;
+  if (C) {
+    const a = C.orbit.angle * Math.PI / 180;
+    bodies.push(starBody(C, 'companion', Math.cos(a) * C.orbit.radius, Math.sin(a) * C.orbit.radius, { parent: 'star', orbit: C.orbit, port: null }));
+    placed.set('companion', bodies[1]);
+  }
+  // every station circles its parent, paced as real orbits are: the system's period for one three of the parent's radii
+  // out, longer farther out (as distance^1.5), so far stations move slower; null if they hold still there
+  const motionOf = (P, R) => { const st = sys.stations || {}, base = P.kind === 'star' ? st.starPeriod : st.period; return base > 0 ? { period: base * Math.pow(R / (3 * P.r), 1.5), clockwise: !!st.clockwise } : null; };
   // place parents before children (a moon may be listed before its planet)
   let todo = sys.bodies.slice(), guard = 0;
   while (todo.length && guard++ < 50) {
@@ -94,7 +107,8 @@ function loadSystem(raw, schema, opts) {
       const body = {
         id: b.id, name: b.name, kind: b.kind, parent: parent.id, orbit: b.orbit,
         x: parent.x + Math.cos(a) * b.orbit.radius, y: parent.y + Math.sin(a) * b.orbit.radius, r: b.radius, g: b.gravity,
-        look: b.look, station: b.kind === 'station' ? stationOf(b) : undefined, port: b.port || null
+        look: b.look, station: b.kind === 'station' ? stationOf(b) : undefined, port: b.port || null,
+        motion: b.kind === 'station' ? motionOf(parent, b.orbit.radius) : null // stations circle their parent (core/src/motion.rs)
       };
       bodies.push(body); placed.set(b.id, body);
     }
@@ -117,7 +131,8 @@ function loadSystem(raw, schema, opts) {
       bodies.push({
         id, name: `${w.name} ${e.archetype} ${k + 1}`, kind: 'station', parent: w.id, orbit,
         x: w.x + Math.cos(a) * orbit.radius, y: w.y + Math.sin(a) * orbit.radius, r, g: 0,
-        station: { archetype: e.archetype, brand: e.brand, seed: `${e.archetype}-${e.brand}-${k % 2 + 1}` }, env: { archetype: e.archetype, brand: e.brand, scale }, port: null
+        station: { archetype: e.archetype, brand: e.brand, seed: `${e.archetype}-${e.brand}-${k % 2 + 1}` }, env: { archetype: e.archetype, brand: e.brand, scale }, port: null,
+        motion: motionOf(w, orbit.radius)
       });
     });
   }
@@ -126,7 +141,7 @@ function loadSystem(raw, schema, opts) {
   for (const b of sys.belts || []) {
     const at = `$.belts[${b.id}]`;
     if (bodies.some(o => o.id === b.id)) { notes.push({ path: at, msg: `id ${b.id} is taken; dropped`, fatal: false }); continue; }
-    let parent = bodies.find(o => o.id === (b.parent || 'star') && !o.env && o.kind !== 'belt' && o.kind !== 'field');
+    let parent = bodies.find(o => o.id === (b.parent || 'star') && !o.env && o.kind !== 'belt' && o.kind !== 'field' && !o.motion);
     if (!parent) { notes.push({ path: at, msg: `parent ${b.parent} not found; circling the star`, fatal: false }); parent = bodies[0]; }
     const a = b.orbit.angle * Math.PI / 180, field = b.kind === 'field', d = field ? b.orbit.radius : 0;
     bodies.push({

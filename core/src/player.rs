@@ -13,6 +13,10 @@
 //! the target body, round the star or any planet in the way (traffic.rs `detour`), and brakes to stop slow over it,
 //! ready to land. A belt's target is the nearest point of its ring. Touching thrust, reverse or turn, or leaving full
 //! assist, hands control back.
+//!
+//! Near a moving port (motion.rs) full assist holds its set speed relative to the port, so a set speed of zero holds
+//! still over it; the autopilot flies relative to its target the same way. With assist off, matching is the pilot's
+//! job, and the set speed shown is the speed along the nose relative to the port.
 
 use crate::flight::{dir_cap, heading};
 use crate::port::{BODY_BELT, BODY_STATION};
@@ -39,13 +43,15 @@ pub fn control(w: &mut World) {
     if slot < 0 || slot as usize >= w.count { return; }
     let i = slot as usize;
     if w.ships.alive[i] == 0 { return; }
+    let (fx, fy) = w.frame(w.ships.x[i], w.ships.y[i]); // the frame the assist holds still in: a moving port's, near it
+    (w.game.fvx[0], w.game.fvy[0]) = (fx, fy);
     let held = |bit: u32| input & bit != 0;
     let (up, down, left, right) = (held(IN_THRUST), held(IN_REVERSE), held(IN_LEFT), held(IN_RIGHT));
     if w.game.auto[0] > 0 {
         if held(IN_ASSIST) && !(up || down || left || right) { autopilot(w, i); return; }
         w.game.auto[0] = 0; // the player took the stick: carry on at the speed along the nose
         let (hx, hy) = heading(w.ships.ang[i]);
-        w.game.set[0] = (w.ships.vx[i] * hx + w.ships.vy[i] * hy).max(0.0);
+        w.game.set[0] = ((w.ships.vx[i] - fx) * hx + (w.ships.vy[i] - fy) * hy).max(0.0);
     }
     let set0 = w.game.set[0];
     let (b_acc, b_cap, k_turn) = (w.p(P::burn_accel), w.p(P::burn_cap), w.p(P::assist_turn));
@@ -54,7 +60,7 @@ pub fn control(w: &mut World) {
     let k = s.kind[i] as usize;
     let (accel, turn, vmax) = (t.accel[k], t.turn[k], t.vmax[k]);
     s.turn_in[i] = (left as i32 - right as i32) as f64;
-    let burn = up && held(IN_BURN);
+    let burn = up && held(IN_BURN) && w.game.fuel[0] > 0.0; // the burner burns fuel (service.rs)
     s.burn[i] = burn as u8;
     let (hx, hy) = heading(s.ang[i]);
     let mut set = set0;
@@ -68,8 +74,8 @@ pub fn control(w: &mut World) {
         if !burn && set > cruise { set = cruise.max(set - accel * 0.6 * DT); }
         s.ctl[i] = 3; // assist holds the velocity; the turn command stays the player's
         s.rot[i] = 0;
-        s.want_vx[i] = hx * set;
-        s.want_vy[i] = hy * set;
+        s.want_vx[i] = fx + hx * set;
+        s.want_vy[i] = fy + hy * set;
     } else {
         s.ctl[i] = 0;
         s.rot[i] = held(IN_TORQUE) as u8;
@@ -80,7 +86,7 @@ pub fn control(w: &mut World) {
             s.turn_in[i] = clamp1(wrap(atan2(vx, -vy) - s.ang[i]) * k_turn / turn);
             s.rot[i] = 0; // the retro autopilot steers by rate, in either off mode
         }
-        set = (vx * hx + vy * hy).max(0.0);
+        set = ((vx - fx) * hx + (vy - fy) * hy).max(0.0);
     }
     w.game.set[0] = set;
 }
@@ -109,12 +115,16 @@ fn autopilot(w: &mut World, i: usize) {
     let limit = if w.bodies.kind[j] == BODY_STATION { w.p(P::dock_speed) } else { w.p(P::land_speed) };
     let stop = if w.bodies.kind[j] == BODY_BELT { 300.0 } else { (w.bodies.r[j] * 0.25).max(80.0) };
     let d_end = hypot(bx - x, by - y);
-    let sp = hypot(w.ships.vx[i], w.ships.vy[i]);
+    // relative to the target: a moving station's velocity, fading in as the ship nears it (motion.rs)
+    let (fx, fy) = w.frame_of(j, x, y);
+    (w.game.fvx[0], w.game.fvy[0]) = (fx, fy);
+    let (bvx, bvy) = (w.bodies.vx[j], w.bodies.vy[j]);
+    let sp = hypot(w.ships.vx[i] - bvx, w.ships.vy[i] - bvy);
     let s = &mut w.ships;
     if d_end < stop && sp < limit * 0.6 {
         w.game.auto[0] = 0;
         w.game.set[0] = 0.0;
-        s.ctl[i] = 3; s.want_vx[i] = 0.0; s.want_vy[i] = 0.0;
+        s.ctl[i] = 3; s.want_vx[i] = fx; s.want_vy[i] = fy;
         return;
     }
     let (dx, dy) = (tx - x, ty - y);
@@ -125,8 +135,8 @@ fn autopilot(w: &mut World, i: usize) {
     s.rot[i] = 0;
     s.burn[i] = 0;
     s.turn_in[i] = 0.0;
-    s.want_vx[i] = dx / d * v;
-    s.want_vy[i] = dy / d * v;
+    s.want_vx[i] = fx + dx / d * v;
+    s.want_vy[i] = fy + dy / d * v;
     w.game.set[0] = v;
 }
 
@@ -140,6 +150,8 @@ mod tests {
         w.types.accel[0] = 60.0;
         w.types.turn[0] = 1.0;
         w.types.vmax[0] = 200.0;
+        w.types.fuel[0] = 10.0;
+        w.game.fuel[0] = 10.0; // a tank, for the burner
         w.count = 1;
         w.ships.alive[0] = 1;
         w.game.player[0] = 0;
@@ -165,11 +177,11 @@ mod tests {
     }
 
     #[test]
-    fn burner_raises_set_speed_past_vmax_and_it_decays_after() {
+    fn burner_raises_set_speed_faster_to_the_same_top_speed() {
         let mut w = world();
-        hold(&mut w, IN_ASSIST | IN_THRUST | IN_BURN, 6.0);
-        assert!(w.game.set[0] > 200.0 && w.game.set[0] <= 260.0, "{}", w.game.set[0]);
-        hold(&mut w, IN_ASSIST, 4.0);
+        hold(&mut w, IN_ASSIST | IN_THRUST | IN_BURN, 1.0);
+        assert!((w.game.set[0] - 60.0 * w.p(P::burn_accel)).abs() < 1.5, "{}", w.game.set[0]);
+        hold(&mut w, IN_ASSIST | IN_THRUST | IN_BURN, 5.0);
         assert!((w.game.set[0] - 200.0).abs() < 1e-9, "{}", w.game.set[0]);
     }
 

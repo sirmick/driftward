@@ -43,6 +43,8 @@ const CORE_READY = (async () => {
       count: () => X.dw_count(w),
       setBodies: n => X.dw_set_bodies(w, n),
       placeBody: (j, parent, radius, angleDeg) => X.dw_place_body(w, j, parent, radius, angleDeg), // x, y by the core's trig
+      // set a placed body turning on its orbit, a turn every period seconds (negative: clockwise); core/src/motion.rs
+      bodyMotion: (j, period) => X.dw_body_motion(w, j, period),
       due: realDt => X.dw_due(w, realDt), // fixed ticks owed for this much real time
       step: () => X.dw_step(w),
       interpolate: () => X.dw_interpolate(w), // writes ship.rx/ry/ra for this frame
@@ -63,6 +65,9 @@ const CORE_READY = (async () => {
       credits: () => groups.game.credits[0], debt: () => groups.game.debt[0],
       price: (body, g) => groups.market.price[body * M.maxGoods + g],
       holdUsed: () => X.dw_hold_used(w), // trade and mission cargo, tons
+      // fuel and hull (core/src/service.rs): what refuelling or repair would cost in full where the player is landed,
+      // and the radiation at a point (the share of a sound hull lost a second)
+      serviceCost: code => X.dw_service_cost(w, code), radiation: (x, y) => X.dw_radiation(w, x, y),
       setInput: bits => X.dw_set_input(w, bits >>> 0),
       playerSet: () => groups.game.set[0], // assist set speed, m/s (the player is on the game row)
       // save: a copy of the whole world as bytes; load(bytes): 0 ok, else an error code (see snapshot.rs)
@@ -76,22 +81,23 @@ const CORE_READY = (async () => {
       orbitOut: groups.orbit.out,
       orbitClear: () => X.dw_orbit_clear(w),
       orbitAdd: (body, kind, count, seed) => X.dw_orbit_add(w, body, kind, count, seed >>> 0),
-      // ferries: specks shuttling between two points near a body (a world's surface and its stations), for looks
-      orbitFerries: (body, ax, ay, bx, by, spreadA, spreadB, count, seed) => X.dw_orbit_ferries(w, body, ax, ay, bx, by, spreadA, spreadB, count, seed >>> 0),
+      // ferries: specks shuttling between two points near a body (a world's surface and its stations, where they are at
+      // time 0), for looks; each end turns about the body with its station, at spinA and spinB rad/s
+      orbitFerries: (body, ax, ay, bx, by, spreadA, spreadB, spinA, spinB, count, seed) => X.dw_orbit_ferries(w, body, ax, ay, bx, by, spreadA, spreadB, spinA, spinB, count, seed >>> 0),
       orbitEval: (t, sx, sy, cx, cy, hw, hh, minM) => X.dw_orbit_eval(w, t, sx, sy, cx, cy, hw, hh, minM),
       checkViews: () => { if (mem.buffer !== buffer) throw new Error('sim core memory grew; column views are stale'); },
       free: () => X.dw_world_free(w)
     };
   }
   // input bits, mirrored from core/src/player.rs
-  // game commands, modes and results, mirrored from core/src/port.rs, market.rs and mission.rs
-  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, teleport: 100, jump: 101 };
+  // game commands, modes and results, mirrored from core/src/port.rs, market.rs, mission.rs and service.rs
+  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, refuel: 11, repair: 12, teleport: 100, jump: 101 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
   // traffic.rs: phases; streams (traffic.role; environ: to or from an environmental station); mix row streams; the
   // jump zones, north, east, south, west
   const TRAFFIC = { launch: 1, cruise: 2, land: 3, streams: ['local', 'arrive', 'depart', 'loiter', 'environ'], mix: { local: 1, through: 2, loiter: 3, env: 4 }, zones: ['north', 'east', 'south', 'west'] };
-  const MODE = { flying: 0, descending: 1, landed: 2, launching: 3 };
-  const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body' };
+  const MODE = { flying: 0, descending: 1, landed: 2, launching: 3, dead: 4 };
+  const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body', 13: 'not offered here', 14: 'nothing to do' };
   const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };
   return { world, IN, CMD, MODE, MISSION, TRAFFIC, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
 })();

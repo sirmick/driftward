@@ -198,12 +198,13 @@ with sync_playwright() as p:
         check(out == f"tick {jr['tick']} hash {jr['hash']}", f"a session through three systems (two jumps) replays natively: {out}")
         pg.keyboard.press('Escape')
 
-    # flight: the same numbers as the lab's Fly tab (the Prism military class I, the M0 Halcyon fighter, from rest, clear space)
-    a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -8000], ship: 'prism.military:c1' }); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe()]; })()")
+    # flight: the same numbers as the lab's Fly tab (the Prism military class I, the M0 Halcyon fighter, from rest, clear space,
+    # far from every well: a well raises the top speed heading into it)
+    a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -30000], ship: 'prism.military:c1' }); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe(), P.sim.type.vmax[P.sim.ship.kind[0]]]; })()")
     print('after 4 s W   ', json.dumps({k: a[0][k] for k in ('tick', 'v', 'set')}))
     print('after 3 s burn', json.dumps({k: a[1][k] for k in ('tick', 'v', 'set')}))
-    check(355 < a[0]['v'] < 365, f"cruise speed {a[0]['v']:.1f} m/s (the lab gives 359.7)")
-    check(a[1]['v'] > a[0]['v'] + 50, f"burner adds speed ({a[1]['v']:.1f} m/s)")
+    check(486 < a[0]['v'] < 496, f"cruise speed {a[0]['v']:.1f} m/s (the lab gives 491.1)")
+    check(a[1]['v'] > a[0]['v'] + 50 and a[1]['set'] <= a[2] + 1e-6 and a[1]['v'] <= a[2] + 1, f"the burner adds thrust, not top speed ({a[1]['v']:.1f} m/s, set {a[1]['set']:.0f}, top speed {a[2]:.0f})")
 
     # save, fly on, load: back to exactly the saved state
     r = ev("(() => { const P = __play; P.advance(2, ['KeyA']); P.save(); const saved = P.probe(); P.advance(5, ['KeyW', 'KeyD']); const moved = P.probe(); P.load(); return [saved, moved, P.probe()]; })()")
@@ -269,7 +270,8 @@ with sync_playwright() as p:
       P.command(C.autopilot, P.probe().at); let t = 0; while (P.probe().auto >= 0 && t < 120) { P.advance(1, []); t++; } })()""")
     ev("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")  # a frame has seen it flying, however slow frames are
     ev("(() => { const P = __play, C = P.CMD; P.command(C.land); P.command(C.skip); P.advance(0.1, []); })()")
-    pg.wait_for_function("localStorage.getItem('driftward.autosave.meta')", timeout=60000)  # and landed: the autosave
+    # and landed: the autosave (a new game saves too, on day 1 at its start port, so wait for this landing's, day 2)
+    pg.wait_for_function("(JSON.parse(localStorage.getItem('driftward.autosave.meta') || 'null') || {}).day === 2", timeout=60000)
     meta = json.loads(ev("localStorage.getItem('driftward.autosave.meta')") or 'null')
     check(meta is not None and meta['day'] == 2 and meta['port'] == 'Halde Landing', f'landing autosaves: {meta}')
     ev('__play.showTitle()'); pg.wait_for_timeout(200)

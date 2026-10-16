@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://driftward.game/schema/system.schema.json",
   "title": "Driftward star system",
-  "description": "One star system: its star, bodies and ports. The contract an LLM authors against and the validator that clamps what it writes (src/schema.js). Distances are metres; the star sits at the origin; angles are degrees counter-clockwise from +x. Bodies hold still in M1.",
+  "description": "One star system: its star, bodies and ports. The contract an LLM authors against and the validator that clamps what it writes (src/schema.js). Distances are metres; the star sits at the origin; angles are degrees counter-clockwise from +x. Planets, moons and the stars hold still; stations circle their parent (stations).",
   "type": "object",
   "required": [
     "id",
@@ -70,29 +70,443 @@
           "maxLength": 40
         },
         "class": {
+          "description": "One of the twelve classes. Pulsars, black holes and quasars are exotics: each has a hazard zone round it where radiation wears a hull down, and traffic and the autopilot keep clear of it.",
           "enum": [
-            "red-dwarf",
-            "orange",
             "yellow",
+            "orange",
+            "red-dwarf",
+            "brown-dwarf",
+            "red-giant",
             "white",
-            "blue-giant"
+            "blue-giant",
+            "wolf-rayet",
+            "white-dwarf",
+            "pulsar",
+            "black-hole",
+            "quasar"
           ],
           "default": "yellow"
         },
         "radius": {
+          "description": "The star's radius, metres (a black hole's: its horizon). Leave it out for the class's (src/stars.js).",
           "type": "number",
-          "minimum": 800,
-          "maximum": 6000,
-          "default": 2400
+          "minimum": 150,
+          "maximum": 8000
         },
         "gravity": {
-          "description": "Well strength at the surface; 40 is a full-strength well.",
+          "description": "Well strength at the surface; 40 is a full-strength well. Leave it out for the class's.",
           "type": "number",
           "minimum": 0,
-          "maximum": 80,
-          "default": 55
+          "maximum": 120
+        },
+        "hazard": {
+          "description": "The hazard zone's radius, metres (exotics only; 0 for none). Leave it out for the class's.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30000
+        },
+        "seed": {
+          "description": "Varies the class's look a little (temperature, spots, tilts).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 1
+        },
+        "look": {
+          "description": "How the star is drawn: any of its class's look values, overridden (src/stars.js STAR_CLASSES has each class's; the debug screen's Suns tab shows them). Leave it out for the class's own look. Values a class doesn't use (a black hole's temperature) are ignored.",
+          "type": "object",
+          "default": {},
+          "properties": {
+            "temp": {
+              "description": "Surface temperature, kelvin: sets the colour (stars, pulsars).",
+              "type": "number",
+              "minimum": 1000,
+              "maximum": 40000
+            },
+            "bright": {
+              "description": "Brightness of the disc (stars, pulsars).",
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 16
+            },
+            "gran": {
+              "description": "Granulation: the boiling cells on the surface (stars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "cell": {
+              "description": "Size of the granulation cells (bigger is finer) (stars).",
+              "type": "number",
+              "minimum": 1.5,
+              "maximum": 10
+            },
+            "spots": {
+              "description": "Starspots (stars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "corona": {
+              "description": "Corona: the glow round the disc (stars, pulsars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "streamers": {
+              "description": "Streamers in the corona (stars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "prom": {
+              "description": "Prominences on the limb (stars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1.2
+            },
+            "limb": {
+              "description": "Limb darkening (stars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "bands": {
+              "description": "Bands across the disc (brown dwarfs) (stars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "shell": {
+              "description": "An ejecta shell round the star (Wolf-Rayet) (stars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1.5
+            },
+            "beamTilt": {
+              "description": "A pulsar's beam tilt from its spin axis, degrees (pulsars).",
+              "type": "number",
+              "minimum": 5,
+              "maximum": 90
+            },
+            "beamRate": {
+              "description": "A pulsar's spin, turns a second (pulsars).",
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 6
+            },
+            "beamW": {
+              "description": "A pulsar's beam width (pulsars).",
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 1
+            },
+            "nebula": {
+              "description": "A pulsar's wind nebula (pulsars).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1.5
+            },
+            "diskTilt": {
+              "description": "A black hole's accretion disk tilt from face-on, degrees (black holes).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 89
+            },
+            "diskAngle": {
+              "description": "The disk's angle on the sky, degrees (black holes).",
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "diskIn": {
+              "description": "The disk's inner edge, horizon radii (black holes).",
+              "type": "number",
+              "minimum": 1.6,
+              "maximum": 6
+            },
+            "diskOut": {
+              "description": "The disk's outer edge, horizon radii (black holes).",
+              "type": "number",
+              "minimum": 5,
+              "maximum": 18
+            },
+            "diskTemp": {
+              "description": "The disk's temperature, kelvin (black holes).",
+              "type": "number",
+              "minimum": 2500,
+              "maximum": 30000
+            },
+            "diskB": {
+              "description": "The disk's brightness (black holes).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 4
+            },
+            "jets": {
+              "description": "Jets from the poles (quasars) (black holes).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "flare": {
+              "description": "Lens flare strength (stars, pulsars, black holes).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2.5
+            },
+            "spikes": {
+              "description": "Diffraction spikes (stars, pulsars, black holes).",
+              "type": "number",
+              "minimum": 4,
+              "maximum": 10
+            },
+            "anam": {
+              "description": "Anamorphic streak (stars, pulsars, black holes).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "companion": {
+          "description": "A binary's second star (id \"companion\": a planet orbits it with parent \"companion\"). Both stars hold still, as every body but a moving station does.",
+          "type": "object",
+          "required": [
+            "name",
+            "class",
+            "orbit"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "class": {
+              "description": "One of the twelve classes. Pulsars, black holes and quasars are exotics: each has a hazard zone round it where radiation wears a hull down, and traffic and the autopilot keep clear of it.",
+              "enum": [
+                "yellow",
+                "orange",
+                "red-dwarf",
+                "brown-dwarf",
+                "red-giant",
+                "white",
+                "blue-giant",
+                "wolf-rayet",
+                "white-dwarf",
+                "pulsar",
+                "black-hole",
+                "quasar"
+              ],
+              "default": "yellow"
+            },
+            "radius": {
+              "description": "The star's radius, metres (a black hole's: its horizon). Leave it out for the class's (src/stars.js).",
+              "type": "number",
+              "minimum": 150,
+              "maximum": 8000
+            },
+            "gravity": {
+              "description": "Well strength at the surface; 40 is a full-strength well. Leave it out for the class's.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "hazard": {
+              "description": "The hazard zone's radius, metres (exotics only; 0 for none). Leave it out for the class's.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30000
+            },
+            "seed": {
+              "description": "Varies the class's look a little (temperature, spots, tilts).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 1
+            },
+            "look": {
+              "description": "How the star is drawn: any of its class's look values, overridden (src/stars.js STAR_CLASSES has each class's; the debug screen's Suns tab shows them). Leave it out for the class's own look. Values a class doesn't use (a black hole's temperature) are ignored.",
+              "type": "object",
+              "default": {},
+              "properties": {
+                "temp": {
+                  "description": "Surface temperature, kelvin: sets the colour (stars, pulsars).",
+                  "type": "number",
+                  "minimum": 1000,
+                  "maximum": 40000
+                },
+                "bright": {
+                  "description": "Brightness of the disc (stars, pulsars).",
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 16
+                },
+                "gran": {
+                  "description": "Granulation: the boiling cells on the surface (stars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "cell": {
+                  "description": "Size of the granulation cells (bigger is finer) (stars).",
+                  "type": "number",
+                  "minimum": 1.5,
+                  "maximum": 10
+                },
+                "spots": {
+                  "description": "Starspots (stars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "corona": {
+                  "description": "Corona: the glow round the disc (stars, pulsars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "streamers": {
+                  "description": "Streamers in the corona (stars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "prom": {
+                  "description": "Prominences on the limb (stars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1.2
+                },
+                "limb": {
+                  "description": "Limb darkening (stars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "bands": {
+                  "description": "Bands across the disc (brown dwarfs) (stars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "shell": {
+                  "description": "An ejecta shell round the star (Wolf-Rayet) (stars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1.5
+                },
+                "beamTilt": {
+                  "description": "A pulsar's beam tilt from its spin axis, degrees (pulsars).",
+                  "type": "number",
+                  "minimum": 5,
+                  "maximum": 90
+                },
+                "beamRate": {
+                  "description": "A pulsar's spin, turns a second (pulsars).",
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 6
+                },
+                "beamW": {
+                  "description": "A pulsar's beam width (pulsars).",
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 1
+                },
+                "nebula": {
+                  "description": "A pulsar's wind nebula (pulsars).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1.5
+                },
+                "diskTilt": {
+                  "description": "A black hole's accretion disk tilt from face-on, degrees (black holes).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 89
+                },
+                "diskAngle": {
+                  "description": "The disk's angle on the sky, degrees (black holes).",
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90
+                },
+                "diskIn": {
+                  "description": "The disk's inner edge, horizon radii (black holes).",
+                  "type": "number",
+                  "minimum": 1.6,
+                  "maximum": 6
+                },
+                "diskOut": {
+                  "description": "The disk's outer edge, horizon radii (black holes).",
+                  "type": "number",
+                  "minimum": 5,
+                  "maximum": 18
+                },
+                "diskTemp": {
+                  "description": "The disk's temperature, kelvin (black holes).",
+                  "type": "number",
+                  "minimum": 2500,
+                  "maximum": 30000
+                },
+                "diskB": {
+                  "description": "The disk's brightness (black holes).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 4
+                },
+                "jets": {
+                  "description": "Jets from the poles (quasars) (black holes).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "flare": {
+                  "description": "Lens flare strength (stars, pulsars, black holes).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2.5
+                },
+                "spikes": {
+                  "description": "Diffraction spikes (stars, pulsars, black holes).",
+                  "type": "number",
+                  "minimum": 4,
+                  "maximum": 10
+                },
+                "anam": {
+                  "description": "Anamorphic streak (stars, pulsars, black holes).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "orbit": {
+              "description": "Where the companion is: distance from the first star, which sits at the origin, and the angle.",
+              "type": "object",
+              "required": [
+                "radius",
+                "angle"
+              ],
+              "properties": {
+                "radius": {
+                  "type": "number",
+                  "minimum": 3000,
+                  "maximum": 40000
+                },
+                "angle": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 360
+                }
+              }
+            }
+          }
         }
-      }
+      },
+      "description": "The system's star, at the origin; with a companion, a binary."
     },
     "start": {
       "description": "The id of the port body a new game starts landed at.",
@@ -101,7 +515,7 @@
     },
     "bodies": {
       "type": "array",
-      "description": "Planets, moons and stations; the star is not one of them. At most 7: the game's core holds 8 bodies with the star.",
+      "description": "Planets, moons and stations; the stars are not among them. At most 7.",
       "minItems": 1,
       "maxItems": 7,
       "items": {
@@ -132,7 +546,7 @@
             ]
           },
           "parent": {
-            "description": "Id of the body a moon or station orbits; omit to orbit the star.",
+            "description": "Id of the body a moon or station orbits; omit to orbit the star (\"companion\" for a binary's second star).",
             "type": "string",
             "default": ""
           },
@@ -575,6 +989,31 @@
             "maximum": 100,
             "default": 1
           }
+        }
+      }
+    },
+    "stations": {
+      "description": "How the stations move: every station round a planet or moon, port and environmental, circles it, paced as real orbits are, so far stations turn slower and move slower (Book: Docking at stations). Orbits may pass through other bodies and each other: nothing collides. Ships docked at a station, and landing or launching there, move with it; full assist holds still relative to one as you near it. Planets, moons and the stars hold still, and so, unless starPeriod is set, do the stations round a star.",
+      "type": "object",
+      "default": {},
+      "properties": {
+        "period": {
+          "description": "Seconds a turn takes for a station three of its planet's or moon's radii out; nearer ones are quicker and farther ones slower, as distance to the power 1.5 (0: stations there hold still).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 7200,
+          "default": 900
+        },
+        "starPeriod": {
+          "description": "As period, for the stations that circle a star (three of its radii out); 0, the default, holds them still, since a ring round the star sweeps through every planet's neighbourhood.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 14400,
+          "default": 0
+        },
+        "clockwise": {
+          "type": "boolean",
+          "default": false
         }
       }
     },

@@ -13,7 +13,10 @@
 //!
 //! Ferries are the same small traffic going somewhere: back and forth along a gently curved route between two points
 //! near a world (its surface and an environmental station, or two stations), easing in and out at each end and out
-//! of sight while docked, so a busy world's stations have specks coming and going. Drawn as traffic beacons.
+//! of sight while docked, so a busy world's stations have specks coming and going. Drawn as traffic beacons. The
+//! stations round a world circle it (core/src/motion.rs), so each end of a ferry's route turns about the world's centre
+//! at its station's rate (`spin_a`, `spin_b`; a world's surface end turns with the station it serves): the ends are given
+//! where they are at time 0.
 
 use crate::cols::{soa, ColumnDesc};
 use crate::math::{sin_cos, TAU};
@@ -29,10 +32,10 @@ pub const TRAFFIC: u8 = 1;
 pub const MAX_FERRIES: usize = 512;
 
 soa! {
-    /// One ferry: its route from (ax, ay) to (bx, by) (world m) bowed sideways by `bend` of its length, round body
-    /// `body` (for culling); its cycle `period` (s, out and back with a dwell at each end) and `phase` (0..1); the share
-    /// of the cycle spent moving; its size (m) and seed.
-    pub struct Ferries { body: u16, ax: f64, ay: f64, bx: f64, by: f64, bend: f32, period: f64, phase: f64, travel: f32, size: f32, seed: f32 }
+    /// One ferry: its route from (ax, ay) to (bx, by) (world m, at time 0) bowed sideways by `bend` of its length,
+    /// round body `body`, each end turning about it with its station (spin_a, spin_b, rad/s); its cycle `period` (s, out
+    /// and back with a dwell at each end) and `phase` (0..1); the share of the cycle spent moving; its size (m) and seed.
+    pub struct Ferries { body: u16, ax: f64, ay: f64, bx: f64, by: f64, spin_a: f64, spin_b: f64, bend: f32, period: f64, phase: f64, travel: f32, size: f32, seed: f32 }
 }
 
 soa! {
@@ -83,10 +86,10 @@ impl Orbit {
     pub fn clear(&mut self) { self.swarms.clear(); self.len = 0; self.nf = 0; }
 
     /// Add `count` ferries on a route between (ax, ay) and (bx, by) near body `body`, each ending within `spread_a` and
-    /// `spread_b` metres of its end (so they don't stack), at 60 to 140 m/s, with their own bow, phase and dwell;
-    /// returns how many fit.
+    /// `spread_b` metres of its end (so they don't stack), at 60 to 140 m/s, with their own bow, phase and dwell, each
+    /// end turning about the body at spin_a and spin_b rad/s; returns how many fit.
     #[allow(clippy::too_many_arguments)]
-    pub fn add_ferries(&mut self, body: usize, ax: f64, ay: f64, bx: f64, by: f64, spread_a: f64, spread_b: f64, count: usize, seed: u32) -> usize {
+    pub fn add_ferries(&mut self, body: usize, ax: f64, ay: f64, bx: f64, by: f64, spread_a: f64, spread_b: f64, spin_a: f64, spin_b: f64, count: usize, seed: u32) -> usize {
         let n = count.min(MAX_FERRIES - self.nf);
         let mut g = Rng::new(seed as u64 ^ 0x5eed_f322 ^ ((body as u64) << 40));
         for i in self.nf..self.nf + n {
@@ -96,6 +99,7 @@ impl Orbit {
             let (sb, cb) = sin_cos(tb);
             let f = &mut self.f;
             f.body[i] = body as u16;
+            (f.spin_a[i], f.spin_b[i]) = (spin_a, spin_b);
             (f.ax[i], f.ay[i]) = (ax + ca * ra, ay + sa * ra);
             (f.bx[i], f.by[i]) = (bx + cb * rb, by + sb * rb);
             let len = ((f.bx[i] - f.ax[i]).powi(2) + (f.by[i] - f.ay[i]).powi(2)).sqrt();
@@ -205,7 +209,7 @@ impl Orbit {
         }
         // ferries: out (A to B) through the first half of the cycle, back through the second, each leg easing in and
         // out and taking `travel` of its half; docked (unseen) the rest
-        let f = &self.f;
+        let (f, bx_, by_) = (&self.f, bx, by);
         for i in 0..self.nf {
             let u = (f.phase[i] + t / f.period[i]).fract();
             let (half, back) = if u < 0.5 { (u * 2.0, false) } else { (u * 2.0 - 1.0, true) };
@@ -214,7 +218,14 @@ impl Orbit {
             if !(0.0..=1.0).contains(&d) { continue; }
             let s = smooth(0.0, 1.0, d);
             let s = if back { 1.0 - s } else { s };
-            let (ax, ay, bx, by) = (f.ax[i], f.ay[i], f.bx[i], f.by[i]);
+            // each end where its station has turned it to by now
+            let j = f.body[i] as usize;
+            let turn = |x: f64, y: f64, w: f64| if w == 0.0 { (x, y) } else {
+                let (sn, cs) = sin_cos((w * t) % TAU);
+                let (rx, ry) = (x - bx_[j], y - by_[j]);
+                (bx_[j] + cs * rx - sn * ry, by_[j] + sn * rx + cs * ry)
+            };
+            let ((ax, ay), (bx, by)) = (turn(f.ax[i], f.ay[i], f.spin_a[i]), turn(f.bx[i], f.by[i], f.spin_b[i]));
             let (mx, my) = ((ax + bx) / 2.0 - (by - ay) * f.bend[i] as f64, (ay + by) / 2.0 + (bx - ax) * f.bend[i] as f64); // the bow
             let w = 1.0 - s;
             let (x, y) = (w * w * ax + 2.0 * w * s * mx + s * s * bx, w * w * ay + 2.0 * w * s * my + s * s * by);
@@ -273,7 +284,7 @@ mod tests {
     #[test]
     fn ferries_shuttle_between_their_ends() {
         let mut orb = Orbit::new();
-        assert_eq!(orb.add_ferries(0, 0.0, 0.0, 3000.0, 0.0, 50.0, 50.0, 8, 1), 8);
+        assert_eq!(orb.add_ferries(0, 0.0, 0.0, 3000.0, 0.0, 50.0, 50.0, 0.0, 0.0, 8, 1), 8);
         let (bx, by, br) = ([0.0], [0.0], [1000.0]);
         let (mut seen, mut hidden, mut near_a, mut near_b) = (0, 0, false, false);
         for step in 0..400 {

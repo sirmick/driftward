@@ -36,7 +36,7 @@ const SYSTEMS = JSON.parse($('systems').textContent).map(raw => {
 if (!SYSTEMS.length) { $('glerr').textContent = 'No usable system file'; $('glerr').hidden = false; return; }
 const START_SYSTEM = 0;
 // the system the page draws now, set by setSystem (below, once the bake helpers exist)
-let sysK = -1, SYS, BODIES, STAR, LORE, ART, star, WORLDS, STATIONS;
+let sysK = -1, SYS, BODIES, STAR, SUNS, LORE, ART, star, WORLDS, STATIONS;
 // the debug screen (backquote): how the current system's content was made (src/play/debug.js), and the jump box
 const debug = makeDebug({ el: $('debug'), econ: ECON, system: () => SYSTEMS[sysK] });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -49,12 +49,25 @@ const worldsOf = bodies => bodies.filter(b => b.kind === 'planet' || b.kind === 
   if (b.port) pu.city = Math.max(pu.city || 0, CITY_LIGHTS[b.port.population] || 0);
   return Object.assign({}, b, { pu, LA: pu.atm, ext: pu.ext });
 });
-// light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
-function sunFrom(x, y, out = new Float32Array(3)) {
-  const dx = STAR.x - x, dy = STAR.y - y, l = Math.hypot(dx, dy);
-  const vx = l > 1 ? dx / l : 0, vy = l > 1 ? dy / l : 0, vz = l > 1 ? 0.45 : 1, n = Math.hypot(vx, vy, vz);
+// Light comes from the stars: the direction toward them from (x, y), tipped toward the camera so day sides read. A
+// binary's two stars each count by 1 / distance² (its nearer star lights a world most), the directions and their
+// colours (col, linear, if given) mixed by those weights; two stars on opposite sides light a world from the front.
+function sunFrom(x, y, out = new Float32Array(3), col) {
+  let vx = 0, vy = 0, sum = 0;
+  if (col) col.fill(0);
+  for (const S of SUNS) {
+    const dx = S.x - x, dy = S.y - y, l = Math.hypot(dx, dy), w = 1 / Math.max(l, S.r) ** 2;
+    if (l > 1) { vx += dx / l * w; vy += dy / l * w; }
+    sum += w;
+    if (col) for (let k = 0; k < 3; k++) col[k] += S.lightLin[k] * w;
+  }
+  vx /= sum; vy /= sum;
+  if (col) for (let k = 0; k < 3; k++) col[k] /= sum;
+  const h = Math.hypot(vx, vy), vz = 0.45 * h + (1 - h), n = Math.hypot(vx, vy, vz);
   out[0] = vx / n; out[1] = vy / n; out[2] = vz / n; return out;
 }
+// the star lighting (x, y) most: what the orbiters and rocks take as their sun
+const sunAtPoint = (x, y) => SUNS.reduce((a, S) => Math.hypot(S.x - x, S.y - y) / S.r < Math.hypot(a.x - x, a.y - y) / a.r ? S : a, SUNS[0]);
 
 // ---------- ship types: one per brand x size; flight stats from the catalog, looks from the bake ----------
 const baker = makeBaker({
@@ -65,6 +78,10 @@ const baker = makeBaker({
 // (picked there; the game's ships use the same seeds)
 const yard = makeShipyard({ gl, P: G.P, draw: G.draw, baker, catalog, target: () => G.targets.scene });
 debug.setYard(yard);
+// the stars (src/stars.js): the game draws its systems' with the kit, the debug screen's Suns tab every class
+const starKit = makeStarKit(gl, compile, draw);
+const sunGallery = makeSunGallery({ gl, P: G.P, draw: G.draw, kit: starKit, target: () => G.targets.scene });
+debug.setSuns(sunGallery);
 const nSizes = catalog.sizes.length;
 const types = [];
 catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
@@ -74,6 +91,7 @@ catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
     accel: (fz.accel || 60) * (fb.accel || 1), turn: (fz.turn || 1) * (fb.turn || 1), vmax: (fz.vmax || 200) * (fb.vmax || 1),
     well: fz.well == null ? 0.5 : fz.well, // how much gravity wells pull this hull and bend its top speed
     cargo: Math.round((fz.cargo || 0) * (fb.cargo == null ? 1 : fb.cargo)), // hold, tons: the class's, times the line's
+    hull: (fz.hull || 100) * (fb.hull || 1), fuel: (fz.fuel || 4) * (fb.fuel || 1), // hull points when sound; the tank, tons
     s: null, half: z.length / 2
   });
 }));
@@ -122,7 +140,10 @@ const stationsOf = bodies => bodies.filter(b => b.kind === 'station').map(b => {
 function setSystem(k, bake = true) {
   const S = SYSTEMS[k];
   sysK = k; SYS = S.loaded.system; BODIES = S.loaded.bodies; STAR = BODIES[0]; LORE = S.lore; ART = S.art;
-  star = STARS[STAR.look] || STARS.sol;
+  // the stars (a binary has two), each with its light (src/stars.js); the first's lights the sky
+  SUNS = BODIES.filter(b => b.kind === 'star');
+  SUNS.forEach(S => { S.light = starLight(S.starClass); S.lightLin = lin(S.light.col); });
+  star = STAR.light;
   WORLDS = S.worlds || (S.worlds = worldsOf(BODIES));
   STATIONS = S.stations || (S.stations = stationsOf(BODIES));
   if (!bake) return;
@@ -148,7 +169,6 @@ const FP = {
   ship: compile(FLY_SHIP_VS, derive(SHIP_FS, DERIVE.ship), { iA: 1, iB: 2 }),
   plume: compile(FLY_PLUME_VS, derive(PLUME_FS, DERIVE.plume), { iN: 1, iP: 2, iB: 3 }),
   planet: compile(PLANET_VS, PLANET_FS),
-  star: compile(STARBODY_VS, STARBODY_FS),
   sheath: compile(SHEATH_VS, SHEATH_FS),
   orbiter: compile(ORBITER_VS, ORBITER_FS, { iA: 1, iB: 2 })
 };
@@ -241,6 +261,7 @@ window.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) { if (e.code === 'Escape') e.target.blur(); return; }
   if (barrierUp()) { e.preventDefault(); return; } // the world is stopped while the system's ships and stations bake
   if (noticeUp()) { if (['Enter', 'Space', 'Escape', 'NumpadEnter'].includes(e.code) && !e.repeat) closeNotice(); e.preventDefault(); return; }
+  if (lostUp()) { if (['Enter', 'NumpadEnter'].includes(e.code) && !e.repeat) $('lost-reload').click(); e.preventDefault(); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
   // the debug screen takes every key but its own: backquote opens and closes it, as does Esc
   if (e.code === 'Backquote' && !e.repeat) { if (debug.isOpen()) debug.close(); else { debug.open(); keys.clear(); } e.preventDefault(); return; }
@@ -250,7 +271,7 @@ window.addEventListener('keydown', e => {
   if (!keys.has(e.code)) {
     if (e.code === 'KeyP') pauseGame(true);
     if (e.code === 'Escape') onEscape();
-    if (e.code === 'Tab' || e.code === 'KeyF') { assistMode = (assistMode + 1) % 3; toast(ASSIST[assistMode].toast); }
+    if ((e.code === 'Tab' || e.code === 'KeyF') && !inPort()) { assistMode = (assistMode + 1) % 3; toast(ASSIST[assistMode].toast); }
     if ((e.code === 'KeyQ' || e.code === 'KeyE') && assist()) toast('Strafe works with assist off: press Tab');
     // flight: T cycles ship targets, 1-9 pick from the location list, G flies to the target, M opens the map
     if (inFlight()) {
@@ -269,6 +290,8 @@ window.addEventListener('keydown', e => {
     if (e.code === 'KeyL') landOrLaunch();
     if (e.code === 'Enter') skipSequence();
     if (e.code === 'KeyW' && inPort()) waitDay();
+    if (e.code === 'KeyF' && inPort()) portService('refuel');
+    if (e.code === 'KeyR' && inPort()) portService('repair');
     if (e.code === 'KeyT' && inPort()) showPanel(panelOpen() === 'trade' ? null : 'trade');
     if (e.code === 'KeyM' && inPort()) showPanel(panelOpen() === 'board' ? null : 'board');
     if (e.code === 'KeyB' && inPort()) showPanel(panelOpen() === 'bar' ? null : 'bar');
@@ -305,8 +328,9 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
-let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false;
+let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false, portService = () => {};
 let pauseGame = () => {}, shellBack = () => {}, jitterToggle = () => false, barrierUp = () => false, noticeUp = () => false, closeNotice = () => {};
+let lostUp = () => false, closeLost = () => {};
 // Esc steps back: a sequence skips; in port, an open panel closes; in flight, the map closes, then the target
 // clears; otherwise the game pauses
 function onEscape() {
@@ -326,7 +350,7 @@ CORE_READY.then(CORE => {
   const CFG = { maxShips: 128, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + SYSTEM_SCHEMA.properties.belts.maxItems + 1 + MAX_ENVIRONS, envN: 16, envW: 40000, seed: 1 };
   const sim = CORE.world(CFG);
   const SH = sim.ship, IN = CORE.IN;
-  types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; });
+  types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; sim.type.hull[k] = T.hull; sim.type.fuel[k] = T.fuel; });
   const CMD = CORE.CMD, MODE = CORE.MODE;
   // Asteroid belts and fields: their rocks (src/rocks.js), placed once from each one's seed round where the core put
   // it. Scenery: not in the sim (ships fly through them), so the page owns them. Density 1 is a rock per 22,000 m²;
@@ -438,18 +462,20 @@ CORE_READY.then(CORE => {
       sim.orbitAdd(j, 0, Math.round((DEBRIS_N[L.surface] || 250) * k * L.debris), 1009 * j + 17);
       if (b.port) sim.orbitAdd(j, 1, Math.round((TRAFFIC_N[b.port.population] || 40) * L.orbitTraffic), 2027 * j + 5);
     });
+    // a station's turning rate round its parent, rad/s (0 if it holds still)
+    const spinOf = b => b.motion ? 2 * Math.PI / b.motion.period * (b.motion.clockwise ? -1 : 1) : 0;
     // ferries: specks coming and going between a world and its environmental stations, and between stations whose
-    // route clears the world, a few to a route
+    // route clears the world, a few to a route; from where the stations were laid out, turning round the world with them
     BODIES.forEach((w, j) => {
       if (w.kind !== 'planet' && w.kind !== 'moon') return;
       const st = BODIES.map((b, k) => [b, k]).filter(([b]) => b.env && b.parent === w.id);
       st.forEach(([s, k], n) => {
-        const dx = s.x - w.x, dy = s.y - w.y, d = Math.hypot(dx, dy) || 1;
-        sim.orbitFerries(j, w.x + dx / d * w.r * 0.97, w.y + dy / d * w.r * 0.97, s.x, s.y, w.r * 0.25, s.r * 0.3, 3, 3301 * k + 11);
+        const dx = s.x0 - w.x, dy = s.y0 - w.y, d = Math.hypot(dx, dy) || 1, spin = spinOf(s);
+        sim.orbitFerries(j, w.x + dx / d * w.r * 0.97, w.y + dy / d * w.r * 0.97, s.x0, s.y0, w.r * 0.25, s.r * 0.3, spin, spin, 3, 3301 * k + 11); // the world's end under its station
         for (const [o, m] of st.slice(n + 1)) {
           // the closest the straight route comes to the world's centre
-          const ex = o.x - s.x, ey = o.y - s.y, t = Math.max(0, Math.min(1, ((w.x - s.x) * ex + (w.y - s.y) * ey) / (ex * ex + ey * ey)));
-          if (Math.hypot(s.x + ex * t - w.x, s.y + ey * t - w.y) > w.r * 1.15) sim.orbitFerries(j, s.x, s.y, o.x, o.y, s.r * 0.3, o.r * 0.3, 2, 7919 * k + 13 * m);
+          const ex = o.x0 - s.x0, ey = o.y0 - s.y0, t = Math.max(0, Math.min(1, ((w.x - s.x0) * ex + (w.y - s.y0) * ey) / (ex * ex + ey * ey)));
+          if (Math.hypot(s.x0 + ex * t - w.x, s.y0 + ey * t - w.y) > w.r * 1.15) sim.orbitFerries(j, s.x0, s.y0, o.x0, o.y0, s.r * 0.3, o.r * 0.3, spin, spinOf(o), 2, 7919 * k + 13 * m);
         }
       });
     });
@@ -458,25 +484,41 @@ CORE_READY.then(CORE => {
   // (core/src/atlas.rs), which keeps them all: a new game, a load or a jump then makes one live in the core alone.
   // bodies: the core places each on its orbit with its own trig (loadSystem lists parents first), and the page's
   // copies take the core's positions, so routes, wells and the drawing agree in every browser
+  // a port's services the core runs (core/src/service.rs SVC_*), and its fuel price: the market's, where it sells fuel,
+  // else dear (the base price at the high tier)
+  const SVC = { refuel: 1, repair: 2 }, FUEL = GOODS.findIndex(c => c.id === 'fuel');
   function layoutSystem(k) {
     setSystem(k, false);
     sim.setBodies(BODIES.length);
     BODIES.forEach((b, j) => {
       const B = sim.body; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
-      if (j) sim.placeBody(j, BODIES.findIndex(p => p.id === b.parent), b.kind === 'belt' ? 0 : b.orbit.radius, b.orbit.angle); // a belt is centred on its parent
-      b.x = B.x[j]; b.y = B.y[j];
+      // the stars' wells reach and hazard zones (src/stars.js); nothing else has either
+      B.reach[j] = b.reach || 0; B.hazard[j] = b.hazard || 0; B.rad[j] = b.rad || 0;
+      if (!j) { B.x[0] = 0; B.y[0] = 0; }
+      sim.placeBody(j, j ? BODIES.findIndex(p => p.id === b.parent) : 0, !j || b.kind === 'belt' ? 0 : b.orbit.radius, j ? b.orbit.angle : 0); // a belt is centred on its parent
+      if (b.motion) sim.bodyMotion(j, b.motion.period * (b.motion.clockwise ? -1 : 1)); // a station that orbits (core/src/motion.rs)
+      b.x = b.x0 = B.x[j]; b.y = b.y0 = B.y[j]; // (x0, y0): where it was laid out, at time 0
       B.pop[j] = b.port ? TRAFFIC_DATA.population[b.port.population] || 1 : 0; // traffic's gravity model
+      const sv = (b.port && b.port.services) || [];
+      B.svc[j] = sv.reduce((n, v) => n | (SVC[v] || 0), 0);
     });
     for (const o of [...WORLDS, ...STATIONS]) { const b = BODIES.find(b => b.id === o.id); o.x = b.x; o.y = b.y; }
     writeTraffic(); writePrices();
+    BODIES.forEach((b, j) => { if (!b.port) return; const m = FUEL >= 0 ? sim.price(j, FUEL) : 0; sim.body.fuel_price[j] = m || Math.round((FUEL >= 0 ? GOODS[FUEL].base : 45) * ECON.tiers.high); });
     if (!sim.atlasStore(k)) console.error(`the atlas is full: system ${SYS.id} left out`);
   }
   SYSTEMS.forEach((_, k) => layoutSystem(k));
   // The page draws system k, live in the core: its rocks, orbiters, start port, the ship types its traffic flies, and
   // the views made from its bodies (systemViews, below: the location list's rows, the map's extent, the sky's colours)
   let startBody = 1;
+  // moving stations (core/src/motion.rs): the page's copies of their positions follow the core's render positions each
+  // frame (syncMovers)
+  let MOVERS = [];
+  function syncMovers() { for (const m of MOVERS) { m.b.x = sim.body.rx[m.j]; m.b.y = sim.body.ry[m.j]; if (m.st) { m.st.x = m.b.x; m.st.y = m.b.y; } } }
   function showSystem(k) {
     setSystem(k);
+    MOVERS = BODIES.map((b, j) => b.motion ? { j, b, st: STATIONS.find(o => o.id === b.id) } : null).filter(Boolean);
+    syncMovers();
     ({ list: ROCKS, grid: rockGrid, reach: rockReach } = rocksOf(SYSTEMS[k]));
     orbitersFor();
     startBody = Math.max(1, BODIES.findIndex(b => b.id === SYS.start && b.port), BODIES.findIndex(b => b.port));
@@ -523,6 +565,7 @@ CORE_READY.then(CORE => {
     sim.atlasLoad(START_SYSTEM); showSystem(START_SYSTEM); // the start system, live in the core and drawn
     sim.setCount(1);
     SH.kind[0] = playerTypeIndex(opts && opts.ship); SH.alive[0] = 1; SH.ang[0] = 0; // opts.ship: 'faction.line:class' (dev and tests)
+    SH.hull[0] = sim.type.hull[SH.kind[0]]; sim.game.fuel[0] = sim.type.fuel[SH.kind[0]]; // sound, and a full tank
     sim.setPlayer(0);
     if (opts && opts.space) { SH.x[0] = opts.space[0]; SH.y[0] = opts.space[1]; sim.slotReset(0, true); }
     else { sim.slotReset(0, true); sim.placeLanded(startBody); }
@@ -536,8 +579,9 @@ CORE_READY.then(CORE => {
     if (sim.game.auto) sim.game.auto[0] = 0;
     if (opts && opts.backdrop) SH.alive[0] = 0; // nobody flies the title
     else { closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav); zoom = 1; }
-    missionSeen.set(sim.mission.state); closeNotice();
+    missionSeen.set(sim.mission.state); closeNotice(); closeLost();
     startRecording();
+    if (!(opts && opts.backdrop) && sim.mode() === MODE.landed) autosave(); // so a ship lost before its first landing has a save to go back to
   }
   // commands go through here: applied now (between ticks) and logged for replays when they take effect
   function command(code, a, b) {
@@ -551,7 +595,7 @@ CORE_READY.then(CORE => {
     if (m !== MODE.flying) return;
     const r = command(CMD.land);
     if (r === 1) toast('Nothing to land on here: fly over a port');
-    else if (r === 2) { const pb = sim.portBelow(), st = pb && BODIES[pb.body].kind === 'station'; toast(`Too fast to ${st ? 'dock' : 'land'}: slow below ${sim.param(st ? 'dock_speed' : 'land_speed')} m/s`); }
+    else if (r === 2) { const pb = sim.portBelow(), B = pb && BODIES[pb.body], st = B && B.kind === 'station'; toast(`Too fast to ${st ? 'dock' : 'land'}: slow below ${sim.param(st ? 'dock_speed' : 'land_speed')} m/s${B && B.motion ? ' relative to it' : ''}`); }
   };
   skipSequence = () => command(CMD.skip);
   waitDay = () => {
@@ -561,6 +605,19 @@ CORE_READY.then(CORE => {
     refreshPort();
   };
   inPort = () => sim.mode() === MODE.landed;
+  // refuel or repair (core/src/service.rs): as much as the credits pay for, at this port's price
+  portService = what => {
+    const refuel = what === 'refuel', cr0 = sim.credits(), before = refuel ? sim.game.fuel[0] : SH.hull[0];
+    const r = command(refuel ? CMD.refuel : CMD.repair), paid = cr0 - sim.credits();
+    if (r === 0) {
+      const full = refuel ? sim.game.fuel[0] >= sim.type.fuel[SH.kind[0]] : SH.hull[0] >= sim.type.hull[SH.kind[0]];
+      toast(refuel ? `${full ? 'Tank full' : 'Refuelled'}: ${(sim.game.fuel[0] - before).toFixed(1)} t for ${fmtCr(paid)} cr` : `${full ? 'Hull repaired' : 'Repaired'}: ${Math.round(SH.hull[0] - before)} points for ${fmtCr(paid)} cr`);
+    } else toast(r === 14 ? (refuel ? 'The tank is full' : 'The hull is sound') : `Can't ${what}: ${CORE.RESULT[r] || r}`);
+    refreshPort();
+    return r;
+  };
+  $('svc-refuel').onclick = () => { portService('refuel'); canvas.focus(); };
+  $('svc-repair').onclick = () => { portService('repair'); canvas.focus(); };
   $('svc-wait').onclick = () => { waitDay(); canvas.focus(); };
   $('svc-trade').onclick = () => { showPanel(panelOpen() === 'trade' ? null : 'trade'); canvas.focus(); };
   $('svc-board').onclick = () => { showPanel(panelOpen() === 'board' ? null : 'board'); canvas.focus(); };
@@ -582,7 +639,7 @@ CORE_READY.then(CORE => {
     const meta = JSON.parse(localStorage.getItem(key + '.meta') || '{}');
     seedNow = meta.seed >>> 0;
     showSystem(sim.game.system[0]); // the save's system, live in the core already
-    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; viewScale = 0; missionSeen.set(sim.mission.state); closeNotice(); startRecording();
+    camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; viewScale = 0; missionSeen.set(sim.mission.state); closeNotice(); closeLost(); startRecording();
     closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav);
     toast(`Loaded day ${sim.day()}`);
     return true;
@@ -713,7 +770,7 @@ CORE_READY.then(CORE => {
     for (const k of bakeKinds) typeReady(types[k]);
     let ran = 0;
     checkBarrier();
-    if (!paused && !debug.isOpen() && !barrier && !notice) { // paused, debugging or behind the system barrier: the clock stops (the replay log is by tick, so a pause leaves no trace)
+    if (!paused && !debug.isOpen() && !barrier && !notice && !lost) { // paused, debugging, behind the system barrier or a dialog: the clock stops (the replay log is by tick, so a pause leaves no trace)
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
       ran = sim.due(dt);
@@ -721,6 +778,7 @@ CORE_READY.then(CORE => {
     }
     const c1 = performance.now();
     sim.interpolate();
+    syncMovers();
     const mode = sim.mode();
     if (mode !== lastMode) { onMode(mode, lastMode); lastMode = mode; }
     watchMissions();
@@ -732,6 +790,8 @@ CORE_READY.then(CORE => {
     else { const q = playerSeq().pose, lead = 0.35; camX += (q.x + q.vx * lead - camX) * k; camY += (q.y + q.vy * lead - camY) * k; } // following the curl, leading as in flight
     const yv = debug.yardView(); // the debug screen's Ships tab draws the shipyard instead of the game
     if (yv) { yard.render((now - t0) / 1000, yv.cells, yv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
+    const sv = debug.sunView(); // and its Suns tab, the star gallery
+    if (sv) { sunGallery.render((now - t0) / 1000, sv.cells, sv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     // nothing to see under the port's painted vista, the map, the debug screen or the pause menu: the canvas keeps
     // its last frame (pause shows it frozen behind the menu), and the GPU rests
     const covered = ($('vista').classList.contains('on') && !document.body.classList.contains('vista-framed')) || mapOn || debug.isOpen() || (paused && !titleUp());
@@ -763,6 +823,7 @@ CORE_READY.then(CORE => {
       $('svc-trade').disabled = !(P0.services || []).includes('market');
       $('svc-board').disabled = !(P0.services || []).includes('missions');
       $('svc-bar').disabled = !(P0.services || []).includes('bar') || !L;
+      $('svc-refuel').hidden = !(P0.services || []).includes('refuel'); $('svc-repair').hidden = !(P0.services || []).includes('repair');
       fillLore(B, L);
       showVista(B.id);
       port.hidden = false;
@@ -771,7 +832,24 @@ CORE_READY.then(CORE => {
       // stepping the sim directly can pass the whole descent between two frames
       if (prev !== -1 && prev !== MODE.landed) { autosave(); toast(`Landed at ${P0.name}: day ${sim.day()}, saved`); }
     } else { port.hidden = true; showVista(null); }
+    if (mode === MODE.dead) showLost();
   }
+  // The ship lost (core/src/service.rs): the world stops behind a dialog that reloads the last landing's save (the
+  // Book: death reloads the last landing save), or goes back to the title.
+  let lost = false;
+  function showLost() {
+    const meta = JSON.parse(localStorage.getItem('driftward.autosave.meta') || 'null');
+    const near = SUNS.filter(S => S.hazard > 0).sort((a, b) => Math.hypot(a.x - SH.x[0], a.y - SH.y[0]) - Math.hypot(b.x - SH.x[0], b.y - SH.y[0]))[0];
+    $('lost-title').textContent = types[SH.kind[0]].name;
+    $('lost-sub').textContent = `Day ${sim.day()} · ${SYS.name} system`;
+    $('lost-text').textContent = `${near ? `Radiation from ${near.name} burned through the hull.` : 'The hull gave out.'} ${meta ? `The last landing was day ${meta.day}${meta.port ? ' at ' + meta.port : ''}.` : 'There is no landing to go back to.'}`;
+    $('lost-reload').disabled = !localStorage.getItem('driftward.autosave');
+    lost = true; $('lost').hidden = false; ($('lost-reload').disabled ? $('lost-title-btn') : $('lost-reload')).focus();
+  }
+  lostUp = () => lost;
+  closeLost = () => { if (!lost) return; lost = false; $('lost').hidden = true; };
+  $('lost-reload').onclick = () => { if (!loadFrom('driftward.autosave')) showTitle(); };
+  $('lost-title-btn').onclick = () => { closeLost(); showTitle(); };
   // the painted vista of the port on body id (none: the procedural view shows), faded in once it has loaded
   function showVista(id) {
     const img = $('vista'), src = id && ART.vistas[id];
@@ -819,6 +897,12 @@ CORE_READY.then(CORE => {
     $('port-day').textContent = `Day ${sim.day()} · ${SYS.name} system`;
     const nm = activeMissions().length;
     $('port-money').textContent = `${fmtCr(sim.credits())} cr · hold ${sim.holdUsed()}/${holdCap()} t · owe ${fmtCr(sim.debt())} cr` + (nm ? ` · ${nm} mission${nm > 1 ? 's' : ''}` : '');
+    // refuel and repair: the full cost on each, or that there is nothing to do
+    const fuelCost = sim.serviceCost(CMD.refuel), hullCost = sim.serviceCost(CMD.repair), k = SH.kind[0];
+    $('svc-refuel').disabled = !fuelCost; $('svc-repair').disabled = !hullCost;
+    $('svc-refuel-k').textContent = fuelCost ? `${fmtCr(fuelCost)} cr · F` : `full · F`;
+    $('svc-repair-k').textContent = hullCost ? `${fmtCr(hullCost)} cr · R` : `sound · R`;
+    $('port-day').textContent += ` · hull ${Math.round(100 * SH.hull[0] / sim.type.hull[k])}% · fuel ${sim.game.fuel[0].toFixed(1)}/${sim.type.fuel[k].toFixed(1)} t`;
     if (panelOpen() === 'board') refreshBoard();
     if (panelOpen() !== 'trade') return;
     const at = sim.game.at[0], room = holdCap() - sim.holdUsed(), cr = sim.credits();
@@ -871,7 +955,8 @@ CORE_READY.then(CORE => {
     const goods = GOODS.map((c, g) => ({ name: c.name, base: c.base, aboard: Math.max(0, sim.hold.tons[g] - missions.filter(m => MS.good[m.k] === g).reduce((n, m) => n + m.tons, 0)), prices: ports.map(o => price(o.j, g)) }));
     const tradeTons = goods.reduce((n, g) => n + g.aboard, 0);
     return {
-      ship: { name: T.name, kind: k, length: T.L, accel: sim.type.accel[k], turn: sim.type.turn[k], vmax: sim.type.vmax[k], well: sim.type.well[k], cargo: sim.type.cargo[k] },
+      ship: { name: T.name, kind: k, length: T.L, accel: sim.type.accel[k], turn: sim.type.turn[k], vmax: sim.type.vmax[k], well: sim.type.well[k], cargo: sim.type.cargo[k],
+        hull: SH.hull[0], hullCap: sim.type.hull[k], fuel: sim.game.fuel[0], fuelCap: sim.type.fuel[k], radiation: sim.radiation(SH.x[0], SH.y[0]) },
       mode: Object.keys(MODE).find(m => MODE[m] === mode), assist: ASSIST[assistMode].hud.toLowerCase(),
       at: landed || mode !== MODE.flying ? portName(at) : '', below: mode === MODE.flying && below ? `${portName(below.body)}${below.slow ? ', slow enough to land' : ', too fast to land'}` : '',
       x: SH.x[0], y: SH.y[0], vx: SH.vx[0], vy: SH.vy[0], v: Math.hypot(SH.vx[0], SH.vy[0]), heading: ((SH.ang[0] * 180 / Math.PI) % 360 + 360) % 360, av: SH.av[0],
@@ -983,7 +1068,7 @@ CORE_READY.then(CORE => {
   const spinVis = new Float32Array(MAXS); // per-slot turning-jet pulse, decaying (visual only)
   const turnSlew = sim.param('turn_slew');
   plCol.set(lin([0.72, 0.78, 0.88]), RCS * 3); plCore.set([1, 1, 1], RCS * 3); plP.set([0.5, 0, 0.25, 0], RCS * 4); plSpread[RCS] = 0.9; plBurn.set(plCol.subarray(RCS * 3, RCS * 3 + 3), RCS * 3);
-  let sunCol = lin(star.col), starCol = sunCol; // the current system's star (systemViews)
+  let sunCol = lin(star.col); // the light at the camera (sunFrom's colour), for ships; worlds get their own
   // the plume look tables are constant: set once on the program
   gl.useProgram(FP.plume.p);
   { const u = FP.plume.u; gl.uniform3fv(u.uPlCol, plCol); gl.uniform3fv(u.uPlCore, plCore); gl.uniform4fv(u.uPlP, plP); gl.uniform1fv(u.uPlSpread, plSpread); gl.uniform3fv(u.uPlBurn, plBurn); }
@@ -991,7 +1076,10 @@ CORE_READY.then(CORE => {
   // rocks on screen: drawn as rocks (at most ROCK_DRAW), or under a pixel and a half across as specks of light
   const ROCK_DRAW = 3000, rockKit = makeRockKit(gl, compile, quad, ROCK_DRAW), rockInst = new Float32Array(ROCK_DRAW * ROCK_STRIDE);
   const rockSeen = [], speckInst = new Float32Array(MAX_ROCKS * 8);
-  const sunCam = new Float32Array(3), sunAt = new Float32Array(3); // sunFrom's results, reused
+  const sunCam = new Float32Array(3), sunAt = new Float32Array(3), colAt = new Float32Array(3); // sunFrom's results, reused
+  // the stars' brightness in the game, against the lab's (whose gallery the debug screen keeps): the scene's bloom
+  // and tone map run hotter here
+  const STAR_GAIN = 0.6, starSky = { star: null, neb: null, sd: [0, 0], off: [0, 0] };
   const nearW = new Int32Array(4); // the star dimming's nearest worlds
   const dimU = new Float32Array(16); // worlds the sky dims its stars round: screen x, y, radius (px)
   // lens ghosts per flare: [distance along the flare-to-centre line (1 is the far side), size in px at 900 px tall, tint]
@@ -1005,10 +1093,12 @@ CORE_READY.then(CORE => {
   // a landing or launch sequence's look at d (0 in flight .. 1 down) over body B: hull scale, plasma heat, fade-out
   // into the atmosphere's tint
   const ATM_NONE = [0.6, 0.7, 0.8];
-  let atmOf = new Map(); // body -> its atmosphere's colour, for the sheath (systemViews)
+  let atmOf = new Map(), airOf = new Map(); // body -> its atmosphere's colour and how much air it has (look.air), for the sheath (systemViews)
   function seqLook(d, B) {
     const st = B.kind === 'station', ss = x => x * x * (3 - 2 * x), seg = (a, b, x) => ss(Math.max(0, Math.min(1, (x - a) / (b - a))));
-    return { sc: st ? 1 - 0.45 * seg(0, 1, d) : 1 - 0.85 * seg(0.08, 1, d), heat: st ? 0 : seg(0, 0.2, d) * (1 - seg(0.88, 1, d)), fade: seg(0.5, 0.95, d), atm: atmOf.get(B) || ATM_NONE };
+    // the plasma is air burning round the hull: none on an airless world (most moons), faint in thin air, full from 0.3
+    const air = Math.min(1, (airOf.get(B) ?? 1) / 0.3);
+    return { sc: st ? 1 - 0.45 * seg(0, 1, d) : 1 - 0.85 * seg(0.08, 1, d), heat: st ? 0 : seg(0, 0.2, d) * (1 - seg(0.88, 1, d)) * air, fade: seg(0.5, 0.95, d), atm: atmOf.get(B) || ATM_NONE };
   }
   // ---------- the sequences' path: the curl ----------
   // A landing turns across the planet and spirals out to its horizon (the limb), shrinking into the atmosphere; a
@@ -1108,7 +1198,8 @@ CORE_READY.then(CORE => {
   // the player's sequence pose now (the core's game state; a launch ends on the velocity the core wrote when it began)
   function playerSeq() {
     const mode = sim.mode(), landing = mode === MODE.descending, B = BODIES[sim.game.at[0]];
-    const T = landing ? DESCENT_S : LAUNCH_S, p = seqProgress(sim.game.timer[0], T), x = SH.x[0], y = SH.y[0];
+    // (at a moving station the ship rides along with it, so its pose is interpolated like the station's)
+    const T = landing ? DESCENT_S : LAUNCH_S, p = seqProgress(sim.game.timer[0], T), mv = !!B.motion, x = mv ? SH.rx[0] : SH.x[0], y = mv ? SH.ry[0] : SH.y[0];
     const dir = sim.game.curl[0] ? -1 : 1, G0 = sim.game;
     const tx = G0.hand_x[0], ty = G0.hand_y[0], v = landing ? 0 : G0.hand_v[0]; // the launch's heading and speed
     const pose = seqPose(0, landing, p, x, y, landing ? SH.ang[0] : angOf(tx, ty), dir, v, B, T);
@@ -1123,7 +1214,8 @@ CORE_READY.then(CORE => {
   function npcPose(i) {
     const landing = TR.phase[i] === TRAFFIC.land, B = BODIES[landing ? TR.to[i] : TR.from[i]], T = landing ? DESCENT_S : LAUNCH_S;
     const p = seqProgress(TR.timer[i], T), hx = -Math.sin(SH.ang[i]), hy = Math.cos(SH.ang[i]);
-    return { p, B, landing, pose: seqPose(i, landing, p, SH.x[i], SH.y[i], SH.ang[i], roundDir(B, SH.x[i], SH.y[i], hx, hy), landing ? 0 : TR.cruise[i], B, T) };
+    const x = B.motion ? SH.rx[i] : SH.x[i], y = B.motion ? SH.ry[i] : SH.y[i];
+    return { p, B, landing, pose: seqPose(i, landing, p, x, y, SH.ang[i], roundDir(B, x, y, hx, hy), landing ? 0 : TR.cruise[i], B, T) };
   }
   // the view's scale glides between flight, a sequence (pulled back a little) and the port's vista, rather than
   // jumping
@@ -1181,7 +1273,7 @@ CORE_READY.then(CORE => {
     }
     viewScale = viewScale > 0 ? Math.exp(Math.log(viewScale) + (Math.log(want) - Math.log(viewScale)) * (1 - Math.exp(-frameDt * 2.5))) : want;
     scale = viewScale;
-    sunFrom(cx, cy, sunCam); const sl = Math.hypot(sunCam[0], sunCam[1]) || 1;
+    sunFrom(cx, cy, sunCam, sunCol); const sl = Math.hypot(sunCam[0], sunCam[1]) || 1;
     const halfW = RW / scale / 2, halfH = RH / scale / 2;
     const TW = G.targets.scene.w, TH = G.targets.scene.h, ss = sceneScale = scale * TW / RW; // the scene target, and px per m in it
     gl.bindVertexArray(null);
@@ -1208,21 +1300,20 @@ CORE_READY.then(CORE => {
     draw();
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-    // the star
-    if (Math.abs(STAR.x - cx) < halfW + STAR.r * 2.4 && Math.abs(STAR.y - cy) < halfH + STAR.r * 2.4) {
-      setView(FP.star, TW, TH, cx, cy);
-      const u = FP.star.u;
-      gl.uniform2f(u.uC, STAR.x, STAR.y); gl.uniform1f(u.uR, STAR.r); gl.uniform3fv(u.uCol, starCol);
-      gl.uniform1f(u.uTime, t); gl.uniform1f(u.uPx, 1 / (STAR.r * ss));
-      draw();
+    // the stars (a binary's two), by the star kit (src/stars.js); a black hole lenses the same sky as the background
+    starSky.star = star.col; starSky.neb = star.neb; starSky.sd[0] = sunCam[0] / sl; starSky.sd[1] = sunCam[1] / sl; starSky.off[0] = cx * ss * 0.04; starSky.off[1] = cy * ss * 0.04;
+    for (const S of SUNS) {
+      const f = S.frame || (S.frame = starFrame(S.star, S.r, S.hazard)), reach = S.r * f.ext;
+      if (Math.abs(S.x - cx) > halfW + reach || Math.abs(S.y - cy) > halfH + reach) continue;
+      starKit.star(S.star, { res: [TW, TH], cx: (S.x - cx) * ss + TW / 2, cy: (S.y - cy) * ss + TH / 2, rpx: S.r * ss, glowR: f.glowR, ext: f.ext, t, gain: STAR_GAIN, sky: starSky });
     }
     // planets and moons, each lit from the star's direction
     setView(FP.planet, TW, TH, cx, cy);
     { const u = FP.planet.u;
-      gl.uniform3fv(u.uSunCol, sunCol); gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
+      gl.uniform3fv(u.uAmb, star.amb); gl.uniform1f(u.uTime, t);
       for (const p of WORLDS) {
         if (Math.abs(p.x - cx) > halfW + p.r * p.ext || Math.abs(p.y - cy) > halfH + p.r * p.ext) continue;
-        gl.uniform3fv(u.uSun, sunFrom(p.x, p.y, sunAt));
+        gl.uniform3fv(u.uSun, sunFrom(p.x, p.y, sunAt, colAt)); gl.uniform3fv(u.uSunCol, colAt);
         gl.uniform2f(u.uC, p.x, p.y); gl.uniform1f(u.uR, p.r); gl.uniform1f(u.uPx, 1 / (p.r * ss)); // detail follows the scene's pixels
         bindPlanet(gl, u, p.pu); planetClock(gl, u, t, p.pu.seed);
         draw();
@@ -1243,7 +1334,7 @@ CORE_READY.then(CORE => {
         if (o.reach < minPx) { const k = ns++ * 8; speckInst[k] = o.x; speckInst[k + 1] = o.y; speckInst[k + 2] = o.m; speckInst[k + 3] = 0; speckInst[k + 4] = 0.7; speckInst[k + 5] = 0; speckInst[k + 6] = o.seed; speckInst[k + 7] = 1; }
         else if (nr < ROCK_DRAW) rockKit.pack(rockInst, nr++, o.a, o.x, o.y, o.m);
       }
-      if (nr) { rockKit.begin({ res: [TW, TH], cam: [cx, cy], scale: ss, time: t, star: [STAR.x, STAR.y], sunCol, amb: star.amb }); rockKit.draw(rockInst, nr); }
+      if (nr) { const S = sunAtPoint(cx, cy); rockKit.begin({ res: [TW, TH], cam: [cx, cy], scale: ss, time: t, star: [S.x, S.y], sunCol, amb: star.amb }); rockKit.draw(rockInst, nr); }
       if (ns) {
         gl.blendFunc(gl.ONE, gl.ONE);
         setView(FP.orbiter, TW, TH, cx, cy); gl.uniform1f(FP.orbiter.u.uTime, t); gl.uniform3fv(FP.orbiter.u.uSunCol, sunCol);
@@ -1253,7 +1344,7 @@ CORE_READY.then(CORE => {
     }
     // orbiters: the core places them and keeps only what can be seen; then lens ghosts for the brightest flares, along
     // the line from the flare through the middle of the screen
-    { const n = sim.orbitEval((sim.tick() + sim.alpha()) * sim.DT, STAR.x, STAR.y, cx, cy, halfW, halfH, 0.06 / scale);
+    { const S0 = sunAtPoint(cx, cy), n = sim.orbitEval((sim.tick() + sim.alpha()) * sim.DT, S0.x, S0.y, cx, cy, halfW, halfH, 0.06 / scale);
       if (n) {
         gl.blendFunc(gl.ONE, gl.ONE);
         setView(FP.orbiter, TW, TH, cx, cy);
@@ -1416,8 +1507,8 @@ CORE_READY.then(CORE => {
 
   // ---------- HUD ----------
   // The Book's flight HUD: day, credits and status top-left; radar top-right with the location list under it;
-  // the nav target bottom-right; the message log bottom-left; prompts bottom centre. (Ship status, and radar
-  // contacts at their sensor error radius, wait for damage, fuel and sensors in the core.)
+  // the nav target bottom-right; the message log bottom-left; prompts bottom centre. Ship status is hull and fuel (and
+  // radiation, in a hazard zone); shields, energy and heat, and radar contacts at their sensor error radius, wait for M2.
   function drawHUD() {
     hx.setTransform(dpr, 0, 0, dpr, 0, 0);
     hx.clearRect(0, 0, W, H);
@@ -1427,6 +1518,7 @@ CORE_READY.then(CORE => {
     if (mode === MODE.landed || titleUp()) return; // the port screen is the HUD; the title has none
     if (mode !== MODE.flying) { // in a landing or launch sequence: the day and how to skip it
       hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; hx.textBaseline = 'middle'; hx.textAlign = 'center';
+      hx.fillStyle = '#dbe0e7'; // (set here: the HUD's last colour is whatever drew before, often the outline's dark)
       const B = BODIES[sim.game.at[0]];
       label(`${mode === MODE.descending ? (B.kind === 'station' ? 'DOCKING AT' : 'LANDING AT') : 'LAUNCHING FROM'} ${B.port.name.toUpperCase()}  ·  ENTER TO SKIP`, W / 2, H - stripH - 40);
       hx.textAlign = 'left'; return;
@@ -1438,9 +1530,14 @@ CORE_READY.then(CORE => {
     const wk = SH.well[0] * T0.well * (sim.param('well_in') * Math.max(cIn, 0) - sim.param('well_out') * Math.max(-cIn, 0));
     const topNow = Math.max(0.15, 1 + wk) * T0.vmax * (burn ? sim.param('burn_cap') : 1);
     const auto = sim.game.auto[0] - 1;
+    // near a moving port the assist holds still relative to it (core/src/motion.rs): speed is shown relative to it
+    const fvx = sim.game.fvx[0], fvy = sim.game.fvy[0], rel = Math.hypot(fvx, fvy) > 0.5, spRel = Math.hypot(SH.vx[0] - fvx, SH.vy[0] - fvy);
+    // ship status: hull and fuel (core/src/service.rs), and radiation where the ship is
+    const hullK = SH.hull[0] / sim.type.hull[SH.kind[0]], fuelT = sim.game.fuel[0], fuelK = fuelT / sim.type.fuel[SH.kind[0]], rad = sim.radiation(SH.x[0], SH.y[0]);
     const lines = [
       [`DAY ${sim.day()}  ·  ${fmtCr(sim.credits())} CR  ·  HOLD ${sim.holdUsed()}/${holdCap()} T`, '#dbe0e7'],
-      [`SPD ${sp.toFixed(0).padStart(4)} / ${topNow.toFixed(0)} m/s${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, wk < -0.03 ? '#e08a4a' : wk > 0.03 ? '#7fd08a' : '#dbe0e7'],
+      [`HULL ${Math.ceil(hullK * 100)}%  ·  FUEL ${fuelT.toFixed(1)}/${sim.type.fuel[SH.kind[0]].toFixed(1)} T${rad > 0 ? `  ·  RADIATION −${(rad * 100).toFixed(1)}%/S` : ''}`, rad > 0 || hullK < 0.3 ? '#f08a72' : hullK < 0.7 || fuelK < 0.2 ? '#e2b866' : '#dbe0e7'],
+      [rel ? `SPD ${spRel.toFixed(0).padStart(4)} m/s REL${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}  ·  MATCHED ${Math.hypot(fvx, fvy).toFixed(0)}` : `SPD ${sp.toFixed(0).padStart(4)} / ${topNow.toFixed(0)} m/s${assist() ? `  SET ${sim.playerSet().toFixed(0)}` : ''}`, rel ? '#8fd3ff' : wk < -0.03 ? '#e08a4a' : wk > 0.03 ? '#7fd08a' : '#dbe0e7'],
       [`HDG ${hd.toFixed(0).padStart(3, '0')}°  ${ASSIST[assistMode].hud}${burn ? '  BURN' : ''}`, burn ? '#e2b866' : assistMode ? '#c8a27a' : '#8a95a4'],
       [`${T0.name.toUpperCase()}${SETTINGS.debug ? `  ·  TICK ${sim.tick()}  ${fps.toFixed(0)} fps${renderScale < 1 ? `  res ${Math.round(renderScale * 100)}%` : ''}` : ''}`, '#8a95a4']
     ];
@@ -1448,7 +1545,7 @@ CORE_READY.then(CORE => {
     // under the nearest-body line: the autopilot, then the active missions with days left
     const ms = activeMissions().map(k => { const left = MS.due[k] - sim.day(); return [`→ ${missionDest(k).toUpperCase()}  ${MS.tons[k]} T  ${fmtCr(MS.pay[k])} CR  ${daysText(left).toUpperCase()}`, left <= 1 ? NAV_HOT : MIS_COL]; });
     if (auto >= 0) ms.unshift([`AUTOPILOT → ${BODIES[auto].name.toUpperCase()}  ·  STICK TO TAKE OVER`, '#7fd08a']);
-    hx.fillStyle = 'rgba(7,9,12,.55)'; hx.fillRect(6, 6, 340, (lines.length + ms.length) * 17 + 31); // + the nearest-body line
+    hx.fillStyle = 'rgba(7,9,12,.55)'; hx.fillRect(6, 6, 380, (lines.length + ms.length) * 17 + 31); // + the nearest-body line
     lines.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + k * 17); });
     ms.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + (lines.length + 1 + k) * 17); });
     if (!typeReady(T0)) { hx.fillStyle = '#e2b866'; hx.fillText('Baking your ship…', 14, 20 + lines.length * 17 + 28); }
@@ -1518,9 +1615,11 @@ CORE_READY.then(CORE => {
     return BODIES.map((b, j) => { const [x, y] = navPoint(j, SH.rx[0], SH.ry[0]); return { j, name: b.port ? `${b.name} (${b.port.name})` : b.name, short: b.name, x, y, r: navReach(b), kind: b.kind, port: !!b.port, mission: dest.has(j), env: !!b.env, rocky: rocky(b) }; })
       .filter(o => !o.env); // environmental stations are scenery: on the map and radar, not in the overlay
   };
+  // surface distance, and closing speed (> 0 closing; relative to a body that moves: a station on its orbit)
   function navInfo(o) {
-    const dx = o.x - SH.rx[0], dy = o.y - SH.ry[0], d = Math.hypot(dx, dy) || 1;
-    return { d, surf: d - o.r, closing: (SH.vx[0] * dx + SH.vy[0] * dy) / d }; // surface distance; closing speed > 0
+    const dx = o.x - SH.rx[0], dy = o.y - SH.ry[0], d = Math.hypot(dx, dy) || 1, j = o.j ?? -1;
+    const vx = SH.vx[0] - (j >= 0 ? sim.body.vx[j] : 0), vy = SH.vy[0] - (j >= 0 ? sim.body.vy[j] : 0);
+    return { d, surf: d - o.r, closing: (vx * dx + vy * dy) / d };
   }
   const fmtDist = m => m < 1000 ? `${Math.max(0, m).toFixed(0)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
   const fmtClose = v => Math.abs(v) < 1 ? '' : `${v > 0 ? 'closing' : 'opening'} ${Math.abs(v).toFixed(0)} m/s`;
@@ -1552,7 +1651,7 @@ CORE_READY.then(CORE => {
     hx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace';
     hx.fillStyle = near.surf <= 0 ? NAV_HOT : NAV_COL;
     const well = SH.well[0]; // strength of the well here (1: a full-strength planet's surface)
-    hx.fillText((near.surf <= 0 ? `${near.rocky ? 'IN' : 'OVER'} ${near.name.toUpperCase()}` : `NEAREST ${near.name.toUpperCase()} ${fmtDist(near.surf)}`) + (well > 0.01 ? `  WELL ${Math.round(well * 100)}%` : ''), 14, 20 + 4 * 17);
+    hx.fillText((near.surf <= 0 ? `${near.rocky ? 'IN' : 'OVER'} ${near.name.toUpperCase()}` : `NEAREST ${near.name.toUpperCase()} ${fmtDist(near.surf)}`) + (well > 0.01 ? `  WELL ${Math.round(well * 100)}%` : ''), 14, 20 + 5 * 17); // under drawHUD's five lines
     if (!navOn) return;
     hx.textBaseline = 'middle';
     for (const o of navs) {
@@ -1659,15 +1758,17 @@ CORE_READY.then(CORE => {
     const w = 268, x = W - w - 14, rows = [];
     let range, close, title, sub;
     if (j >= 0) {
-      const B = BODIES[j], [nx, ny] = navPoint(j, SH.rx[0], SH.ry[0]), o = navInfo({ x: nx, y: ny, r: navReach(B) });
+      const B = BODIES[j], [nx, ny] = navPoint(j, SH.rx[0], SH.ry[0]), o = navInfo({ j, x: nx, y: ny, r: navReach(B) });
       title = B.port ? B.port.name : B.name;
-      sub = [B.name !== title ? B.name : '', B.kind, B.port ? B.port.role.replace('-', ' ') : '', B.belt ? B.belt.rocks.map(k => ROCK_TYPES[k].label.toLowerCase()).join(', ') : ''].filter(Boolean).join(' · ');
+      sub = [B.name !== title ? B.name : '', B.kind === 'star' ? STAR_CLASSES[B.starClass].label.toLowerCase() : B.kind, B.port ? B.port.role.replace('-', ' ') : '', B.belt ? B.belt.rocks.map(k => ROCK_TYPES[k].label.toLowerCase()).join(', ') : ''].filter(Boolean).join(' · ');
       range = fmtDist(o.surf); close = o.closing;
       if (B.port) {
         const pb = sim.portBelow(), st = B.kind === 'station', limit = sim.param(st ? 'dock_speed' : 'land_speed');
         if (pb && pb.body === j) rows.push(pb.slow ? [`CLEAR TO ${st ? 'DOCK' : 'LAND'}  ·  L`, '#7fd08a'] : [`SLOW BELOW ${limit} M/S TO ${st ? 'DOCK' : 'LAND'}`, NAV_HOT]);
         else rows.push([`${st ? 'DOCK' : 'LAND'} OVER IT BELOW ${limit} M/S`, '#8a95a4']);
       }
+      if (B.hazard) rows.push([`HAZARD ZONE ${fmtDist(B.hazard)}: RADIATION`, '#f08a72']);
+      if (B.motion) rows.push([`ORBITING ${BODIES.find(o => o.id === B.parent).name.toUpperCase()} AT ${Math.hypot(sim.body.vx[j], sim.body.vy[j]).toFixed(0)} M/S`, '#8fd3ff']);
       if (activeHere().some(k => MS.dest[k] === j)) rows.push(['MISSION DESTINATION', MIS_COL]);
       if (sim.game.auto[0] - 1 === j) rows.push(['AUTOPILOT ENGAGED', '#7fd08a']);
       else if (!rows.length || B.port) rows.push(['G  FLY TO IT', '#8a95a4']);
@@ -1731,7 +1832,7 @@ CORE_READY.then(CORE => {
     const el = $('loc');
     el.style.top = `${radarBox().y + radarBox().h + 12}px`;
     el.innerHTML = locRows.map(([j, child], n) => {
-      const B = BODIES[j], tags = (B.port ? `<span class="tag">${B.kind === 'station' ? 'DOCK' : 'LAND'}</span>` : '') + (dest.has(j) ? '<span class="tag m">◆</span>' : '');
+      const B = BODIES[j], tags = (B.port ? `<span class="tag">${B.kind === 'station' ? 'DOCK' : 'LAND'}</span>` : '') + (dest.has(j) ? '<span class="tag m">◆</span>' : '') + (B.hazard ? '<span class="tag h">☢</span>' : '');
       return `<button type="button" data-j="${j}" class="${child ? 'child' : ''}${j === tb ? ' target' : ''}"><span class="n">${n < 9 ? n + 1 : ''}</span><span class="ico">${ICON[B.kind] || '•'}</span>`
         + `<span>${B.name}${tags}</span><span class="r">${fmtDist(surfFrom(j, px, py))}</span></button>`;
     }).join('');
@@ -1780,6 +1881,10 @@ CORE_READY.then(CORE => {
       hx.setLineDash([]);
       hx.fillStyle = tgt || hot ? NAV_HOT : o.mission ? MIS_COL : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
     }
+    // hazard zones round the exotic stars: a red dashed ring
+    hx.setLineDash([4, 4]); hx.strokeStyle = 'rgba(240,138,114,.7)'; hx.lineWidth = 1;
+    for (const S of SUNS) if (S.hazard) { hx.beginPath(); hx.arc(cx + (S.x - px) * k, cy - (S.y - py) * k, S.hazard * k, 0, 6.283); hx.stroke(); }
+    hx.setLineDash([]);
     // environmental stations: not in the nav list, but on the radar as smaller, fainter diamonds, unlabelled
     for (let j = 0; j < BODIES.length; j++) {
       const B = BODIES[j];
@@ -1838,6 +1943,13 @@ CORE_READY.then(CORE => {
       const P = BODIES.find(o => o.id === B.parent) || STAR, [px, py] = mapPos(P.x, P.y, v);
       c.beginPath(); c.arc(px, py, Math.hypot(B.x - P.x, B.y - P.y) * v.s, 0, 6.283); c.stroke();
     }
+    // hazard zones round the exotic stars
+    for (const S of SUNS) {
+      if (!S.hazard) continue;
+      const [x, y] = mapPos(S.x, S.y, v);
+      c.setLineDash([5, 5]); c.strokeStyle = 'rgba(240,138,114,.75)'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, S.hazard * v.s, 0, 6.283); c.stroke(); c.setLineDash([]);
+      c.font = '600 11px "IBM Plex Mono", ui-monospace, monospace'; c.textAlign = 'center'; c.fillStyle = 'rgba(240,138,114,.9)'; c.fillText('RADIATION HAZARD', x, y + S.hazard * v.s + 12);
+    }
     // the jump zones: where through traffic arrives and leaves
     c.font = '600 11px "IBM Plex Mono", ui-monospace, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
     TRAFFIC.zones.forEach((name, z) => {
@@ -1863,7 +1975,7 @@ CORE_READY.then(CORE => {
         return;
       }
       if (B.kind === 'field') { c.fillStyle = 'rgba(176,164,146,.22)'; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); c.setLineDash([2, 3]); c.strokeStyle = 'rgba(176,164,146,.6)'; c.lineWidth = 1; c.stroke(); c.setLineDash([]); }
-      c.fillStyle = B.kind === 'star' ? '#f2b26b' : B.env ? 'rgba(201,210,220,.55)' : B.kind === 'station' ? '#c9d2dc' : '#6f8296';
+      c.fillStyle = B.kind === 'star' ? `rgb(${B.light.col.map(v => Math.round(Math.min(1, v * 1.05) * 242)).join(',')})` : B.env ? 'rgba(201,210,220,.55)' : B.kind === 'station' ? '#c9d2dc' : '#6f8296';
       if (B.kind === 'station') { c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillRect(-r, -r, 2 * r, 2 * r); c.restore(); }
       else if (B.kind !== 'field') { c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); }
       if (j === tb) { c.strokeStyle = TGT_COL; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 6, 0, 6.283); c.stroke(); }
@@ -1909,8 +2021,9 @@ CORE_READY.then(CORE => {
 
   // the views made from the current system's bodies: called by showSystem
   function systemViews() {
-    sunCol = starCol = lin(star.col);
+    sunCol = lin(star.col);
     atmOf = new Map(WORLDS.map(w => [BODIES.find(b => b.id === w.id), w.LA]));
+    airOf = new Map(WORLDS.map(w => [BODIES.find(b => b.id === w.id), w.pu.air]));
     locationRows(); expanded = -1; locAt = 0; locRows = [];
     mapExtent = extentOf();
     navTarget = null;
@@ -1925,6 +2038,8 @@ CORE_READY.then(CORE => {
     // the player's landing or launch sequence now: progress and the drawn pose (null when not in one)
     seq: () => sim.mode() === MODE.descending || sim.mode() === MODE.launching ? playerSeq() : null,
     setNav, trade, repay, showPanel, accept, abandon, setTarget, flyTo, cycleTarget, toggleMap, pickLocation,
+    service: what => portService(what), // 'refuel' or 'repair', where landed
+    get SUNS() { return SUNS; }, starKit, starLook, // the current system's stars, the star kit and looks (src/stars.js)
     target: () => navTarget && (navTarget.body !== undefined ? { body: navTarget.body } : { ship: sim.resolve(navTarget.ship) }),
     locations: () => { locAt = 0; refreshLocations(); return locRows.map(([j, child]) => ({ j, name: BODIES[j].name, child })); }, // as the list shows them now
     // ambient traffic: every ship in flight, with its role, phase, route and whether it is on rails
@@ -1959,7 +2074,8 @@ CORE_READY.then(CORE => {
       };
     },
     probe: () => ({ barrier: !!barrier, notice, tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
-      credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap() }),
+      credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap(),
+      hull: SH.hull[0], hullCap: sim.type.hull[SH.kind[0]], fuel: sim.game.fuel[0], fuelCap: sim.type.fuel[SH.kind[0]], lost }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {
       const saved = new Set(keys); keys.clear(); (held || []).forEach(k => keys.add(k));

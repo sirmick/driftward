@@ -1,5 +1,6 @@
-// Boots index.html's app script against a stub WebGL2 context, captures every shader it compiles,
-// and validates each with glslangValidator. Usage: npm run check (after npm run build)
+// Boots index.html's app script against a stub WebGL2 context, captures every shader it compiles, adds the star kit's
+// (src/stars.js: the game and its debug screen draw stars, the lab no longer does), and validates each with
+// glslangValidator. Usage: npm run check (after npm run build)
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process'), os = require('os');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const grab = id => html.split(`<script id="${id}"`)[1].split('>').slice(1).join('>').split('</script>')[0];
@@ -33,6 +34,11 @@ eval(app);
 (async () => {
 await window.__flyReady; // flight mode compiles its shaders once the sim core has loaded
 if (!window.__fly) errs.push('flight mode did not start');
+{ // the star kit's shaders, built from the shared chunks as the pages build them
+  const src = f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
+  const S = new Function(src('shaders.js') + src('stars.js').replace(/\nif \(typeof module[\s\S]*$/, '') + '\nreturn STAR_SHADERS();')();
+  shaders.push({ type: consts.VERTEX_SHADER, src: S.vs }, { type: 0, src: S.fs }, { type: 0, src: S.hole }, { type: 0, src: S.flare });
+}
 const bin = path.join(__dirname, '..', 'node_modules', 'glslang-validator-prebuilt-predownloaded', 'bin', 'glslangValidator.' + (process.platform === 'win32' ? 'exe' : process.platform));
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'driftward-'));
 let bad = 0;

@@ -438,7 +438,7 @@ One physics for every ship, with flight assist as a control layer on top. The en
 * \[M0\] Actuators: main engine, reverse thrusters (50% of main), lateral thrusters (30% of main) and a turn rate.  
 * \[M0\] Drive taper: each thruster's force falls to zero as speed along its axis approaches the hull's v\_max, so a ship cannot push itself past its cap.  
 * \[M0\] Dampers: speed above v\_max, from gravity, slingshots or recoil, bleeds off slowly.  
-* \[M0\] Burner: ×1.7 thrust and ×1.3 speed cap; burns fuel, adds heat and a large signature.  
+* \[M0\] Burner: ×2.5 thrust at the same top speed (it gets you there, or stops you, faster); burns fuel (a full tank lasts about five minutes of burn), adds heat and a large signature.  
 * \[M0\] External forces: gas drag (density × v²), planet gravity (softened inside the body) and weapon recoil, all summed with thrust and integrated once. Gravity can carry a ship past v\_max; the dampers then bleed off the excess.
 
 ### **Flight assist**
@@ -539,7 +539,7 @@ Ports are safe harbor once you are down; the risk lives in the approach and the 
 ### **Landing on planets**
 
 * \[M1\] Approach: fly over the planet's disc, slow to near-stationary relative to it, and request clearance.  
-* \[M1\] Descent: a short, skippable sequence (2–3 s). The ship shrinks toward the surface inside a red plasma sheath that runs white-hot on the leading edge, then fades into the atmosphere's tint. The sheath is drawn from each hull's baked distance field, so it fits every generated silhouette.  
+* \[M1\] Descent: a short, skippable sequence (2–3 s). The ship shrinks toward the surface inside a red plasma sheath that runs white-hot on the leading edge, then fades into the atmosphere's tint. The sheath is air burning, so it follows how much air the world has: none on an airless moon, faint in thin air. The sheath is drawn from each hull's baked distance field, so it fits every generated silhouette.  
 * \[M1\] Blastoff: the same in reverse. The ship rises out of the surface glare wrapped in plasma, grows to full scale, and control returns with a small orbital velocity.  
 * \[M1\] Time: each landing advances the strategic clock by 1 day.  
 * \[M6\] Clearance: checked against notoriety with the owner, restrictions, blockades and hostility. The port may deny it, demand a customs scan, or take a bribe in corrupt systems. Pirate havens clear only ships with the transponder off.

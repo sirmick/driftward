@@ -4,7 +4,7 @@ M1 in the Book is "Trade and delivery": one system, a game shell, the sim core a
 
 This file tracks that milestone against the Book's `[M1]` items: what is done, and what is outstanding (buildable now, or waiting on a later milestone). Update it as work lands. Status: **done**, **partial** (with what is missing), or **to do**.
 
-Last updated: 2026-10-16, after the exit test, asteroid belts and fields, and the six systems of the Calder March with the debug jump.
+Last updated: 2026-10-16, after the twelve star classes and binaries (hazard zones round the exotics), fuel, hull, refuel and repair, death, and moving stations.
 
 ## Summary
 
@@ -14,25 +14,26 @@ Last updated: 2026-10-16, after the exit test, asteroid belts and fields, and th
 | Flight (M0 physics in the core, three-level assist) | Done |
 | The M1 system, from its schema | Done |
 | Landing, docking, launch, the day clock, autosave | Done |
-| Port screen | Partial: trade, missions, the bar and the port's lore work; refuel and repair are placeholders |
+| Port screen | Done, but for news and intel: trade, missions, the bar, the port's lore, refuel and repair |
 | Cargo, credits, markets, trading | Done |
 | Mission board and delivery missions | Done |
 | Ambient traffic | Done |
-| HUD, targeting, system map, location list | Done, but for ship status and sensor error radii |
-| Shell | Done, but for death (no combat yet) |
+| HUD, targeting, system map, location list | Done, but for sensor error radii; ship status shows hull and fuel (shields, energy and heat wait for M2) |
+| Shell | Done: a lost ship reloads the last landing |
 | Lore, painted vistas and portraits (OpenRouter) | Done, generated offline |
 | Environmental stations and their traffic | Done |
-| Planets, stars and stations in flight | Done, but for binary stars and the full 12 star classes |
+| Planets, stars and stations in flight | Done: twelve star classes, binaries, hazard zones round the exotics |
+| Fuel, hull, hazards and death | Done: the burner burns fuel; radiation in a hazard zone wears the hull down; a lost ship reloads the last landing |
 | Asteroid belts and fields | Done: scenery from the schema, in the location list, flown to by the autopilot |
-| Moving stations (orbiting, spinning; docking matches their velocity) | To do: bodies hold still |
+| Moving stations (orbiting, spinning; docking matches their velocity) | Done: stations orbit, and assist and the autopilot match them; spin is drawn only |
 | Mission templates (the state machine) | Deferred until a second mission type |
 | Debug control plane (local API) | Partial: state reports, `__ask`, and the debug jump to any place in any system; the API's actions are to do |
 | Exit test, headless | Done: `tools/exit-test.py` passes |
 
-**Outstanding for M1, in short** (detail under Outstanding below): binary stars and the full 12 star classes; stations
-that orbit and spin; refuel and repair; news and intel in port; mission templates; the debug API's actions. Ship status on the
-HUD, contacts at their sensor error radius, death reloading the last save and the customs scan wait for M2's damage,
-fuel, sensors and law.
+**Outstanding for M1, in short** (detail under Outstanding below): news and intel in port; mission templates; the debug API's
+actions; the full daily tick. The rest of the ship status (shields, energy, heat), contacts at their sensor error radius and
+the customs scan wait for M2's systems, sensors and law. No system in the Calder March has an exotic star or a binary yet
+(the canon gives them ordinary single stars), so hazards and binaries show only in the debug screen's Suns tab and the tests.
 
 ## Done
 
@@ -43,7 +44,7 @@ fuel, sensors and law.
 - **Save, reload, replay.** The world saves to a fixed-size byte image. A snapshot plus a log of input changes and game commands replays a session exactly. The game page exports replays; `cargo run --bin replay` reruns them natively, and the smoke test checks a browser session with port visits replays to the same hash.
 - **System from its schema.** `src/schema/system.schema.json` is the contract; `src/schema.js` clamps content to it before use (the Book's validation rule). `npm run check` validates every system file and the clamp.
 - **The M1 system.** Brannock, Ironhull-owned, middle ring: an orange star, Cinder (mining), Halde (habitat town), the gas giant Vast and its moon Tallow (refinery), and Kettle Yard (shipyard station). Four ports, so 12 directed routes.
-- **Landing and docking.** Be over a port and slow (30 m/s for planets, 12 for stations), press L. A 3.2 s sequence that curls round the planet: the ship turns across it and spirals out to the horizon, shrinking inside a plasma sheath drawn from the hull's distance field, and fades into the atmosphere. Launch rises at the horizon and spirals back in to the port, accelerating all the way, and hands back control at the speed it arrived at (1.4 times top speed, which the assist and dampers bleed off), heading round the planet the way the landing went. The camera follows, pulled back a little, and the view's zoom glides between flight, sequences and the port. Docking at a station is a straight slide into the clamps. Traffic lands and launches the same way. Skippable with Enter.
+- **Landing and docking.** Be over a port and slow (30 m/s for planets, 12 for stations), press L. A 3.2 s sequence that curls round the planet: the ship turns across it and spirals out to the horizon, shrinking inside a plasma sheath drawn from the hull's distance field (as strong as the world's air: none on airless moons), and fades into the atmosphere. Launch rises at the horizon and spirals back in to the port, accelerating all the way, and hands back control at the speed it arrived at (1.4 times top speed, which the assist and dampers bleed off), heading round the planet the way the landing went. The camera follows, pulled back a little, and the view's zoom glides between flight, sequences and the port. Docking at a station is a straight slide into the clamps. Traffic lands and launches the same way. Skippable with Enter.
 - **Time.** A landing costs a day; waiting in port costs a day. The day lives in the core.
 - **Autosave on landing.** As in EV.
 - **Landed and safe.** In port the ship is out of the flight sim.
@@ -72,6 +73,15 @@ fuel, sensors and law.
 - **Exit test.** `tools/exit-test.py` plays one session in the built game page (the real system, prices and traffic), its clock paused so only the script steps it: a new game from a seed, landed at Halde, accepts the delivery whose destination pays best for something Halde sells, fills the rest of the hold with it, launches, engages the autopilot, saves mid-flight, flies on and lands; the delivery pays and the cargo sells at a profit (seed 2026: 1,463 cr trading and 740 cr delivering). Then the same final state hash comes back four ways: the reloaded save matches the hash it was saved at and, with the inputs logged after it, reaches the end in the page; a new game on the seed with the whole log reaches it; and natively (`cargo run --bin replay`) both the session from its start and the save with the inputs after it reach it.
 - **Asteroid belts and fields.** A system file's `belts` (schema-validated: a belt is a ring round the star or a world, a field a cluster on an orbit; width, density, up to three of the lab's ten compositions, a seed). Each is a core body of its own kind (`BODY_BELT`, `BODY_FIELD`): no well, no port, and nothing steers round it, so traffic and the autopilot fly through. The autopilot flies to a field's centre, or to the nearest point of a belt's ring, and stops there. The page places the rocks once from each belt's seed (scenery, not in the snapshot or hash): thinning toward a belt's edges and gathering in clumps along it, sizes on a power law from 15 to 500 m. They are drawn with the lab's asteroid shader, now shared (`src/rocks.js`; the lab's Asteroids tab uses it too) as one instanced draw for every rock in view; a rock under a pixel and a half across is a speck of light. Belts and fields take their place in the location list in orbital order (a field round a world among its children), with the range to a belt's nearer edge; the radar draws a belt as a band, the map as a ring, and the nav overlay, target brackets and panel follow its nearest point. Brannock has the Scree, a belt between Halde and Vast (about 9,000 rocks: silicate, carbonaceous, metallic), and Cinder Tailings, a field of iron and basalt round Cinder. `npm run check` checks that they clear every body and the jump radius; the play smoke test checks the list's order and flies the autopilot into the belt.
 - **The Calder March and the debug jump.** Six systems in `src/systems/` (Brannock, and drafts of Ostry, Calder, Merrow, Serein and Quire from `src/lore/regions/calder-march.md`), all built into the page. The core holds every system's layout in its atlas (`core/src/atlas.rs`: bodies, prices, traffic mix and params, laid out once by the page and saved with the world), so a jump is a core command (`CMD_JUMP`): the old system's traffic and boards go, the new one's start, and the player arrives at rest over the chosen body, keeping credits, hold and missions (a mission is delivered only in the system it was taken for). Saves and replays follow jumps, natively too. The debug screen's jump box takes `place@system`, both sides completing (`kett@bra` finds Kettle Yard in Brannock); its Content tab shows the current system. The other five have no lore or art yet.
+- **Twelve star classes and binaries.** The system schema's `star.class` is the lab's old Suns set: yellow, orange and red dwarfs, brown dwarf, red giant, white giant, blue supergiant, Wolf-Rayet, white dwarf, pulsar, black hole and quasar. `src/stars.js` holds each class's look, light (colour, ambient, the sky's tint) and game numbers (radius, well strength, how far the well reaches, and for the exotics a hazard zone); a system file can set radius, gravity and hazard per star and override any look value (`star.look`), and `star.companion` adds a second star on an orbit from the first (planets may orbit it). The game draws them with the shared star kit (the lab's shaders: granulation, spots, corona, prominences, pulsar beams, a ray-marched black hole that lenses the sky), and a binary lights each world by the nearer star most. A compact star's well reaches many of its radii (`bodies.reach`).
+- **Hazard zones.** Pulsars (9 km), black holes (7.5 km) and quasars (11 km) have a zone where radiation wears a hull down by up to 8 to 15% of its sound points a second, most at the middle (core/src/service.rs). Traffic routes and the autopilot keep clear of it (the detour's clearance); the HUD shows the dose, the radar and map ring the zone, the location list tags the star. `npm run check` keeps zones off every port and the jump zones.
+- **Fuel and hull.** Each class has a tank (1.5 t at class I to 60 t at class V, in the catalog) and hull points (the catalog's, times the line's). The burner burns fuel, a full tank lasting five minutes of burn; an empty tank leaves it dead. Hull and fuel show on the HUD and the port screen.
+- **Speeds.** Top speeds went up 1.5 times on 2026-10-16 (class I 495 m/s down to class V 135; the Copperhaul about 300). The burner no longer raises the top speed: it gives 2.5 times the thrust up to the same top speed, so it gets you there, or stops you, faster.
+- **Refuel and repair.** Port commands (`CMD_REFUEL`, `CMD_REPAIR`; F and R in port): fill the tank at the port's fuel price (its market's, where it sells fuel, else the high tier), restore the hull at 2 cr a point, as far as the credits go; only where the port lists the service.
+- **Death.** A hull at zero loses the ship (`MODE_DEAD`): the clock stops behind a dialog that reloads the last landing's autosave or quits to the title. A new game autosaves at its start port, so there is always a landing to go back to. A traffic ship lost to radiation is gone.
+- **Moving stations.** Every station round a planet or moon, port and environmental, circles it on the game clock (core/src/motion.rs), paced as real orbits are: the system file's `stations.period` (900 s by default) is a turn for a station three of its world's radii out, and the period grows as distance to the power 1.5, so far stations turn slower and move slower. Saves, loads, jumps and replays find them where they should be. Orbits may pass through other bodies and each other (a moon, another station); nothing collides, so it is only drawn on top. Stations round the star hold still unless `stations.starPeriod` is set (their ring would sweep through every planet's neighbourhood): Kettle Yard and Quire Gate stay put. What is docked at a station moves with it: the player while landed or in a sequence, traffic launching and docking, and the ends of routes there (a loiter's whole loop); the ferries round a world turn with its stations. Landing speed is relative to it; a launch hands back control moving with it; near a moving port, full assist holds its set speed relative to it (the HUD shows the speed REL and MATCHED) and the autopilot flies relative to its target, so holding still over it is the assist's job and, with assist off, the pilot's. Port stations round worlds (Calder Station, Ostry Skim, Halo Clinics) move at 30 to 40 m/s, environmental stations nearer in a little faster.
+- **Station looks.** Stations bake at twice their old resolution (0.3 to 0.8 m a texel; about 50 MB of textures a station bake, against 13 before), and round parts (rings, hubs, discs) are plated in courses round them, rather than in a grid laid across them, as are their patches, rivets and windows.
+- **The Suns tab (debug screen).** The lab's Suns tab, moved into the game's debug screen: the system's stars and one of each class, drawn with the game's star kit and their lens flares; a click opens a star in the builder, whose sliders edit the system file's star entry and show it as JSON to copy.
 - **Port lore on the port screen.** The card shows the lore's first paragraph; About (I) has the full description, notable places and the system's history and culture; the Bar (B) lists the people in tonight with their portraits, what they say, and the rumors overheard. The painted vista fades in over the procedural view of the body. The build inlines the lore, and the page loads the art from `art/` beside it: opened on its own, without that folder, the page falls back to the procedural view and the people's initials.
 
 ## Outstanding
@@ -80,33 +90,31 @@ What the Book tags `[M1]` that is not done yet, grouped by what it waits on.
 
 ### Can be built now
 
-1. **Stars.** Binary systems, and the full 12 star classes (the schema has five: red dwarf to blue giant); exotics (pulsars, black holes) as hazard zones. The lab draws all of them; the game's star is one body at the origin.
-2. **Moving stations.** Ring stations spin and some orbit, so "still" means matched to the station's velocity: assist does the matching, and with assist off it is a skill. Bodies hold still today (see Deviations).
-3. **Refuel and repair** on the port screen (shown disabled). Refuel needs fuel in the core (flight burns it; M4's jumps need it); repair needs damage (M2), so in M1 they can only be wired up empty.
-4. **News and intel in port.** The Book lists them among a port's services; in one system there is little to report until events and other systems exist.
-5. **Mission templates.** The Book's mission template (objective nodes, triggers, branches, bindings) is tagged M1; with one mission type, delivery is written directly in `core/src/mission.rs`. The template machinery comes with the second type.
-6. **Debug control plane.** The dev panel's actions (time scale, teleport, spawn, state inspector, save, replay and diff) over a local API that Claude Code can drive without a browser script. Done so far: the dev server's state reports and `__ask` (any open page's state, screenshot, log and replay), `window.__play` for headless scripts, and the debug screen in the page.
-7. **The daily tick.** Each day should run the economy, conflict, population and event ticks, spread across frames once flight runs the clock. Today a day advances interest, boards and deadlines only, because the other systems do not exist yet (M4 on).
+1. **News and intel in port.** The Book lists them among a port's services; in one system there is little to report until events and other systems exist.
+2. **Mission templates.** The Book's mission template (objective nodes, triggers, branches, bindings) is tagged M1; with one mission type, delivery is written directly in `core/src/mission.rs`. The template machinery comes with the second type.
+3. **Debug control plane.** The dev panel's actions (time scale, teleport, spawn, state inspector, save, replay and diff) over a local API that Claude Code can drive without a browser script. Done so far: the dev server's state reports and `__ask` (any open page's state, screenshot, log and replay), `window.__play` for headless scripts, and the debug screen in the page.
+4. **The daily tick.** Each day should run the economy, conflict, population and event ticks, spread across frames once flight runs the clock. Today a day advances interest, boards and deadlines only, because the other systems do not exist yet (M4 on).
 
 ### Waits on later milestones
 
-- **Ship status on the HUD** (shields, hull, energy, heat, fuel): waits for damage and fuel in the core (M2).
+- **The rest of the ship status on the HUD** (shields, energy, heat): waits for M2's systems. Hull and fuel are there.
 - **Radar contacts at their sensor error radius:** waits for sensors in the core.
-- **Death reloads the last landing save:** waits for something that can kill you (M2).
 - **Customs deep scan on arrival** at controlled ports: waits for law (M6).
 - **The bar's hiring and bar missions:** M2 on; the bar is people and rumors only.
 - **J to jump:** M4. Gamepad: later.
 
 ### Partly done
 
-- **Port screen.** Name, body, role, population, the painted vista (framed on big or high-DPI screens, with the port's controls inside it), lore, trade, the mission board, the bar, wait a day and launch. Missing: refuel and repair, news and intel.
+- **Port screen.** Name, body, role, population, the painted vista (framed on big or high-DPI screens, with the port's controls inside it), lore, trade, the mission board, the bar, refuel, repair, wait a day and launch. Missing: news and intel.
 - **Debug control plane.** The debug screen (backquote) opens over the game with the clock stopped. **Content** shows how the system's content was made, each thing once: a header with the models, dates and costs; the pipeline's shared parts (the system-level facts, the lore prompt with its facts and schema factored out, the run and its attempts, the art bible, and the paragraphs the image prompts share); a card per port with its body (parameters, palette, the facts' words for it, market and routes), its lore, its vista and its people with their portraits, each image with only its own part of the prompt (the full prompt on demand); and the raw files. **Player** is live: the ship and its stats, flight state, credits, debt and net worth, the hold priced at every port (best price for cargo aboard marked), missions, and the session's tick, hash and seed. The lore run records its prompt in `src/lore/<id>.log.json` (Brannock's was recorded after the fact, and says so); the build inlines it and the art log. The page also exposes `window.__play` (new game, advance, commands, teleport, probe, save, load, export replay, report), which headless tests drive, and the dev server takes state reports from any open page. Missing: the local API's actions.
 - **Controls.** As the Book's: arrows or WASD, Shift burner, Tab assist level (F too), T targets, L land, M map, wheel zoom; plus 1 to 9 for locations, G fly to, I the nav overlay, J the jitter probe; in port, T trade and M the mission board. Missing: J to jump (M4; the probe will move), gamepad.
 
 ## Deviations from the Book
 
 - **No array compaction yet.** Ship slots are stable with an alive mask; generation handles detect reuse. The Book's swap-remove compaction waits until no JS-owned columns run parallel to the core's.
-- **Bodies hold still.** No orbiting or spinning stations yet (stations spin only visually), so "slow relative to the port" is just "slow".
+- **Only stations move.** Planets, moons and the stars hold still, as in EV; a station with a `motion` orbits. Its spin is drawn only: it docks at its centre, not at a turning port on its rim. A binary's stars hold still too.
+- **Fuel and damage come early.** The Book puts fuel in M4 and damage in M2; M1 has the tank, the burner's fuel and radiation damage so refuel, repair and death have something to do. Shields, which would soak radiation first, come with M2, so in M1 radiation goes straight to the hull.
+- **The quasar is a star class.** The lab's twelve suns include a quasar, so the twelve classes do: a black hole feeding hard enough to throw jets, with the largest hazard zone.
 - **Gravity is game physics,** by design: see `core/src/flight.rs`.
 - **Prices are content, not core code.** The Book's markets are columns in the core; M1's fixed prices are computed in the page from `src/economy.json` and written into them, so M5's moving prices can replace the writer without changing the columns or the trading commands.
 - **Missions are fixed code, not templates yet.** The Book's mission template (objective nodes, triggers, branches) is tagged M1, but M1 has one mission type, so delivery is written directly in `core/src/mission.rs`; the template machinery waits for a second type.

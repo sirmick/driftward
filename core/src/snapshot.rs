@@ -11,13 +11,15 @@ use crate::world::{Config, World};
 
 pub const MAGIC: [u8; 4] = *b"DWSV";
 /// Bump when the layout changes (a new column, a reordered header).
-pub const VERSION: u32 = 15; // 2: ships.rot; 3, 4: Newtonian wells; 5: game wells; 6: bodies.kind/port, game, landing params;
+pub const VERSION: u32 = 16; // 2: ships.rot; 3, 4: Newtonian wells; 5: game wells; 6: bodies.kind/port, game, landing params;
 // 7: types.cargo, game credits and debt, hold, market, economy params; 8: offers, missions, mission params;
 // 9: ships.rail, bodies.pop, traffic, roles, lanes, traffic params; 10: game.auto, aim_x, aim_y;
 // 11: game.curl, launch_frac, longer sequences; 12: traffic by mix and stream, routes, jump lanes, loiter;
 // 13: the player on the game row (out of the header), game.hand_vx/vy, route.s, lane and mix arrival times;
 // 14: environmental stations (bodies.env, env_rate, env_next, env_jump), MAX_MIX 128;
-// 15: the atlas (every system's layout), game.system, missions.sys
+// 15: the atlas (every system's layout), game.system, missions.sys;
+// 16: stars' reach and hazards, fuel and hull (game.fuel, ships.hull, types.hull and fuel, bodies.svc and fuel_price),
+//     moving stations (bodies.orb_*, vx, vy, prev, render position), game.fvx/fvy, burn_secs, repair_cost, match_reach
 pub const HEADER_LEN: usize = 64;
 
 #[derive(Debug, PartialEq, Eq)]
