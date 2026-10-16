@@ -100,7 +100,7 @@ try { PLAN = (function () {
   // ---------- builder panel ----------
   const pct = v => Math.round(v * 100) + '%', deg = v => Math.round(v) + '°', x2 = v => v.toFixed(2) + '×';
   // [field, label, format]; ranges and steps from the schema
-  const SL = [['air', 'Air', pct], ['lightning', 'Lightning', pct], ['cityLights', 'City lights', pct], ['debris', 'Orbital debris (game only)', x2], ['seed', 'Seed', v => v.toFixed(1)]];
+  const SL = [['air', 'Air', pct], ['lightning', 'Lightning', pct], ['cityLights', 'City lights', pct], ['debris', 'Orbital debris (game only)', x2], ['orbitTraffic', 'Orbital traffic (game only)', x2], ['seed', 'Seed', v => v.toFixed(1)]];
   const RSL = [['density', 'Density', pct], ['inner', 'Inner edge', x2], ['outer', 'Outer edge', x2], ['tilt', 'Tilt from face-on', deg], ['angle', 'Pole on screen', deg]];
   const sliderRow = (id, label, sc) => `<label class="slider" for="${id}" data-row="${id}">${label} <input id="${id}" type="range" min="${sc.minimum}" max="${sc.maximum}" step="${(sc.maximum - sc.minimum) > 50 ? 1 : 0.01}"><output id="${id}-v"></output></label>`;
   $('pl-sliders').innerHTML = SL.map(s => sliderRow('pl-' + s[0], s[1], LP[s[0]])).join('');

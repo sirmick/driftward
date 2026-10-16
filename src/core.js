@@ -74,6 +74,8 @@ const CORE_READY = (async () => {
       orbitOut: groups.orbit.out,
       orbitClear: () => X.dw_orbit_clear(w),
       orbitAdd: (body, kind, count, seed) => X.dw_orbit_add(w, body, kind, count, seed >>> 0),
+      // ferries: specks shuttling between two points near a body (a world's surface and its stations), for looks
+      orbitFerries: (body, ax, ay, bx, by, spreadA, spreadB, count, seed) => X.dw_orbit_ferries(w, body, ax, ay, bx, by, spreadA, spreadB, count, seed >>> 0),
       orbitEval: (t, sx, sy, cx, cy, hw, hh, minM) => X.dw_orbit_eval(w, t, sx, sy, cx, cy, hw, hh, minM),
       checkViews: () => { if (mem.buffer !== buffer) throw new Error('sim core memory grew; column views are stale'); },
       free: () => X.dw_world_free(w)

@@ -10,6 +10,10 @@
 //! same point of every pass. Everything here is small (debris flecks under a metre; traffic is beacons, satellites
 //! and pods, not ships, which the sim's own traffic flies), so the page draws each as a speck of light: sunlit
 //! flecks, blinking beacons, and the flares with spikes and lens ghosts.
+//!
+//! Ferries are the same small traffic going somewhere: back and forth along a gently curved route between two points
+//! near a world (its surface and an environmental station, or two stations), easing in and out at each end and out
+//! of sight while docked, so a busy world's stations have specks coming and going. Drawn as traffic beacons.
 
 use crate::cols::{soa, ColumnDesc};
 use crate::math::{sin_cos, TAU};
@@ -22,6 +26,14 @@ pub const MAX_SWARMS: usize = 16;
 pub const OUT_STRIDE: usize = 8;
 pub const DEBRIS: u8 = 0;
 pub const TRAFFIC: u8 = 1;
+pub const MAX_FERRIES: usize = 512;
+
+soa! {
+    /// One ferry: its route from (ax, ay) to (bx, by) (world m) bowed sideways by `bend` of its length, round body
+    /// `body` (for culling); its cycle `period` (s, out and back with a dwell at each end) and `phase` (0..1); the share
+    /// of the cycle spent moving; its size (m) and seed.
+    pub struct Ferries { body: u16, ax: f64, ay: f64, bx: f64, by: f64, bend: f32, period: f64, phase: f64, travel: f32, size: f32, seed: f32 }
+}
 
 soa! {
     /// One orbiter: its orbit's radius `a` (m) in the plane of the unit vectors e1, e2, its phase and rate (rad, rad/s);
@@ -37,6 +49,8 @@ pub struct Orbit {
     pub o: Orbiters,
     swarms: Vec<Swarm>,
     len: usize,
+    f: Ferries,
+    nf: usize,
     /// visible instances from the last `eval`, OUT_STRIDE floats each
     pub out: Vec<f32>,
 }
@@ -60,12 +74,42 @@ fn smooth(e0: f64, e1: f64, x: f64) -> f64 { let t = ((x - e0) / (e1 - e0)).clam
 
 impl Orbit {
     pub fn new() -> Self {
-        Orbit { o: Orbiters::with_capacity(MAX_ORBITERS), swarms: Vec::with_capacity(MAX_SWARMS), len: 0, out: vec![0.0; MAX_ORBITERS * OUT_STRIDE] }
+        Orbit { o: Orbiters::with_capacity(MAX_ORBITERS), swarms: Vec::with_capacity(MAX_SWARMS), len: 0, f: Ferries::with_capacity(MAX_FERRIES), nf: 0,
+            out: vec![0.0; (MAX_ORBITERS + MAX_FERRIES) * OUT_STRIDE] }
     }
 
     pub fn describe(&self, out: &mut Vec<ColumnDesc>) { out.push(ColumnDesc::of("orbit", "out", &self.out)); }
 
-    pub fn clear(&mut self) { self.swarms.clear(); self.len = 0; }
+    pub fn clear(&mut self) { self.swarms.clear(); self.len = 0; self.nf = 0; }
+
+    /// Add `count` ferries on a route between (ax, ay) and (bx, by) near body `body`, each ending within `spread_a` and
+    /// `spread_b` metres of its end (so they don't stack), at 60 to 140 m/s, with their own bow, phase and dwell;
+    /// returns how many fit.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_ferries(&mut self, body: usize, ax: f64, ay: f64, bx: f64, by: f64, spread_a: f64, spread_b: f64, count: usize, seed: u32) -> usize {
+        let n = count.min(MAX_FERRIES - self.nf);
+        let mut g = Rng::new(seed as u64 ^ 0x5eed_f322 ^ ((body as u64) << 40));
+        for i in self.nf..self.nf + n {
+            let (ta, tb) = (g.range(0.0, TAU), g.range(0.0, TAU));
+            let (ra, rb) = (spread_a * g.next_f64().sqrt(), spread_b * g.next_f64().sqrt());
+            let (sa, ca) = sin_cos(ta);
+            let (sb, cb) = sin_cos(tb);
+            let f = &mut self.f;
+            f.body[i] = body as u16;
+            (f.ax[i], f.ay[i]) = (ax + ca * ra, ay + sa * ra);
+            (f.bx[i], f.by[i]) = (bx + cb * rb, by + sb * rb);
+            let len = ((f.bx[i] - f.ax[i]).powi(2) + (f.by[i] - f.ay[i]).powi(2)).sqrt();
+            let travel = g.range(0.55, 0.8);
+            f.bend[i] = g.range(-0.18, 0.18) as f32;
+            f.period[i] = 2.0 * len * 1.1 / g.range(60.0, 140.0) / travel; // both ways at that speed, plus the dwells
+            f.phase[i] = g.next_f64();
+            f.travel[i] = travel as f32;
+            f.size[i] = g.range(0.5, 1.3) as f32;
+            f.seed[i] = g.next_f64() as f32;
+        }
+        self.nf += n;
+        n
+    }
 
     /// Add `count` orbiters of `kind` round a body of radius `r`; returns how many fit.
     /// Debris: most of it in a few clouds (old breakups, each a clump strung along one orbit), the rest scattered, low
@@ -159,6 +203,28 @@ impl Orbit {
                 n += 1;
             }
         }
+        // ferries: out (A to B) through the first half of the cycle, back through the second, each leg easing in and
+        // out and taking `travel` of its half; docked (unseen) the rest
+        let f = &self.f;
+        for i in 0..self.nf {
+            let u = (f.phase[i] + t / f.period[i]).fract();
+            let (half, back) = if u < 0.5 { (u * 2.0, false) } else { (u * 2.0 - 1.0, true) };
+            let tr = f.travel[i] as f64;
+            let d = (half - (1.0 - tr) / 2.0) / tr; // 0..1 while moving
+            if !(0.0..=1.0).contains(&d) { continue; }
+            let s = smooth(0.0, 1.0, d);
+            let s = if back { 1.0 - s } else { s };
+            let (ax, ay, bx, by) = (f.ax[i], f.ay[i], f.bx[i], f.by[i]);
+            let (mx, my) = ((ax + bx) / 2.0 - (by - ay) * f.bend[i] as f64, (ay + by) / 2.0 + (bx - ax) * f.bend[i] as f64); // the bow
+            let w = 1.0 - s;
+            let (x, y) = (w * w * ax + 2.0 * w * s * mx + s * s * bx, w * w * ay + 2.0 * w * s * my + s * s * by);
+            if (x - cx).abs() > hw + 40.0 || (y - cy).abs() > hh + 40.0 { continue; }
+            let k = n * OUT_STRIDE;
+            let out = &mut self.out[k..k + OUT_STRIDE];
+            out[0] = x as f32; out[1] = y as f32; out[2] = f.size[i]; out[3] = TRAFFIC as f32;
+            out[4] = 1.0; out[5] = 0.0; out[6] = f.seed[i]; out[7] = 1.0;
+            n += 1;
+        }
         n
     }
 }
@@ -202,5 +268,23 @@ mod tests {
         }
         assert!(flared, "some panel catches the sun");
         assert_eq!(orb.eval(&bx, &by, &br, 0.0, 1e5, 0.0, 1e6, 1e6, 500.0, 500.0, 0.0), 0, "off-screen swarms are skipped");
+    }
+
+    #[test]
+    fn ferries_shuttle_between_their_ends() {
+        let mut orb = Orbit::new();
+        assert_eq!(orb.add_ferries(0, 0.0, 0.0, 3000.0, 0.0, 50.0, 50.0, 8, 1), 8);
+        let (bx, by, br) = ([0.0], [0.0], [1000.0]);
+        let (mut seen, mut hidden, mut near_a, mut near_b) = (0, 0, false, false);
+        for step in 0..400 {
+            let n = orb.eval(&bx, &by, &br, step as f64 * 0.5, 1e5, 0.0, 1500.0, 0.0, 1e4, 1e4, 0.0);
+            seen += n; hidden += 8 - n;
+            for k in 0..n {
+                let (x, y) = (orb.out[k * OUT_STRIDE] as f64, orb.out[k * OUT_STRIDE + 1] as f64);
+                assert!((-60.0..3060.0).contains(&x) && y.abs() < 3000.0 * 0.2, "on the route: {x} {y}");
+                near_a |= x < 100.0; near_b |= x > 2900.0;
+            }
+        }
+        assert!(seen > 0 && hidden > 0 && near_a && near_b, "they travel end to end and dock: seen {seen} hidden {hidden}");
     }
 }

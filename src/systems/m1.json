@@ -75,7 +75,9 @@
         "air": 1,
         "seed": 1.3,
         "cityLights": 1,
-        "lightning": 0.3
+        "lightning": 0.225,
+        "debris": 0.75,
+        "orbitTraffic": 0.75
       },
       "port": {
         "name": "Halde Landing",

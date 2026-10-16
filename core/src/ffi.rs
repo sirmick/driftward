@@ -215,6 +215,18 @@ pub unsafe extern "C" fn dw_orbit_add(w: *mut World, body: u32, kind: u32, count
     w.orbit.add(b, r, kind as u8, count as usize, seed) as u32
 }
 
+/// Add `count` ferries (orbit.rs: specks shuttling back and forth, for looks) on a route near body `body` between
+/// (ax, ay) and (bx, by), each end spread by up to spread_a and spread_b metres; returns how many fit.
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn dw_orbit_ferries(w: *mut World, body: u32, ax: f64, ay: f64, bx: f64, by: f64, spread_a: f64, spread_b: f64, count: u32, seed: u32) -> u32 {
+    let w = unsafe { world(w) };
+    if body as usize >= w.n_bodies { return 0; }
+    w.orbit.add_ferries(body as usize, ax, ay, bx, by, spread_a, spread_b, count as usize, seed) as u32
+}
+
 /// Place the orbiters near the view at time `t` and write the visible ones to the "orbit/out" column; returns the count.
 /// # Safety
 /// See `world`.

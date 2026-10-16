@@ -216,6 +216,13 @@
                 "maximum": 3,
                 "default": 1
               },
+              "orbitTraffic": {
+                "description": "Scales the small orbiting traffic (beacons and pods) a world with a port wears; its count follows the port's population.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 3,
+                "default": 1
+              },
               "cityLights": {
                 "type": "number",
                 "minimum": 0,

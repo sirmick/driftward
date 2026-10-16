@@ -354,7 +354,22 @@ CORE_READY.then(CORE => {
       if (b.kind !== 'planet' && b.kind !== 'moon') return;
       const L = b.look || {}, k = Math.min(1.6, Math.max(0.4, b.r / 1200));
       sim.orbitAdd(j, 0, Math.round((DEBRIS_N[L.surface] || 1000) * k * L.debris), 1009 * j + 17);
-      if (b.port) sim.orbitAdd(j, 1, TRAFFIC_N[b.port.population] || 160, 2027 * j + 5);
+      if (b.port) sim.orbitAdd(j, 1, Math.round((TRAFFIC_N[b.port.population] || 160) * L.orbitTraffic), 2027 * j + 5);
+    });
+    // ferries: specks coming and going between a world and its environmental stations, and between stations whose
+    // route clears the world, a few to a route
+    BODIES.forEach((w, j) => {
+      if (w.kind !== 'planet' && w.kind !== 'moon') return;
+      const st = BODIES.map((b, k) => [b, k]).filter(([b]) => b.env && b.parent === w.id);
+      st.forEach(([s, k], n) => {
+        const dx = s.x - w.x, dy = s.y - w.y, d = Math.hypot(dx, dy) || 1;
+        sim.orbitFerries(j, w.x + dx / d * w.r * 0.97, w.y + dy / d * w.r * 0.97, s.x, s.y, w.r * 0.25, s.r * 0.3, 3, 3301 * k + 11);
+        for (const [o, m] of st.slice(n + 1)) {
+          // the closest the straight route comes to the world's centre
+          const ex = o.x - s.x, ey = o.y - s.y, t = Math.max(0, Math.min(1, ((w.x - s.x) * ex + (w.y - s.y) * ey) / (ex * ex + ey * ey)));
+          if (Math.hypot(s.x + ex * t - w.x, s.y + ey * t - w.y) > w.r * 1.15) sim.orbitFerries(j, s.x, s.y, o.x, o.y, s.r * 0.3, o.r * 0.3, 2, 7919 * k + 13 * m);
+        }
+      });
     }); }
   // Market prices: a port with a market trades what its role lists, at base price times the tier. Written at each new
   // game; a loaded save brings its own (prices are world state).
