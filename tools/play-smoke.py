@@ -176,6 +176,28 @@ with sync_playwright() as p:
         check(bt['auto'] == 0 and bt['t'] < 300 and bt['off'] < bt['half'] and bt['v'] < 30, f"the autopilot flies into the belt in {bt['t']} s and stops {bt['off']:.0f} m from its middle")
         check(bt['rocks'] > 1000, f"the belts and fields hold {bt['rocks']} rocks")
 
+    # the debug jump: the debug screen's box completes place@system and jumps there (a logged core command); a session
+    # that jumps between systems replays natively, and a save made after a jump loads back into that system
+    if len(ev('__play.systems()')) > 1:
+        ev("(() => { const P = __play, C = P.CMD; P.newGame(21); P.command(C.launch); P.command(C.skip); P.advance(0.5, []); })()")
+        pg.keyboard.press('Backquote'); pg.wait_for_timeout(300)
+        pg.keyboard.type('rime@ost'); pg.wait_for_timeout(150)
+        first = ev("(document.querySelector('.dbg-jump-list button') || {}).innerText || ''").replace('\n', ' ')
+        pg.keyboard.press('Enter'); pg.wait_for_timeout(300)
+        j = ev("(() => { const P = __play; return { sys: P.systems()[P.system()], at: P.BODIES[P.probe().at].name, mode: P.probe().mode, debug: !document.getElementById('debug').hidden }; })()")
+        check(first.startswith('Rime') and j == {'sys': 'ostry', 'at': 'Rime', 'mode': 0, 'debug': False}, f"the jump box completes rime@ost to {first!r} and jumps there: {j}")
+        js = ev("""(() => { const P = __play, C = P.CMD, s = P.systems(), cal = s.indexOf('calder'), B = P.places().find(p => p.k === cal && p.id === 'station');
+          P.advance(2, ['KeyW']); const r = P.jump(cal, B.j); P.advance(3, ['KeyW', 'KeyA']); P.save(); const saved = P.probe(); P.jump(0, 1); P.load();
+          const back = P.probe(); P.advance(2, []); const rep = P.exportReplay();
+          return { r, saved: saved.hash, back: back.hash, sys: s[P.system()], replay: { save: P.b64(rep.save), log: rep.log, ticks: rep.ticks, tick: rep.tick, hash: rep.hash } }; })()""")
+        check(js['r'] == 0 and js['back'] == js['saved'] and js['sys'] == 'calder', f"a save after a jump loads back into {js['sys']} with the same hash")
+        jr = ev("""(() => { const P = __play, s = P.systems(); P.newGame(22); P.command(P.CMD.launch); P.command(P.CMD.skip); P.advance(1, ['KeyW']);
+          P.jump(s.indexOf('merrow'), 1); P.advance(4, ['KeyW', 'KeyD']); P.jump(s.indexOf('quire'), 2); P.advance(3, ['KeyW']);
+          const r = P.exportReplay(); return { save: P.b64(r.save), log: r.log, ticks: r.ticks, tick: r.tick, hash: r.hash }; })()""")
+        out = native_replay(base64.b64decode(jr['save']), jr['log'], jr['ticks'])
+        check(out == f"tick {jr['tick']} hash {jr['hash']}", f"a session through three systems (two jumps) replays natively: {out}")
+        pg.keyboard.press('Escape')
+
     # flight: the same numbers as the lab's Fly tab (the Prism military class I, the M0 Halcyon fighter, from rest, clear space)
     a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -8000], ship: 'prism.military:c1' }); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe()]; })()")
     print('after 4 s W   ', json.dumps({k: a[0][k] for k in ('tick', 'v', 'set')}))

@@ -1,0 +1,244 @@
+{
+  "id": "serein",
+  "name": "Serein",
+  "owner": "prism",
+  "ring": "middle",
+  "region": "calder-march",
+  "description": "Prism's company system for the March, under a yellow star: Serein, a terraformed world of white towers and managed gardens, a ring of orbital clinics, a bare inner world and a gas giant with Prism's refineries. Clean, quiet, expensive, and polite to the point of menace.",
+  "star": {
+    "name": "Serein",
+    "class": "yellow",
+    "radius": 2200,
+    "gravity": 55
+  },
+  "start": "serein",
+  "bodies": [
+    {
+      "id": "vell",
+      "name": "Vell",
+      "kind": "planet",
+      "orbit": {
+        "radius": 8000,
+        "angle": 210
+      },
+      "radius": 700,
+      "gravity": 22,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#4a3e38",
+          "#7a685a",
+          "#c4b29a"
+        ],
+        "atmosphere": "#c0a080",
+        "air": 0.1,
+        "seed": 1.8
+      }
+    },
+    {
+      "id": "serein",
+      "name": "Serein",
+      "kind": "planet",
+      "orbit": {
+        "radius": 17000,
+        "angle": 100
+      },
+      "radius": 1800,
+      "gravity": 40,
+      "look": {
+        "surface": "terran",
+        "palette": [
+          "#2a6f8f",
+          "#6f9f6a",
+          "#e8e4d8"
+        ],
+        "atmosphere": "#a8d8ff",
+        "air": 1.0,
+        "seed": 3.3,
+        "cityLights": 1,
+        "orbitTraffic": 1.25
+      },
+      "port": {
+        "name": "Serein Concourse",
+        "role": "research",
+        "population": "world",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "White towers in managed gardens, every surface clean and every street quiet. Prism's offices for the March are here, and its clinics, and the people who hold the debts of half the Ironhull crews in the March. Visitors are welcomed, measured, and remembered."
+      },
+      "environs": [
+        {
+          "archetype": "ring",
+          "brand": "prism",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "halo",
+      "name": "Halo Clinics",
+      "kind": "station",
+      "parent": "serein",
+      "orbit": {
+        "radius": 4300,
+        "angle": 250
+      },
+      "radius": 500,
+      "gravity": 4,
+      "station": {
+        "archetype": "ring",
+        "brand": "prism",
+        "seed": "halo-clinics"
+      },
+      "port": {
+        "name": "Halo Clinics",
+        "role": "research",
+        "population": "town",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "A ring of orbital clinics where Prism mends the people who can pay, and some who can't, against their future earnings. The light is soft, the air is scented, and the waiting list is long."
+      }
+    },
+    {
+      "id": "aubade",
+      "name": "Aubade",
+      "kind": "planet",
+      "orbit": {
+        "radius": 30000,
+        "angle": 20
+      },
+      "radius": 2800,
+      "gravity": 44,
+      "look": {
+        "surface": "giant",
+        "palette": [
+          "#d8c8b0",
+          "#a89478",
+          "#f2ece0"
+        ],
+        "atmosphere": "#f0e4d0",
+        "air": 1.1,
+        "seed": 7.7,
+        "rings": {
+          "density": 0.5,
+          "inner": 1.5,
+          "outer": 2.3,
+          "colours": [
+            "#e8e0d4",
+            "#b0a898"
+          ],
+          "tilt": 70,
+          "angle": 20
+        }
+      },
+      "environs": [
+        {
+          "archetype": "refinery",
+          "brand": "prism",
+          "count": 1
+        },
+        {
+          "archetype": "relay",
+          "brand": "prism",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "traffic": {
+    "ships": 30,
+    "throughShare": 0.45,
+    "jumpRadius": 45000,
+    "local": [
+      {
+        "line": "prism.civilian",
+        "share": 0.75,
+        "classes": {
+          "c1": 3,
+          "c2": 3,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.military",
+        "share": 0.15,
+        "classes": {
+          "c1": 2,
+          "c2": 2,
+          "c3": 1
+        }
+      },
+      {
+        "line": "prism.container-liner",
+        "share": 0.1,
+        "classes": {
+          "c4": 1
+        }
+      }
+    ],
+    "through": [
+      {
+        "line": "prism.civilian",
+        "share": 0.45,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "federation.civilian",
+        "share": 0.2,
+        "classes": {
+          "c2": 2,
+          "c3": 2
+        }
+      },
+      {
+        "line": "ironhulls.civilian",
+        "share": 0.2,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.container-liner",
+        "share": 0.1,
+        "classes": {
+          "c4": 1
+        }
+      },
+      {
+        "line": "federation.container-carrier",
+        "share": 0.05,
+        "classes": {
+          "c4": 1
+        }
+      }
+    ],
+    "loiter": [
+      {
+        "port": "serein",
+        "line": "prism.military",
+        "count": 2,
+        "classes": {
+          "c2": 2,
+          "c3": 1
+        }
+      }
+    ]
+  }
+}

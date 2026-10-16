@@ -66,6 +66,7 @@ core/               the sim core, a Rust crate (WASM for the pages, native for t
   src/market.rs     cargo hold, credits, the lender, markets: buy, sell and repay commands
   src/mission.rs    mission boards and delivery missions: offers, accept, deliver on landing, deadlines
   src/traffic.rs    ambient traffic: lanes from a gravity model, Poisson launches, rails far and physics near, landings
+  src/atlas.rs      every system's layout, saved with the world, and the debug jump between systems
   src/scenario.rs   scripted world shared by native and WASM, for the determinism check
   src/bin/          scenario (prints a scenario's hash) and replay (reruns an exported session)
 src/
@@ -77,8 +78,9 @@ src/
   look.js           colour helpers, star presets, brand plume and shield looks
   schema.js         clamps content to its JSON Schema before use; lays out a star system; checks lore against it
   schema/           JSON Schemas: the contract for LLM-authored content (system.schema.json, lore.schema.json)
-  systems/          star systems (m1.json: Brannock, the Book's M1 system)
+  systems/          star systems, all built into the game: m1.json (Brannock, the Book's M1 system, where a game starts) and the rest of the Calder March
   lore/             each system's lore, written by tools/gen-content.js: history, culture, art bible, ports' people and rumors
+                    setting.md (the universe's backstory and recent events) and regions/ (a region's systems), canon for the lore
   economy.json      commodities, price tiers by port role, the starting credits and debt
   traffic.json      traffic hulls by culture and role, population weights for the flows
   play/             the game page: template.html, play.js, debug.js (the debug screen) and shipyard.js (its Ships tab)
@@ -121,7 +123,7 @@ npm run preview      # bake every ship on the CPU -> preview.png
 
 Building needs Rust with the WASM target (`rustup target add wasm32-unknown-unknown`). `python3 tools/build.py --skip-core` reuses the last compiled core. The browser smoke tests need Playwright for Python: `python tools/fly-smoke.py`, `python tools/play-smoke.py` and M1's exit test, `python tools/exit-test.py` (on the dev box, use `~/.venvs/web/bin/python`).
 
-In the game, backquote opens the debug screen: Content shows how the system's content was made (the lore prompt, the art bible and prompt templates, and per port its body, lore and images with their own prompts and costs); Player shows the ship, flight, money, the hold priced at every port and missions, live.
+In the game, backquote opens the debug screen. Its jump box takes you to any planet, moon, station, belt or field in any system: type `place@system` (both sides complete; Tab completes the side you are in, Enter jumps), or `*@system` to arrive over a system's start port. The jump is a logged core command, so saves and replays follow it. The screen's tabs: Content shows how the system's content was made (the lore prompt, the art bible and prompt templates, and per port its body, lore and images with their own prompts and costs); Player shows the ship, flight, money, the hold priced at every port and missions, live.
 
 Lore and art are generated ahead of time and committed: `node tools/gen-content.js lore` writes `src/lore/<system>.json`, `node tools/gen-content.js art` paints `art/<system>/` from it (`--dry` prints the prompts; `--only id,id --force` redoes a port's vista or a person's portrait). It needs an OpenRouter key in `OPENROUTER_API_KEY` or `~/openrouter.token`, and Python with Pillow for the WebP conversion.
 

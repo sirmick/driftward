@@ -1,0 +1,219 @@
+{
+  "id": "quire",
+  "name": "Quire",
+  "owner": "prism",
+  "ring": "middle",
+  "region": "calder-march",
+  "description": "A Prism foundry system under a white star: Quire, a hot, barren inner world built over with navigation-core foundries and domed worker cities, a metal-rich belt, a relay station guarding the lane inward, and an outer giant. Sister plant to the foundry that went glass, and nervous with it.",
+  "star": {
+    "name": "Quire",
+    "class": "white",
+    "radius": 2000,
+    "gravity": 55
+  },
+  "start": "quire",
+  "bodies": [
+    {
+      "id": "quire",
+      "name": "Quire",
+      "kind": "planet",
+      "orbit": {
+        "radius": 9000,
+        "angle": 330
+      },
+      "radius": 1100,
+      "gravity": 30,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#3a2e2a",
+          "#6e5a4a",
+          "#d8c8a8"
+        ],
+        "atmosphere": "#e0c8a0",
+        "air": 0.05,
+        "seed": 5.2,
+        "debris": 1.5
+      },
+      "port": {
+        "name": "Quire Foundry",
+        "role": "forge",
+        "population": "town",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "Foundries over the whole day side of a hot, barren world, and worker cities in domes on the night side. They make navigation cores here, the most valuable cargo in the March, and since the sister plant went silent, every core leaves under escort."
+      },
+      "environs": [
+        {
+          "archetype": "forge",
+          "brand": "prism",
+          "count": 3
+        },
+        {
+          "archetype": "ring",
+          "brand": "prism",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "gate",
+      "name": "Quire Gate",
+      "kind": "station",
+      "orbit": {
+        "radius": 14500,
+        "angle": 60
+      },
+      "radius": 450,
+      "gravity": 4,
+      "station": {
+        "archetype": "relay",
+        "brand": "prism",
+        "seed": "quire-gate"
+      },
+      "port": {
+        "name": "Quire Gate",
+        "role": "relay",
+        "population": "colony",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "A relay array and customs post on the lane inward, run by Prism security in gloss black. Escort convoys form up here, and nobody is told when they leave."
+      }
+    },
+    {
+      "id": "tamsin",
+      "name": "Tamsin",
+      "kind": "planet",
+      "orbit": {
+        "radius": 30000,
+        "angle": 150
+      },
+      "radius": 2600,
+      "gravity": 44,
+      "look": {
+        "surface": "giant",
+        "palette": [
+          "#9c7a6a",
+          "#6a4e44",
+          "#dcc4b4"
+        ],
+        "atmosphere": "#e0c0b0",
+        "air": 1.1,
+        "seed": 2.9,
+        "lightning": 0.4
+      }
+    }
+  ],
+  "belts": [
+    {
+      "id": "assay",
+      "name": "The Assay",
+      "kind": "belt",
+      "orbit": {
+        "radius": 20000
+      },
+      "width": 2400,
+      "density": 0.5,
+      "rocks": [
+        "metal",
+        "cobalt",
+        "silicate"
+      ],
+      "seed": 9
+    }
+  ],
+  "traffic": {
+    "ships": 26,
+    "throughShare": 0.45,
+    "jumpRadius": 42000,
+    "local": [
+      {
+        "line": "prism.civilian",
+        "share": 0.7,
+        "classes": {
+          "c1": 2,
+          "c2": 3,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.military",
+        "share": 0.3,
+        "classes": {
+          "c1": 2,
+          "c2": 3,
+          "c3": 2
+        }
+      }
+    ],
+    "through": [
+      {
+        "line": "prism.civilian",
+        "share": 0.4,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.military",
+        "share": 0.2,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "ironhulls.civilian",
+        "share": 0.2,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "federation.civilian",
+        "share": 0.2,
+        "classes": {
+          "c2": 2,
+          "c3": 2
+        }
+      }
+    ],
+    "loiter": [
+      {
+        "port": "quire",
+        "line": "prism.military",
+        "count": 3,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "port": "gate",
+        "line": "prism.military",
+        "count": 2,
+        "classes": {
+          "c2": 2,
+          "c3": 1
+        }
+      }
+    ]
+  }
+}

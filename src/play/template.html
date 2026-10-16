@@ -157,6 +157,15 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 .dbg-tabs { display: flex; gap: 6px; }
 .dbg-tabs button { background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; font: 600 12.5px var(--f-display); letter-spacing: .05em; text-transform: uppercase; color: var(--fg); }
 .dbg-tabs button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.dbg-jump { position: relative; }
+.dbg-jump input { width: 300px; background: #0d1219; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; color: var(--fg); font: 500 12.5px var(--f-mono); }
+.dbg-jump input:focus { outline: none; border-color: var(--amber); }
+.dbg-jump-list { position: absolute; top: calc(100% + 4px); left: 0; width: 420px; background: #0d1219; border: 1px solid var(--line); border-radius: 6px; padding: 4px; z-index: 2; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+.dbg-jump-list button { display: flex; align-items: baseline; gap: 6px; width: 100%; background: none; border: 0; border-radius: 4px; padding: 5px 8px; text-align: left; cursor: pointer; color: var(--fg); font: 500 12.5px var(--f-mono); }
+.dbg-jump-list button.sel, .dbg-jump-list button:hover { background: #172130; }
+.dbg-jump-list button small { color: var(--muted); }
+.dbg-jump-list button span { color: var(--amber); }
+.dbg-jump-list button .k { margin-left: auto; }
 .dbg-pane { display: grid; grid-template-columns: 170px 1fr; min-height: 0; }
 .dbg-nav { display: grid; align-content: start; gap: 2px; padding: 14px 10px; border-right: 1px solid var(--line); }
 .dbg-nav a { padding: 5px 8px; border-radius: 5px; color: var(--fg); text-decoration: none; font: 500 12.5px var(--f-mono); }
@@ -319,7 +328,9 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
   </div>
 </section>
 <section id="debug" hidden aria-label="Debug">
-  <div class="dbg-head"><h2>Debug</h2><div class="dbg-tabs"></div><span class="hint">` or Esc closes · the clock is stopped</span></div>
+  <div class="dbg-head"><h2>Debug</h2><div class="dbg-tabs"></div>
+    <div class="dbg-jump"><input id="dbg-jump" type="text" placeholder="Jump to place@system, or *@system" autocomplete="off" spellcheck="false" aria-label="Jump to place@system"><div class="dbg-jump-list" hidden></div></div>
+    <span class="hint">` or Esc closes · the clock is stopped</span></div>
   <div class="dbg-pane"></div>
 </section>
 <div class="strip">
@@ -336,7 +347,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 
 <script id="core-wasm" type="application/octet-stream">/*COREWASM*/</script>
 <script id="catalog" type="application/json">/*CATALOG*/</script>
-<script id="system" type="application/json">/*SYSTEM*/</script>
+<script id="systems" type="application/json">/*SYSTEMS*/</script>
 <script id="system-schema" type="application/json">/*SYSTEMSCHEMA*/</script>
 <script id="economy" type="application/json">/*ECONOMY*/</script>
 <script id="traffic" type="application/json">/*TRAFFIC*/</script>

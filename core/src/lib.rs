@@ -7,8 +7,9 @@
 //! by one input bitmask per tick (`player`); the world saves to a fixed-size byte image (`snapshot`), and a
 //! snapshot plus an input log replays a session exactly (`replay`). Ports, landings and the day clock are in `port`;
 //! cargo, credits and markets in `market`; the mission board and deliveries in `mission`; ambient traffic in
-//! `traffic`. Orbiting debris and small traffic, for looks only and outside the sim's state, are in `orbit`.
+//! `traffic`; every system's layout, for jumps between them, in `atlas`. Orbiting debris and small traffic, for looks only and outside the sim's state, are in `orbit`.
 
+pub mod atlas;
 pub mod cols;
 pub mod ffi;
 pub mod flight;

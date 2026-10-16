@@ -45,6 +45,8 @@ pub const CMD_SKIP: u32 = 4;
 pub const CMD_AUTOPILOT: u32 = 10;
 /// Debug control plane: put the flying player at rest over body `a` (a dev action, logged so replays still match).
 pub const CMD_TELEPORT: u32 = 100;
+/// Debug control plane: jump to atlas system `a`, at rest over its body `b`, flying (atlas.rs `jump_to`).
+pub const CMD_JUMP: u32 = 101;
 
 pub const OK: i32 = 0;
 pub const NOT_OVER_PORT: i32 = 1;
@@ -142,6 +144,7 @@ impl World {
                 self.slot_reset(i, false);
                 OK
             }
+            CMD_JUMP => self.jump_to(a, b),
             _ => UNKNOWN_COMMAND,
         }
     }

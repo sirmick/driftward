@@ -1,5 +1,6 @@
 //! The world: every column group, the clock, and the tick pipeline.
 
+use crate::atlas::{AtlasBodies, AtlasHead, AtlasMarket, AtlasMix, AtlasSys, MAX_SYSTEMS};
 use crate::cols::{params, soa, ColumnDesc};
 use crate::flight;
 use crate::market::MAX_GOODS;
@@ -80,10 +81,10 @@ soa! {
     /// a launch hands the ship back moving along the unit vector (hand_x, hand_y) at hand_v m/s, written when it starts
     /// (port.rs `launch_velocity`), so the page draws the sequence toward the velocity the core will give.
     /// The player (player.rs): the ship slot flown (-1 for none: the Fly tab drives its player from JS), the assist
-    /// set speed (m/s), and the buttons held this tick.
+    /// set speed (m/s), and the buttons held this tick. `system`: the atlas system being played (atlas.rs).
     pub struct Game {
         mode: u8, at: i16, timer: f64, curl: u8, day: u32, credits: u32, debt: u32, auto: i16, aim_x: f64, aim_y: f64,
-        hand_x: f64, hand_y: f64, hand_v: f64, player: i32, set: f64, input: u32,
+        hand_x: f64, hand_y: f64, hand_v: f64, player: i32, set: f64, input: u32, system: u8,
     }
 }
 
@@ -106,9 +107,9 @@ soa! {
 }
 
 soa! {
-    /// The player's missions, MAX_MISSIONS rows: state (mission.rs M_*), where from and to, the cargo, the pay, and
-    /// the last day it may be delivered.
-    pub struct Missions { state: u8, from: i16, dest: i16, good: u8, tons: u32, pay: u32, due: u32 }
+    /// The player's missions, MAX_MISSIONS rows: state (mission.rs M_*), where from and to (bodies of system `sys`),
+    /// the cargo, the pay, and the last day it may be delivered.
+    pub struct Missions { state: u8, sys: u8, from: i16, dest: i16, good: u8, tons: u32, pay: u32, due: u32 }
 }
 
 soa! {
@@ -230,6 +231,12 @@ pub struct World {
     pub mix: Mix,
     pub lanes: Lanes,
     pub jlanes: JLanes,
+    /// every system's layout (atlas.rs)
+    pub atlas_head: AtlasHead,
+    pub atlas_sys: AtlasSys,
+    pub atlas_bodies: AtlasBodies,
+    pub atlas_market: AtlasMarket,
+    pub atlas_mix: AtlasMix,
     pub params: Vec<f64>,
     /// live ship slots are 0..count
     pub count: usize,
@@ -264,6 +271,11 @@ impl World {
             mix: Mix::with_capacity(MAX_MIX),
             lanes: Lanes::with_capacity(cfg.max_bodies * cfg.max_bodies * N_ROLES),
             jlanes: JLanes::with_capacity(2 * N_JUMP * cfg.max_bodies),
+            atlas_head: AtlasHead::with_capacity(1),
+            atlas_sys: AtlasSys::with_capacity(MAX_SYSTEMS),
+            atlas_bodies: AtlasBodies::with_capacity(MAX_SYSTEMS * cfg.max_bodies),
+            atlas_market: AtlasMarket::with_capacity(MAX_SYSTEMS * cfg.max_bodies * MAX_GOODS),
+            atlas_mix: AtlasMix::with_capacity(MAX_SYSTEMS * MAX_MIX),
             params: param_defaults(),
             count: 0,
             n_bodies: 0,
@@ -301,6 +313,11 @@ impl World {
         self.mix.describe("mix", &mut c);
         self.lanes.describe("lane", &mut c);
         self.jlanes.describe("jlane", &mut c);
+        self.atlas_head.describe("atlas", &mut c);
+        self.atlas_sys.describe("atlas_sys", &mut c);
+        self.atlas_bodies.describe("atlas_body", &mut c);
+        self.atlas_market.describe("atlas_market", &mut c);
+        self.atlas_mix.describe("atlas_mix", &mut c);
         c.push(ColumnDesc::of("world", "params", &self.params));
         c
     }
@@ -324,7 +341,7 @@ impl World {
     }
 
     /// Start over: every ship column zeroed, the game row, hold, missions and boards emptied, no live slots, clock at
-    /// tick 0, no traffic. Types, bodies, markets, the traffic mix, gas, params and the generator are kept (reseed
+    /// tick 0, no traffic. Types, bodies, markets, the traffic mix, the atlas, gas, params and the generator are kept (reseed
     /// separately; post boards with `post_boards`, start traffic with `plan_traffic` and `seed_traffic`). Handles from before a clear are invalid.
     pub fn clear(&mut self) {
         self.ships.clear();
@@ -446,7 +463,7 @@ impl World {
         eat(self.game.mode[0] as u64 | (self.game.at[0] as u16 as u64) << 8 | (self.game.day[0] as u64) << 32);
         eat(self.game.timer[0].to_bits());
         eat(self.game.credits[0] as u64 | (self.game.debt[0] as u64) << 32);
-        eat(self.game.auto[0] as u16 as u64 | (self.game.curl[0] as u64) << 16);
+        eat(self.game.auto[0] as u16 as u64 | (self.game.curl[0] as u64) << 16 | (self.game.system[0] as u64) << 24);
         for v in [self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0]] { eat(v.to_bits()); }
         // tuning and the system: a live param change or a moved body shows in the hash at once
         for &p in &self.params { eat(p.to_bits()); }

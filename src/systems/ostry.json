@@ -1,0 +1,243 @@
+{
+  "id": "ostry",
+  "name": "Ostry",
+  "owner": "ironhulls",
+  "ring": "middle",
+  "region": "calder-march",
+  "description": "An Ironhull system of the middle ring under a dim red dwarf: a banded gas giant skimmed for fuel, its ice moon where most people live in towns cut into the ice, and a skimmer station. Poor, cold and tight-knit, and the last stop before the closed lane to Varrow.",
+  "star": {
+    "name": "Ostry",
+    "class": "red-dwarf",
+    "radius": 1400,
+    "gravity": 35
+  },
+  "start": "rime",
+  "bodies": [
+    {
+      "id": "sallow",
+      "name": "Sallow",
+      "kind": "planet",
+      "orbit": {
+        "radius": 6500,
+        "angle": 20
+      },
+      "radius": 500,
+      "gravity": 18,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#3b2f2c",
+          "#5c4a42",
+          "#8a7466"
+        ],
+        "atmosphere": "#a07060",
+        "air": 0,
+        "seed": 2.2
+      }
+    },
+    {
+      "id": "gaunt",
+      "name": "Gaunt",
+      "kind": "planet",
+      "orbit": {
+        "radius": 16000,
+        "angle": 140
+      },
+      "radius": 2800,
+      "gravity": 42,
+      "look": {
+        "surface": "giant",
+        "palette": [
+          "#7a8a96",
+          "#4e5a66",
+          "#c8d0d6"
+        ],
+        "atmosphere": "#b0c0cc",
+        "air": 1.1,
+        "seed": 5.6,
+        "lightning": 0.3
+      },
+      "environs": [
+        {
+          "archetype": "refinery",
+          "brand": "ironhulls",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "rime",
+      "name": "Rime",
+      "kind": "moon",
+      "parent": "gaunt",
+      "orbit": {
+        "radius": 6200,
+        "angle": 300
+      },
+      "radius": 700,
+      "gravity": 15,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#8fa3b2",
+          "#c2d0da",
+          "#eef3f6"
+        ],
+        "atmosphere": "#c8d8e8",
+        "air": 0.1,
+        "seed": 8.4,
+        "debris": 1.5
+      },
+      "port": {
+        "name": "Rime Town",
+        "role": "ice",
+        "population": "town",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "Towns cut down into the ice of a moon of Gaunt, lit by lamps because the red sun gives almost nothing. Water and ice go out to the whole March; everything else comes in, and costs."
+      },
+      "environs": [
+        {
+          "archetype": "ring",
+          "brand": "ironhulls",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "skim",
+      "name": "Ostry Skim",
+      "kind": "station",
+      "parent": "gaunt",
+      "orbit": {
+        "radius": 4200,
+        "angle": 70
+      },
+      "radius": 450,
+      "gravity": 4,
+      "station": {
+        "archetype": "refinery",
+        "brand": "ironhulls",
+        "seed": "ostry-skim"
+      },
+      "port": {
+        "name": "Ostry Skim",
+        "role": "gas",
+        "population": "colony",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "A skimmer station hung low over Gaunt, dropping scoops into the cloud tops and pumping fuel up into tanks the size of hulls. The crews work long shifts and drink with Blackhulls nobody admits to knowing."
+      }
+    }
+  ],
+  "belts": [
+    {
+      "id": "rubble",
+      "name": "The Rubble",
+      "kind": "belt",
+      "orbit": {
+        "radius": 27000
+      },
+      "width": 2600,
+      "density": 0.35,
+      "rocks": [
+        "icy",
+        "carbon"
+      ],
+      "seed": 4
+    }
+  ],
+  "traffic": {
+    "ships": 22,
+    "throughShare": 0.45,
+    "jumpRadius": 40000,
+    "local": [
+      {
+        "line": "ironhulls.civilian",
+        "share": 0.85,
+        "classes": {
+          "c1": 4,
+          "c2": 4,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "ironhulls.military",
+        "share": 0.15,
+        "classes": {
+          "c1": 2,
+          "c2": 2
+        }
+      }
+    ],
+    "through": [
+      {
+        "line": "ironhulls.civilian",
+        "share": 0.55,
+        "classes": {
+          "c2": 3,
+          "c3": 3,
+          "c4": 2,
+          "c5": 1
+        }
+      },
+      {
+        "line": "ironhulls.military",
+        "share": 0.15,
+        "classes": {
+          "c1": 2,
+          "c2": 2,
+          "c3": 1
+        }
+      },
+      {
+        "line": "federation.civilian",
+        "share": 0.15,
+        "classes": {
+          "c2": 2,
+          "c3": 1
+        }
+      },
+      {
+        "line": "federation.military",
+        "share": 0.15,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      }
+    ],
+    "loiter": [
+      {
+        "port": "skim",
+        "line": "federation.military",
+        "count": 2,
+        "classes": {
+          "c2": 2,
+          "c3": 1
+        }
+      },
+      {
+        "port": "rime",
+        "line": "ironhulls.military",
+        "count": 1,
+        "classes": {
+          "c1": 1,
+          "c2": 1
+        }
+      }
+    ]
+  }
+}

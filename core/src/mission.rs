@@ -104,10 +104,10 @@ impl World {
         }
     }
 
-    /// The player landed at `at`: deliver every active mission bound there.
+    /// The player landed at `at`: deliver every active mission bound there (in this system).
     pub(crate) fn deliver(&mut self, at: usize) {
         for k in 0..MAX_MISSIONS {
-            if self.missions.state[k] == M_ACTIVE && self.missions.dest[k] as usize == at {
+            if self.missions.state[k] == M_ACTIVE && self.missions.dest[k] as usize == at && self.missions.sys[k] == self.game.system[0] {
                 self.missions.state[k] = M_DELIVERED;
                 self.game.credits[0] = self.credits().saturating_add(self.missions.pay[k]);
             }
@@ -130,6 +130,7 @@ impl World {
         let (f, m) = (&mut self.offers, &mut self.missions);
         f.live[o] = 0;
         m.state[k] = M_ACTIVE;
+        m.sys[k] = self.game.system[0];
         m.from[k] = at as i16;
         m.dest[k] = f.dest[o];
         m.good[k] = f.good[o];

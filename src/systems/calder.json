@@ -1,0 +1,260 @@
+{
+  "id": "calder",
+  "name": "Calder",
+  "owner": "federation",
+  "ring": "middle",
+  "region": "calder-march",
+  "description": "The Federation's naval station for the March, under a white star: Calder, a dry, cold world with thin air whose cities grew up round the navy; Calder Station in orbit with its picket squadron, customs and the Compact levy office; and a gas giant with a depot moon.",
+  "star": {
+    "name": "Calder",
+    "class": "white",
+    "radius": 2000,
+    "gravity": 55
+  },
+  "start": "calder",
+  "bodies": [
+    {
+      "id": "calder",
+      "name": "Calder",
+      "kind": "planet",
+      "orbit": {
+        "radius": 14000,
+        "angle": 40
+      },
+      "radius": 1600,
+      "gravity": 38,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#5a5248",
+          "#8f8170",
+          "#c9bca4"
+        ],
+        "atmosphere": "#c8d4e0",
+        "air": 0.35,
+        "seed": 6.1,
+        "orbitTraffic": 1.5
+      },
+      "port": {
+        "name": "Calder Down",
+        "role": "habitat",
+        "population": "world",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "Grey cities on a dry, cold world, laid out in the navy's straight lines and grown crooked since: barracks blocks, contractor towers, and dockside streets that sell to everyone who works for the fleet."
+      },
+      "environs": [
+        {
+          "archetype": "ring",
+          "brand": "federation",
+          "count": 2
+        },
+        {
+          "archetype": "relay",
+          "brand": "federation",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "station",
+      "name": "Calder Station",
+      "kind": "station",
+      "parent": "calder",
+      "orbit": {
+        "radius": 4200,
+        "angle": 120
+      },
+      "radius": 500,
+      "gravity": 4,
+      "station": {
+        "archetype": "shipyard",
+        "brand": "federation",
+        "seed": "calder-station"
+      },
+      "port": {
+        "name": "Calder Station",
+        "role": "military",
+        "population": "town",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "The navy's base for the March: berths for the picket squadron, customs halls where every Ironhull cargo going inward is opened, and the levy office the Compact pays into. Clean, loud, and shorter-staffed every month."
+      }
+    },
+    {
+      "id": "weir",
+      "name": "Weir",
+      "kind": "planet",
+      "orbit": {
+        "radius": 30000,
+        "angle": 230
+      },
+      "radius": 2600,
+      "gravity": 44,
+      "look": {
+        "surface": "giant",
+        "palette": [
+          "#b8a07a",
+          "#7a6a52",
+          "#e6dcc4"
+        ],
+        "atmosphere": "#e0d0b0",
+        "air": 1.1,
+        "seed": 3.9,
+        "lightning": 0.5
+      },
+      "environs": [
+        {
+          "archetype": "refinery",
+          "brand": "federation",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "larch",
+      "name": "Larch",
+      "kind": "moon",
+      "parent": "weir",
+      "orbit": {
+        "radius": 5500,
+        "angle": 20
+      },
+      "radius": 450,
+      "gravity": 12,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#4a4a4e",
+          "#707076",
+          "#a8a8b0"
+        ],
+        "atmosphere": "#a0a0b0",
+        "air": 0,
+        "seed": 9.2
+      },
+      "port": {
+        "name": "Larch Depot",
+        "role": "container-port",
+        "population": "colony",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "A bonded depot on an airless moon, where impounded and inspected cargo waits for its paperwork. Everything passes through here eventually, and some of it never leaves."
+      }
+    }
+  ],
+  "traffic": {
+    "ships": 34,
+    "throughShare": 0.5,
+    "jumpRadius": 45000,
+    "local": [
+      {
+        "line": "federation.civilian",
+        "share": 0.6,
+        "classes": {
+          "c1": 3,
+          "c2": 3,
+          "c3": 3,
+          "c4": 1
+        }
+      },
+      {
+        "line": "federation.military",
+        "share": 0.3,
+        "classes": {
+          "c1": 2,
+          "c2": 3,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "federation.container-carrier",
+        "share": 0.1,
+        "classes": {
+          "c4": 1
+        }
+      }
+    ],
+    "through": [
+      {
+        "line": "ironhulls.civilian",
+        "share": 0.35,
+        "classes": {
+          "c2": 2,
+          "c3": 3,
+          "c4": 3,
+          "c5": 2
+        }
+      },
+      {
+        "line": "federation.civilian",
+        "share": 0.3,
+        "classes": {
+          "c1": 1,
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.civilian",
+        "share": 0.15,
+        "classes": {
+          "c2": 2,
+          "c3": 1,
+          "c4": 1
+        }
+      },
+      {
+        "line": "ironhulls.military",
+        "share": 0.1,
+        "classes": {
+          "c2": 2,
+          "c3": 2
+        }
+      },
+      {
+        "line": "federation.container-carrier",
+        "share": 0.05,
+        "classes": {
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.container-liner",
+        "share": 0.05,
+        "classes": {
+          "c4": 1
+        }
+      }
+    ],
+    "loiter": [
+      {
+        "port": "station",
+        "line": "federation.military",
+        "count": 3,
+        "classes": {
+          "c2": 2,
+          "c3": 2,
+          "c4": 1
+        }
+      }
+    ]
+  }
+}

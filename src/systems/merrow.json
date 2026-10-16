@@ -1,0 +1,247 @@
+{
+  "id": "merrow",
+  "name": "Merrow",
+  "owner": "federation",
+  "ring": "middle",
+  "region": "calder-march",
+  "description": "A Federation farm system under a yellow star: Merrow, a green, wet world under farm domes and open fields where most of the March's people live, two small moons with agricultural and shipping stations, and a cold outer giant. It feeds the March, and lately feeds evacuees from the Shadow front too.",
+  "star": {
+    "name": "Merrow",
+    "class": "yellow",
+    "radius": 2400,
+    "gravity": 55
+  },
+  "start": "merrow",
+  "bodies": [
+    {
+      "id": "merrow",
+      "name": "Merrow",
+      "kind": "planet",
+      "orbit": {
+        "radius": 18000,
+        "angle": 300
+      },
+      "radius": 2000,
+      "gravity": 40,
+      "look": {
+        "surface": "terran",
+        "palette": [
+          "#1f5f7a",
+          "#4f8a3a",
+          "#b8c47a"
+        ],
+        "atmosphere": "#7fbfff",
+        "air": 1.1,
+        "seed": 2.7,
+        "cityLights": 1,
+        "lightning": 0.3,
+        "orbitTraffic": 1.5
+      },
+      "port": {
+        "name": "Merrow Fields",
+        "role": "agri",
+        "population": "world",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "The only world in the March where food grows in the open: fields to the horizon, farm domes on the uplands, and food-processing cities along the rivers that ship it all out. Federal, comfortable, and a little smug about it."
+      },
+      "environs": [
+        {
+          "archetype": "port",
+          "brand": "federation",
+          "count": 2
+        },
+        {
+          "archetype": "ring",
+          "brand": "federation",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "glean",
+      "name": "Glean",
+      "kind": "moon",
+      "parent": "merrow",
+      "orbit": {
+        "radius": 5600,
+        "angle": 70
+      },
+      "radius": 500,
+      "gravity": 12,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#5a5650",
+          "#837d74",
+          "#b8b0a2"
+        ],
+        "atmosphere": "#a0a8b0",
+        "air": 0,
+        "seed": 4.4
+      },
+      "port": {
+        "name": "Glean Domes",
+        "role": "agri",
+        "population": "colony",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "Greenhouse domes on a bare moon, growing what Merrow's weather won't: seed stock, medicinal crops, and the fresh food the inspectors and evacuee camps pay over the odds for."
+      }
+    },
+    {
+      "id": "thresh",
+      "name": "Thresh",
+      "kind": "moon",
+      "parent": "merrow",
+      "orbit": {
+        "radius": 8200,
+        "angle": 210
+      },
+      "radius": 420,
+      "gravity": 10,
+      "look": {
+        "surface": "rock",
+        "palette": [
+          "#4e4844",
+          "#76706a",
+          "#a49c92"
+        ],
+        "atmosphere": "#9a9aa0",
+        "air": 0,
+        "seed": 7.1
+      },
+      "port": {
+        "name": "Thresh Dock",
+        "role": "container-port",
+        "population": "colony",
+        "services": [
+          "market",
+          "missions",
+          "bar",
+          "refuel",
+          "repair"
+        ],
+        "description": "A shipping moon: container stacks, cranes and tugs, loading Merrow's food for every system in the March. The evacuee ships come in here too, and their passengers wait in the warehouses."
+      }
+    },
+    {
+      "id": "hollin",
+      "name": "Hollin",
+      "kind": "planet",
+      "orbit": {
+        "radius": 34000,
+        "angle": 150
+      },
+      "radius": 2200,
+      "gravity": 42,
+      "look": {
+        "surface": "giant",
+        "palette": [
+          "#6e8ea0",
+          "#4a6272",
+          "#c4d6e0"
+        ],
+        "atmosphere": "#b8d0e0",
+        "air": 1.0,
+        "seed": 6.6
+      }
+    }
+  ],
+  "traffic": {
+    "ships": 40,
+    "throughShare": 0.5,
+    "jumpRadius": 48000,
+    "local": [
+      {
+        "line": "federation.civilian",
+        "share": 0.7,
+        "classes": {
+          "c1": 3,
+          "c2": 4,
+          "c3": 3,
+          "c4": 2
+        }
+      },
+      {
+        "line": "federation.container-carrier",
+        "share": 0.2,
+        "classes": {
+          "c4": 1
+        }
+      },
+      {
+        "line": "federation.military",
+        "share": 0.1,
+        "classes": {
+          "c2": 2,
+          "c3": 1
+        }
+      }
+    ],
+    "through": [
+      {
+        "line": "federation.civilian",
+        "share": 0.4,
+        "classes": {
+          "c2": 2,
+          "c3": 3,
+          "c4": 2
+        }
+      },
+      {
+        "line": "ironhulls.civilian",
+        "share": 0.25,
+        "classes": {
+          "c2": 2,
+          "c3": 3,
+          "c4": 2,
+          "c5": 1
+        }
+      },
+      {
+        "line": "prism.civilian",
+        "share": 0.15,
+        "classes": {
+          "c2": 2,
+          "c3": 1
+        }
+      },
+      {
+        "line": "federation.container-carrier",
+        "share": 0.1,
+        "classes": {
+          "c4": 1
+        }
+      },
+      {
+        "line": "prism.container-liner",
+        "share": 0.1,
+        "classes": {
+          "c4": 1
+        }
+      }
+    ],
+    "loiter": [
+      {
+        "port": "merrow",
+        "line": "federation.military",
+        "count": 2,
+        "classes": {
+          "c2": 2,
+          "c3": 1
+        }
+      }
+    ]
+  }
+}

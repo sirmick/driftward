@@ -8,9 +8,10 @@
 //   Traffic  the traffic mix (local, through, loiter) against what is flying now, by stream and by row.
 //   Ships    every faction line's hulls in every class, drawn behind the tab by the shipyard (src/play/shipyard.js)
 //            with plumes and shields: click a hull for a new seed, shift-click for the one before.
-// tools/gen-content.js records how content was made; the build inlines the records. Everything here is read-only.
+// The header's jump box takes the player to any planet, moon, station, belt or field in any system: place@system.
+// tools/gen-content.js records how content was made; the build inlines the records. Everything else here is read-only.
 function makeDebug(ctx) {
-  const { el, raw, loaded, econ, lore, art, log } = ctx;
+  const { el, econ } = ctx, current = ctx.system; // the system being played: { id, raw, loaded, lore, art, log }
   const e = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const json = v => `<pre class="dbg-json">${e(JSON.stringify(v, null, 2))}</pre>`;
   const text = s => `<pre class="dbg-text">${e(s)}</pre>`;
@@ -19,32 +20,33 @@ function makeDebug(ctx) {
   const money = n => n == null ? '' : `$${(+n).toFixed(3)}`;
   const fold = (title, body, open) => `<details class="dbg-fold"${open ? ' open' : ''}><summary>${title}</summary>${body}</details>`;
   const notesHtml = notes => notes.map(n => `${n.fatal ? 'FATAL' : 'clamped'} <code>${e(n.path)}</code> ${e(n.msg)}`).join('<br>');
-  const SYS = loaded.system, BODIES = loaded.bodies, L = lore.lore, LL = log.lore, AL = log.art || {};
   const sections = (list, top) => `<nav class="dbg-nav">${list.map(s => `<a href="#dbg-${s.id}">${e(s.title)}</a>`).join('')}</nav>`
     + `<div class="dbg-body">${top || ''}${list.map(s => `<section id="dbg-${s.id}"><h3>${e(s.title)}</h3>${s.body}</section>`).join('')}</div>`;
 
-  // ---------- the image prompts, factored: a paragraph two or more prompts of a kind share is template; the rest is
-  // the image's own part. The art bible's paragraph is shown once, as the bible.
-  const artFiles = [...Object.entries(art.vistas).map(([id, src]) => ({ kind: 'vista', id, src })), ...Object.entries(art.portraits).map(([id, src]) => ({ kind: 'portrait', id, src }))]
-    .map(f => Object.assign(f, { name: f.src.split('/').pop() }, { rec: AL[f.src.split('/').pop()] || {} }));
-  const paras = p => (p || '').split('\n\n');
-  const isBible = p => /^Art bible for /.test(p);
-  const shared = {};
-  for (const kind of ['vista', 'portrait']) {
-    const count = new Map();
-    artFiles.filter(f => f.kind === kind).forEach(f => new Set(paras(f.rec.prompt)).forEach(p => count.set(p, (count.get(p) || 0) + 1)));
-    shared[kind] = { n: artFiles.filter(f => f.kind === kind && f.rec.prompt).length, paras: [...count].filter(([p, c]) => c > 1 && !isBible(p)) };
-  }
-  const ownPart = f => paras(f.rec.prompt).filter(p => !isBible(p) && !shared[f.kind].paras.some(([q]) => q === p)).join('\n\n');
-  const artMeta = f => `<small>seed ${e(f.rec.seed)} · ${money(f.rec.cost)}${f.rec.seconds ? ` · ${f.rec.seconds} s` : ''}${f.rec.date !== artDate ? ` · ${e(f.rec.date)}` : ''} · ${f.rec.reference ? `reference ${e(f.rec.reference)}` : 'no reference'}${f.rec.model !== artModel ? ` · ${e(f.rec.model)}` : ''}${f.rec.size ? ` · ${e(f.rec.size)}` : ''}${f.rec.provider ? ` · via ${e(f.rec.provider)}` : ''}</small>`;
-  const artModels = [...new Set(artFiles.map(f => f.rec.model).filter(Boolean))], artModel = artModels[0];
-  const artDates = [...new Set(artFiles.map(f => f.rec.date).filter(Boolean))].sort(), artDate = artDates.length === 1 ? artDates[0] : null;
-  const artCost = artFiles.reduce((n, f) => n + (f.rec.cost || 0), 0);
-  const imageBlock = f => `<img src="${e(f.src)}" alt="${e(f.name)}" loading="lazy">${artMeta(f)}`
-    + (f.rec.prompt ? fold('Own prompt part', text(ownPart(f)), true) + fold('Full prompt', text(f.rec.prompt), false) : '<small class="warn">no log entry</small>');
-
   // ---------- Content ----------
   function content() {
+    const { raw, loaded, lore, art, log } = current();
+    const SYS = loaded.system, BODIES = loaded.bodies, L = lore.lore, LL = log.lore || null, AL = log.art || {};
+    // ---------- the image prompts, factored: a paragraph two or more prompts of a kind share is template; the rest is
+    // the image's own part. The art bible's paragraph is shown once, as the bible.
+    const artFiles = [...Object.entries(art.vistas).map(([id, src]) => ({ kind: 'vista', id, src })), ...Object.entries(art.portraits).map(([id, src]) => ({ kind: 'portrait', id, src }))]
+      .map(f => Object.assign(f, { name: f.src.split('/').pop() }, { rec: AL[f.src.split('/').pop()] || {} }));
+    const paras = p => (p || '').split('\n\n');
+    const isBible = p => /^Art bible for /.test(p);
+    const shared = {};
+    for (const kind of ['vista', 'portrait']) {
+      const count = new Map();
+      artFiles.filter(f => f.kind === kind).forEach(f => new Set(paras(f.rec.prompt)).forEach(p => count.set(p, (count.get(p) || 0) + 1)));
+      shared[kind] = { n: artFiles.filter(f => f.kind === kind && f.rec.prompt).length, paras: [...count].filter(([p, c]) => c > 1 && !isBible(p)) };
+    }
+    const ownPart = f => paras(f.rec.prompt).filter(p => !isBible(p) && !shared[f.kind].paras.some(([q]) => q === p)).join('\n\n');
+    const artMeta = f => `<small>seed ${e(f.rec.seed)} · ${money(f.rec.cost)}${f.rec.seconds ? ` · ${f.rec.seconds} s` : ''}${f.rec.date !== artDate ? ` · ${e(f.rec.date)}` : ''} · ${f.rec.reference ? `reference ${e(f.rec.reference)}` : 'no reference'}${f.rec.model !== artModel ? ` · ${e(f.rec.model)}` : ''}${f.rec.size ? ` · ${e(f.rec.size)}` : ''}${f.rec.provider ? ` · via ${e(f.rec.provider)}` : ''}</small>`;
+    const artModels = [...new Set(artFiles.map(f => f.rec.model).filter(Boolean))], artModel = artModels[0];
+    const artDates = [...new Set(artFiles.map(f => f.rec.date).filter(Boolean))].sort(), artDate = artDates.length === 1 ? artDates[0] : null;
+    const artCost = artFiles.reduce((n, f) => n + (f.rec.cost || 0), 0);
+    const imageBlock = f => `<img src="${e(f.src)}" alt="${e(f.name)}" loading="lazy">${artMeta(f)}`
+      + (f.rec.prompt ? fold('Own prompt part', text(ownPart(f)), true) + fold('Full prompt', text(f.rec.prompt), false) : '<small class="warn">no log entry</small>');
+
     const S = [], add = (id, title, body) => S.push({ id, title, body });
     const facts = LL && LL.facts, factOf = id => facts && facts.bodies.find(b => b.id === id);
     const header = `<div class="dbg-head-line">`
@@ -212,18 +214,71 @@ function makeDebug(ctx) {
     tab = id;
     el.querySelector('.dbg-tabs').innerHTML = TABS.map(t => `<button type="button" data-tab="${t.id}" aria-pressed="${t.id === tab}">${e(t.name)}</button>`).join('');
     const T = TABS.find(t => t.id === id), pane = el.querySelector('.dbg-pane');
-    if (!T.fixed || !cache.has(id)) cache.set(id, T.render()); // content is static: rendered once; live tabs every time
-    pane.innerHTML = cache.get(id);
+    const key = T.fixed ? `${id}:${current().id}` : id; // content is static: rendered once per system; live tabs every time
+    if (!T.fixed || !cache.has(key)) cache.set(key, T.render());
+    pane.innerHTML = cache.get(key);
     document.body.classList.toggle('dbg-clear', !!T.clear); // see-through: the game's canvas draws behind this tab, the rest of the page hides
     if (T.mount) T.mount(pane);
     // section links scroll the pane, not the page's hash
     pane.querySelectorAll('.dbg-nav a').forEach(a => { a.onclick = ev => { ev.preventDefault(); pane.querySelector(a.getAttribute('href')).scrollIntoView({ block: 'start' }); }; });
   }
   el.querySelector('.dbg-tabs').onclick = ev => { const b = ev.target.closest('button[data-tab]'); if (b) show(b.dataset.tab); };
+
+  // ---------- the jump box: place@system, either side completing (Tab completes the side the cursor is in; arrows
+  // pick, Enter or a click jumps). A side matches a name's start, a word's start, or anywhere in it; a place matches
+  // its body's name, its port's name or its id, a system its name or id. With no @, places in the current system
+  // come first. A left side of * (or nothing, before an @) lists the systems themselves: one each, arriving over its
+  // start port.
+  let jump = null, jsel = 0, jmatches = [];
+  const jin = el.querySelector('#dbg-jump'), jlist = el.querySelector('.dbg-jump-list');
+  const norm = v => String(v || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const score = (q, ...names) => {
+    if (!q) return 1;
+    let best = 0;
+    for (const n of names.map(norm).filter(Boolean)) best = Math.max(best, n.startsWith(q) ? 3 : n.split(/[\s-]/).some(w => w.startsWith(q)) ? 2 : n.includes(q) ? 1 : 0);
+    return best;
+  };
+  function jumpMatches() {
+    const [lq, sq] = jin.value.split('@').map(norm), cur = jump.current();
+    if (lq === '*' || (lq === '' && sq !== undefined))
+      return jump.systems().map(p => ({ p, b: score(sq, p.system, p.sysId) })).filter(m => m.b)
+        .sort((x, y) => y.b - x.b || x.p.k - y.p.k).map(m => Object.assign({ any: true }, m.p));
+    return jump.places().map(p => ({ p, a: score(lq, p.place, p.port, p.id), b: sq === undefined ? 1 : score(sq, p.system, p.sysId) }))
+      .filter(m => m.a && m.b).sort((x, y) => (y.a * 10 + y.b * 2 + (y.p.k === cur)) - (x.a * 10 + x.b * 2 + (x.p.k === cur)) || x.p.k - y.p.k || x.p.j - y.p.j)
+      .slice(0, 12).map(m => m.p);
+  }
+  function jumpRender() {
+    if (!jump) return;
+    jmatches = jumpMatches(); jsel = Math.min(jsel, Math.max(0, jmatches.length - 1));
+    jlist.innerHTML = jmatches.map((p, i) => `<button type="button" data-i="${i}" class="${i === jsel ? 'sel' : ''}">${p.any
+        ? `<b>*</b><span>@${e(p.system)}</span><small class="k">arrive over ${e(p.port || p.place)}</small>`
+        : `<b>${e(p.place)}</b>${p.port && p.port !== p.place ? ` <small>${e(p.port)}</small>` : ''}<span>@${e(p.system)}</span><small class="k">${e(p.kind)}</small>`}</button>`).join('')
+      || '<p class="dbg-note">Nothing matches</p>';
+    jlist.hidden = document.activeElement !== jin;
+  }
+  function jumpGo(p) { if (p && jump.go(p.k, p.j) === 0) { jin.value = ''; jlist.hidden = true; } }
+  function close() { el.hidden = true; document.body.classList.remove('dbg-clear'); jin.blur(); }
+  jin.addEventListener('input', () => { jsel = 0; jumpRender(); });
+  jin.addEventListener('focus', jumpRender);
+  jin.addEventListener('blur', () => setTimeout(() => { jlist.hidden = true; }, 150));
+  jin.addEventListener('keydown', ev => {
+    if (ev.code === 'Backquote' || (ev.key === 'Escape' && !jin.value)) { ev.preventDefault(); ev.stopPropagation(); close(); return; }
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { jsel = (jsel + (ev.key === 'ArrowDown' ? 1 : jmatches.length - 1)) % Math.max(1, jmatches.length); jumpRender(); ev.preventDefault(); }
+    else if (ev.key === 'Enter') { jumpGo(jmatches[jsel]); ev.preventDefault(); }
+    else if (ev.key === 'Tab') {
+      const p = jmatches[jsel]; if (!p) return;
+      ev.preventDefault();
+      const at = jin.value.indexOf('@');
+      jin.value = at < 0 || jin.selectionStart <= at ? `${p.any ? '*' : p.place}@${at < 0 ? '' : jin.value.slice(at + 1)}` : jin.value.slice(0, at + 1) + p.system;
+      jsel = 0; jumpRender();
+    }
+  });
+  jlist.addEventListener('mousedown', ev => { const b = ev.target.closest('button[data-i]'); if (b) { ev.preventDefault(); jumpGo(jmatches[+b.dataset.i]); } });
   return {
     isOpen: () => !el.hidden,
-    open() { show(tab); el.hidden = false; },
-    close() { el.hidden = true; document.body.classList.remove('dbg-clear'); },
+    open() { show(tab); el.hidden = false; jin.focus(); },
+    close,
+    setJump(j) { jump = j; }, // { places(), systems(), current(), go(k, j) }, bound once the core has loaded
     setLive(fn) { live = fn; }, // the Player tab's source, bound once the core has loaded
     setYard(y) { yard = y; },
     yardView

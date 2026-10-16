@@ -32,6 +32,8 @@ const CORE_READY = (async () => {
       // ambient traffic (core/src/traffic.rs): per-ship state, the ship type per role, and the lanes
       traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
       startTraffic: () => X.dw_start_traffic(w), // plan the lanes and seed the steady state, for a new game
+      // the atlas (core/src/atlas.rs): store the live system as system k; load system k as the live one
+      atlasStore: k => X.dw_atlas_store(w, k), atlasLoad: k => X.dw_atlas_load(w, k),
       trafficCount: () => X.dw_traffic_count(w),
       // tuning: core.param('damper') / core.param('damper', 0.6); names in core/src/world.rs
       param: (name, v) => { if (!(name in P)) throw new Error('unknown core param ' + name); if (v !== undefined) params[P[name]] = v; return params[P[name]]; },
@@ -83,7 +85,7 @@ const CORE_READY = (async () => {
   }
   // input bits, mirrored from core/src/player.rs
   // game commands, modes and results, mirrored from core/src/port.rs, market.rs and mission.rs
-  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, teleport: 100 };
+  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, teleport: 100, jump: 101 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
   // traffic.rs: phases; streams (traffic.role; environ: to or from an environmental station); mix row streams; the
   // jump zones, north, east, south, west

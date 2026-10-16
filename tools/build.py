@@ -57,39 +57,48 @@ def inline_modules(script, needed):
         script = script.replace(marker, (src / MODULES[marker]).read_text())
     return script
 
-# the game's system, and the schema it is validated (clamped) against at load; the economy (prices by port role);
-# traffic (hulls by culture and role, population weights)
-system = json.dumps(json.loads((src / 'systems' / 'm1.json').read_text()))
+# the game's systems (every file in src/systems/, the start system first), and the schema each is validated (clamped)
+# against at load; the economy (prices by port role); traffic (hulls by culture and role, population weights)
+START_SYSTEM = 'm1.json'
+system_files = sorted((src / 'systems').glob('*.json'), key=lambda f: (f.name != START_SYSTEM, f.name))
+systems_raw = [json.loads(f.read_text()) for f in system_files]
+systems = json.dumps(systems_raw)
 system_schema = json.dumps(json.loads((src / 'schema' / 'system.schema.json').read_text()))
 economy = json.dumps(json.loads((src / 'economy.json').read_text()))
 traffic = json.dumps(json.loads((src / 'traffic.json').read_text()))
-assert '</script' not in system + system_schema + economy + traffic
+assert '</script' not in systems + system_schema + economy + traffic
 
-# the system's lore (tools/gen-content.js writes it; null if there is none yet) and its schema, inlined; the art is
-# not: the page loads the vistas and portraits from art/<system>/ beside it, so the manifest lists only files that
-# exist, and a page without them (opened on its own) shows the procedural backdrop and no portraits
-system_id = json.loads(system)['id']
-lore_file = src / 'lore' / f'{system_id}.json'
-lore = json.dumps(json.loads(lore_file.read_text())) if lore_file.exists() else 'null'
-lore_schema = json.dumps(json.loads((src / 'schema' / 'lore.schema.json').read_text()))
-art_dir = root / 'art' / system_id
-art = {'vistas': {}, 'portraits': {}}
-for f in sorted(art_dir.glob('*.webp')) if art_dir.exists() else []:
-    kind, _, name = f.stem.partition('-')
-    if kind in ('vista', 'portrait'):
-        art[kind + 's'][name] = f.relative_to(root).as_posix()
-art = json.dumps(art)
-# how the content was made, for the debug screen: the lore run's record (facts, messages, model, cost) and the art
-# log (every image's prompt, model, seed, reference and cost)
+# each system's lore (tools/gen-content.js writes it; absent if there is none yet) and the lore schema, inlined, keyed
+# by system id; the art is not: the page loads the vistas and portraits from art/<id>/ beside it, so the manifest lists
+# only files that exist, and a page without them (opened on its own) shows the procedural backdrop and no portraits
 def read_json(f):
     return json.loads(f.read_text()) if f.exists() else None
-content_log = json.dumps({'lore': read_json(src / 'lore' / f'{system_id}.log.json'), 'art': read_json(art_dir / 'log.json')})
+lore_map, art_map, log_map = {}, {}, {}
+for raw in systems_raw:
+    sid = raw['id']
+    lore_file = src / 'lore' / f'{sid}.json'
+    if lore_file.exists():
+        lore_map[sid] = json.loads(lore_file.read_text())
+    art_dir = root / 'art' / sid
+    a = {'vistas': {}, 'portraits': {}}
+    for f in sorted(art_dir.glob('*.webp')) if art_dir.exists() else []:
+        kind, _, name = f.stem.partition('-')
+        if kind in ('vista', 'portrait'):
+            a[kind + 's'][name] = f.relative_to(root).as_posix()
+    art_map[sid] = a
+    # how the content was made, for the debug screen: the lore run's record (facts, messages, model, cost) and the art
+    # log (every image's prompt, model, seed, reference and cost)
+    log_map[sid] = {'lore': read_json(src / 'lore' / f'{sid}.log.json'), 'art': read_json(art_dir / 'log.json')}
+lore = json.dumps(lore_map)
+lore_schema = json.dumps(json.loads((src / 'schema' / 'lore.schema.json').read_text()))
+art = json.dumps(art_map)
+content_log = json.dumps(log_map)
 assert '</script' not in lore + lore_schema + art + content_log
 
 def page(template, script):
     t = template.replace('/*COREWASM*/', core_b64).replace('/*CATALOG*/', catalog).replace('/*GEN*/', gen).replace('/*APP*/', script)
     t = t.replace('/*LORE*/', lore).replace('/*LORESCHEMA*/', lore_schema).replace('/*ART*/', art).replace('/*CONTENTLOG*/', content_log)
-    return t.replace('/*SYSTEM*/', system).replace('/*SYSTEMSCHEMA*/', system_schema).replace('/*ECONOMY*/', economy).replace('/*TRAFFIC*/', traffic)
+    return t.replace('/*SYSTEMS*/', systems).replace('/*SYSTEMSCHEMA*/', system_schema).replace('/*ECONOMY*/', economy).replace('/*TRAFFIC*/', traffic)
 
 # the lab: app.js pulls in the shared kit and every tab
 lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').read_text(),
@@ -100,5 +109,5 @@ game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*LOO
 for name, html in (('index.html', lab), ('play.html', game)):
     (root / name).write_text(html)
     print(f'wrote {name} ({len(html):,} bytes)', end='; ')
-print(f"lore {'yes' if lore != 'null' else 'none'}, art {len(json.loads(art)['vistas'])} vistas and {len(json.loads(art)['portraits'])} portraits", end='; ')
+print(f"{len(systems_raw)} systems ({', '.join(r['id'] for r in systems_raw)}); lore for {len(lore_map)}; art {sum(len(a['vistas']) for a in art_map.values())} vistas and {sum(len(a['portraits']) for a in art_map.values())} portraits", end='; ')
 print(f'core {wasm.stat().st_size:,} bytes of WASM')
