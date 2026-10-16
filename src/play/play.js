@@ -34,8 +34,11 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const star = STARS[STAR.look] || STARS.sol;
 const BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3, belt: 4, field: 5 };
 // planets and moons, drawn by the planet shader
+// city lights follow a port's population (look.cityLights is a floor on top, for a world brighter than its tier)
+const CITY_LIGHTS = { outpost: 0.1, colony: 0.3, town: 0.6, world: 1 };
 const WORLDS = BODIES.filter(b => b.kind === 'planet' || b.kind === 'moon').map(b => {
   const pu = planetUniforms(b.look); // every field filled by the schema clamp, defaults and all
+  if (b.port) pu.city = Math.max(pu.city || 0, CITY_LIGHTS[b.port.population] || 0);
   return Object.assign({}, b, { pu, LA: pu.atm, ext: pu.ext });
 });
 // light comes from the star: the direction toward it from (x, y), tipped toward the camera so day sides read
