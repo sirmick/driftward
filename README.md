@@ -96,7 +96,7 @@ tools/
   check.js          boots the page against a stub WebGL context and validates every shader
   core-test.js      core unit tests, native vs WASM state hashes, and a WASM session replayed natively
   fly-smoke.py      drives the lab's Fly tab in headless Chromium: speeds, seeded replay, clock rate
-  dev.js            the dev server (npm run dev): rebuilds and live-reloads, takes each page's console into .dev/frontend.log, and keeps state reports in .dev/reports/ (the Send state button or F8 on a page; curl localhost:8000/__ask asks every open page for one)
+  dev.js            the dev server (npm run dev): rebuilds and live-reloads, takes each page's console into .dev/frontend.log, and keeps state reports in .dev/reports/ (the Send state button, = or F8 on a page; curl localhost:8000/__ask asks every open page for one)
   dev-client.js     what the dev server injects into each page for that
   jitter.py         drives the game page at exact refresh rates (60 to 240 Hz, timer noise, dropped frames) and reports motion jitter per frame
   play-smoke.py     drives the game page: start landed, the market, ambient traffic, the mission board and a delivery, flight, a port visit, save and load, a browser session replayed natively
