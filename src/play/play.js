@@ -1053,7 +1053,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const near = SUNS.filter(S => S.hazard > 0).sort((a, b) => Math.hypot(a.x - SH.x[0], a.y - SH.y[0]) - Math.hypot(b.x - SH.x[0], b.y - SH.y[0]))[0];
     $('lost-title').textContent = types[SH.kind[0]].name;
     $('lost-sub').textContent = `Day ${sim.day()} · ${SYS.name} system`;
-    $('lost-text').textContent = `${near ? `Radiation from ${near.name} burned through the hull.` : 'The hull gave out.'} ${meta ? `The last landing was day ${meta.day}${meta.port ? ' at ' + meta.port : ''}.` : 'There is no landing to go back to.'}`;
+    const flareStar = sim.game.flare[0] === 2 && BODIES[sim.game.flare_star[0]];
+    $('lost-text').textContent = `${flareStar ? `A flare from ${flareStar.name} burned through the hull.` : near ? `Radiation from ${near.name} burned through the hull.` : 'The hull gave out.'} ${meta ? `The last landing was day ${meta.day}${meta.port ? ' at ' + meta.port : ''}.` : 'There is no landing to go back to.'}`;
     $('lost-reload').disabled = !localStorage.getItem('driftward.autosave');
     lost = true; $('lost').hidden = false; ($('lost-reload').disabled ? $('lost-title-btn') : $('lost-reload')).focus();
   }
@@ -1789,7 +1790,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     // near a moving port the assist holds still relative to it (core/src/motion.rs): speed is shown relative to it
     const fvx = sim.game.fvx[0], fvy = sim.game.fvy[0], rel = Math.hypot(fvx, fvy) > 0.5, spRel = Math.hypot(SH.vx[0] - fvx, SH.vy[0] - fvy);
     // ship status: hull and fuel (core/src/service.rs), and radiation where the ship is
-    const hullK = SH.hull[0] / sim.type.hull[SH.kind[0]], fuelT = sim.game.fuel[0], fuelK = fuelT / sim.type.fuel[SH.kind[0]], rad = sim.radiation(SH.x[0], SH.y[0]);
+    const hullK = SH.hull[0] / sim.type.hull[SH.kind[0]], fuelT = sim.game.fuel[0], fuelK = fuelT / sim.type.fuel[SH.kind[0]];
+    // the hull's wear a second: a hazard zone's radiation, and a flare's above the safe level (core/src/sensors.rs)
+    const rad = sim.radiation(SH.x[0], SH.y[0]) + sim.param('rad_hull') * Math.max(0, sim.stellar(SH.x[0], SH.y[0]) - sim.param('rad_safe'));
     const heat = sim.game.heat[0], hot = sim.game.hot[0]; // the burner's heat; at full it locks until half cooled (core/src/service.rs)
     // The status panel (top left, styled as the target panel): the ship's name; day, credits and hold; amount bars, as
     // percentages, two to a row: speed (of the top speed here, the throttle's mark on it) and fuel (the next jump's cost

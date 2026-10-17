@@ -16,7 +16,8 @@
 //!
 //! Stellar radiation: each star's output (`bodies.out`), dimmed in the shadow corridor behind every planet and moon,
 //! raised by a flare on it, plus ionized gas. It raises sensor noise and heats the player's ship (service.rs); above
-//! `rad_safe` it would wear unshielded hulls (`rad_hull`, 0 until M2's shields). Flares: a system's most flare-prone
+//! `rad_safe` (only a flare gets there) it wears unshielded hulls (`rad_hull`: a full flare in the open costs about a
+//! tenth of a hull, a planet's shadow nothing; M2's shields will soak it first). Flares: a system's most flare-prone
 //! star flares every so often (`flare_min` and `flare_span` over its `flares`), after `flare_warn` seconds of warning,
 //! for `flare_secs`; the shelter is a planet's shadow.
 
@@ -341,6 +342,24 @@ mod tests {
         let t = w.p(P::flare_secs);
         run(&mut w, t);
         assert_eq!((w.game.flare[0], w.game.flare_lvl[0]), (0, 0.0));
+    }
+
+    /// A full flare from a yellow dwarf costs a ship in the open about a tenth of its hull, and one in a planet's shadow
+    /// nothing.
+    #[test]
+    fn a_flare_wears_an_exposed_hull_and_spares_a_sheltered_one() {
+        let hull_after = |y: f64| {
+            let mut w = world(4000.0);
+            (w.types.hull[0], w.ships.hull[0], w.ships.y[0]) = (100.0, 100.0, y);
+            w.ships.x[0] = 4000.0; // behind the planet when y is 0
+            w.command(CMD_FLARE, 0, 0);
+            let t = w.p(P::flare_warn) + w.p(P::flare_secs) + 0.5;
+            run(&mut w, t);
+            w.ships.hull[0]
+        };
+        let (open, shade) = (hull_after(8000.0), hull_after(0.0));
+        assert!((86.0..94.0).contains(&open), "exposed: {open}");
+        assert!(shade > 99.9, "sheltered: {shade}");
     }
 
     #[test]

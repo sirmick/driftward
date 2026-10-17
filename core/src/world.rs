@@ -284,8 +284,8 @@ params! {
     flare_secs = 9.0;     "seconds a flare lasts (rising over 1.2 s, falling over its last 2)"
     flare_gain = 9.0;     "a flare multiplies its star's radiation by 1 + this at its height"
     heat_star = 0.02;     "stellar radiation's heat: this times the radiation, a second"
-    rad_safe = 1.5;       "stellar radiation above this wears an unshielded hull"
-    rad_hull = 0.0;       "share of a sound hull lost a second per unit of stellar radiation above rad_safe (0 until M2's shields soak it)"
+    rad_safe = 2.5;       "stellar radiation above this wears an unshielded hull (above every star's own output: only a flare gets there)"
+    rad_hull = 0.0018;    "share of a sound hull lost a second per unit of stellar radiation above rad_safe: a full flare in the open costs about a tenth of a hull"
     repair_cost = 2.0;    "credits a hull point costs to repair"
     match_reach = 4.0;    "full assist and the autopilot match a moving port's velocity within this many of its radii (fading in from there to half as near)"
 }
