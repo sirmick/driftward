@@ -32,8 +32,8 @@ with sync_playwright() as p:
     a = ev("(() => { const F = __fly; F.reset(4242); F.advance(4, ['KeyW']); const a = F.probe(); F.advance(3, ['KeyW', 'ShiftLeft']); return [a, F.probe()]; })()")
     print('after 4 s W   ', json.dumps({k: a[0][k] for k in ('tick', 'v', 'set', 'y')}))
     print('after 3 s burn', json.dumps({k: a[1][k] for k in ('tick', 'v', 'set', 'y', 'fuel', 'gas')}))
-    check(486 < a[0]['v'] < 496, f"cruise speed {a[0]['v']:.1f} m/s (491.1 from rest in clear space, since top speeds went up 1.5 times on 2026-10-16)")
-    check(a[1]['v'] > a[0]['v'] + 50 and a[1]['set'] <= a[0]['set'] + 1e-6, f"the burner adds thrust, not top speed ({a[1]['v']:.1f} m/s, set {a[1]['set']:.0f})")
+    check(541 < a[0]['v'] < 551, f"cruise speed {a[0]['v']:.1f} m/s (546.1 from rest in clear space, since top speeds went up 1.25 times more on 2026-10-17)")
+    check(a[1]['v'] > a[0]['v'] + 50 and a[1]['set'] <= 712 + 1e-6, f"the burner adds thrust, not top speed ({a[1]['v']:.1f} m/s, set {a[1]['set']:.0f}, top speed 712)")
     check(a[1]['fuel'] < 1, 'burner drinks fuel')
 
     # replay: same seed, same inputs -> same state, twice over

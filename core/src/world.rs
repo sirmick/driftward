@@ -105,6 +105,10 @@ soa! {
         // lane's fuel and how much is burnt, a chain asked for in transit (a gate, or -1 none, -2 missed), the system
         // it left; and the day's fraction the lanes' days carry
         jump: u8, jgate: i16, jt: f64, jv0: f64, jcost: f64, jburnt: f64, jchain: i16, jfrom: u32, day_part: f64,
+        // heat (service.rs): 0 cold to 1 full, and whether the burner is locked until it cools
+        heat: f64, hot: u8,
+        // the assist's throttle (player.rs): 0 to 1 of the top speed where the ship is
+        throttle: f64,
     }
 }
 
@@ -196,6 +200,10 @@ params! {
     pull = 0.6;           "a well's pull at strength 1, as a share of the ship's thrust, times the hull's sensitivity"
     well_in = 1.0;        "top speed heading into a well: raised by this, times strength and sensitivity"
     well_out = 0.6;       "top speed heading out of a well: lowered by this, times strength and sensitivity"
+    cruise_max = 3.0;     "in open space (outside every well) top speed rises, at most to this multiple of the hull's"
+    cruise_brake = 1.0;   "the open-space top speed is what this share of the hull's thrust brakes to top speed by the nearest well's edge"
+    cruise_bleed = 1.0;   "inertial damper rate above the speed limit in open space, per second (fast: speed follows the open-space ceiling down)"
+    throttle_secs = 1.0;  "seconds holding W (or S) sweeps the assist's throttle from stop to full (a quick tap moves it about a tenth)"
     land_speed = 30.0;    "fastest a ship may be moving to land on a planet or moon, m/s"
     dock_speed = 12.0;    "fastest a ship may be moving to dock at a station, m/s"
     launch_speed = 20.0;  "speed a ship has when a launch from a station hands back control, m/s"
@@ -234,7 +242,11 @@ params! {
     loiter_turns = 1.25;  "mean number of turns a loitering ship flies round its port before landing"
     loiter_cruise = 0.45; "loitering ships fly at this fraction of their top speed"
     env_trip = 90.0;      "a typical environmental station trip, seconds (seeds the ships already under way at a new game)"
-    burn_secs = 300.0;    "seconds of burner a full tank lasts"
+    heat_burn = 15.0;     "seconds of burner that take a cold ship to full heat, where the burner locks"
+    heat_cool = 10.0;     "seconds a ship takes to cool from full heat to cold, not burning, in clear space"
+    heat_gas = 4.0;       "gas speeds cooling: the rate times 1 + this times the gas density round the ship"
+    heat_unlock = 0.5;    "a locked burner unlocks once heat is down to this share"
+    heat_rad = 1.0;       "radiation's heat: a dose (share of a sound hull lost a second) adds this times it in heat a second"
     repair_cost = 2.0;    "credits a hull point costs to repair"
     match_reach = 4.0;    "full assist and the autopilot match a moving port's velocity within this many of its radii (fading in from there to half as near)"
 }

@@ -1045,11 +1045,10 @@
           "default": 0.45
         },
         "jumpRadius": {
-          "description": "Distance of the four jump zones (north, east, south, west) from the star, metres.",
+          "description": "Distance of the jump zones from the star, metres. Leave it out to have it computed from the layout (src/schema.js loadSystem): just far enough that every zone is clear of every well, belt and hazard zone.",
           "type": "number",
           "minimum": 10000,
-          "maximum": 200000,
-          "default": 45000
+          "maximum": 200000
         },
         "local": {
           "description": "Who flies between the ports.",

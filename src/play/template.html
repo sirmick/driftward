@@ -114,7 +114,7 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 .lore-list li { margin: 0 0 8px; color: #c4ccd6; font-size: 13.5px; line-height: 1.5; }
 .lore-list b { color: var(--fg); font: 600 14px var(--f-display); letter-spacing: .03em; }
 /* flight: the location list on the right, under the radar; the system map over everything but the strip */
-#loc { position: fixed; right: 14px; width: 238px; display: grid; gap: 2px; font: 500 12px var(--f-mono); }
+#loc { position: fixed; right: 14px; width: 262px; display: grid; gap: 2px; font: 500 12px var(--f-mono); }
 #loc button { display: grid; grid-template-columns: 14px 12px 1fr auto; align-items: baseline; gap: 6px; padding: 4px 8px; text-align: left;
   background: rgba(7,9,12,.62); border: 1px solid transparent; border-radius: 5px; cursor: pointer; color: var(--fg); font: inherit; }
 #loc button:hover { border-color: var(--line); }
@@ -368,15 +368,15 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
     <p class="port-kicker" id="port-kicker"></p>
     <h2 id="port-name"></h2>
     <p class="port-desc" id="port-desc"></p>
-    <button type="button" class="port-more" id="svc-about" aria-pressed="false">More about this port <span>I</span></button>
+    <button type="button" class="port-more" id="svc-about" aria-pressed="false">About this port <span>I</span></button>
     <div class="port-services">
       <button type="button" id="svc-trade" aria-pressed="false">Trade<span>T</span></button>
-      <button type="button" id="svc-board" aria-pressed="false">Mission board<span>M</span></button>
+      <button type="button" id="svc-board" aria-pressed="false">Missions<span>M</span></button>
       <button type="button" id="svc-bar" aria-pressed="false">Bar<span>B</span></button>
       <button type="button" id="svc-refuel">Refuel<span id="svc-refuel-k">F</span></button>
       <button type="button" id="svc-repair">Repair<span id="svc-repair-k">R</span></button>
-      <button type="button" id="svc-wait">Wait a day<span>W</span></button>
-      <button type="button" id="svc-map">Galaxy map<span>G</span></button>
+      <button type="button" id="svc-wait">Wait<span>W</span></button>
+      <button type="button" id="svc-map">Map<span>G</span></button>
       <button type="button" id="svc-launch" class="primary">Launch<span>L</span></button>
     </div>
     <p class="port-day" id="port-day"></p>
@@ -385,23 +385,23 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
   <div id="trade" hidden aria-label="Market">
     <div class="trade-head"><h3>Market</h3><span id="trade-sum"></span></div>
     <table>
-      <thead><tr><th>Commodity</th><th class="num">Price</th><th class="num">Aboard</th><th></th></tr></thead>
+      <thead><tr><th>Goods</th><th class="num">Price/t</th><th class="num">Hold</th><th></th></tr></thead>
       <tbody id="trade-rows"></tbody>
     </table>
-    <div class="trade-foot"><span id="trade-debt"></span><button type="button" id="repay-1k">Repay 1,000</button><button type="button" id="repay-max">Repay max</button></div>
-    <p class="trade-note">Prices are per ton. Click for one ton; Shift-click buys all you can, or sells all aboard.</p>
+    <div class="trade-foot"><span id="trade-debt"></span><button type="button" id="repay-1k">Repay 1,000</button><button type="button" id="repay-max">Repay all</button></div>
+    <p class="trade-note">Shift-click: as many as you can.</p>
   </div>
   <div id="board" hidden aria-label="Mission board">
-    <div class="trade-head"><h3>Mission board</h3><span id="board-sum"></span></div>
+    <div class="trade-head"><h3>Missions</h3><span id="board-sum"></span></div>
     <table>
-      <thead><tr><th>Deliver to</th><th>Cargo</th><th class="num">Pay</th><th class="num">Deadline</th><th></th></tr></thead>
+      <thead><tr><th>To</th><th>Cargo</th><th class="num">Pay</th><th class="num">Due in</th><th></th></tr></thead>
       <tbody id="board-rows"></tbody>
     </table>
-    <p class="board-sub">Your missions</p>
+    <p class="board-sub">Taken</p>
     <table>
       <tbody id="mission-rows"></tbody>
     </table>
-    <p class="trade-note">Mission cargo takes hold space; land at the destination by the deadline to be paid. Late, the cargo is reclaimed and nothing is paid.</p>
+    <p class="trade-note">Late: no pay, and the cargo is taken back.</p>
   </div>
   <div id="bar" hidden aria-label="Bar">
     <div class="trade-head"><h3>Bar</h3><span id="bar-sum"></span></div>
@@ -412,7 +412,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
   <div id="about" hidden aria-label="About the port">
     <div class="trade-head"><h3 id="about-name"></h3><span id="about-sum"></span></div>
     <div id="about-desc"></div>
-    <p class="board-sub">Notable places</p>
+    <p class="board-sub">Places</p>
     <ul class="lore-list" id="about-places"></ul>
     <p class="board-sub" id="about-sys-head"></p>
     <div id="about-sys"></div>
@@ -439,7 +439,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
     <button type="button" class="item" id="t-new">New game<span>a used Copperhaul and a debt</span></button>
     <label class="seed">Seed <input type="text" id="t-seed" placeholder="blank: random" maxlength="24" spellcheck="false"></label>
     <button type="button" class="item" id="t-settings">Settings</button>
-    <p class="foot">An Escape Velocity-style game in progress: milestone M1, one system. Trade, haul, and pay off the lender.</p>
+    <p class="foot">Trade, haul, and pay off the lender.</p>
   </div>
 </section>
 <section id="pause" class="shell" hidden aria-label="Paused">
@@ -448,9 +448,9 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
     <p class="note" id="pause-sub"></p>
     <button type="button" class="item primary" id="p-resume">Resume<span>P or Esc</span></button>
     <button type="button" class="item" id="p-save">Save<span>F6</span></button>
-    <button type="button" class="item" id="p-load">Load<span>F9: your save, else the last landing</span></button>
+    <button type="button" class="item" id="p-load">Load<span>F9</span></button>
     <button type="button" class="item" id="p-settings">Settings</button>
-    <button type="button" class="item" id="p-replay">Export replay<span>snapshot and input log</span></button>
+    <button type="button" class="item" id="p-replay">Export replay</button>
     <button type="button" class="item" id="p-title">Quit to title<span>unsaved progress is lost</span></button>
   </div>
 </section>
@@ -459,7 +459,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
     <h3>Settings</h3>
     <div class="setting">Bloom <select id="s-bloom"><option value="1">On</option><option value="0">Off</option></select></div>
     <div class="setting">Navigation overlay at start <select id="s-nav"><option value="0">Off</option><option value="1">On</option></select></div>
-    <div class="setting">Assist level at start <select id="s-assist"><option value="0">Full assist</option><option value="1">Drift off</option><option value="2">Full off</option></select></div>
+    <div class="setting">Flight mode at start <select id="s-assist"><option value="0">Assist</option><option value="1">Drift</option><option value="2">Free</option></select></div>
     <div class="setting">Render resolution <select id="s-quality"><option value="0">Auto (drops when frames run late)</option><option value="1">Full</option><option value="0.85">85%</option><option value="0.75">75%</option><option value="0.62">62%</option><option value="0.5">50%</option></select></div>
     <div class="setting">Debug readout (tick, fps) <select id="s-debug"><option value="1">On</option><option value="0">Off</option></select></div>
     <button type="button" class="item primary" id="s-done">Done<span>Esc</span></button>
@@ -475,13 +475,12 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 </section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · P pause · Tab assist · L land · T target · 1–9 locations · G fly to · J jump (in a lane's zone) · M galaxy map · Shift M system map · I nav · wheel zoom · ` debug</span>
+  <span class="keys" hidden>W S throttle · X stop · A D turn · Shift burn · Tab mode · L land · J jump · G autopilot · T target · M galaxy · Shift M system · I nav</span>
   <span class="spacer"></span>
   <button type="button" id="b-menu" title="P">Menu</button>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
   <button type="button" id="b-save" title="F6">Save</button>
   <button type="button" id="b-load" title="F9">Load</button>
-  <button type="button" id="b-replay" title="Download the snapshot and input log since the last new game or load">Export replay</button>
   <a href="index.html">Lab</a>
 </div>
 

@@ -438,7 +438,7 @@ One physics for every ship, with flight assist as a control layer on top. The en
 * \[M0\] Actuators: main engine, reverse thrusters (50% of main), lateral thrusters (30% of main) and a turn rate.  
 * \[M0\] Drive taper: each thruster's force falls to zero as speed along its axis approaches the hull's v\_max, so a ship cannot push itself past its cap.  
 * \[M0\] Dampers: speed above v\_max, from gravity, slingshots or recoil, bleeds off slowly.  
-* \[M0\] Burner: ×2.5 thrust at the same top speed (it gets you there, or stops you, faster); burns fuel (a full tank lasts about five minutes of burn), adds heat and a large signature.  
+* \[M0\] Burner: ×2.5 thrust at the same top speed (it gets you there, or stops you, faster); adds heat (a cold ship reaches full heat in about 15 s of burn, and full heat locks the burner until it cools; it burns no fuel) and a large signature.  
 * \[M0\] External forces: gas drag (density × v²), planet gravity (softened inside the body) and weapon recoil, all summed with thrust and integrated once. Gravity can carry a ship past v\_max; the dampers then bleed off the excess.
 
 ### **Flight assist**
@@ -487,7 +487,7 @@ Each system stores a coarse density grid per gas species:
 ### **Heat and fuel**
 
 * \[M2\] Heat: added by the burner, firing and radiation, and shed by radiators, faster in gas. Overheating locks weapons and burner until the ship cools; extreme heat damages the hull.  
-* \[M4\] Fuel: spent by the burner and by jumps; refilled at stations or by scooping hydrogen.
+* \[M4\] Fuel: spent by jumps; refilled at stations or by scooping hydrogen. (The burner is limited by heat, not fuel.)
 
 ### **Data**
 

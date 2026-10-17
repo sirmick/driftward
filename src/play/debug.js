@@ -154,7 +154,8 @@ function makeDebug(ctx) {
       ['acceleration', `${d.ship.accel.toFixed(1)} m/s²`], ['turn', `${d.ship.turn.toFixed(2)} rad/s`], ['top speed', `${d.ship.vmax.toFixed(0)} m/s`],
       ['gravity well', `${d.ship.well} <small>(how hard wells pull it and bend its top speed)</small>`], ['hold', `${d.ship.cargo} t`],
       ['hull', `${Math.round(d.ship.hull)} of ${Math.round(d.ship.hullCap)} points${d.ship.radiation > 0 ? ` <small class="warn">losing ${(d.ship.radiation * 100).toFixed(1)}% a second to radiation</small>` : ''}`],
-      ['fuel', `${d.ship.fuel.toFixed(2)} of ${d.ship.fuelCap.toFixed(1)} t <small>(the burner empties a full tank in two minutes)</small>`]]));
+      ['fuel', `${d.ship.fuel.toFixed(2)} of ${d.ship.fuelCap.toFixed(1)} t <small>(for jumps)</small>`],
+      ['heat', `${Math.round(d.ship.heat * 100)}%${d.ship.hot ? ' <span class="warn">burner locked until half cooled</span>' : ''} <small>(the burner's: full in ${d.ship.heatBurn} s of burn, cold again in ${d.ship.heatCool})</small>`]]));
     add('flight', 'Flight', kv([['mode', e(d.mode)], ['assist', e(d.assist)], ['at', e(d.at || '')], ['below', e(d.below || 'no port')],
       ['position', `${fmt(d.x)}, ${fmt(d.y)} m`], ['velocity', `${d.v.toFixed(1)} m/s <small>(${d.vx.toFixed(1)}, ${d.vy.toFixed(1)})</small>`],
       ['heading', `${d.heading.toFixed(1)}° <small>spin ${d.av.toFixed(3)} rad/s</small>`], ['set speed', `${d.set.toFixed(0)} m/s`], ['autopilot', e(d.auto || 'off')]]));

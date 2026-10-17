@@ -81,6 +81,8 @@ const CORE_READY = (async () => {
       // fuel and hull (core/src/service.rs): what refuelling or repair would cost in full where the player is landed,
       // and the radiation at a point (the share of a sound hull lost a second)
       serviceCost: code => X.dw_service_cost(w, code), radiation: (x, y) => X.dw_radiation(w, x, y),
+      // a ship type's top speed at a point, before the well's bend by direction (raised in open space)
+      topSpeed: (kind, x, y) => X.dw_top_speed(w, kind, x, y),
       setInput: bits => X.dw_set_input(w, bits >>> 0),
       playerSet: () => groups.game.set[0], // assist set speed, m/s (the player is on the game row)
       // save: a copy of the whole world as bytes; load(bytes): 0 ok, else an error code (see snapshot.rs)

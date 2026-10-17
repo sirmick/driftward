@@ -110,7 +110,7 @@ impl World {
                 self.game.at[0] = j as i16;
                 self.game.auto[0] = 0;
                 self.game.timer[0] = DESCENT_S;
-                self.game.set[0] = 0.0;
+                self.hand_speed(0.0);
                 OK
             }
             CMD_LAUNCH => {
@@ -151,7 +151,7 @@ impl World {
                 let s = &mut self.ships;
                 (s.x[i], s.y[i]) = at;
                 s.vx[i] = bvx; s.vy[i] = bvy; s.av[i] = 0.0; // at rest relative to it
-                self.game.set[0] = 0.0;
+                self.hand_speed(0.0);
                 self.slot_reset(i, false);
                 OK
             }
@@ -241,7 +241,7 @@ impl World {
                         s.prev_x[i] = s.x[i];
                         s.prev_y[i] = s.y[i];
                         s.prev_ang[i] = s.ang[i];
-                        self.game.set[0] = rv;
+                        self.hand_speed(rv);
                     }
                 }
             }

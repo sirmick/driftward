@@ -2,8 +2,11 @@
 //! influence on the sim, so a recorded log of it replays a session exactly.
 //!
 //! The Book's three assist levels, on the same thrusters and limits:
-//! - full assist (IN_ASSIST): thrust and reverse move a set speed along the nose; the assist controller holds
-//!   that velocity, cancelling drift and gravity, with the side thrusters. Strafe does nothing here.
+//! - full assist (IN_ASSIST; the page's ASSIST): thrust and reverse move a throttle, 0 to 1 of the top speed where the
+//!   ship is (raised in open space, bent by a well; flight.rs), sweeping the whole range in `throttle_secs`; retro is
+//!   all stop. The set speed is the throttle times that top speed, so it falls as a well nears and comes back after,
+//!   at the same throttle. The assist controller holds that velocity along the nose, cancelling drift and gravity,
+//!   with the side thrusters; the burner (held alone) gets it there faster. Strafe does nothing here.
 //! - drift off (neither bit): raw main, reverse and lateral thrusters, Newtonian; rotation still rate-controlled.
 //! - full off (IN_TORQUE): as drift off, but rotation is torque: a spin persists until countered.
 //!
@@ -51,27 +54,32 @@ pub fn control(w: &mut World) {
         if held(IN_ASSIST) && !(up || down || left || right) { autopilot(w, i); return; }
         w.game.auto[0] = 0; // the player took the stick: carry on at the speed along the nose
         let (hx, hy) = heading(w.ships.ang[i]);
-        w.game.set[0] = ((w.ships.vx[i] - fx) * hx + (w.ships.vy[i] - fy) * hy).max(0.0);
+        w.hand_speed(((w.ships.vx[i] - fx) * hx + (w.ships.vy[i] - fy) * hy).max(0.0));
     }
-    let set0 = w.game.set[0];
-    let (b_acc, b_cap, k_turn) = (w.p(P::burn_accel), w.p(P::burn_cap), w.p(P::assist_turn));
+    let top = w.top_speed(w.ships.kind[i] as usize, w.ships.x[i], w.ships.y[i]); // raised in open space (flight.rs)
+    let (b_cap, k_turn, sweep) = (w.p(P::burn_cap), w.p(P::assist_turn), DT / w.p(P::throttle_secs).max(DT));
     let (k_in, k_out) = (w.p(P::well_in), w.p(P::well_out));
     let (s, t) = (&mut w.ships, &w.types);
     let k = s.kind[i] as usize;
-    let (accel, turn, vmax) = (t.accel[k], t.turn[k], t.vmax[k]);
+    let turn = t.turn[k];
     s.turn_in[i] = (left as i32 - right as i32) as f64;
-    let burn = up && held(IN_BURN) && w.game.fuel[0] > 0.0; // the burner burns fuel (service.rs)
+    // the burner: with the throttle in assist (it gets the ship to its set speed faster), with thrust off it; locked
+    // while overheated, until it cools (service.rs)
+    let burn = (up || held(IN_ASSIST)) && held(IN_BURN) && w.game.hot[0] == 0;
     s.burn[i] = burn as u8;
     let (hx, hy) = heading(s.ang[i]);
-    let mut set = set0;
+    // the top speed along the nose: open space raises it, and the well raises it pointing in and lowers it pointing out
+    // (from last tick's well, which the forces stage keeps per ship)
+    let cap = dir_cap(top * if burn { b_cap } else { 1.0 }, s.well[i], s.well_x[i], s.well_y[i], hx, hy, t.well[k], k_in, k_out);
+    let set;
     if held(IN_ASSIST) {
-        // the set speed's ceiling is the top speed along the nose, so the well raises it pointing in and lowers it
-        // pointing out (from last tick's well, which the forces stage keeps per ship)
-        let well_cap = |base: f64| dir_cap(base, s.well[i], s.well_x[i], s.well_y[i], hx, hy, t.well[k], k_in, k_out);
-        let (cap, cruise) = (well_cap(vmax * if burn { b_cap } else { 1.0 }), well_cap(vmax));
-        if up { set = cap.min(set + accel * if burn { b_acc } else { 1.0 } * DT); }
-        if down { set = (set - accel * DT).max(0.0); }
-        if !burn && set > cruise { set = cruise.max(set - accel * 0.6 * DT); }
+        let mut thr = w.game.throttle[0];
+        if up { thr += sweep; }
+        if down { thr -= sweep; }
+        if held(IN_RETRO) { thr = 0.0; } // all stop
+        thr = thr.clamp(0.0, 1.0);
+        w.game.throttle[0] = thr;
+        set = thr * cap;
         s.ctl[i] = 3; // assist holds the velocity; the turn command stays the player's
         s.rot[i] = 0;
         s.want_vx[i] = fx + hx * set;
@@ -87,8 +95,22 @@ pub fn control(w: &mut World) {
             s.rot[i] = 0; // the retro autopilot steers by rate, in either off mode
         }
         set = ((vx - fx) * hx + (vy - fy) * hy).max(0.0);
+        w.game.throttle[0] = if cap > 0.0 { (set / cap).min(1.0) } else { 0.0 }; // so assist, back on, holds this speed
     }
     w.game.set[0] = set;
+}
+
+impl World {
+    /// Hand the player's ship to the assist at speed v (a launch, a jump's arrival, the autopilot letting go): the set
+    /// speed, and the throttle that gives it where the ship is.
+    pub(crate) fn hand_speed(&mut self, v: f64) {
+        self.game.set[0] = v;
+        let top = match usize::try_from(self.game.player[0]) {
+            Ok(i) if i < self.count => self.top_speed(self.ships.kind[i] as usize, self.ships.x[i], self.ships.y[i]),
+            _ => 0.0,
+        };
+        self.game.throttle[0] = if top > 0.0 { (v / top).clamp(0.0, 1.0) } else { 0.0 };
+    }
 }
 
 /// Where to fly to reach body `j` from (x, y): its centre, or for a belt the nearest point of its ring.
@@ -111,7 +133,7 @@ fn autopilot(w: &mut World, i: usize) {
     let (tx, ty) = w.detour((x, y), (bx, by), [j, j]).unwrap_or((bx, by));
     (w.game.aim_x[0], w.game.aim_y[0]) = (tx, ty);
     let k = w.ships.kind[i] as usize;
-    let (accel, vmax) = (w.types.accel[k], w.types.vmax[k]);
+    let (accel, vmax) = (w.types.accel[k], w.top_speed(k, x, y)); // (raised in open space)
     let limit = if w.bodies.kind[j] == BODY_STATION { w.p(P::dock_speed) } else { w.p(P::land_speed) };
     let stop = if w.bodies.kind[j] == BODY_BELT { 300.0 } else { (w.bodies.r[j] * 0.25).max(80.0) };
     let d_end = hypot(bx - x, by - y);
@@ -120,13 +142,14 @@ fn autopilot(w: &mut World, i: usize) {
     (w.game.fvx[0], w.game.fvy[0]) = (fx, fy);
     let (bvx, bvy) = (w.bodies.vx[j], w.bodies.vy[j]);
     let sp = hypot(w.ships.vx[i] - bvx, w.ships.vy[i] - bvy);
-    let s = &mut w.ships;
     if d_end < stop && sp < limit * 0.6 {
         w.game.auto[0] = 0;
-        w.game.set[0] = 0.0;
+        w.hand_speed(0.0);
+        let s = &mut w.ships;
         s.ctl[i] = 3; s.want_vx[i] = fx; s.want_vy[i] = fy;
         return;
     }
+    let s = &mut w.ships;
     let (dx, dy) = (tx - x, ty - y);
     let d = hypot(dx, dy).max(1e-6);
     // brake for the target only on the last leg (a waypoint is passed at speed)
@@ -152,6 +175,7 @@ mod tests {
         w.types.vmax[0] = 200.0;
         w.types.fuel[0] = 10.0;
         w.game.fuel[0] = 10.0; // a tank, for the burner
+        w.params[P::cruise_max as usize] = 1.0; // (no wells: all open space; these test the assist itself)
         w.count = 1;
         w.ships.alive[0] = 1;
         w.game.player[0] = 0;
@@ -163,26 +187,52 @@ mod tests {
     }
     fn speed(w: &World) -> f64 { w.ships.vx[0].hypot(w.ships.vy[0]) }
 
+    /// Full assist at its top set speed in open space, flying at a body: the set speed rises with the open-space top
+    /// speed and falls with it as the well nears, so the ship reaches the well's edge at about its top speed.
     #[test]
-    fn assist_set_speed_rises_holds_and_falls() {
+    fn full_assist_cruises_fast_in_open_space_and_slows_for_a_well() {
         let mut w = world();
-        hold(&mut w, IN_ASSIST | IN_THRUST, 2.0);
-        assert!((w.game.set[0] - 120.0).abs() < 1.5, "set {}", w.game.set[0]);
+        w.params[P::cruise_max as usize] = 3.0;
+        (w.n_bodies, w.bodies.r[0], w.bodies.g[0]) = (1, 500.0, w.p(P::g_ref)); // a well to 1.5 km round (0, 0)
+        (w.ships.y[0], w.ships.ang[0]) = (40_000.0, std::f64::consts::PI); // far out, facing it
+        let (mut fastest, mut at_edge) = (0.0f64, 0.0);
+        w.game.input[0] = IN_ASSIST | IN_THRUST;
+        for _ in 0..(200.0 / DT) as usize {
+            w.step();
+            fastest = fastest.max(speed(&w));
+            if w.ships.y[0] < 1500.0 { at_edge = speed(&w); break; }
+        }
+        assert!(fastest > 500.0, "fastest {fastest}");
+        assert!(at_edge > 150.0 && at_edge < 200.0 * 1.2, "at the well's edge {at_edge}");
+    }
+
+    #[test]
+    fn assist_throttle_sweeps_holds_and_stops() {
+        let mut w = world(); // vmax 200, throttle_secs 1
+        hold(&mut w, IN_ASSIST | IN_THRUST, 0.5);
+        assert!((w.game.throttle[0] - 0.5).abs() < 0.02 && (w.game.set[0] - 100.0).abs() < 4.0, "throttle {} set {}", w.game.throttle[0], w.game.set[0]);
         hold(&mut w, IN_ASSIST, 8.0);
-        assert!((speed(&w) - w.game.set[0]).abs() < 2.0, "speed {} set {}", speed(&w), w.game.set[0]);
-        hold(&mut w, IN_ASSIST | IN_REVERSE, 3.0);
-        assert_eq!(w.game.set[0], 0.0);
-        hold(&mut w, IN_ASSIST, 6.0);
+        assert!((speed(&w) - 100.0).abs() < 4.0, "holds it: {}", speed(&w));
+        hold(&mut w, IN_ASSIST | IN_THRUST, 1.0);
+        assert_eq!(w.game.throttle[0], 1.0); // full, and no further
+        hold(&mut w, IN_ASSIST | IN_REVERSE, 0.25);
+        assert!((w.game.throttle[0] - 0.75).abs() < 0.02, "{}", w.game.throttle[0]);
+        hold(&mut w, IN_ASSIST | IN_RETRO, DT); // X: all stop
+        assert_eq!((w.game.throttle[0], w.game.set[0]), (0.0, 0.0));
+        hold(&mut w, IN_ASSIST, 8.0);
         assert!(speed(&w) < 2.0, "{}", speed(&w));
     }
 
     #[test]
-    fn burner_raises_set_speed_faster_to_the_same_top_speed() {
-        let mut w = world();
-        hold(&mut w, IN_ASSIST | IN_THRUST | IN_BURN, 1.0);
-        assert!((w.game.set[0] - 60.0 * w.p(P::burn_accel)).abs() < 1.5, "{}", w.game.set[0]);
-        hold(&mut w, IN_ASSIST | IN_THRUST | IN_BURN, 5.0);
-        assert!((w.game.set[0] - 200.0).abs() < 1e-9, "{}", w.game.set[0]);
+    fn the_burner_gets_the_assist_to_its_set_speed_faster() {
+        let (mut plain, mut burn) = (world(), world());
+        plain.game.throttle[0] = 1.0; burn.game.throttle[0] = 1.0;
+        hold(&mut plain, IN_ASSIST, 1.0);
+        hold(&mut burn, IN_ASSIST | IN_BURN, 1.0); // the burner alone, the throttle already full
+        assert!(speed(&burn) > 1.8 * speed(&plain), "{} vs {}", speed(&burn), speed(&plain));
+        assert!(burn.game.set[0] <= 200.0 + 1e-9 && burn.game.heat[0] > 0.0);
+        hold(&mut burn, IN_ASSIST | IN_BURN, 4.0);
+        assert!(speed(&burn) <= 200.0 + 1.0, "the same top speed: {}", speed(&burn));
     }
 
     #[test]

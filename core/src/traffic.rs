@@ -21,6 +21,7 @@
 //! rows give a ship type and a weight per stream; a new ship draws its row by weight. A route is a polyline: start,
 //! waypoints (round any body in the way, or the loop of a loiter), end.
 
+use crate::flight::open_gap;
 use crate::market::MAX_GOODS;
 use crate::math::{atan2, cos, exp, hypot, ln, sin, TAU};
 use crate::port::{BODY_BELT, BODY_FIELD, BODY_STAR, BODY_STATION, DESCENT_S, DONE, LAUNCH_S};
@@ -167,7 +168,32 @@ impl World {
         for m in self.mix_rows(stream) { x -= self.mix.weight[m]; last = Some(m); if x <= 0.0 { break; } }
         last
     }
-    fn route_len(pts: &[(f64, f64); 3]) -> f64 { hypot(pts[1].0 - pts[0].0, pts[1].1 - pts[0].1) + hypot(pts[2].0 - pts[1].0, pts[2].1 - pts[1].1) }
+    /// A traffic ship's pace factor at (x, y): its hull's top speed there over its top speed (above 1 in open space;
+    /// flight.rs), which its cruise is multiplied by, on rails and under physics.
+    fn open_k(&self, k: usize, x: f64, y: f64) -> f64 {
+        let kind = self.ships.kind[k] as usize;
+        self.top_speed(kind, x, y) / self.types.vmax[kind].max(1e-6)
+    }
+    /// A route's flying time for a stream at `cruise`, open space's pace included (flight.rs `open_top`, for the
+    /// stream's mean of accel / vmax^2, which sets how fast a hull's pace rises with the gap): sampled every 500 m.
+    fn route_time(&self, pts: &[(f64, f64); 3], stream: u8, cruise: f64) -> f64 {
+        let total = self.mix_total(stream).max(1e-9);
+        let q = self.mix_rows(stream).map(|m| { let k = self.mix.kind[m] as usize; self.mix.weight[m] * self.types.accel[k] / (self.types.vmax[k] * self.types.vmax[k]).max(1.0) }).sum::<f64>() / total;
+        let (reach, max, brake) = (self.p(P::well_reach), self.p(P::cruise_max), self.p(P::cruise_brake));
+        let mut t = 0.0;
+        for leg in 0..2 {
+            let (a, b) = (pts[leg], pts[leg + 1]);
+            let len = hypot(b.0 - a.0, b.1 - a.1);
+            let n = (len / 500.0).ceil().max(1.0);
+            for i in 0..n as usize {
+                let f = (i as f64 + 0.5) / n;
+                let gap = open_gap(&self.bodies, self.n_bodies, a.0 + (b.0 - a.0) * f, a.1 + (b.1 - a.1) * f, reach);
+                let pace = (1.0 + 2.0 * brake * q * gap.min(1e12)).sqrt().min(max.max(1.0));
+                t += len / n / (cruise * pace).max(1.0);
+            }
+        }
+        t
+    }
 
     /// Plan the traffic: every local lane's and through lane's rate (ships a second) and dwell (seconds a ship
     /// spends on it, launch and landing included), and each loiter row's. Call after the bodies, markets,
@@ -186,7 +212,7 @@ impl World {
                 for i in 0..nb {
                     for j in 0..nb {
                         if i == j || self.bodies.port[i] == 0 || self.bodies.port[j] == 0 { continue; }
-                        let len = Self::route_len(&self.route(i, j));
+                        let pts = self.route(i, j);
                         let km = (hypot(self.bodies.x[j] - self.bodies.x[i], self.bodies.y[j] - self.bodies.y[i]) / 1000.0).max(0.1);
                         let pp = self.bodies.pop[i] * self.bodies.pop[j];
                         let weight = match role as u8 + 1 {
@@ -196,7 +222,7 @@ impl World {
                         };
                         let l = self.lane(i, j, role);
                         self.lanes.rate[l] = weight;
-                        self.lanes.dwell[l] = len / cruise.max(1.0) + LAUNCH_S + DESCENT_S;
+                        self.lanes.dwell[l] = self.route_time(&pts, MIX_LOCAL, cruise) + LAUNCH_S + DESCENT_S;
                         total += weight * self.lanes.dwell[l];
                     }
                 }
@@ -215,7 +241,7 @@ impl World {
                         let pts = if dir == 0 { self.route_ends(End::Jump(z), End::Body(j)) } else { self.route_ends(End::Body(j), End::Jump(z)) };
                         let l = self.jlane(dir, z, j);
                         self.jlanes.rate[l] = self.bodies.pop[j];
-                        self.jlanes.dwell[l] = Self::route_len(&pts) / cruise.max(1.0) + if dir == 0 { DESCENT_S } else { LAUNCH_S };
+                        self.jlanes.dwell[l] = self.route_time(&pts, MIX_THROUGH, cruise) + if dir == 0 { DESCENT_S } else { LAUNCH_S };
                         total += self.jlanes.rate[l] * self.jlanes.dwell[l];
                     }
                 }
@@ -482,7 +508,7 @@ impl World {
             (x, y) = (p0.0 + dx * f, p0.1 + dy * f);
         }
         let d = hypot(dx, dy).max(1e-6);
-        let cruise = self.traffic.cruise[k];
+        let cruise = self.traffic.cruise[k] * self.open_k(k, x, y);
         // a loiter round a moving station goes round with it (motion.rs carries the loop), so moves with it too
         let (bvx, bvy) = match (self.traffic.role[k], End::of(self.traffic.from[k])) { (LOITER, End::Body(j)) => (self.bodies.vx[j], self.bodies.vy[j]), _ => (0.0, 0.0) };
         let sh = &mut self.ships;
@@ -622,15 +648,18 @@ impl World {
     /// Come in by a jump zone, `t` seconds ago: along the route at jump speed easing down to cruise (as the player's
     /// arrival), on rails; then cruising.
     fn arriving_step(&mut self, k: usize, t: f64) {
-        let (cruise, total) = (self.traffic.cruise[k], self.p(P::arrive_secs));
+        // (cruise is its open-space pace there, which place_on_route moves it at)
+        let cruise = self.traffic.cruise[k] * self.open_k(k, self.ships.x[k], self.ships.y[k]);
+        let total = self.p(P::arrive_secs);
         let vj = self.p(P::jump_speed) * self.types.vmax[self.ships.kind[k] as usize];
         let f = (1.0 - t / total).max(0.0);
-        let v = cruise + (vj - cruise) * f * f;
+        let v = cruise + (vj - cruise).max(0.0) * f * f;
         if t > 0.0 { self.traffic.s[k] += v * DT; }
         if self.traffic.s[k] >= self.traffic.len[k] { self.traffic.s[k] = self.traffic.len[k]; self.place_on_route(k); self.arrive(k); return; }
         self.place_on_route(k);
+        let pace = self.traffic.cruise[k] * self.open_k(k, self.ships.x[k], self.ships.y[k]);
         let s = &mut self.ships;
-        let k_v = v / cruise.max(1e-6);
+        let k_v = v / pace.max(1e-6);
         s.vx[k] *= k_v; s.vy[k] *= k_v;
         s.thr[k] = 0.15;
         if t >= total { self.traffic.phase[k] = T_CRUISE; }
@@ -645,7 +674,7 @@ impl World {
             if d_player < near { // close to the player: hand over to the physics, moving as it was
                 self.ships.rail[k] = 0;
             } else {
-                self.traffic.s[k] += self.traffic.cruise[k] * DT;
+                self.traffic.s[k] += self.traffic.cruise[k] * self.open_k(k, self.ships.x[k], self.ships.y[k]) * DT;
                 if self.traffic.s[k] >= self.traffic.len[k] {
                     self.traffic.s[k] = self.traffic.len[k];
                     self.place_on_route(k);
@@ -671,7 +700,7 @@ impl World {
         let (tx, ty) = self.pt(k, leg + 1);
         let (dx, dy) = (tx - self.ships.x[k], ty - self.ships.y[k]);
         let d = hypot(dx, dy);
-        let cruise = self.traffic.cruise[k];
+        let cruise = self.traffic.cruise[k] * self.open_k(k, self.ships.x[k], self.ships.y[k]);
         if leg + 2 < n {
             if d < 800.0 { self.traffic.leg[k] = (leg + 1) as u8; }
             let v = cruise / d.max(1e-6);
@@ -839,7 +868,8 @@ mod tests {
         assert!((hypot(w.ships.vx[a], w.ships.vy[a]) - w.p(P::jump_speed) * vmax).abs() < 1.0 && w.ships.vy[a] < 0.0, "in at jump speed, heading in");
         for _ in 0..((w.p(P::arrive_secs) + 0.1) / DT) as usize { w.step(); }
         assert_eq!(w.traffic.phase[a], T_CRUISE);
-        assert!((hypot(w.ships.vx[a], w.ships.vy[a]) - w.traffic.cruise[a]).abs() < 1.0, "slowed to cruise");
+        let pace = w.traffic.cruise[a] * w.open_k(a, w.ships.x[a], w.ships.y[a]); // (raised in open space, flight.rs)
+        assert!((hypot(w.ships.vx[a], w.ships.vy[a]) - pace).abs() < 1.0, "slowed to cruise: {} for {pace}", hypot(w.ships.vx[a], w.ships.vy[a]));
         let (mut landed, mut torch, mut last) = (false, false, (0.0, 0.0, 0.0));
         for _ in 0..(900.0 / DT) as usize {
             if w.traffic.role[a] == ARRIVE && w.traffic.phase[a] == T_LAND { landed = true; }

@@ -76,7 +76,8 @@ with sync_playwright() as p:
     lore_file = pathlib.Path(__file__).resolve().parent.parent / 'src' / 'lore' / 'brannock.json'
     if lore_file.exists():
         lore = json.loads(lore_file.read_text()); L = next(p for p in lore['ports'] if p['body'] == 'halde')
-        check(pg.inner_text('#port-desc') == L['description'][0], 'the port card shows the lore\'s description')
+        desc = pg.inner_text('#port-desc')
+        check(desc and L['description'][0].startswith(desc), 'the port card opens the lore\'s description (the about page has all of it)')
         pg.keyboard.press('KeyB'); pg.wait_for_timeout(300)
         loaded = ev("[...document.querySelectorAll('#bar-people img')].filter(i => i.complete && i.naturalWidth > 0).length")
         check(pg.is_visible('#bar') and pg.locator('#bar .person').count() == len(L['people']) and pg.locator('#bar-rumors li').count() == len(L['rumors']),
@@ -207,7 +208,7 @@ with sync_playwright() as p:
     check(gj['route'] == gj['best'] and len(gj['route']) <= len(gr['days']) and gj['course'] == {'dest': 0, 'by': 'jumps'}, f"J plots by fewest jumps ({len(gj['route']) - 1}) and Enter sets the course: {gj['course']}")
     pg.keyboard.press('KeyM'); pg.wait_for_timeout(600)
     gc = ev("({ open: __play.galaxy.isOpen(), tick: __play.probe().tick, course: __play.course() })")
-    check(not gc['open'] and gc['tick'] > t0 and gc['course'] == {'dest': 0, 'by': 'jumps'}, 'M closes it, the clock runs again and the course stays set')
+    check(not gc["open"] and gc["tick"] > t0 and gc["course"] == {"dest": 0, "by": "jumps"}, f"M closes it, the clock runs again and the course stays set: {gc}")
     ev("__play.newGame(32)"); pg.wait_for_function('!__play.probe().barrier', timeout=120000); pg.focus('#view')
     pg.keyboard.press('KeyG'); pg.wait_for_timeout(300)
     gp = ev("({ open: __play.galaxy.isOpen(), course: __play.course(), landed: __play.probe().mode })")
@@ -283,12 +284,15 @@ with sync_playwright() as p:
         check(out == f"tick {jr['tick']} hash {jr['hash']}", f"a session through three systems (two jumps) replays natively: {out}")
         pg.keyboard.press('Escape')
 
-    # flight: the same numbers as the lab's Fly tab (the Prism military class I, the M0 Halcyon fighter, from rest, clear space,
-    # far from every well: a well raises the top speed heading into it)
-    a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -30000], ship: 'prism.military:c1' }); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); return [a, P.probe(), P.sim.type.vmax[P.sim.ship.kind[0]]]; })()")
+    # flight: assist from rest, then the burner (as the lab's Fly tab: the Prism military class I, the M0 Halcyon fighter, from rest, clear space,
+    # far from every well: a well raises the top speed heading into it; open space's raised top speed off, which the lab
+    # doesn't have)
+    a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -30000], ship: 'prism.military:c1' }); const c0 = P.sim.param('cruise_max'); P.sim.param('cruise_max', 1); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); P.sim.param('cruise_max', c0); return [a, P.probe(), P.sim.type.vmax[P.sim.ship.kind[0]]]; })()")
     print('after 4 s W   ', json.dumps({k: a[0][k] for k in ('tick', 'v', 'set')}))
     print('after 3 s burn', json.dumps({k: a[1][k] for k in ('tick', 'v', 'set')}))
-    check(486 < a[0]['v'] < 496, f"cruise speed {a[0]['v']:.1f} m/s (the lab gives 491.1)")
+    # (562.5: W sweeps the assist's throttle to full in a second, and the ship follows at its own acceleration. The lab's
+    # frozen prototype raises a set speed at the hull's acceleration instead, and gives 546.1)
+    check(557 < a[0]['v'] < 568, f"cruise speed {a[0]['v']:.1f} m/s (562.5)")
     check(a[1]['v'] > a[0]['v'] + 50 and a[1]['set'] <= a[2] + 1e-6 and a[1]['v'] <= a[2] + 1, f"the burner adds thrust, not top speed ({a[1]['v']:.1f} m/s, set {a[1]['set']:.0f}, top speed {a[2]:.0f})")
 
     # save, fly on, load: back to exactly the saved state

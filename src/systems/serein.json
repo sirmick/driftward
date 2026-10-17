@@ -158,7 +158,6 @@
   "traffic": {
     "ships": 30,
     "throughShare": 0.45,
-    "jumpRadius": 45000,
     "local": [
       {
         "line": "prism.civilian",

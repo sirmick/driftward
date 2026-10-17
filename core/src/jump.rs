@@ -175,7 +175,7 @@ impl World {
                 if t >= total {
                     s.rail[i] = 0;
                     self.game.jump[0] = J_NONE;
-                    self.game.set[0] = vmax; // the assist holds what the drive handed back
+                    self.hand_speed(vmax); // the assist holds what the drive handed back
                 }
             }
             _ => {}
@@ -259,9 +259,9 @@ impl World {
         let s = &mut self.ships;
         (s.x[i], s.y[i], s.vx[i], s.vy[i], s.av[i]) = (dx * at, dy * at, dx * v, dy * v, 0.0);
         s.ang[i] = atan2(-dx, dy);
-        self.game.set[0] = v;
         self.game.auto[0] = 0;
         self.slot_reset(i, false);
+        self.hand_speed(v);
         OK
     }
 }

@@ -4,7 +4,7 @@ Status, 2026-10-17: built (the Book's Jumping chapter, M4; code in `core/src/jum
 
 ## The zones
 
-Every system has 16 zones round it, one every 22.5° (zone k on the bearing k × 22.5° counter-clockwise from +x, in the galactic plane's x and y), at the system's jump radius (`jump_radius`, the system file's `traffic.jumpRadius`, 40 to 48 km in the March). Each lane takes the zone nearest its bearing toward its destination; where two lanes want the same zone, the second takes the nearest free one (in the universe index's lane order, so every page agrees; `gatesOf` in `play.js`). A lane's zone works both ways: you leave Brannock from its Calder zone and arrive at Calder's Brannock zone.
+Every system has 16 zones round it, one every 22.5° (zone k on the bearing k × 22.5° counter-clockwise from +x, in the galactic plane's x and y), at the system's jump radius (`jump_radius`: computed from the layout, `loadSystem` in `src/schema.js`, just far enough out that every zone's runway starts clear of every well, belt and hazard zone; a system file's `traffic.jumpRadius` overrides it; 36 to 48 km in the March). Each lane takes the zone nearest its bearing toward its destination; where two lanes want the same zone, the second takes the nearest free one (in the universe index's lane order, so every page agrees; `gatesOf` in `play.js`). A lane's zone works both ways: you leave Brannock from its Calder zone and arrive at Calder's Brannock zone.
 
 - **Lanes per system:** at most 16; the galaxy's most is 7 (GJ 3440), most have 2 or 3. Two lanes share a nearest zone in 90 of the 929 systems, never three.
 - **A zone** is a runway along its bearing: `zone_len` 12 km long, `zone_width` 6 km wide, centred on the jump radius.

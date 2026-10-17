@@ -174,6 +174,18 @@ function loadSystem(raw, schema, opts) {
       belt: { width: b.width, density: b.density, rocks: b.rocks, seed: b.seed, sizes: b.sizes, clumping: b.clumping, profile: b.profile }, port: null
     });
   }
+  // The jump radius, where the system ends: far enough out that the jump zones' runways (12 km long, centred on it:
+  // the core's zone_len) start clear of every well (3 radii, or a compact star's own reach), belt, field and hazard
+  // zone (with traffic's 2.5 km arrival spread), at any bearing; a moving station counts at its orbit's far side. So a
+  // compact system's zones sit close in, and no zone sits in a well. A file's traffic.jumpRadius overrides it.
+  const WELL_REACH = 3, ZONE_HALF = 6000, CLEAR = 1000, SPREAD = 2500;
+  const extent = b => {
+    if (b.kind === 'belt') return Math.hypot(b.x, b.y) + b.r + b.belt.width / 2;
+    const P = b.motion && bodies.find(o => o.id === b.parent), d = P ? Math.hypot(P.x, P.y) + b.orbit.radius : Math.hypot(b.x, b.y);
+    return Math.max(d + (b.g > 0 ? b.r * (b.reach || WELL_REACH) : b.r), b.hazard ? d + b.hazard + SPREAD : 0);
+  };
+  sys.traffic = sys.traffic || {};
+  if (sys.traffic.jumpRadius === undefined) sys.traffic.jumpRadius = Math.ceil((Math.max(...bodies.map(extent)) + ZONE_HALF + CLEAR) / 1000) * 1000;
   if (sys.start && !bodies.some(b => b.id === sys.start && b.port)) notes.push({ path: '$.start', msg: `${sys.start} is not a port body; starting at the first port`, fatal: false });
   return { system: sys, bodies, notes };
 }

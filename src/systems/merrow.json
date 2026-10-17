@@ -161,7 +161,6 @@
   "traffic": {
     "ships": 40,
     "throughShare": 0.5,
-    "jumpRadius": 48000,
     "local": [
       {
         "line": "federation.civilian",

@@ -16,7 +16,7 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
   // inside the jump zones (traffic's arrivals start there), services listed once, environmental stations clear of
   // every other body; belts and fields clear of every body (a belt's ring, a field's disc), and inside the jump zones
   if (system) {
-    const ids = new Set(), jump = (system.traffic || {}).jumpRadius ?? schema.properties.traffic.properties.jumpRadius.default;
+    const ids = new Set(), jump = system.traffic.jumpRadius; // (loadSystem computes it unless the file sets it)
     for (const b of system.bodies) {
       const at = `$.bodies[${b.id}]`, P = bodies.find(o => o.id === (b.parent || 'star'));
       if (ids.has(b.id) || b.id === 'star') notes.push({ path: at, msg: `id ${b.id} used twice (or "star", the star's)`, fatal: true });

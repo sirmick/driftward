@@ -67,7 +67,7 @@ function makeGalaxyMap(ctx) {
       <input class="gx-search" type="search" placeholder="Find a system" autocomplete="off" list="gx-names"><datalist id="gx-names"></datalist>
       <div class="gx-by" role="group" aria-label="Plot by"><button type="button" data-by="days">Fewest days</button><button type="button" data-by="jumps">Fewest jumps</button></div>
       <button type="button" data-act="home" title="H">Here</button><button type="button" data-act="down" title="V">Look down</button>
-      <span class="gx-keys">click: a system · drag: turn · right-drag: pan · wheel: zoom</span>
+      <span class="gx-keys">drag turn · right-drag pan · wheel zoom</span>
       <button type="button" data-act="close" class="gx-close" title="M or Esc">Close <span>M</span></button></header>
     <aside class="gx-card"></aside>`;
   const q = s => el.querySelector(s), surface = q('.gx-surface'), labels = q('.gx-labels'), card = q('.gx-card'), search = q('.gx-search');
@@ -156,8 +156,9 @@ function makeGalaxyMap(ctx) {
     // its region
     if (R.name) {
       const T = R.trade;
-      h += `<h3>${e(R.name)}</h3>` + (T ? `<p class="gx-trade"><span>Exports</span>${T.exports.map(goodName).map(e).join(', ') || 'nothing'}</p><p class="gx-trade"><span>Imports</span>${T.imports.map(goodName).map(e).join(', ') || 'nothing'}</p>` : '')
-        + (R.summary && R.summary.length ? `<details class="gx-fold"><summary>About the region</summary><ul>${R.summary.map(b => `<li>${e(b)}</li>`).join('')}</ul></details>` : '');
+      // (folded: the system's own trade, above, is what a trader needs)
+      const trade = T ? `<p class="gx-trade"><span>Exports</span>${T.exports.map(goodName).map(e).join(', ') || 'nothing'}</p><p class="gx-trade"><span>Imports</span>${T.imports.map(goodName).map(e).join(', ') || 'nothing'}</p>` : '';
+      if (trade || (R.summary && R.summary.length)) h += `<details class="gx-fold"><summary>${e(R.name)}</summary>${trade}<ul>${(R.summary || []).map(b => `<li>${e(b)}</li>`).join('')}</ul></details>`;
     }
     // its flags and story
     const flags = [[c.hazard, 'hazard star', 'Radiation and a deep well'], [c.front, 'the front', 'Faces the Shadow'], [c.gateway, 'gateway', 'A lane into the open Drift'],

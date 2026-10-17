@@ -10,6 +10,12 @@
 //!   and falls heading out (`well_out`). Ships fall in fast and crawl out.
 //!
 //! A fast pass through a well still carries momentum out the far side; the dampers then bleed it down.
+//!
+//! Open space is fast. Outside every well, a hull's top speed rises with the distance to the nearest well's edge, up to
+//! `cruise_max` times its top speed: the speed from which its own thrust (times `cruise_brake`) brings it back down to
+//! top speed by that edge, so the faster stretches are the longer gaps and any hull can slow in time. There the
+//! dampers bleed faster (`cruise_bleed`), so speed follows the ceiling down as a well nears. Every ship flies by it: the
+//! player, the autopilot, and traffic on rails or under physics. It is what keeps a visit to a system a few minutes.
 
 use crate::math::{atan2, clamp1, hypot, sin_cos, wrap};
 use crate::world::{World, DT, P};
@@ -124,6 +130,34 @@ pub(crate) fn well_field(b: &crate::world::Bodies, nb: usize, x: f64, y: f64, re
     (wx, wy)
 }
 
+/// How far (x, y) is outside the nearest well's edge (each body with gravity, at `reach` radii or its own), metres; 0
+/// inside one, and unbounded where nothing has a well.
+pub(crate) fn open_gap(b: &crate::world::Bodies, nb: usize, x: f64, y: f64, reach: f64) -> f64 {
+    let mut gap = f64::INFINITY;
+    for j in 0..nb {
+        if b.g[j] <= 0.0 { continue; }
+        let edge = b.r[j] * if b.reach[j] > 0.0 { b.reach[j] } else { reach };
+        gap = gap.min(hypot(b.x[j] - x, b.y[j] - y) - edge);
+    }
+    gap.max(0.0)
+}
+
+/// A hull's top speed `gap` metres out into open space: the speed from which `brake` times its thrust brings it back to
+/// `vmax` by the well's edge, at most `max` times `vmax`.
+#[inline]
+pub(crate) fn open_top(vmax: f64, accel: f64, gap: f64, max: f64, brake: f64) -> f64 {
+    if gap <= 0.0 { return vmax; }
+    (vmax * vmax + 2.0 * brake * accel * gap.min(1e12)).sqrt().min(vmax * max.max(1.0))
+}
+
+impl World {
+    /// Ship type k's top speed at (x, y), before the well's bend by direction: raised in open space (`open_top`).
+    pub fn top_speed(&self, k: usize, x: f64, y: f64) -> f64 {
+        let gap = open_gap(&self.bodies, self.n_bodies, x, y, self.p(P::well_reach));
+        open_top(self.types.vmax[k], self.types.accel[k], gap, self.p(P::cruise_max), self.p(P::cruise_brake))
+    }
+}
+
 /// The well's effect on a speed cap along the unit direction (dx, dy): raised heading into the well (k_in), lowered
 /// heading out (k_out), by strength `sw` (unit direction (ux, uy)) times the hull's sensitivity. Never below 15%.
 #[inline]
@@ -139,6 +173,7 @@ pub fn forces(w: &mut World) {
     let (rev, rcs, b_acc, b_cap, lat_cap) = (w.p(P::rev), w.p(P::rcs), w.p(P::burn_accel), w.p(P::burn_cap), w.p(P::lat_cap));
     let (reach, g_ref, pull, k_in, k_out) = (w.p(P::well_reach), w.p(P::g_ref), w.p(P::pull), w.p(P::well_in), w.p(P::well_out));
     let (dh, dd, di) = (w.p(P::drag_h), w.p(P::drag_d), w.p(P::drag_i));
+    let (c_max, c_brake) = (w.p(P::cruise_max), w.p(P::cruise_brake));
     let (s, t, b, nb) = (&mut w.ships, &w.types, &w.bodies, w.n_bodies);
     for i in 0..w.count {
         if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
@@ -155,7 +190,8 @@ pub fn forces(w: &mut World) {
         let sw = wl.min(1.5);
         s.well[i] = sw; s.well_x[i] = ux; s.well_y[i] = uy;
         let cap = |base: f64, dx: f64, dy: f64| dir_cap(base, sw, ux, uy, dx, dy, sens, k_in, k_out);
-        let base = vmax * if burn { b_cap } else { 1.0 };
+        let top = open_top(vmax, accel, open_gap(b, nb, s.x[i], s.y[i], reach), c_max, c_brake);
+        let base = top * if burn { b_cap } else { 1.0 };
         let (vx, vy) = (s.vx[i], s.vy[i]);
         let along = vx * hx + vy * hy;
         let side = vx * rx + vy * ry;
@@ -190,11 +226,13 @@ pub fn forces(w: &mut World) {
 
 /// Semi-implicit Euler, with inertial dampers between the velocity and position updates. They bleed speed above
 /// the cap along the direction of travel (set by the well, see the module notes), so momentum from a fall or a
-/// slingshot outlasts the cap for a while.
+/// slingshot outlasts the cap for a while; in open space they bleed faster (`cruise_bleed`), so a ship slows as the
+/// open-space top speed falls toward a well.
 pub fn integrate(w: &mut World) {
     let (b_cap, damper, k_in, k_out) = (w.p(P::burn_cap), w.p(P::damper), w.p(P::well_in), w.p(P::well_out));
-    let (s, t) = (&mut w.ships, &w.types);
-    let bleed = (damper * DT).min(1.0);
+    let (reach, c_max, c_brake) = (w.p(P::well_reach), w.p(P::cruise_max), w.p(P::cruise_brake));
+    let (bleed_well, bleed_open) = ((damper * DT).min(1.0), (w.p(P::cruise_bleed) * DT).min(1.0));
+    let (s, t, b, nb) = (&mut w.ships, &w.types, &w.bodies, w.n_bodies);
     for i in 0..w.count {
         if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
         s.vx[i] += s.ax[i] * DT;
@@ -203,8 +241,11 @@ pub fn integrate(w: &mut World) {
         let k = s.kind[i] as usize;
         let sp = hypot(s.vx[i], s.vy[i]);
         if sp > 0.0 {
-            let lim = dir_cap(t.vmax[k] * if burn { b_cap } else { 1.0 }, s.well[i], s.well_x[i], s.well_y[i],
+            let gap = open_gap(b, nb, s.x[i], s.y[i], reach);
+            let top = open_top(t.vmax[k], t.accel[k], gap, c_max, c_brake);
+            let lim = dir_cap(top * if burn { b_cap } else { 1.0 }, s.well[i], s.well_x[i], s.well_y[i],
                 s.vx[i] / sp, s.vy[i] / sp, t.well[k], k_in, k_out);
+            let bleed = if gap > 0.0 { bleed_open } else { bleed_well };
             if sp > lim {
                 let f = 1.0 - bleed * (sp - lim) / sp;
                 s.vx[i] *= f;
@@ -233,7 +274,8 @@ pub fn engines(w: &mut World) {
 mod tests {
     use crate::world::{Config, World, DT, P};
 
-    /// One ship of a type with accel 60, turn 1, vmax 200, at rest at the origin facing +y.
+    /// One ship of a type with accel 60, turn 1, vmax 200, at rest at the origin facing +y; open space's raised top
+    /// speed off (a world without wells is all open space), for the tests of the drive itself.
     fn one_ship() -> Box<World> {
         let mut w = World::new(Config { max_ships: 4, max_types: 1, max_bodies: 1, env_n: 16, env_w: 16_000.0 }, 3);
         w.types.accel[0] = 60.0;
@@ -241,6 +283,7 @@ mod tests {
         w.types.vmax[0] = 200.0;
         w.count = 1;
         w.ships.alive[0] = 1;
+        w.params[P::cruise_max as usize] = 1.0;
         w
     }
     fn run(w: &mut World, secs: f64) { for _ in 0..(secs / DT).round() as usize { w.step(); } }
@@ -323,6 +366,30 @@ mod tests {
         let mut far = in_a_well(1600.0, 60.0, 200.0, 0.5); // beyond 3 radii: nothing
         far.step();
         assert_eq!((far.ships.ax[0], far.ships.well[0]), (0.0, 0.0));
+    }
+
+    /// Open space: top speed rises with the gap to the nearest well's edge, to cruise_max times; speed follows the
+    /// ceiling down as a well nears (a ship flown in at full open-space speed reaches the edge near its top speed).
+    #[test]
+    fn open_space_raises_top_speed_and_gives_it_back_by_a_well() {
+        let mut w = in_a_well(0.0, 60.0, 200.0, 0.5); // a 500 m body at (0, 0), its well to 1.5 km
+        w.params[P::cruise_max as usize] = 3.0;
+        assert_eq!(w.top_speed(0, 1000.0, 0.0), 200.0); // inside the well
+        let near = w.top_speed(0, 1500.0 + 100.0, 0.0);
+        assert!(near > 200.0 && near < 230.0, "{near}"); // just out: barely raised
+        assert_eq!(w.top_speed(0, 1.0e6, 0.0), 600.0); // far out: three times
+        // full thrust from far out, straight at the body: fast in open space, near top speed by the well's edge
+        (w.ships.x[0], w.ships.y[0], w.ships.ang[0]) = (0.0, 30_000.0, std::f64::consts::PI); // facing -y, at the body
+        w.ships.main[0] = 1.0;
+        let (mut fastest, mut at_edge) = (0.0f64, 0.0);
+        for _ in 0..(120.0 / DT) as usize {
+            w.step();
+            fastest = fastest.max(speed(&w));
+            if w.ships.y[0] < 1500.0 { at_edge = speed(&w); break; }
+        }
+        assert!(fastest > 500.0, "fastest {fastest}");
+        // (raw thrust held all the way: the dampers alone bring it down; under assist the reverse thrust helps too)
+        assert!(at_edge > 0.0 && at_edge < 200.0 * 1.5, "at the well's edge {at_edge}");
     }
 
     /// A big body (radius 5 km), so ships reach steady speeds inside the strong part of its well.

@@ -163,7 +163,6 @@
   "traffic": {
     "ships": 22,
     "throughShare": 0.45,
-    "jumpRadius": 40000,
     "local": [
       {
         "line": "ironhulls.civilian",

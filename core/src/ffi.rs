@@ -84,6 +84,9 @@ pub unsafe extern "C" fn dw_service_cost(w: *mut World, code: u32) -> u32 {
 /// See `world`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dw_radiation(w: *mut World, x: f64, y: f64) -> f64 { unsafe { world(w) }.radiation(x, y) }
+/// Ship type `kind`'s top speed at (x, y), before the well's bend by direction (raised in open space; flight.rs).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_top_speed(w: *mut World, kind: u32, x: f64, y: f64) -> f64 { unsafe { world(w) }.top_speed(kind as usize, x, y) }
 
 /// # Safety
 /// See `world`.

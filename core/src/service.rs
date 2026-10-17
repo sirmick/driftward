@@ -1,8 +1,12 @@
 //! Fuel, hull and hazards, and the port services that put them right (M1).
 //!
-//! Fuel: the player's tank (`game.fuel`, tons; a hull type's `fuel` when full). The burner burns it (the Book's
-//! Physics: "burns fuel"), a full tank lasting `burn_secs` of burn; an empty tank leaves the burner dead (player.rs).
-//! M4's jumps will spend it too.
+//! Fuel: the player's tank (`game.fuel`, tons; a hull type's `fuel` when full), spent by jumps (jump.rs).
+//!
+//! Heat (the Book's Energy and heat, M2, built small): the player's `game.heat`, 0 cold to 1 full. The burner adds it,
+//! a cold ship reaching full in `heat_burn` seconds of burn; not burning, it sheds it, full to cold in `heat_cool`
+//! seconds, faster in gas (`heat_gas`); radiation adds it (`heat_rad`). At full the burner locks (`game.hot`, player.rs)
+//! until heat is down to `heat_unlock`. Hulls all hold the same heat for now; M2 brings capacity by mass, reactors,
+//! radiators and heat's signature.
 //!
 //! Hull: every ship's points (`ships.hull`; a type's `hull` when sound). In M1 only radiation wears it down: the
 //! hazard zones round the exotic stars (the Book's System contents: pulsars and black holes "create hazard zones";
@@ -60,13 +64,19 @@ impl World {
         dose
     }
 
-    /// The ships stage, after motion: the player's burner burns fuel; radiation wears hulls down, and a hull at zero
-    /// is lost.
+    /// The ships stage, after motion: the player's heat; radiation wears hulls down, and a hull at zero is lost.
     pub(crate) fn step_ships(&mut self) {
         if let Ok(i) = usize::try_from(self.game.player[0])
-            && i < self.count && self.ships.alive[i] != 0 && self.ships.burn[i] != 0 && self.ships.main[i] > 0.0 {
-            let tank = self.types.fuel[self.ships.kind[i] as usize];
-            self.game.fuel[0] = (self.game.fuel[0] - tank / self.p(P::burn_secs).max(1.0) * DT).max(0.0);
+            && i < self.count && self.ships.alive[i] != 0 && self.ships.rail[i] == 0 {
+            // (the jump drive's torch is not the burner: the ship is on rails then)
+            let s = &self.ships;
+            let burning = s.burn[i] != 0 && s.main[i] > 0.0;
+            let dh = if burning { 1.0 / self.p(P::heat_burn).max(0.1) } else {
+                -(1.0 + self.p(P::heat_gas) * (s.gas_h[i] + s.gas_d[i] + s.gas_i[i])) / self.p(P::heat_cool).max(0.1)
+            } + self.p(P::heat_rad) * self.radiation(s.x[i], s.y[i]);
+            let h = (self.game.heat[0] + dh * DT).clamp(0.0, 1.0);
+            self.game.heat[0] = h;
+            if h >= 1.0 { self.game.hot[0] = 1; } else if h <= self.p(P::heat_unlock) { self.game.hot[0] = 0; }
         }
         if !(0..self.n_bodies).any(|j| self.bodies.hazard[j] > 0.0) { return; }
         let player = usize::try_from(self.game.player[0]).ok();
@@ -132,24 +142,40 @@ mod tests {
         (w.bodies.x[1], w.bodies.r[1], w.bodies.kind[1], w.bodies.port[1], w.bodies.svc[1], w.bodies.fuel_price[1]) = (20_000.0, 800.0, BODY_PLANET, 1, SVC_REFUEL | SVC_REPAIR, 50);
         (w.count, w.ships.alive[0], w.game.player[0]) = (1, 1, 0);
         (w.ships.x[0], w.ships.hull[0], w.game.fuel[0], w.game.credits[0]) = (x, 100.0, 4.0, 1000);
+        w.params[P::cruise_max as usize] = 1.0; // (open space's raised top speed off: these test fuel, hull and radiation)
         w
     }
     fn run(w: &mut World, secs: f64) { for _ in 0..(secs / DT).round() as usize { w.step(); } }
 
     #[test]
-    fn the_burner_burns_fuel_and_an_empty_tank_kills_it() {
-        let mut w = world(-50_000.0);
+    fn the_burner_heats_the_ship_locks_at_full_and_unlocks_cool() {
+        let mut w = world(-50_000.0); // clear space: no gas, no radiation
         w.game.input[0] = IN_ASSIST | IN_THRUST | IN_BURN;
-        run(&mut w, 30.0);
-        assert!((w.fuel() - 3.6).abs() < 0.01, "{}", w.fuel()); // a tenth of the 300 s a tank lasts
+        run(&mut w, 7.5);
+        assert!((w.game.heat[0] - 0.5).abs() < 0.01 && w.fuel() == 4.0, "half heat in half of 15 s, no fuel: {} {}", w.game.heat[0], w.fuel());
+        run(&mut w, 7.6);
+        assert!(w.game.heat[0] > 0.98 && w.game.hot[0] == 1, "full: locked (and cooling since): {}", w.game.heat[0]);
+        w.step();
+        assert_eq!(w.ships.burn[0], 0, "the burner is locked");
         w.game.input[0] = IN_ASSIST | IN_THRUST;
-        run(&mut w, 10.0);
-        assert!((w.fuel() - 3.6).abs() < 0.01, "cruise burns nothing: {}", w.fuel());
-        w.game.fuel[0] = 0.0;
+        run(&mut w, 4.0);
+        assert!((w.game.heat[0] - 0.6).abs() < 0.02 && w.game.hot[0] == 1, "cooling, still locked: {}", w.game.heat[0]);
+        run(&mut w, 1.1);
+        assert_eq!(w.game.hot[0], 0, "unlocked at half: {}", w.game.heat[0]);
         w.game.input[0] = IN_ASSIST | IN_THRUST | IN_BURN;
         w.step();
-        assert_eq!(w.ships.burn[0], 0);
+        assert_eq!(w.ships.burn[0], 1);
         assert!(w.game.set[0] <= w.types.vmax[0] + 1e-9);
+    }
+
+    #[test]
+    fn radiation_heats_the_ship() {
+        let mut w = world(0.0); // the middle of the zone: 10% a second, heat 0.1 a second, less the cooling
+        run(&mut w, 1.0);
+        assert!(w.game.heat[0] == 0.0, "{}", w.game.heat[0]); // a cooling of 0.1 a second offsets it exactly
+        w.params[P::heat_cool as usize] = 20.0;
+        run(&mut w, 2.0);
+        assert!((w.game.heat[0] - 0.1).abs() < 0.01, "{}", w.game.heat[0]);
     }
 
     #[test]
