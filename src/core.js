@@ -64,7 +64,7 @@ const CORE_READY = (async () => {
       alpha: () => X.dw_alpha(w),
       tick: () => X.dw_tick(w),
       slotReset: (i, respawn) => X.dw_slot_reset(w, i, respawn ? 1 : 0),
-      handle: i => X.dw_handle(w, i),
+      handle: i => X.dw_handle(w, i) >>> 0, // (unsigned: the core's u32 comes back signed)
       resolve: h => X.dw_resolve(w, h),
       rand: () => X.dw_rand(w),
       reseed: seed => X.dw_reseed(w, seed >>> 0),
@@ -83,6 +83,8 @@ const CORE_READY = (async () => {
       serviceCost: code => X.dw_service_cost(w, code), radiation: (x, y) => X.dw_radiation(w, x, y),
       // a ship type's top speed at a point, before the well's bend by direction (raised in open space)
       topSpeed: (kind, x, y) => X.dw_top_speed(w, kind, x, y),
+      // stellar radiation at a point (sensors.rs: 1 a yellow dwarf's light in the open; a flare's many times that)
+      stellar: (x, y) => X.dw_stellar(w, x, y),
       setInput: bits => X.dw_set_input(w, bits >>> 0),
       playerSet: () => groups.game.set[0], // assist set speed, m/s (the player is on the game row)
       // save: a copy of the whole world as bytes; load(bytes): 0 ok, else an error code (see snapshot.rs)
@@ -114,7 +116,7 @@ const CORE_READY = (async () => {
   }
   // input bits, mirrored from core/src/player.rs
   // game commands, modes and results, mirrored from core/src/port.rs, market.rs, mission.rs and service.rs
-  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, refuel: 11, repair: 12, hyper: 13, teleport: 100, jump: 101, zone: 102 };
+  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, refuel: 11, repair: 12, hyper: 13, cold: 14, ping: 15, target: 16, teleport: 100, jump: 101, zone: 102, flare: 103 };
   // a jump's phases (core/src/jump.rs, game.jump)
   const JUMP = { none: 0, torch: 1, transit: 2, arrive: 3 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
@@ -123,7 +125,8 @@ const CORE_READY = (async () => {
   const TRAFFIC = { launch: 1, cruise: 2, land: 3, torch: 4, arriving: 5, streams: ['local', 'arrive', 'depart', 'loiter', 'environ'], mix: { local: 1, through: 2, loiter: 3, env: 4 }, zones: ['north', 'east', 'south', 'west'] };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3, dead: 4 };
   const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body', 13: 'not offered here', 14: 'nothing to do',
-    15: 'not in a jump zone', 16: 'not lined up with the zone', 17: 'too slow to jump', 18: 'not enough fuel', 19: 'no chart of that system', 20: 'missed' };
+    15: 'not in a jump zone', 16: 'not lined up with the zone', 17: 'too slow to jump', 18: 'not enough fuel', 19: 'no chart of that system', 20: 'missed',
+    21: 'the ping is recharging', 22: 'not on your sensors' };
   const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };
   return { world, IN, CMD, JUMP, MODE, MISSION, TRAFFIC, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
 })();

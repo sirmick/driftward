@@ -57,7 +57,7 @@ gen = (src / 'gen.js').read_text()
 MODULES = {
     '/*LOOK*/': 'look.js', '/*SHADERS*/': 'shaders.js', '/*GFX*/': 'gfx.js', '/*BAKE*/': 'bake.js', '/*CORE*/': 'core.js',
     '/*FLY*/': 'fly.js', '/*PLANETS*/': 'planets.js', '/*STARS*/': 'stars.js', '/*SUNS*/': 'play/suns.js', '/*STATIONS*/': 'stations.js',
-    '/*ASTEROIDS*/': 'asteroids.js', '/*ROCKS*/': 'rocks.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js', '/*DEBUG*/': 'play/debug.js', '/*SHIPYARD*/': 'play/shipyard.js', '/*JITTER*/': 'play/jitter.js',
+    '/*ASTEROIDS*/': 'asteroids.js', '/*ROCKS*/': 'rocks.js', '/*PLAY*/': 'play/play.js', '/*SCHEMA*/': 'schema.js', '/*DEBUG*/': 'play/debug.js', '/*SHIPYARD*/': 'play/shipyard.js', '/*JITTER*/': 'play/jitter.js', '/*KEYS*/': 'play/keys.js',
     '/*MAP*/': 'map/map.js', '/*MAPPANEL*/': 'map/panel.js', '/*MAPVIEW*/': 'map/view.js', '/*DATA*/': 'data.js', '/*GALAXYMAP*/': 'play/galaxy.js',
 }
 
@@ -129,7 +129,7 @@ lab = page((src / 'template.html').read_text(), inline_modules((src / 'app.js').
     ['/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*FLY*/', '/*STARS*/', '/*SCHEMA*/', '/*PLANETS*/', '/*STATIONS*/', '/*ASTEROIDS*/']))
 # the game and the star map: their templates carry the script shell and markers themselves, and the data loader
 # (src/data.js) first; the files they read inline where the build is self-contained
-game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*DATA*/', '/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*GALAXYMAP*/', '/*SHIPYARD*/', '/*SUNS*/', '/*MAP*/', '/*MAPPANEL*/', '/*JITTER*/', '/*PLAY*/']), '').replace('<!--DATA-->', data_tags(GAME_DATA))
+game = page(inline_modules((src / 'play' / 'template.html').read_text(), ['/*DATA*/', '/*LOOK*/', '/*SHADERS*/', '/*GFX*/', '/*ROCKS*/', '/*BAKE*/', '/*CORE*/', '/*STARS*/', '/*SCHEMA*/', '/*DEBUG*/', '/*GALAXYMAP*/', '/*SHIPYARD*/', '/*SUNS*/', '/*MAP*/', '/*MAPPANEL*/', '/*JITTER*/', '/*KEYS*/', '/*PLAY*/']), '').replace('<!--DATA-->', data_tags(GAME_DATA))
 starmap = inline_modules((src / 'map' / 'template.html').read_text(), ['/*DATA*/', '/*SHADERS*/', '/*GFX*/', '/*STARS*/', '/*MAP*/', '/*MAPPANEL*/', '/*MAPVIEW*/']).replace('<!--DATA-->', data_tags(MAP_DATA))
 
 out_dir.mkdir(parents=True, exist_ok=True)

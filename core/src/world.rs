@@ -46,6 +46,9 @@ soa! {
         rx: f32, ry: f32, ra: f32,
         // hull points left (service.rs): radiation in a hazard zone wears it down; at zero the ship is lost
         hull: f64,
+        // sensors (sensors.rs): the signature it emits; the player's smoothed SNR on it and its own on the player; the
+        // player's scan of it, 0 to 1 (1 scanned)
+        sig: f64, det: f64, seen: f64, scan: f64,
         alive: u8,
         // 1 while traffic.rs moves the ship along its route (on rails, or held for a launch or landing); the flight
         // stages skip it
@@ -65,7 +68,7 @@ soa! {
     /// Ship types (one per brand x size): flight stats from the catalog. `well` is how strongly gravity wells
     /// affect the hull (0 not at all; fighters about .35, capital ships about .75); `cargo` is the hold, in tons;
     /// `hull` the hull's points when sound; `fuel` the tank, in tons (service.rs).
-    pub struct Types { accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32, hull: f64, fuel: f64 }
+    pub struct Types { accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32, hull: f64, fuel: f64, len: f64 }
 }
 
 soa! {
@@ -76,12 +79,13 @@ soa! {
     /// `reach`: how far its well reaches, in radii (0: the well_reach param; compact stars reach much further).
     /// A hazard zone (service.rs; the exotic stars') is `hazard` metres round it, where radiation wears a hull down by
     /// up to `rad` of its sound points a second, most at the centre. A port's services (service.rs SVC_* bits) and
-    /// its fuel price, credits a ton.
+    /// its fuel price, credits a ton. A star's `out`, its radiation output (sensors.rs: 1 a yellow dwarf's), and `flares`,
+    /// how prone it is to flares (0 never).
     /// Its orbit (motion.rs): `orb_r` metres from body `orb_p` (-1: none) at `orb_a` radians at time 0, turning
     /// `orb_w` radians a second (0: it holds still); its velocity, and its previous-tick and render positions.
     pub struct Bodies {
         x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8, env: u8, env_rate: f64, env_next: f64, env_jump: f64,
-        reach: f64, hazard: f64, rad: f64, svc: u8, fuel_price: u32,
+        reach: f64, hazard: f64, rad: f64, svc: u8, fuel_price: u32, out: f64, flares: f64,
         orb_p: i16, orb_r: f64, orb_a: f64, orb_w: f64, vx: f64, vy: f64, prev_x: f64, prev_y: f64, rx: f64, ry: f64,
     }
 }
@@ -109,6 +113,12 @@ soa! {
         heat: f64, hot: u8,
         // the assist's throttle (player.rs): 0 to 1 of the top speed where the ship is
         throttle: f64,
+        // sensors (sensors.rs): running cold; the active ping (its level, decaying from 1 as it goes out, and the
+        // cooldown left); the ship the player targets (its handle plus one, 0 none; exact in an f64), which a scan needs
+        cold: u8, ping: f64, ping_cd: f64, target: f64,
+        // stellar flares (sensors.rs): phase (0 quiet, 1 warning, 2 flaring), seconds into it, when the next is due
+        // (game seconds; 0 not drawn yet), the flaring star, and the flare's level now (0 to 1)
+        flare: u8, flare_t: f64, flare_due: f64, flare_star: i16, flare_lvl: f64,
     }
 }
 
@@ -247,6 +257,35 @@ params! {
     heat_gas = 4.0;       "gas speeds cooling: the rate times 1 + this times the gas density round the ship"
     heat_unlock = 0.5;    "a locked burner unlocks once heat is down to this share"
     heat_rad = 1.0;       "radiation's heat: a dose (share of a sound hull lost a second) adds this times it in heat a second"
+    sens_k = 100.0;       "sensor constant: SNR = this x signature / range (km)^2 x gas transmission / local noise"
+    sig_idle = 0.15;      "signature terms, times hull length over 18 m to the 1.2: idle"
+    sig_thrust = 0.6;     "signature: engines, times the engine glow"
+    sig_burn = 1.6;       "signature: the burner lit"
+    sig_lat = 0.1;        "signature: side thrusters, times their command"
+    sig_heat = 0.6;       "signature: the player's heat, times it"
+    sig_ping = 8.0;       "signature: an active ping, times its level"
+    sig_cold = 0.35;      "running cold multiplies the player's signature by this"
+    contact_snr = 1.0;    "SNR at which a ship is a contact (position, with an error radius)"
+    ident_snr = 3.0;      "SNR at which a contact is identified (class and faction)"
+    scan_range = 5000.0;  "an identified target within this many metres is scanned"
+    scan_secs = 2.2;      "seconds a scan takes"
+    det_rise = 4.0;       "the player's sensors settle on a stronger signal at this rate a second"
+    det_fall = 1.5;       "and lose a weaker one at this rate"
+    seen_rise = 3.0;      "other ships' sensors settle on the player at this rate a second"
+    seen_fall = 0.35;     "and forget slowly (they remember where they last saw you)"
+    ping_gain = 5.0;      "an active ping multiplies sensor gain by 1 + this, times its level"
+    ping_decay = 0.25;    "a ping's level falls this much a second"
+    ping_cool = 6.0;      "seconds before the next ping"
+    noise_rad = 0.35;     "local sensor noise: 1 + this x stellar radiation + noise_ion x ionized gas"
+    noise_ion = 0.6;      "local sensor noise from ionized gas"
+    flare_min = 70.0;     "a flare comes every flare_min to flare_min + flare_span seconds, divided by the star's flares"
+    flare_span = 50.0;    "the spread of the time between flares, seconds"
+    flare_warn = 8.0;     "seconds of warning before a flare"
+    flare_secs = 9.0;     "seconds a flare lasts (rising over 1.2 s, falling over its last 2)"
+    flare_gain = 9.0;     "a flare multiplies its star's radiation by 1 + this at its height"
+    heat_star = 0.02;     "stellar radiation's heat: this times the radiation, a second"
+    rad_safe = 1.5;       "stellar radiation above this wears an unshielded hull"
+    rad_hull = 0.0;       "share of a sound hull lost a second per unit of stellar radiation above rad_safe (0 until M2's shields soak it)"
     repair_cost = 2.0;    "credits a hull point costs to repair"
     match_reach = 4.0;    "full assist and the autopilot match a moving port's velocity within this many of its radii (fading in from there to half as near)"
 }
@@ -460,7 +499,8 @@ impl World {
     /// traffic (arrivals, launches and landings, rails, and the AI flying ambient ships near the player),
     /// control (assist turns desired velocity into actuator commands), fields (gas at each ship),
     /// steer (angular motion), forces (thrust, drag, gravity), integrate (velocity, dampers, position),
-    /// engines (glow), ships (the burner's fuel, hazards' radiation, a hull lost; service.rs). Trading and the day's costs are commands, applied between ticks (market.rs). Decide (AI) and the systems after motion still run in JS around this call.
+    /// engines (glow), ships (heat, hazards' radiation, a hull lost; service.rs), sensors (signature, detection, scans,
+    /// flares; sensors.rs). Trading and the day's costs are commands, applied between ticks (market.rs). Decide (AI) and the systems after motion still run in JS around this call.
     pub fn step(&mut self) {
         let n = self.count;
         let s = &mut self.ships;
@@ -479,6 +519,7 @@ impl World {
         flight::integrate(self);
         flight::engines(self);
         self.step_ships();
+        self.step_sensors();
         self.tick += 1;
     }
 
@@ -504,7 +545,7 @@ impl World {
     /// snaps the interpolation history so the ship does not streak across the screen.
     pub fn slot_reset(&mut self, i: usize, respawn: bool) {
         let s = &mut self.ships;
-        if respawn { s.generation[i] = s.generation[i].wrapping_add(1) & 0xffff; }
+        if respawn { s.generation[i] = s.generation[i].wrapping_add(1) & 0xffff; (s.sig[i], s.det[i], s.seen[i], s.scan[i]) = (0.0, 0.0, 0.0, 0.0); }
         s.prev_x[i] = s.x[i];
         s.prev_y[i] = s.y[i];
         s.prev_ang[i] = s.ang[i];

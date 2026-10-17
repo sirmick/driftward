@@ -73,16 +73,18 @@ impl World {
             let burning = s.burn[i] != 0 && s.main[i] > 0.0;
             let dh = if burning { 1.0 / self.p(P::heat_burn).max(0.1) } else {
                 -(1.0 + self.p(P::heat_gas) * (s.gas_h[i] + s.gas_d[i] + s.gas_i[i])) / self.p(P::heat_cool).max(0.1)
-            } + self.p(P::heat_rad) * self.radiation(s.x[i], s.y[i]);
+            } + self.p(P::heat_rad) * self.radiation(s.x[i], s.y[i]) + self.p(P::heat_star) * self.stellar(s.x[i], s.y[i], s.gas_i[i]);
             let h = (self.game.heat[0] + dh * DT).clamp(0.0, 1.0);
             self.game.heat[0] = h;
             if h >= 1.0 { self.game.hot[0] = 1; } else if h <= self.p(P::heat_unlock) { self.game.hot[0] = 0; }
         }
-        if !(0..self.n_bodies).any(|j| self.bodies.hazard[j] > 0.0) { return; }
-        let player = usize::try_from(self.game.player[0]).ok();
+        let wear = self.p(P::rad_hull); // stellar radiation's wear on unshielded hulls (sensors.rs; 0 until M2's shields)
+        if wear <= 0.0 && !(0..self.n_bodies).any(|j| self.bodies.hazard[j] > 0.0) { return; }
+        let (player, safe) = (usize::try_from(self.game.player[0]).ok(), self.p(P::rad_safe));
         for i in 0..self.count {
             if self.ships.alive[i] == 0 || self.ships.rail[i] != 0 { continue; }
-            let dose = self.radiation(self.ships.x[i], self.ships.y[i]);
+            let (x, y) = (self.ships.x[i], self.ships.y[i]);
+            let dose = self.radiation(x, y) + if wear > 0.0 { wear * (self.stellar(x, y, self.ships.gas_i[i]) - safe).max(0.0) } else { 0.0 };
             if dose <= 0.0 { continue; }
             self.ships.hull[i] -= dose * self.types.hull[self.ships.kind[i] as usize] * DT;
             if self.ships.hull[i] > 0.0 { continue; }

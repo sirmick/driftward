@@ -39,14 +39,20 @@ vec3 sky(vec2 px){
   c += pow(uNeb,vec3(2.2))*0.35*smoothstep(.45,.95,nb)*(.6+.4*nb2);
   float sd = max(dot(normalize(q+1e-4), uSunDir),0.);
   c += pow(uStar,vec3(2.2))*0.012*pow(sd,4.)*smoothstep(0.,.9,length(q));
-  for(int l=0;l<3;l++){
-    float sc = 90.+float(l)*70.; vec2 g = px/(uRS > 0. ? uRS : 1.)/sc*(1.+float(l)*.37) + float(l)*13.7; vec2 id=floor(g); vec2 f=fract(g)-.5;
-    float r = h21(id+float(l)); if(r>.18) continue;
+  // four layers of stars at their own depths (each shifts with the view by its own share of the offset, so they slide
+  // past each other): sparse and bright to dense and faint; a few of the bright ones with a soft glow
+  for(int l=0;l<4;l++){
+    float fl = float(l), depth = l == 0 ? .55 : l == 1 ? 1. : l == 2 ? 1.6 : .35;
+    vec2 pl = px + uOff*(depth - 1.);
+    float sc = l == 3 ? 38. : 90.+fl*70.; vec2 g = pl/(uRS > 0. ? uRS : 1.)/sc*(1.+fl*.37) + fl*13.7; vec2 id=floor(g); vec2 f=fract(g)-.5;
+    float r = h21(id+fl); if(r>(l == 3 ? .3 : .18)) continue;
     vec2 o2 = vec2(h21(id+3.1),h21(id+7.3))-.5; float d=length(f-o2*.7);
     float tw = .75+.25*sin(uTime*(1.+r*9.)+r*40.);
-    float b = (1.-smoothstep(0.,.06-.015*float(l),d))*(.35+.65*h21(id+11.))*tw;
+    float w = l == 3 ? .045 : .06-.015*fl, mag = .35+.65*h21(id+11.);
+    float b = (1.-smoothstep(0.,w,d))*mag*tw;
+    if (l == 0 && mag > .88) b += .0016/(d*d + .002)*(mag - .88)*8.*tw*(1. - smoothstep(.04, .14, d)); // the brightest: a glow round them (inside their cell)
     vec3 sc3 = mix(vec3(1.,.8,.6), vec3(.6,.75,1.), h21(id+5.));
-    c += sc3*b*(.6-.15*float(l))*starK;
+    c += sc3*b*(l == 3 ? .22 : .6-.15*fl)*starK;
   }
   return c;
 }`;
@@ -56,10 +62,34 @@ ${SKY}
 // worlds near the view, in screen pixels (centre, radius): stars fade out toward each one's limb, almost gone there
 // and back in full by about 2.6 radii, past its orbiting debris
 uniform vec4 uDim[4]; uniform int uDimN;
+// Specks: dust near the ship's own depth, in two layers (uSp0, uSp1: their offsets, the view's position times their
+// share of it, wrapped by the page to whole periods of their grid), so they cross the screen at the ship's speed, each
+// drawn as a streak back along its motion (uStreak, px, for a layer at the ship's depth; the page lengthens it with
+// speed and more in deep space). uDeep (0 by a world, 1 deep in open space) brings more of them; uSpeckK their
+// brightness (0: none, as in the lab); uSpeckN their number (fewer zoomed out, where each cell covers more space).
+uniform vec2 uSp0, uSp1, uStreak; uniform float uDeep, uSpeckK, uSpeckN;
+const float SP_PERIOD = 1024.;
+vec3 specks(vec2 p){
+  vec3 c = vec3(0.);
+  for (int l = 0; l < 2; l++) {
+    float k = l == 0 ? .45 : 1., cs = l == 0 ? 170. : 260.;
+    vec2 off = l == 0 ? uSp0 : uSp1, s = uStreak*k, g = (p + off)/cs, id0 = floor(g);
+    float ss = max(dot(s, s), 1e-4), dens = ((l == 0 ? .12 : .07) + .22*uDeep)*uSpeckN, fade = mix(1., .55, clamp(length(s)/150., 0., 1.));
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+      vec2 id = id0 + vec2(x, y), hid = mod(id, SP_PERIOD) + float(l)*71.3;
+      float r = h21(hid + 31.7); if (r > dens) continue;
+      vec2 pos = (id + .15 + .7*vec2(h21(hid + 1.3), h21(hid + 5.9)))*cs - off;
+      vec2 pa = p - pos; float h = clamp(dot(pa, -s)/ss, 0., 1.), d = length(pa + s*h);
+      float b = (1. - smoothstep(.0, 1.1 + .7*h21(hid + 9.1), d))*(1. - .75*h)*(.3 + .5*h21(hid + 2.2))*fade;
+      c += mix(vec3(.36,.38,.42), vec3(.44,.42,.38), h21(hid + 4.4))*b; // dark grey dust, faintly cool or warm
+    }
+  }
+  return c*uSpeckK;
+}
 void main(){
   vec2 p = vUv*uRes;
   for (int i = 0; i < 4; i++) { if (i >= uDimN) break; starK *= mix(.05, 1., smoothstep(1., 2.6, length(p - uDim[i].xy)/uDim[i].z)); }
-  o = vec4(sky(p + uOff), 1.);
+  o = vec4(sky(p + uOff) + specks(p), 1.);
 }`;
 
 const SHIP_VS = `#version 300 es
@@ -138,7 +168,7 @@ void main(){
   float eg = X.g;
   float flick = .92 + .08*sin(uTime*41. + vQ.y*13.);
   vec3 em = pow(Et.rgb*2., vec3(1.6))*2.2;
-  em *= mix(1., (.2 + 4.5*uThrottle*uThrottle)*flick, eg);
+  em *= mix(1., (.2*smoothstep(0., .1, uThrottle) + 4.5*uThrottle*uThrottle)*flick, eg); // engine parts dark when the engines are off
   col += em;
   col += vec3(.5,.38,.18)*uHover*.025;
   o = vec4(col*A.a, A.a);

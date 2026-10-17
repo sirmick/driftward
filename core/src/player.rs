@@ -50,8 +50,11 @@ pub fn control(w: &mut World) {
     (w.game.fvx[0], w.game.fvy[0]) = (fx, fy);
     let held = |bit: u32| input & bit != 0;
     let (up, down, left, right) = (held(IN_THRUST), held(IN_REVERSE), held(IN_LEFT), held(IN_RIGHT));
-    if w.game.auto[0] > 0 {
-        if held(IN_ASSIST) && !(up || down || left || right) { autopilot(w, i); return; }
+    if w.game.auto[0] != 0 {
+        if held(IN_ASSIST) && !(up || down || left || right) {
+            if w.game.auto[0] < 0 { zone_pilot(w, i, (-1 - w.game.auto[0]) as usize); } else { autopilot(w, i); }
+            return;
+        }
         w.game.auto[0] = 0; // the player took the stick: carry on at the speed along the nose
         let (hx, hy) = heading(w.ships.ang[i]);
         w.hand_speed(((w.ships.vx[i] - fx) * hx + (w.ships.vy[i] - fy) * hy).max(0.0));
@@ -121,6 +124,34 @@ pub fn nav_point(w: &World, j: usize, x: f64, y: f64) -> (f64, f64) {
     let d = hypot(dx, dy);
     if d < 1e-6 { return (bx + w.bodies.r[j], by); }
     (bx + dx / d * w.bodies.r[j], by + dy / d * w.bodies.r[j])
+}
+
+/// The autopilot to jump zone g (game.auto -1 - g): to a point just inside its runway's inner end (round anything in
+/// the way), at the top speed there; in the runway, out along its bearing at the hull's top speed, lined up for a jump
+/// (J, jump.rs), with the runway's length to press it in. It stays on until the jump or the stick takes over.
+fn zone_pilot(w: &mut World, i: usize, g: usize) {
+    if g >= w.n_gates() { w.game.auto[0] = 0; return; }
+    let (dx, dy) = w.gate_dir(g);
+    let (r, half, width) = (w.p(P::jump_radius), w.p(P::zone_len) / 2.0, w.p(P::zone_width));
+    let (x, y) = (w.ships.x[i], w.ships.y[i]);
+    let (along, side) = (x * dx + y * dy, y * dx - x * dy);
+    let k = w.ships.kind[i] as usize;
+    let inside = along > r - half && along < r + half && side.abs() < width / 2.0 - 300.0;
+    let (wx, wy, v, aim) = if inside {
+        let vmax = w.types.vmax[k];
+        (dx, dy, vmax, (dx * (r + half), dy * (r + half)))
+    } else {
+        let entry = (dx * (r - half + 1500.0), dy * (r - half + 1500.0));
+        let (tx, ty) = w.detour((x, y), entry, [usize::MAX, usize::MAX]).unwrap_or(entry);
+        let d = hypot(tx - x, ty - y).max(1e-6);
+        ((tx - x) / d, (ty - y) / d, w.top_speed(k, x, y), (tx, ty))
+    };
+    (w.game.aim_x[0], w.game.aim_y[0]) = aim;
+    (w.game.fvx[0], w.game.fvy[0]) = (0.0, 0.0);
+    let s = &mut w.ships;
+    s.ctl[i] = 1; s.rot[i] = 0; s.burn[i] = 0; s.turn_in[i] = 0.0;
+    s.want_vx[i] = wx * v; s.want_vy[i] = wy * v;
+    w.game.set[0] = v;
 }
 
 /// The autopilot's tick: a desired velocity toward the next point (a waypoint round an obstacle, or the target),
@@ -204,6 +235,23 @@ mod tests {
         }
         assert!(fastest > 500.0, "fastest {fastest}");
         assert!(at_edge > 150.0 && at_edge < 200.0 * 1.2, "at the well's edge {at_edge}");
+    }
+
+    /// The autopilot to a jump zone: from the middle of the system, into the zone's runway and out along its bearing,
+    /// fast enough and lined up to jump.
+    #[test]
+    fn the_zone_pilot_lines_the_ship_up_in_its_zone() {
+        let mut w = world();
+        w.gates.dest[0] = 7; w.gates.zone[0] = 4; // north (zone 4: 90 degrees)
+        let jr = w.p(P::jump_radius);
+        w.game.mode[0] = crate::port::MODE_FLYING;
+        assert_eq!(w.command(crate::port::CMD_AUTOPILOT, -2, 0), crate::port::OK);
+        w.game.input[0] = IN_ASSIST;
+        for _ in 0..(400.0 / DT) as usize { w.step(); if w.ships.y[0] > jr { break; } }
+        let (vx, vy) = (w.ships.vx[0], w.ships.vy[0]);
+        assert!(w.ships.y[0] > jr && w.ships.x[0].abs() < 2000.0, "in the zone: {} {}", w.ships.x[0], w.ships.y[0]);
+        assert!(vy > 0.5 * w.types.vmax[0] && vx.abs() < 0.2 * vy, "out along it, fast: {vx} {vy}");
+        assert!(w.game.auto[0] < 0, "still on, for the jump");
     }
 
     #[test]

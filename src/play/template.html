@@ -126,11 +126,13 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 #loc .tag { margin-left: 4px; padding: 0 4px; border-radius: 3px; font-size: 9.5px; letter-spacing: .06em; color: #7fd08a; border: 1px solid rgba(127,208,138,.45); }
 #loc .tag.m { color: #8fd3ff; border-color: rgba(143,211,255,.5); }
 #loc .tag.h { color: var(--bad); border-color: rgba(240,138,114,.5); }
+#loc .tag.z { color: #c8a27a; border-color: rgba(200,162,122,.5); }
 #map { position: fixed; left: 0; top: 0; width: 100%; cursor: crosshair; }
 /* the shell: the title over a live view of the system, the pause menu, settings */
 .shell { position: fixed; inset: 0; display: grid; align-items: center; padding: 24px 6vw; }
 #title { background: linear-gradient(90deg, rgba(7,9,12,.9) 0%, rgba(7,9,12,.6) 40%, rgba(7,9,12,0) 72%); }
-#pause, #settings { background: rgba(7,9,12,.7); justify-items: center; }
+#pause, #settings, #keys { background: rgba(7,9,12,.7); justify-items: center; }
+#keys { padding-bottom: 80px; }
 /* the system barrier: the world stopped and blurred behind a small dialog while the system's ships and stations bake */
 #barrier, #notice, #lost { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; backdrop-filter: blur(7px) brightness(.65); -webkit-backdrop-filter: blur(7px) brightness(.65); background: rgba(7,9,12,.25); }
 #barrier[hidden], #notice[hidden], #lost[hidden] { display: none; }
@@ -159,7 +161,21 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 .barrier-bar i { display: block; height: 100%; width: 0; background: var(--amber); transition: width .15s; }
 #barrier-note { margin: 8px 0 0; color: var(--muted); font: 500 11.5px var(--f-mono); }
 .shell-card { width: min(380px, 100%); display: grid; gap: 8px; }
-#pause .shell-card, #settings .shell-card { background: rgba(12,16,21,.94); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; }
+#pause .shell-card, #settings .shell-card, #keys .shell-card { background: rgba(12,16,21,.94); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; }
+/* the Keys dialog (src/play/keys.js): each action with two key slots; click a slot, press a key */
+#keys .shell-card { width: min(620px, 100%); max-height: calc(100vh - 130px); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.keys-list { overflow-y: auto; padding-right: 6px; }
+.keys-list h4 { margin: 12px 0 4px; color: var(--amber); font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; }
+.key-row { display: grid; grid-template-columns: 1fr 104px 104px; align-items: center; gap: 6px; padding: 2px 0; font: 13px var(--f-body); color: #c4ccd6; }
+.key-row.fixed { grid-template-columns: 1fr 214px; } .key-row.fixed b { color: var(--muted); font: 500 12px var(--f-mono); text-align: center; }
+.key-row button.key { background: #0c1015; border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; cursor: pointer; color: var(--fg); font: 500 12px var(--f-mono); }
+.key-row button.key:hover { border-color: var(--amber); }
+.key-row button.key.cap { border-color: var(--amber); color: var(--amber); }
+.key-row button.key.clash { border-color: var(--bad); color: var(--bad); }
+.keys-acts { display: flex; gap: 8px; margin-top: 10px; }
+.keys-acts button { flex: 1; background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; cursor: pointer; color: var(--fg); font: 600 12.5px var(--f-display); letter-spacing: .05em; text-transform: uppercase; }
+.keys-acts button:hover { border-color: var(--amber); }
+.keys-acts button.primary { border-color: var(--amber); color: var(--amber); }
 .shell h2 { margin: 0; font: 700 64px/0.95 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
 .shell h3 { margin: 0 0 6px; font: 700 22px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
 .shell .sub { margin: 4px 0 22px; color: var(--muted); font: 500 13px var(--f-mono); }
@@ -462,8 +478,18 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
     <div class="setting">Flight mode at start <select id="s-assist"><option value="0">Assist</option><option value="1">Drift</option><option value="2">Free</option></select></div>
     <div class="setting">Render resolution <select id="s-quality"><option value="0">Auto (drops when frames run late)</option><option value="1">Full</option><option value="0.85">85%</option><option value="0.75">75%</option><option value="0.62">62%</option><option value="0.5">50%</option></select></div>
     <div class="setting">Debug readout (tick, fps) <select id="s-debug"><option value="1">On</option><option value="0">Off</option></select></div>
+    <button type="button" class="item" id="s-keys">Keys<span>rebind, import, export</span></button>
     <button type="button" class="item primary" id="s-done">Done<span>Esc</span></button>
     <p class="note">Settings are kept in this browser.</p>
+  </div>
+</section>
+<section id="keys" class="shell" hidden aria-label="Keys">
+  <div class="shell-card">
+    <h3>Keys</h3>
+    <p class="note">Click a key, then press the new one: Shift with a key binds the shifted key. Backspace clears, Esc cancels. Red: also bound where the same keys are live.</p>
+    <div class="keys-list"></div>
+    <div class="keys-acts"><button type="button" data-act="import">Import</button><button type="button" data-act="export">Export</button><button type="button" data-act="reset">Defaults</button><button type="button" class="primary" data-act="done">Done</button></div>
+    <input type="file" accept=".json,application/json" hidden>
   </div>
 </section>
 <section id="galaxy" hidden aria-label="Galaxy map"></section>
@@ -475,7 +501,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 </section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys" hidden>W S throttle · X stop · A D turn · Shift burn · Tab mode · L land · J jump · G autopilot · T target · M galaxy · Shift M system · I nav</span>
+  <span class="keys" hidden>W S throttle · X stop · Shift burn · Tab mode · L land · J jump · G autopilot · T ships · R places · C cold · V ping · M maps · I nav</span>
   <span class="spacer"></span>
   <button type="button" id="b-menu" title="P">Menu</button>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
@@ -511,6 +537,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 /*MAP*/
 /*MAPPANEL*/
 /*JITTER*/
+/*KEYS*/
 /*PLAY*/
 })();
 </script>

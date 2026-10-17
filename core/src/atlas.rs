@@ -44,6 +44,7 @@ soa! {
     pub struct AtlasBodies {
         x: f64, y: f64, r: f64, g: f64, pop: f64, kind: u8, port: u8, env: u8, env_rate: f64, env_jump: f64,
         reach: f64, hazard: f64, rad: f64, svc: u8, fuel_price: u32, orb_p: i16, orb_r: f64, orb_a: f64, orb_w: f64,
+        out: f64, flares: f64,
     }
 }
 
@@ -98,6 +99,7 @@ impl World {
             let f = |c: &[f64]| if j == usize::MAX { 0.0 } else { c[j] };
             (a.x[o], a.y[o], a.r[o], a.g[o], a.pop[o], a.env_rate[o], a.env_jump[o]) = (f(&b.x), f(&b.y), f(&b.r), f(&b.g), f(&b.pop), f(&b.env_rate), f(&b.env_jump));
             (a.reach[o], a.hazard[o], a.rad[o], a.orb_r[o], a.orb_a[o], a.orb_w[o]) = (f(&b.reach), f(&b.hazard), f(&b.rad), f(&b.orb_r), f(&b.orb_a), f(&b.orb_w));
+            (a.out[o], a.flares[o]) = (f(&b.out), f(&b.flares));
             if j == usize::MAX {
                 (a.kind[o], a.port[o], a.env[o], a.svc[o], a.fuel_price[o], a.orb_p[o]) = (0, 0, 0, 0, 0, -1);
             } else {
@@ -135,6 +137,7 @@ impl World {
             (b.x[j], b.y[j], b.r[j], b.g[j], b.pop[j]) = (a.x[o], a.y[o], a.r[o], a.g[o], a.pop[o]);
             (b.kind[j], b.port[j], b.env[j], b.env_rate[j], b.env_jump[j]) = (a.kind[o], a.port[o], a.env[o], a.env_rate[o], a.env_jump[o]);
             (b.reach[j], b.hazard[j], b.rad[j], b.svc[j], b.fuel_price[j]) = (a.reach[o], a.hazard[o], a.rad[o], a.svc[o], a.fuel_price[o]);
+            (b.out[j], b.flares[j]) = (a.out[o], a.flares[o]);
             (b.orb_p[j], b.orb_r[j], b.orb_a[j], b.orb_w[j]) = (a.orb_p[o], a.orb_r[o], a.orb_a[o], a.orb_w[o]);
             (b.vx[j], b.vy[j]) = (0.0, 0.0); // still, unless its orbit moves it (below): none of the last system's motion stays
             b.env_next[j] = 0.0;

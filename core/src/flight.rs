@@ -257,7 +257,8 @@ pub fn integrate(w: &mut World) {
     }
 }
 
-/// Engine glow follows the throttle: idle, cruise or burner.
+/// Engine glow follows the throttle: dark at rest (no thrust: no glow, so the plume and the engine light go out), cruise
+/// or burner.
 pub fn engines(w: &mut World) {
     let rate = (w.p(P::thr_rate) * DT).min(1.0);
     let s = &mut w.ships;
@@ -265,7 +266,7 @@ pub fn engines(w: &mut World) {
         if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
         let m = s.main[i];
         let burn = s.burn[i] != 0 && m > 0.0;
-        let target = if m > 0.05 { if burn { 1.0 } else { 0.3 + 0.42 * m } } else { 0.06 };
+        let target = if m > 0.05 { if burn { 1.0 } else { 0.3 + 0.42 * m } } else { 0.0 };
         s.thr[i] += (target - s.thr[i]) * rate;
     }
 }

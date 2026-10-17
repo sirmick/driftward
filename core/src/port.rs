@@ -18,6 +18,7 @@
 
 use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL, NO_CREDITS};
 use crate::mission::{CMD_ABANDON, CMD_ACCEPT};
+use crate::sensors::{CMD_COLD, CMD_FLARE, CMD_PING, CMD_TARGET};
 use crate::service::{CMD_REFUEL, CMD_REPAIR};
 use crate::jump::{CMD_HYPER, CMD_ZONE, J_NONE};
 use crate::math::{atan2, hypot};
@@ -137,8 +138,16 @@ impl World {
             CMD_BUY | CMD_SELL | CMD_REPAY => self.trade(code, a, b),
             CMD_ACCEPT | CMD_ABANDON => self.mission_command(code, a),
             CMD_REFUEL | CMD_REPAIR => self.service(code),
+            CMD_COLD | CMD_PING | CMD_TARGET | CMD_FLARE => self.sensor_command(code, a, b),
             CMD_AUTOPILOT => {
+                // a: body a; -1 off; -2 - g: jump zone g (its lane's gate; player.rs zone_pilot)
                 if mode != MODE_FLYING { return WRONG_MODE; }
+                if a <= -2 {
+                    let g = (-2 - a) as usize;
+                    if g >= self.n_gates() { return NO_SUCH_BODY; }
+                    self.game.auto[0] = -(g as i16 + 1);
+                    return OK;
+                }
                 if a < -1 || a >= self.n_bodies as i32 { return NO_SUCH_BODY; }
                 self.game.auto[0] = (a + 1) as i16;
                 OK

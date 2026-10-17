@@ -2,7 +2,7 @@
 // and live-reloads open pages. Usage: npm run dev   (PORT=8000 and HOST=0.0.0.0, all interfaces, by default)
 // Each page it serves gets tools/dev-client.js, which also:
 // - sends the page's console and uncaught errors here (POST /__log), kept in .dev/frontend.log (errors echo below);
-// - sends a state report (POST /__report) from its Send state button or F8, kept in .dev/reports/<time>-<page>/:
+// - sends a state report (POST /__report) on F8, kept in .dev/reports/<time>-<page>/:
 //   report.json, screen.png, and for the game save.bin and inputs.txt (a replay: node core replay, see README);
 // - answers GET /__ask (curl localhost:8000/__ask), which asks every open page for a report, waits for them (up to
 //   ?wait= seconds, default 20) and replies with where they landed.

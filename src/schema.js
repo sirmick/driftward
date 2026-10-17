@@ -108,7 +108,7 @@ function loadSystem(raw, schema, opts) {
   const stationSchema = schema.properties.bodies.items.properties.station;
   const stationOf = b => { const st = clampToSchema(stationSchema, b.station || {}, `$.bodies[${b.id}].station`, notes); if (!st.seed) st.seed = b.id; return st; };
   // the star is body 0; a binary's companion body 1, on its orbit from it
-  const starBody = (st, id, x, y, extra) => { const G = STAR_LIB.starGame(st); return Object.assign({ id, name: st.name, kind: 'star', x, y, r: G.radius, g: G.gravity, reach: G.reach, hazard: G.hazard, rad: G.rad, starClass: st.class, star: STAR_LIB.starLook(st) }, extra); };
+  const starBody = (st, id, x, y, extra) => { const G = STAR_LIB.starGame(st); return Object.assign({ id, name: st.name, kind: 'star', x, y, r: G.radius, g: G.gravity, reach: G.reach, hazard: G.hazard, rad: G.rad, out: G.out, flares: G.flares, starClass: st.class, star: STAR_LIB.starLook(st) }, extra); };
   bodies.push(starBody(sys.star, 'star', 0, 0, { port: null }));
   placed.set('', bodies[0]); placed.set('star', bodies[0]);
   const C = sys.star.companion;

@@ -161,13 +161,20 @@ with sync_playwright() as p:
     h = ev('__play.locations()')
     rows = pg.locator('#loc button').count()
     check(rows == len(h) and rows >= 5 and pg.is_visible('#loc'), f'the location list shows {rows} rows: ' + ', '.join(r['name'] for r in h))
-    pg.keyboard.press('Digit2'); pg.wait_for_timeout(100)
-    check(ev('__play.target()') == {'body': h[1]['j']}, f"2 targets {h[1]['name']}")
+    top = [r['r'] for r in h if not r['child']]
+    check(all(a <= b + 1 for a, b in zip(top, top[1:])) and any('zone' in r for r in h), 'the list is nearest first, the jump zones among the places')
+    nb = next(n for n, r in enumerate(h) if 'j' in r and n > 0) # the second row that is a body
+    pg.keyboard.press(f'Digit{nb + 1}'); pg.wait_for_timeout(100)
+    check(ev('__play.target()') == {'body': h[nb]['j']}, f"{nb + 1} targets {h[nb]['name']}")
     pg.keyboard.press('KeyT'); pg.wait_for_timeout(100)
     tgt = ev('__play.target()')
     check(tgt is not None and tgt.get('ship', -1) > 0, 'T targets the nearest ship')
-    pg.keyboard.press('Digit2'); pg.keyboard.press('KeyG'); pg.wait_for_timeout(100)
-    check(ev('__play.probe().auto') == h[1]['j'], 'G engages the autopilot to the target body')
+    pg.keyboard.press(f'Digit{nb + 1}'); pg.keyboard.press('KeyG'); pg.wait_for_timeout(100)
+    check(ev('__play.probe().auto') == h[nb]['j'], 'G engages the autopilot to the target body')
+    nz = next(n for n, r in enumerate(h) if 'zone' in r)
+    if nz < 9:
+        pg.keyboard.press('KeyG'); pg.keyboard.press(f'Digit{nz + 1}'); pg.keyboard.press('KeyG'); pg.wait_for_timeout(100)
+        check(ev('__play.target()') == {'zone': h[nz]['zone']} and ev('__play.sim.game.auto[0]') == -1 - h[nz]['zone'], f"{nz + 1} targets the {h[nz]['name']} jump zone and G flies there")
     pg.keyboard.press('Shift+KeyM')
     try: pg.wait_for_function("!document.getElementById('map').hidden && document.getElementById('loc').hidden", timeout=5000) # the HUD hides the list next frame
     except Exception: pass
@@ -175,7 +182,7 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     check(not pg.is_visible('#map'), 'Escape closes it')
 
-    # asteroid belts and fields: in the location list in orbital order, and the autopilot flies into a belt (to the
+    # asteroid belts and fields: in the location list, and the autopilot flies into a belt (to the
     # nearest point of its ring, straight through anything rocky in the way) and stops there
     if ev("__play.BODIES.some(b => b.id === 'scree')"):
         bt = ev("""(() => { const P = __play, C = P.CMD; P.newGame(12, { space: [-17000, -1000] }); P.advance(0.2, []);
@@ -184,7 +191,7 @@ with sync_playwright() as p:
           const q = P.probe(), d = Math.hypot(q.x - B.x, q.y - B.y);
           return { names: P.locations().map(r => r.name), auto, t, off: Math.abs(d - B.r), half: B.belt.width / 2, v: q.v, rocks: P.rocks() }; })()""")
         n = bt['names']
-        check('The Scree' in n and n.index('Halde') < n.index('The Scree') < n.index('Vast'), f"the belt is in the location list in orbital order: {', '.join(n)}")
+        check('The Scree' in n, f"the belt is in the location list: {', '.join(n)}")
         check(bt['auto'] == 0 and bt['t'] < 300 and bt['off'] < bt['half'] and bt['v'] < 30, f"the autopilot flies into the belt in {bt['t']} s and stops {bt['off']:.0f} m from its middle")
         check(bt['rocks'] > 1000, f"the belts and fields hold {bt['rocks']} rocks")
 
@@ -206,7 +213,9 @@ with sync_playwright() as p:
     pg.keyboard.press('KeyJ'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
     gj = ev("({ route: __play.galaxy.route(), course: __play.course(), best: __play.route(%d, 0, 'jumps').ids })" % here)
     check(gj['route'] == gj['best'] and len(gj['route']) <= len(gr['days']) and gj['course'] == {'dest': 0, 'by': 'jumps'}, f"J plots by fewest jumps ({len(gj['route']) - 1}) and Enter sets the course: {gj['course']}")
-    pg.keyboard.press('KeyM'); pg.wait_for_timeout(600)
+    pg.keyboard.press('KeyM')
+    try: pg.wait_for_function(f'!__play.galaxy.isOpen() && __play.probe().tick > {t0}', timeout=5000) # (a slow frame on a busy box can take a while)
+    except Exception: pass
     gc = ev("({ open: __play.galaxy.isOpen(), tick: __play.probe().tick, course: __play.course() })")
     check(not gc["open"] and gc["tick"] > t0 and gc["course"] == {"dest": 0, "by": "jumps"}, f"M closes it, the clock runs again and the course stays set: {gc}")
     ev("__play.newGame(32)"); pg.wait_for_function('!__play.probe().barrier', timeout=120000); pg.focus('#view')

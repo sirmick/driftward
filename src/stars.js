@@ -10,7 +10,9 @@
 // A class's game numbers: `radius` (m: a black hole's is its horizon), `gravity` (the well's strength, 40 a full
 // one), `reach` (how many radii the well reaches; 0 the core's usual 3), `hazard` (m: the zone where radiation wears
 // a hull down, core/src/service.rs; 0 none) and `rad` (the share of a sound hull lost a second at its middle). A
-// system file can set radius, gravity and hazard per star, and override any look parameter.
+// system file can set radius, gravity and hazard per star, and override any look parameter. Two more come from the look
+// (core/src/sensors.rs): `out`, its radiation output (its brightness over a yellow dwarf's), and `flares`, how prone it
+// is to flares (its look's flare activity).
 const STAR_CLASSES = {
   yellow:        { label: 'Yellow dwarf', cls: 'G', kind: 'star', temp: 5800, radius: 1, bright: 6, gran: 1, cell: 7, spots: .35, corona: 1, streamers: .8, prom: .6, limb: .6, flare: 1, spikes: 6, anam: .2,
                    game: { radius: 2400, gravity: 55 }, light: () => STARS.sol },
@@ -83,7 +85,9 @@ const starLight = c => { const L = (STAR_CLASSES[c] || STAR_CLASSES.yellow).ligh
 // A star's game numbers, the class's with the entry's own radius, gravity and hazard on top.
 function starGame(entry) {
   const G = (STAR_CLASSES[entry.class] || STAR_CLASSES.yellow).game;
-  return { radius: entry.radius ?? G.radius, gravity: entry.gravity ?? G.gravity, reach: G.reach || 0, hazard: entry.hazard ?? (G.hazard || 0), rad: G.rad || 0 };
+  const C = STAR_CLASSES[entry.class] || STAR_CLASSES.yellow;
+  return { radius: entry.radius ?? G.radius, gravity: entry.gravity ?? G.gravity, reach: G.reach || 0, hazard: entry.hazard ?? (G.hazard || 0), rad: G.rad || 0,
+    out: (C.bright || 6) / 6, flares: C.flare || 0 };
 }
 // How a star of game radius r (m) is framed at ss pixels a metre: its corona's reach in radii (glowR; a compact star's
 // glow is far larger than its disc), and the quad's extent in radii (ext: a pulsar's beams reach its hazard zone's

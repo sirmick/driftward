@@ -2,7 +2,7 @@
 // - Live reload: the server's 'reload' event reloads the page; 'fail' logs the build's errors.
 // - Logs: console.log/info/warn/error and uncaught errors go to the server too (POST /__log, batched), which keeps
 //   them in .dev/frontend.log with this page's id.
-// - State reports: the Send state button (or = or F8), or the server's 'snapshot' event (GET /__ask), sends a report
+// - State reports: F8, or the server's 'snapshot' event (GET /__ask), sends a report
 //   (POST /__report): a screenshot of every canvas (and the vista) on screen as composited (the page's HTML, such as
 //   the port card, is not in it: browsers can't draw it without asking), the recent log, the screen and GPU, and
 //   whatever the page adds (the game's window.__play.report(): its probe, jitter, traffic, a save and a replay log).
@@ -66,25 +66,16 @@
     busy = false;
   }
 
-  // ---------- the button, F8, and the server's requests ----------
+  // ---------- F8, and the server's requests ----------
   let note = null;
   function flash(text) {
     if (!note) { note = document.createElement('div'); note.style.cssText = 'position:fixed;right:12px;bottom:52px;z-index:99999;padding:6px 10px;border-radius:6px;background:rgba(7,9,12,.9);border:1px solid #2a3340;color:#dbe0e7;font:500 12px ui-monospace,monospace;pointer-events:none;transition:opacity .4s'; document.body.appendChild(note); }
     note.textContent = text; note.style.opacity = 1; clearTimeout(note.t); note.t = setTimeout(() => { note.style.opacity = 0; }, 3500);
   }
-  addEventListener('DOMContentLoaded', () => {
-    const b = document.createElement('button');
-    b.textContent = 'Send state (=)'; b.title = 'Send this page’s state to the dev server: a screenshot, the log, and the game’s state, jitter probe and replay (= or F8)';
-    b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:8px;z-index:99999;padding:4px 9px;border-radius:6px;border:1px solid #2a3340;background:rgba(7,9,12,.75);color:#8fd3ff;font:600 11px ui-monospace,monospace;cursor:pointer;opacity:.6';
-    b.onmouseenter = () => { b.style.opacity = 1; }; b.onmouseleave = () => { b.style.opacity = .6; };
-    b.onclick = e => { e.preventDefault(); b.blur(); report('button'); };
-    document.body.appendChild(b);
-  });
-  // = (or F8) sends a report. Under the dev server = is taken from the game's keyboard zoom-in (the wheel and numpad +
-  // still zoom); typing in a field is left alone
+  // F8 sends a report (typing in a field is left alone)
   addEventListener('keydown', e => {
-    if ((e.code !== 'Equal' && e.code !== 'F8') || e.repeat || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
-    e.preventDefault(); e.stopImmediatePropagation(); report(e.code === 'F8' ? 'F8' : 'key =');
+    if (e.code !== 'F8' || e.repeat || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    e.preventDefault(); e.stopImmediatePropagation(); report('F8');
   }, true);
   const es = new EventSource('/__events');
   es.addEventListener('hello', () => post('/__log', { page: PAGE, entries: [{ t: Date.now(), level: 'info', msg: `page open: ${location.href} ${innerWidth}x${innerHeight} @${window.devicePixelRatio || 1}` }] }));
