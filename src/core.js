@@ -118,7 +118,7 @@ const CORE_READY = (async () => {
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
   // traffic.rs: phases; streams (traffic.role; environ: to or from an environmental station); mix row streams; the
   // jump zones, north, east, south, west
-  const TRAFFIC = { launch: 1, cruise: 2, land: 3, streams: ['local', 'arrive', 'depart', 'loiter', 'environ'], mix: { local: 1, through: 2, loiter: 3, env: 4 }, zones: ['north', 'east', 'south', 'west'] };
+  const TRAFFIC = { launch: 1, cruise: 2, land: 3, torch: 4, arriving: 5, streams: ['local', 'arrive', 'depart', 'loiter', 'environ'], mix: { local: 1, through: 2, loiter: 3, env: 4 }, zones: ['north', 'east', 'south', 'west'] };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3, dead: 4 };
   const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body', 13: 'not offered here', 14: 'nothing to do',
     15: 'not in a jump zone', 16: 'not lined up with the zone', 17: 'too slow to jump', 18: 'not enough fuel', 19: 'no chart of that system', 20: 'missed' };

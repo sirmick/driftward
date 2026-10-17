@@ -11,7 +11,9 @@
 //!   complement, how much dearer the destination's market is for what both trade; liner: pop x pop / km);
 //! - ARRIVE: from one of the system's jump zones (its lanes' gates, jump.rs; four compass zones, `jump_radius` out,
 //!   where it has none) to a port, by population;
-//! - DEPART: from a port, by population, to a jump zone, where it leaves (vanishes, for now);
+//! - DEPART: from a port, by population, to a jump zone, where it lights its torch and leaves (jump.rs's jump: out
+//!   along the zone's bearing to `jump_speed` times top speed, then gone); an arrival comes in the other way, at jump
+//!   speed along its route, slowing to cruise over `arrive_secs`;
 //! - LOITER: launches, circles its port at `loiter_orbit` radii for about `loiter_turns` turns, and lands again.
 //!
 //! Local and through traffic share `traffic_ships` (`share_through` of it through); each loiter row keeps its own
@@ -57,6 +59,11 @@ pub const MAX_PTS: usize = 12;
 pub const T_LAUNCH: u8 = 1;
 pub const T_CRUISE: u8 = 2;
 pub const T_LAND: u8 = 3;
+/// Leaving by a jump zone: the torch, outward along the zone's bearing up to jump speed, then the blink (jump.rs's
+/// numbers, as the player's jump).
+pub const T_TORCH: u8 = 4;
+/// Come in by a jump zone: in at jump speed along the route, slowing to cruise over `arrive_secs`.
+pub const T_ARRIVING: u8 = 5;
 
 /// How far into its port's disc a route starts and ends, as a fraction of the radius (inside the landing zone).
 const SPOT: f64 = 0.3;
@@ -435,7 +442,7 @@ impl World {
         t.from[k] = from.code(); t.to[k] = to.code();
         t.s[k] = 0.0; t.cruise[k] = cruise; t.age[k] = 0.0;
         if let End::Body(_) = from { t.phase[k] = T_LAUNCH; t.timer[k] = LAUNCH_S; self.slot_reset(k, true); }
-        else { t.phase[k] = T_CRUISE; t.timer[k] = 0.0; self.place_on_route(k); self.slot_reset(k, true); }
+        else { t.phase[k] = T_ARRIVING; t.timer[k] = 0.0; self.arriving_step(k, 0.0); self.slot_reset(k, true); }
         Some(k)
     }
 
@@ -549,6 +556,8 @@ impl World {
                     self.traffic.timer[k] -= DT;
                     if self.traffic.timer[k] <= DONE { self.despawn(k); }
                 }
+                T_TORCH => self.torch_step(k),
+                T_ARRIVING => { self.traffic.timer[k] += DT; let t = self.traffic.timer[k]; self.arriving_step(k, t); }
                 _ => self.cruise_step(k, px, py, near, far),
             }
         }
@@ -573,9 +582,58 @@ impl World {
         self.traffic.timer[k] = DESCENT_S;
     }
 
-    /// The end of the route reached: land at a body, or leave by a jump zone.
+    /// The end of the route reached: land at a body, or leave by a jump zone (lighting the torch).
     fn arrive(&mut self, k: usize) {
-        match End::of(self.traffic.to[k]) { End::Body(_) => self.land(k), End::Jump(_) => self.despawn(k) }
+        match End::of(self.traffic.to[k]) { End::Body(_) => self.land(k), End::Jump(z) => self.light_torch(k, z) }
+    }
+
+    /// The bearing out of jump zone z: its gate's, or straight out from the star for the compass zones.
+    fn zone_dir(&self, z: usize) -> (f64, f64) {
+        if self.n_gates() > 0 { return self.gate_dir(z % self.n_gates()); }
+        let (x, y) = self.jump_point(z);
+        let l = hypot(x, y).max(1e-6);
+        (x / l, y / l)
+    }
+
+    /// Leaving by zone z: on rails, along its bearing, at the speed it has.
+    fn light_torch(&mut self, k: usize, z: usize) {
+        let (dx, dy) = self.zone_dir(z);
+        let v = hypot(self.ships.vx[k], self.ships.vy[k]).max(self.traffic.cruise[k]);
+        let s = &mut self.ships;
+        s.rail[k] = 1;
+        (s.vx[k], s.vy[k], s.av[k]) = (dx * v, dy * v, 0.0);
+        s.ang[k] = atan2(-dx, dy);
+        self.traffic.phase[k] = T_TORCH;
+    }
+
+    /// The torch: faster along the bearing, at `torch_accel` top speeds a second, to jump speed; then the blink.
+    fn torch_step(&mut self, k: usize) {
+        let vmax = self.types.vmax[self.ships.kind[k] as usize];
+        let (vj, a) = (self.p(P::jump_speed) * vmax, self.p(P::torch_accel) * vmax);
+        let s = &mut self.ships;
+        let v = hypot(s.vx[k], s.vy[k]).max(1e-6);
+        let nv = (v + a * DT).min(vj);
+        (s.vx[k], s.vy[k]) = (s.vx[k] / v * nv, s.vy[k] / v * nv);
+        s.x[k] += s.vx[k] * DT; s.y[k] += s.vy[k] * DT;
+        s.thr[k] = 1.0; s.burn[k] = 1;
+        if nv >= vj { self.despawn(k); }
+    }
+
+    /// Come in by a jump zone, `t` seconds ago: along the route at jump speed easing down to cruise (as the player's
+    /// arrival), on rails; then cruising.
+    fn arriving_step(&mut self, k: usize, t: f64) {
+        let (cruise, total) = (self.traffic.cruise[k], self.p(P::arrive_secs));
+        let vj = self.p(P::jump_speed) * self.types.vmax[self.ships.kind[k] as usize];
+        let f = (1.0 - t / total).max(0.0);
+        let v = cruise + (vj - cruise) * f * f;
+        if t > 0.0 { self.traffic.s[k] += v * DT; }
+        if self.traffic.s[k] >= self.traffic.len[k] { self.traffic.s[k] = self.traffic.len[k]; self.place_on_route(k); self.arrive(k); return; }
+        self.place_on_route(k);
+        let s = &mut self.ships;
+        let k_v = v / cruise.max(1e-6);
+        s.vx[k] *= k_v; s.vy[k] *= k_v;
+        s.thr[k] = 0.15;
+        if t >= total { self.traffic.phase[k] = T_CRUISE; }
     }
 
     fn cruise_step(&mut self, k: usize, px: f64, py: f64, near: f64, far: f64) {
@@ -622,7 +680,7 @@ impl World {
             return;
         }
         let End::Body(to) = End::of(self.traffic.to[k]) else {
-            if d < 600.0 { self.despawn(k); return; } // left by the jump zone
+            if d < 600.0 { let End::Jump(z) = End::of(self.traffic.to[k]) else { return }; self.light_torch(k, z); return; } // at the jump zone: the torch
             let v = cruise / d.max(1e-6);
             self.ships.want_vx[k] = dx * v;
             self.ships.want_vy[k] = dy * v;
@@ -774,20 +832,29 @@ mod tests {
         w.params[P::traffic_ships as usize] = 0.0; w.mix.weight[2] = 0.0; w.plan_traffic(); // nothing else
         let a = w.spawn(ARRIVE, End::Jump(0), End::Body(2), None).unwrap();
         let d = w.spawn(DEPART, End::Body(1), End::Jump(3), None).unwrap();
-        // the arrival appears cruising in the north zone; the departure lifts off its port
-        let north = w.jump_point(0);
+        // the arrival comes in at jump speed in the north zone, slowing to cruise; the departure lifts off its port
+        let (north, vmax) = (w.jump_point(0), w.types.vmax[0]);
         assert!(hypot(w.ships.x[a] - north.0, w.ships.y[a] - north.1) <= w.p(P::jump_spread) + 1.0);
-        assert_eq!((w.traffic.phase[a], w.traffic.phase[d]), (T_CRUISE, T_LAUNCH));
-        let (mut landed, mut gone_at) = (false, None);
+        assert_eq!((w.traffic.phase[a], w.traffic.phase[d]), (T_ARRIVING, T_LAUNCH));
+        assert!((hypot(w.ships.vx[a], w.ships.vy[a]) - w.p(P::jump_speed) * vmax).abs() < 1.0 && w.ships.vy[a] < 0.0, "in at jump speed, heading in");
+        for _ in 0..((w.p(P::arrive_secs) + 0.1) / DT) as usize { w.step(); }
+        assert_eq!(w.traffic.phase[a], T_CRUISE);
+        assert!((hypot(w.ships.vx[a], w.ships.vy[a]) - w.traffic.cruise[a]).abs() < 1.0, "slowed to cruise");
+        let (mut landed, mut torch, mut last) = (false, false, (0.0, 0.0, 0.0));
         for _ in 0..(900.0 / DT) as usize {
             if w.traffic.role[a] == ARRIVE && w.traffic.phase[a] == T_LAND { landed = true; }
-            if w.traffic.role[d] == DEPART { let west = w.jump_point(3); gone_at = Some(hypot(w.ships.x[d] - west.0, w.ships.y[d] - west.1)); }
+            if w.traffic.role[d] == DEPART {
+                torch |= w.traffic.phase[d] == T_TORCH;
+                last = (w.ships.x[d], w.ships.y[d], hypot(w.ships.vx[d], w.ships.vy[d]));
+            }
             w.step();
             if w.traffic.role[a] == 0 && w.traffic.role[d] == 0 { break; }
         }
         assert!(landed, "the arrival never landed");
         assert_eq!((w.traffic.role[a], w.traffic.role[d]), (0, 0));
-        assert!(gone_at.unwrap() < w.p(P::jump_spread) + 600.0, "left {:?} m from the west zone", gone_at);
+        // the departure reached the west zone, lit its torch, and blinked out going west near jump speed, beyond the zone
+        let west = w.jump_point(3);
+        assert!(torch && last.2 > (w.p(P::jump_speed) - 0.1) * vmax && last.0 < west.0, "left at {:?}", last);
     }
 
     #[test]

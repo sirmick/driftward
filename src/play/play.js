@@ -733,6 +733,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       galaxy.endTransit();
       camX = SH.x[0]; camY = SH.y[0]; viewScale = 0; navTarget = null;
       if (ph !== JUMP.torch) raiseBarrier(); // (a chained pass straight through doesn't wait for its bakes)
+      flashes.push({ x: SH.x[0], y: SH.y[0], t0: performance.now() / 1000, out: false });
       if (ph === JUMP.torch) toast(`Chained through ${SYS.name}`);
       else if (course && course.dest === sysRec.entry.id) { course = null; toast(`Arrived at ${SYS.name}: course complete`); }
       else toast(`Arrived at ${SYS.name}`);
@@ -1652,7 +1653,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
         const E = T.eng[e], o = nPl * 10;
         plumeInst[o] = SH.rx[i] + c * E.lx - s * E.ly; plumeInst[o + 1] = SH.ry[i] + s * E.lx + c * E.ly;
         plumeInst[o + 2] = c * E.dx - s * E.dy; plumeInst[o + 3] = s * E.dx + c * E.dy;
-        const tk = i === 0 && torch ? torch : 1;
+        // (a departing traffic ship's torch the same way, by how near jump speed it is)
+        const tk = i === 0 && torch ? torch : sim.traffic.role[i] && sim.traffic.phase[i] === TRAFFIC.torch ? 2 + 4 * Math.min(1, Math.hypot(SH.vx[i], SH.vy[i]) / (sim.param('jump_speed') * sim.type.vmax[SH.kind[i]])) : 1;
         plumeInst[o + 4] = E.w * T.br.plLen * (0.5 + 2.6 * th) * (1 + 1.2 * bi) * tk; plumeInst[o + 5] = E.w * T.br.plWid * 1.35 * (1 + 0.3 * bi) * Math.sqrt(tk);
         plumeInst[o + 6] = i * 7.3 + e * 1.37; plumeInst[o + 7] = pw; plumeInst[o + 8] = T.bi; plumeInst[o + 9] = bi;
         nPl++;
@@ -1738,6 +1740,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       hx.textAlign = 'left'; return;
     }
     drawBuoys();
+    watchBlinks(); drawFlashes();
     const T0 = types[SH.kind[0]], sp = Math.hypot(SH.vx[0], SH.vy[0]), hd = ((-SH.ang[0] * 180 / Math.PI) % 360 + 360) % 360;
     const burn = SH.burn[0] && SH.main[0] > 0;
     // top speed along the nose here, by the core's rule: raised pointing into a well, lowered pointing out
@@ -1838,6 +1841,31 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // lane in green), the lights chasing outward along the bearing. Drawn on the HUD's canvas, in the world's place.
   const hexCol = c => `rgb(${c.map(v => Math.round(Math.pow(Math.min(1, v), 1 / 2.2) * 255)).join(',')})`;
   const gateCol = (G, g, n) => n && n.g === g ? '#7fd08a' : UNIVERSE.factions[G.owner] ? hexCol(UNIVERSE.factions[G.owner].colour) : '#9fb4c8';
+  // Blinks: a flash where a ship leaves at jump speed (a traffic torch that ends) or comes in (a traffic arrival, the
+  // player's arrival), an expanding ring and a glow over FLASH_S, drawn in the world's place on the HUD canvas.
+  const FLASH_S = 0.7, flashes = [], torching = new Map(), arrived = new Set(); // slot -> where it was in its torch; arrivals flashed (handles)
+  function watchBlinks() {
+    const now = performance.now() / 1000, TR = sim.traffic;
+    for (const [i, p] of torching) if (!(SH.alive[i] && TR.role[i] && TR.phase[i] === TRAFFIC.torch)) { flashes.push({ x: p.x, y: p.y, t0: now, out: true }); torching.delete(i); }
+    for (let i = 1; i < sim.count(); i++) {
+      if (!SH.alive[i] || !TR.role[i]) continue;
+      if (TR.phase[i] === TRAFFIC.torch) torching.set(i, { x: SH.x[i], y: SH.y[i] });
+      if (TR.phase[i] === TRAFFIC.arriving && !arrived.has(sim.handle(i))) { arrived.add(sim.handle(i)); if (TR.timer[i] < 0.5) flashes.push({ x: SH.x[i], y: SH.y[i], t0: now, out: false }); }
+    }
+    if (arrived.size > 256) arrived.clear(); // (handles of ships long cruising: forgetting them only risks a stray flash)
+    while (flashes.length && now - flashes[0].t0 > FLASH_S) flashes.shift();
+    if (flashes.length > 64) flashes.splice(0, flashes.length - 64);
+  }
+  function drawFlashes() {
+    const now = performance.now() / 1000, pxm = scale / dpr;
+    for (const f of flashes) {
+      const a = (now - f.t0) / FLASH_S; if (a > 1) continue;
+      const [sx, sy] = toScreen(f.x, f.y), r = Math.max(6, 160 * pxm) * (0.3 + a), k = 1 - a;
+      hx.globalAlpha = k * 0.5; hx.fillStyle = f.out ? '#cfe6ff' : '#fff2d6'; hx.beginPath(); hx.arc(sx, sy, r * 0.6, 0, 6.283); hx.fill();
+      hx.globalAlpha = k; hx.strokeStyle = '#ffffff'; hx.lineWidth = 1.5; hx.beginPath(); hx.arc(sx, sy, r, 0, 6.283); hx.stroke();
+    }
+    hx.globalAlpha = 1;
+  }
   function drawBuoys() {
     const Gs = gatesOf(sysRec);
     if (!Gs.length) return;

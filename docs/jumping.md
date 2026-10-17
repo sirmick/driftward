@@ -11,7 +11,7 @@ Every system has 16 zones round it, one every 22.5° (zone k on the bearing k ×
 - **Gates** are the lanes as core content: per system, each lane's destination (star id), zone, light years and days, written by the page when it lays a system out and stored in the atlas with the rest of the system.
 - **Buoys** mark them: a field across each runway, one every 500 m along and across, their lamps chasing outward along the bearing in the colour of who holds the far end (the course's next lane in green). Drawn on the HUD canvas.
 - **The system map and radar** show each lane's runway, named, with its days, in the far end's colour; the course's next lane in green.
-- **Traffic** arrives at and leaves by the gates (`n_zones`, `jump_point` in `traffic.rs`); a system without gates keeps the old four compass zones.
+- **Traffic** arrives at and leaves by the gates (`n_zones`, `jump_point` in `traffic.rs`); a system without gates keeps the old four compass zones. It jumps as the player does: a departing ship reaches its zone and lights its torch (`T_TORCH`: out along the bearing at `torch_accel` to `jump_speed`, its plume growing long), then blinks out; an arrival blinks in at the zone at jump speed along its route (`T_ARRIVING`) and slows to cruise over `arrive_secs`. Both on rails, so they replay. The page draws a flash where a ship blinks out or in (the player's arrival too).
 
 ## The jump
 
@@ -41,7 +41,7 @@ Every system has 16 zones round it, one every 22.5° (zone k on the bearing k ×
 
 - **Breaking a jump:** nothing can pull a ship off the line during the torch yet (interdiction is M2/M3: drag fields, ion, tractors); the core holds it on the bearing.
 - **Misjump** (from anywhere at top speed, with damage): the Book's emergency exit.
-- **Traffic's own torches and arrivals at speed:** NPCs still appear and vanish at the zones as before; they don't chain.
+- **Traffic chaining:** NPCs jump one lane at a time.
 - **The autopilot to a zone:** fly there by hand, or target and fly toward it on the system map.
 - **Uncharted lanes:** a lane to a system without a file says so; generated systems (docs/data.md step 4) open them up.
 - **Sensor blackout on arrival** (the Book's 2 s).
