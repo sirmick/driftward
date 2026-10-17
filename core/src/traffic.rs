@@ -9,7 +9,8 @@
 //! Four streams (a ship's `traffic.role`):
 //! - LOCAL: port to port, on a gravity model per local role (shuttle: pop x pop / km^2; hauler: pop x pop / km x
 //!   complement, how much dearer the destination's market is for what both trade; liner: pop x pop / km);
-//! - ARRIVE: from one of four jump zones (north, east, south, west, `jump_radius` out) to a port, by population;
+//! - ARRIVE: from one of the system's jump zones (its lanes' gates, jump.rs; four compass zones, `jump_radius` out,
+//!   where it has none) to a port, by population;
 //! - DEPART: from a port, by population, to a jump zone, where it leaves (vanishes, for now);
 //! - LOITER: launches, circles its port at `loiter_orbit` radii for about `loiter_turns` turns, and lands again.
 //!
@@ -47,8 +48,8 @@ pub const MAX_MIX: usize = 128;
 /// How far before and after a route's waypoint a railed ship starts and ends its turn, metres (less on short legs).
 const CORNER: f64 = 600.0;
 
-/// Jump zones: north, east, south and west of the star.
-pub const N_JUMP: usize = 4;
+/// Jump zones traffic can use: a system's gates (jump.rs MAX_GATES), or the four compass zones of one without.
+pub const N_JUMP: usize = crate::jump::MAX_GATES;
 /// Most points on a route (a loiter's loop uses them all).
 pub const MAX_PTS: usize = 12;
 
@@ -74,10 +75,14 @@ impl World {
     /// Through lane row: dir 0 arriving (zone to body), 1 departing (body to zone).
     fn jlane(&self, dir: usize, z: usize, body: usize) -> usize { (dir * N_JUMP + z) * self.cfg.max_bodies + body }
 
-    /// The centre of jump zone z: north, east, south, west.
+    /// The system's jump zones: one per gate, or north, east, south and west where it has no gates.
+    pub fn n_zones(&self) -> usize { match self.n_gates() { 0 => 4, n => n } }
+
+    /// The centre of jump zone z: gate z's, or north, east, south, west.
     pub fn jump_point(&self, z: usize) -> (f64, f64) {
         let r = self.p(P::jump_radius);
-        [(0.0, r), (r, 0.0), (0.0, -r), (-r, 0.0)][z % N_JUMP]
+        if self.n_gates() > 0 { let (dx, dy) = self.gate_dir(z % self.n_gates()); return (dx * r, dy * r); }
+        [(0.0, r), (r, 0.0), (0.0, -r), (-r, 0.0)][z % 4]
     }
 
     /// Where a route touches an end, coming from or going toward `other`: a point on a body's disc facing it, or the
@@ -196,8 +201,9 @@ impl World {
         if self.mix_total(MIX_THROUGH) > 0.0 {
             let cruise = self.mean_cruise(MIX_THROUGH);
             let mut total = 0.0;
+            self.jlanes.rate.fill(0.0);
             for dir in 0..2 {
-                for z in 0..N_JUMP {
+                for z in 0..self.n_zones() {
                     for j in (0..nb).filter(|&j| self.bodies.port[j] != 0) {
                         let pts = if dir == 0 { self.route_ends(End::Jump(z), End::Body(j)) } else { self.route_ends(End::Body(j), End::Jump(z)) };
                         let l = self.jlane(dir, z, j);
@@ -245,7 +251,7 @@ impl World {
         for m in self.env_rows(g) { x -= self.mix.weight[m]; row = Some(m); if x <= 0.0 { break; } }
         let outbound = self.rng.next_f64() < 0.5;
         let other = if self.rng.next_f64() < self.bodies.env_jump[j] {
-            End::Jump(((self.rng.next_f64() * N_JUMP as f64) as usize).min(N_JUMP - 1))
+            End::Jump(((self.rng.next_f64() * self.n_zones() as f64) as usize).min(self.n_zones() - 1))
         } else {
             let pops: f64 = (0..self.n_bodies).filter(|&p| self.bodies.port[p] != 0).map(|p| self.bodies.pop[p]).sum();
             if pops <= 0.0 { return None; }
@@ -283,7 +289,7 @@ impl World {
             let l = self.lane(i, j, role);
             if !self.seed_lane(LOCAL, End::Body(i), End::Body(j), self.lanes.rate[l] * self.lanes.dwell[l], None) { return; }
         } } }
-        for z in 0..N_JUMP { for j in 0..nb {
+        for z in 0..self.n_zones() { for j in 0..nb {
             let (a, d) = (self.jlane(0, z, j), self.jlane(1, z, j));
             if !self.seed_lane(ARRIVE, End::Jump(z), End::Body(j), self.jlanes.rate[a] * self.jlanes.dwell[a], None) { return; }
             if !self.seed_lane(DEPART, End::Body(j), End::Jump(z), self.jlanes.rate[d] * self.jlanes.dwell[d], None) { return; }
@@ -502,7 +508,7 @@ impl World {
             }
         }
         // through: arrivals at the jump zones, departures from the ports
-        for z in 0..N_JUMP {
+        for z in 0..self.n_zones() {
             for j in 0..nb {
                 for (dir, from, to, stream) in [(0, End::Jump(z), End::Body(j), ARRIVE), (1, End::Body(j), End::Jump(z), DEPART)] {
                     let l = self.jlane(dir, z, j);

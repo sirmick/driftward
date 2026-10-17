@@ -495,23 +495,26 @@ Each system stores a coarse density grid per gas species:
 
 ## **Jumping and interdiction**
 
-Jumps leave from fixed zones at full speed, which makes routes predictable and interdiction possible.
+Jumps leave from fixed zones along a torch run-up, which makes routes predictable and interdiction possible. As built: [jumping.md](jumping.md).
 
 ### **Jump zones**
 
-* \[M4\] Geometry: every outbound lane has a zone: a large arc at the system edge on the bearing toward the destination, outside every gravity well. Zones are kilometres wide, so covering one takes several ships.  
-* \[M4\] Display: zones appear on the radar and system map as arcs colored by destination, with known contacts inside them. The galaxy map shows reported blockades, subject to intel age and error.
+* \[M4\] Geometry: 16 zones round every system, one every 22.5°, at the system's edge; every lane takes the zone nearest its bearing toward its destination (the next free one where two want the same), so a lane's zone works both ways. A zone is a runway along its bearing (12 km by 6 km), outside every gravity well, so covering one takes several ships. A system has at most 16 lanes (the galaxy's most is 7).  
+* \[M4\] Buoys: a field of navigation buoys across each runway, their lamps chasing outward along the bearing in the colour of the far end's owner.  
+* \[M4\] Display: zones appear on the radar and system map colored by destination (the course's next lane green), with known contacts inside them. The galaxy map shows reported blockades, subject to intel age and error.
 
 ### **The jump**
 
-* \[M4\] Conditions: the ship is inside the destination's zone, its velocity vector (not its nose) is within about ±20° of the bearing, and its speed is at or above about 97% of the hull's rated top speed, held for a short window (about 1 s, longer for heavy hulls). Fuel is spent.  
-* \[M4\] No spool and no mass lock: the run-up is the charge. Speed gained from the burner, gravity or slingshots counts.  
-* \[M4\] Arrival: in the destination's inbound zone on the side facing the origin, scattered across the zone, with velocity preserved and a short sensor blackout (about 2 s).  
+* \[M4\] Conditions: the ship is inside a lane's zone, its velocity vector (not its nose) within about ±20° of the bearing, at half its top speed or more, with the lane's fuel aboard (by the lane's length). J commits.  
+* \[M4\] The torch: the drive takes the ship along the bearing behind a long torch plume, accelerating it to about 6x top speed and burning half the lane's fuel on the way; then it blinks out, the rest spent and the lane's days on the clock. Anything that pulls the ship off the line during the torch breaks the jump, and the fuel burnt is lost.  
+* \[M4\] Transit: a few seconds between systems, played on the galaxy map.  
+* \[M4\] Arrival: in the destination's zone for the lane come by (on the side facing the origin), scattered across it, at jump speed heading in, slowing to top speed over a few seconds, with a short sensor blackout (about 2 s).  
+* \[M4\] Chain jumping: in the transit's last moment a J chains on along the course: the ship comes out in the next lane's zone, lined up at jump speed, and blinks straight out again, the next lane's fuel spent at once (times a chain cost, 1 for now). Too early, the chance is gone. Each pass through still arrives in a zone, so blockades still catch it.  
 * \[M4\] Emergency misjump: at top speed from anywhere outside a gravity well; the ship lands at a random point in the destination system with drive damage and a heavy fuel cost. It keeps a blockade from ever being a hard lock.
 
 ### **Interdiction**
 
-Anything that holds a ship below its top speed, or bends its velocity off the bearing, during the hold window stops the jump:
+Anything that bends a ship's velocity off the bearing, or drags it, during the torch stops the jump:
 
 * \[M3\] Drag-field projector: the interdictor outfit. A bubble of artificial drag; because thrust is near zero at top speed, any drag pulls a ship under. It runs on a duty cycle, is very loud, and makes its carrier the priority target. Fields are leaky: a burner can punch through a weak one.  
 * \[M4\] Ion weapons drain energy and weaken thrust; tractors pull directly; mines and debris force dodges and add drag.  
@@ -1003,8 +1006,9 @@ Sim sources and the offers they spawn:
 * \[M1\] Top-down camera centred on the ship, leading toward the direction of travel; mouse-wheel zoom.  
 * \[M1\] HUD as an overlay, no side panel: day and credits top-left; radar top-right, with contacts drawn at their error radius; ship status (shields, hull, energy, heat, fuel) and assist level bottom-left; nav target bottom-right (range, relative speed, clear to land); active mission with days left; message log.  
 * \[M1\] Location list on the right: the star, planets and free-orbiting stations and belts in fixed orbital order. The body whose local zone (a fixed multiple of its radius) the player is inside expands to show its moons and stations, one body at a time, with hysteresis at the edge. Each row shows icon, name, range, and landable, dockable and mission markers; a click or number key sets the nav target. Ships appear only on the radar.  
-* \[M1\] System map (M): orbits, bodies, known contacts and mission destinations; click to target; a fly-to autopilot under full assist.  
-* \[M1\] Controls: arrows or WASD, Shift for the burner, Tab for assist level, T to cycle targets, L to land or dock, M for the map, J to jump (from M4). Gamepad later.
+* \[M1\] System map (Shift+M): orbits, bodies, known contacts and mission destinations; click to target; a fly-to autopilot under full assist.  
+* \[M1\] Controls: arrows or WASD, Shift for the burner, Tab for assist level, T to cycle targets, L to land or dock, M for the galaxy map and Shift+M for the system map, J to jump (from M4). Gamepad later.
+* \[M4\] Galaxy map (M): the systems and lanes round the player; a system's lanes out, the course from here by days or jumps, what is known of it, and its missions; set a course for the HUD.  
 
 ### **Ports**
 
@@ -1099,7 +1103,7 @@ Each milestone adds to the one before and ends with an exit test:
 
 | Milestone | Scope | Mechanisms | Exit test |
 | :---- | :---- | :---- | :---- |
-| M0 Flight lab (exists) | One sector | Flight physics and assist, nebula and radiation, sensors, NPC combat, procedural ships, stations, planets and suns | Remaining: the three-level assist and full-off rotation |
+| M0 Flight lab (exists) | One sector | Flight physics and assist, nebula and radiation, sensors, NPC combat, procedural ships, stations, planets and suns | Done: the three-level assist and full-off rotation are in the core and the game (the lab's Fly tab, frozen, keeps on and off) |
 | M1 Trade and delivery | One system | Game shell (space, landing, port screens, takeoff with the plasma sheath); sim core skeleton as a Rust/WASM crate with the M0 flight physics ported in (typed-array columns, fixed-step deterministic loop, seeded RNG, save on landing); the system loaded from its schema; cargo hold, credits, the three-level assist; trading commodities on each port's market, and one mission type from the mission board (deliver cargo to a named port in the system); ambient liners and haulers | A market trade and a delivery mission both complete end to end; save, reload and replay of the same inputs give the same result, tested headless |
 | M2 Combat | One system | Weapons (multicannons, beams, rails), energy and heat, shields, hull and systems damage, field and landed repair, outfitting and a shipyard, pirates, bounty and defend missions, disabling | The player outfits for a fight and wins a bounty |
 | M3 Assets and set pieces | One system plus a sandbox spawner | Faction asset build-out: full hull rosters per faction (every line in every size class, and the heavies), station styles, shield colors, weapon and plume looks, the alien visual languages (hive, AI zone, exterminators). In-system mechanics with graphics: boarding and capture, mining (lasers, charges, tractor beam and limpets), capital landers, drag-field projectors, scans, derelicts and wrecks, escape pods, cargo canisters, jump-in and jump-out effects | Every faction's roster can be spawned and fought; each mechanic works in one system; all assets come through schemas |

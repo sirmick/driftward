@@ -1,6 +1,7 @@
 //! The world: every column group, the clock, and the tick pipeline.
 
-use crate::atlas::{AtlasBodies, AtlasHead, AtlasMarket, AtlasMix, AtlasSys, MAX_SYSTEMS};
+use crate::atlas::{AtlasBodies, AtlasGates, AtlasHead, AtlasMarket, AtlasMix, AtlasSys, MAX_SYSTEMS, NO_SYSTEM};
+use crate::jump::{Gates, MAX_GATES};
 use crate::cols::{params, soa, ColumnDesc};
 use crate::flight;
 use crate::market::MAX_GOODS;
@@ -100,6 +101,10 @@ soa! {
     pub struct Game {
         mode: u8, at: i16, timer: f64, curl: u8, day: u32, credits: u32, debt: u32, auto: i16, aim_x: f64, aim_y: f64,
         hand_x: f64, hand_y: f64, hand_v: f64, player: i32, set: f64, input: u32, system: u8, fuel: f64, fvx: f64, fvy: f64,
+        // a jump (jump.rs): its phase, the gate it leaves by, the phase's seconds, the speed the torch began at, the
+        // lane's fuel and how much is burnt, a chain asked for in transit (a gate, or -1 none, -2 missed), the system
+        // it left; and the day's fraction the lanes' days carry
+        jump: u8, jgate: i16, jt: f64, jv0: f64, jcost: f64, jburnt: f64, jchain: i16, jfrom: u32, day_part: f64,
     }
 }
 
@@ -211,8 +216,20 @@ params! {
     share_liner = 0.2;    "liners' share of the local traffic"
     traffic_cruise = 0.7; "ambient ships cruise at this fraction of their top speed"
     traffic_near = 8000.0; "within this many metres of the player, ambient ships fly full physics; beyond, rails"
-    jump_radius = 45000.0; "distance from the star of the four jump zones (north, east, south, west)"
-    jump_spread = 2500.0; "radius of a jump zone: ships arrive and leave anywhere within it"
+    jump_radius = 45000.0; "distance from the star of the jump zones (the middle of each lane's runway; jump.rs)"
+    jump_spread = 2500.0; "traffic arrives and leaves anywhere within this many metres of a jump zone's middle"
+    zone_len = 12000.0;   "a jump zone's runway: its length along the lane's bearing, metres, centred on the jump radius"
+    zone_width = 6000.0;  "a jump zone's runway: its width across the bearing, metres"
+    jump_align = 20.0;    "a jump wants the ship moving within this many degrees of the zone's bearing"
+    jump_min = 0.5;       "and at this share of its top speed or more"
+    jump_speed = 6.0;     "the torch takes the ship to this multiple of its top speed, where it blinks out; it arrives at it"
+    torch_accel = 2.0;    "the torch's acceleration, in the hull's top speeds a second"
+    jump_fuel = 0.05;     "a jump's fuel, as a share of the hull's tank per light year of lane (a 10 ly lane: half a tank)"
+    transit_secs = 4.0;   "seconds between systems, out of the sim (the page plays the trip on the galaxy map)"
+    chain_window = 0.8;   "the last seconds of a transit in which J chains on to the course's next lane"
+    chain_cost = 1.0;     "a chained jump's fuel, as a multiple of the lane's"
+    chain_coast = 0.6;    "seconds a chained arrival coasts in the next zone before it blinks out again"
+    arrive_secs = 3.0;    "seconds an arrival takes to slow from jump speed to top speed"
     loiter_orbit = 3.0;   "loitering ships circle their port at this many body radii"
     loiter_turns = 1.25;  "mean number of turns a loitering ship flies round its port before landing"
     loiter_cruise = 0.45; "loitering ships fly at this fraction of their top speed"
@@ -249,12 +266,15 @@ pub struct World {
     pub mix: Mix,
     pub lanes: Lanes,
     pub jlanes: JLanes,
+    /// the live system's lanes (jump.rs)
+    pub gates: Gates,
     /// the layouts of the systems this game has been to (atlas.rs)
     pub atlas_head: AtlasHead,
     pub atlas_sys: AtlasSys,
     pub atlas_bodies: AtlasBodies,
     pub atlas_market: AtlasMarket,
     pub atlas_mix: AtlasMix,
+    pub atlas_gates: AtlasGates,
     pub params: Vec<f64>,
     /// live ship slots are 0..count
     pub count: usize,
@@ -296,6 +316,8 @@ impl World {
             atlas_bodies: AtlasBodies::with_capacity(MAX_SYSTEMS * cfg.max_bodies),
             atlas_market: AtlasMarket::with_capacity(MAX_SYSTEMS * cfg.max_bodies * MAX_GOODS),
             atlas_mix: AtlasMix::with_capacity(MAX_SYSTEMS * MAX_MIX),
+            gates: Gates::with_capacity(MAX_GATES),
+            atlas_gates: AtlasGates::with_capacity(MAX_SYSTEMS * MAX_GATES),
             params: param_defaults(),
             count: 0,
             n_bodies: 0,
@@ -311,6 +333,7 @@ impl World {
         w.cols = w.columns();
         w.snap = vec![0; snapshot::snapshot_len(&w.cols)];
         w.atlas_row = vec![0; w.atlas_row_len()];
+        w.gates.dest.fill(NO_SYSTEM);
         w.atlas_reset();
         w.game.player[0] = -1; // no player until the page sets one
         w.manifest = w.build_manifest();
@@ -336,11 +359,13 @@ impl World {
         self.mix.describe("mix", &mut c);
         self.lanes.describe("lane", &mut c);
         self.jlanes.describe("jlane", &mut c);
+        self.gates.describe("gate", &mut c);
         self.atlas_head.describe("atlas", &mut c);
         self.atlas_sys.describe("atlas_sys", &mut c);
         self.atlas_bodies.describe("atlas_body", &mut c);
         self.atlas_market.describe("atlas_market", &mut c);
         self.atlas_mix.describe("atlas_mix", &mut c);
+        self.atlas_gates.describe("atlas_gate", &mut c);
         c.push(ColumnDesc::of("world", "params", &self.params));
         c
     }
@@ -432,6 +457,7 @@ impl World {
         s.prev_ang[..n].copy_from_slice(&s.ang[..n]);
         self.move_bodies();
         self.step_game();
+        self.step_jump();
         player::control(self);
         self.step_traffic();
         flight::control(self);
@@ -499,6 +525,9 @@ impl World {
         eat(self.game.timer[0].to_bits());
         eat(self.game.credits[0] as u64 | (self.game.debt[0] as u64) << 32);
         eat(self.game.auto[0] as u16 as u64 | (self.game.curl[0] as u64) << 16 | (self.game.system[0] as u64) << 24);
+        let g = &self.game;
+        eat(g.jump[0] as u64 | (g.jgate[0] as u16 as u64) << 8 | (g.jchain[0] as u16 as u64) << 24 | (g.jfrom[0] as u64) << 32);
+        for v in [g.jt[0], g.jcost[0], g.jburnt[0], g.day_part[0]] { eat(v.to_bits()); }
         for v in [self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0], self.game.fuel[0]] { eat(v.to_bits()); }
         // tuning and the system: a live param change or a moved body shows in the hash at once
         for &p in &self.params { eat(p.to_bits()); }

@@ -11,7 +11,7 @@
 // (CPU) time per frame by section: the sim, the render calls, the HUD (with the location list) and the map. For each
 // hitch, the frame before it is split into its CPU time and the rest (GPU, browser, garbage collection), so a hitch
 // with little CPU before it is the GPU or the browser. Long main-thread tasks (over 50 ms; Chrome only) count too.
-// J toggles an overlay: frame times as bars (the line is 60 Hz; bars go amber or red as jitter or a hitch grows)
+// Shift+J toggles an overlay: frame times as bars (the line is 60 Hz; bars go amber or red as jitter or a hitch grows)
 // and the numbers. window.__play.jitter() reports.
 function makeJitter(maxShips, N = 1200) {
   const dt = new Float64Array(N), ticks = new Uint8Array(N), alpha = new Float64Array(N), gpu = new Float64Array(N);

@@ -193,11 +193,42 @@ function makeGalaxyMap(ctx) {
     else if (a === 'clear') { ctx.onCourse(null); render(); }
   }
 
+  // ---------- a transit: the trip between systems, played on the map (src/play/play.js draws the prompt over it) ----------
+  // T: { from, to, next (the course's lane after, a star id, or null), f (0..1 of the way), window (the chain window is
+  // open), chain (-1 none, -2 missed, else chained) }. The map alone, framed on the lane; the ship a streak along it.
+  let transitKey = '';
+  function transit(T) {
+    if (!build()) return null;
+    const a = idx.get(T.from), b = idx.get(T.to), n = T.next != null ? idx.get(T.next) : undefined;
+    if (a == null || b == null) return null;
+    const pa = M.stars[a].pos, pb = M.stars[b].pos;
+    if (transitKey !== `${T.from}|${T.to}`) { // a new leg: frame it from above, its far system and the one after in view
+      transitKey = `${T.from}|${T.to}`;
+      el.hidden = false; el.classList.add('gx-transit');
+      sel = -1; M.select(-1); M.st.here = -1;
+      const pts = [pa, pb, ...(n != null ? [M.stars[n].pos] : [])], mid = [0, 1, 2].map(d => pts.reduce((s, p) => s + p[d], 0) / pts.length);
+      M.focusOn(mid, Math.max(24, Math.min(160, Math.max(...pts.map(p => M.distLy(p, mid))) * 3.4 + 8))); M.cam.pitch = 1.2;
+    }
+    mark();
+    M.st.route = n != null ? [a, b, n] : [a, b];
+    const f = T.f < 0.5 ? 2 * T.f * T.f : 1 - Math.pow(-2 * T.f + 2, 2) / 2;
+    M.st.ship = { from: pa, pos: [0, 1, 2].map(d => pa[d] + (pb[d] - pa[d]) * f), window: T.window && T.chain === -1 && n != null, chained: T.chain >= 0, missed: T.chain === -2 };
+    const v = document.getElementById('view');
+    if (labels.width !== v.width || labels.height !== v.height) { labels.width = v.width; labels.height = v.height; }
+    return M;
+  }
+  function endTransit() {
+    if (!transitKey) return;
+    transitKey = ''; el.classList.remove('gx-transit');
+    if (M) M.st.ship = null;
+    if (!open) el.hidden = true;
+  }
+
   // ---------- open and close ----------
   function show() {
     if (!build()) return false;
     const h = hereI(), c = ctx.course();
-    M.st.here = h;
+    M.st.here = h; M.st.ship = null;
     if (c) by = c.by || by;
     setBy(by);
     const start = c && idx.has(c.dest) ? idx.get(c.dest) : h;
@@ -234,7 +265,7 @@ function makeGalaxyMap(ctx) {
     return M;
   }
   return {
-    open: openMap, close, isOpen: () => open, key, view,
+    open: openMap, close, isOpen: () => open, key, view, transit, endTransit,
     // the selection, the plotted course and the marked systems (tests)
     selected: () => (M && sel >= 0 ? M.sys[sel].id : null), route: () => (M && M.st.route ? M.st.route.map(i => M.sys[i].id) : null),
     marked: () => (M && M.st.marks ? M.st.marks.map(i => M.sys[i].id) : []),

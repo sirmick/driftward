@@ -57,7 +57,7 @@ Status, 2026-10-16: **steps 1 to 3 of the plan below are built; 4 and 5 are next
 ## Gaps that remain
 
 1. **No path from the map to a flyable system** beyond the 6 hand-written files (step 4).
-2. **Lanes never reach flight:** system files still have four fixed jump zones; the Book wants one per outbound lane, on its bearing (step 5).
+2. ~~Lanes never reach flight~~: each lane is a jump zone now, and jumps travel them ([jumping.md](jumping.md)).
 3. **Facts are still written twice:** a system file's owner, ring, region and port roles repeat its index entry. They are now checked to agree, not derived. Generated systems (step 4) will take them from the entry directly.
 4. **The jump box reads every flyable system** when it gets focus, so it can complete `place@system`. That's fine for 6 files. With generated systems it should list systems from the index and read one only when it is picked.
 5. **A full atlas forgets a system's layout,** not its missions' history: a delivered or failed mission bound for an evicted slot names a port of whatever system now holds that slot. Only past 8 systems in one game; active missions keep their slot.
@@ -69,6 +69,6 @@ Status, 2026-10-16: **steps 1 to 3 of the plan below are built; 4 and 5 are next
    * The same code for `tools/` (preview, validate many) and for the page, which makes a system on first visit.
    * `loadSystem(id)` in the page falls back to it when the entry has no `file`; a hand-written file overrides it, as the March's do.
    * The atlas already takes any star id, and a stored layout already reaches replays, so a made system replays like a written one.
-5. **Lanes drive jump zones:** each outbound lane a zone on its bearing toward its destination, coloured by destination, replacing the four fixed zones (`traffic.jumpRadius`, the core's jump lanes). Then travel between systems by lane, not only the debug jump.
+5. **Lanes drive jump zones:** done 2026-10-17, with real jumps and chaining: see [jumping.md](jumping.md).
 
 Related: `docs/galaxy.md` (how the map, worlds and stories are made), `docs/book.md` (the design: galaxy map, the Drift, jumping), `README.md` (the files).

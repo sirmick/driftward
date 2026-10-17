@@ -14,12 +14,15 @@ const CORE_READY = (async () => {
   function world(cfg) {
     const w = X.dw_world_new(cfg.maxShips, cfg.maxTypes, cfg.maxBodies, cfg.envN, cfg.envW, (cfg.seed >>> 0) || 1);
     const json = new TextDecoder().decode(new Uint8Array(mem.buffer, X.dw_manifest_ptr(w), X.dw_manifest_len(w)));
-    const M = JSON.parse(json), buffer = mem.buffer;
-    const groups = {};
-    for (const c of M.columns) (groups[c.group] ||= {})[c.name] = new VIEW[c.kind](buffer, c.ptr, c.len);
-    const params = groups.world.params, P = {};
+    const M = JSON.parse(json);
+    // the views, made again by rebind() should WASM memory grow (making another world grows it: rebind the ones
+    // made before it, before anything holds on to their views)
+    let buffer, groups;
+    const bind = () => { buffer = mem.buffer; groups = {}; for (const c of M.columns) (groups[c.group] ||= {})[c.name] = new VIEW[c.kind](buffer, c.ptr, c.len); };
+    bind();
+    const P = {};
     M.params.forEach((name, k) => { P[name] = k; });
-    return {
+    const o = {
       manifest: M, DT: M.dt,
       ship: groups.ship, type: groups.type, body: groups.body, env: groups.env, game: groups.game,
       // the player's hold (tons per commodity) and every market's prices (body * maxGoods + commodity; 0 not traded)
@@ -40,10 +43,13 @@ const CORE_READY = (async () => {
       atlasCount: () => groups.atlas.n[0], atlasId: k => groups.atlas_sys.id[k],
       // slot k's row as bytes (a copy), and a row put back into slot k: what a replay log carries for a store mid-session
       atlasRow: k => X.dw_atlas_row_save(w, k) ? new Uint8Array(mem.buffer, X.dw_atlas_row_ptr(w), X.dw_atlas_row_len(w)).slice() : null,
+      // the live system's lanes (core/src/jump.rs: dest star id, zone 0..15, ly, days; dest 2^32-1 past the last), the
+      // gate whose jump zone holds (x, y) or -1, and the fuel a lane of ly light years costs a ship type
+      gate: groups.gate, zoneAt: (x, y) => X.dw_zone_at(w, x, y), laneFuel: (kind, ly) => X.dw_lane_fuel(w, kind, ly),
       atlasPut: (k, row) => { new Uint8Array(mem.buffer, X.dw_atlas_row_ptr(w), X.dw_atlas_row_len(w)).set(row); return X.dw_atlas_row_load(w, k); },
       trafficCount: () => X.dw_traffic_count(w),
       // tuning: core.param('damper') / core.param('damper', 0.6); names in core/src/world.rs
-      param: (name, v) => { if (!(name in P)) throw new Error('unknown core param ' + name); if (v !== undefined) params[P[name]] = v; return params[P[name]]; },
+      param: (name, v) => { if (!(name in P)) throw new Error('unknown core param ' + name); const params = groups.world.params; if (v !== undefined) params[P[name]] = v; return params[P[name]]; },
       paramNames: M.params,
       clear: () => X.dw_clear(w), // zero every ship, tick back to 0
       setCount: n => X.dw_set_count(w, n),
@@ -95,16 +101,27 @@ const CORE_READY = (async () => {
       checkViews: () => { if (mem.buffer !== buffer) throw new Error('sim core memory grew; column views are stale'); },
       free: () => X.dw_world_free(w)
     };
+    // the column groups as properties (the views' holders), set again on a rebind
+    const views = () => Object.assign(o, {
+      ship: groups.ship, type: groups.type, body: groups.body, env: groups.env, game: groups.game, hold: groups.hold, market: groups.market,
+      offer: groups.offer, mission: groups.mission, traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
+      gate: groups.gate, orbitOut: groups.orbit.out });
+    views();
+    o.rebind = () => { if (mem.buffer !== buffer) { bind(); views(); } };
+    return o;
   }
   // input bits, mirrored from core/src/player.rs
   // game commands, modes and results, mirrored from core/src/port.rs, market.rs, mission.rs and service.rs
-  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, refuel: 11, repair: 12, teleport: 100, jump: 101 };
+  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, refuel: 11, repair: 12, hyper: 13, teleport: 100, jump: 101, zone: 102 };
+  // a jump's phases (core/src/jump.rs, game.jump)
+  const JUMP = { none: 0, torch: 1, transit: 2, arrive: 3 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
   // traffic.rs: phases; streams (traffic.role; environ: to or from an environmental station); mix row streams; the
   // jump zones, north, east, south, west
   const TRAFFIC = { launch: 1, cruise: 2, land: 3, streams: ['local', 'arrive', 'depart', 'loiter', 'environ'], mix: { local: 1, through: 2, loiter: 3, env: 4 }, zones: ['north', 'east', 'south', 'west'] };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3, dead: 4 };
-  const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body', 13: 'not offered here', 14: 'nothing to do' };
+  const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body', 13: 'not offered here', 14: 'nothing to do',
+    15: 'not in a jump zone', 16: 'not lined up with the zone', 17: 'too slow to jump', 18: 'not enough fuel', 19: 'no chart of that system', 20: 'missed' };
   const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };
-  return { world, IN, CMD, MODE, MISSION, TRAFFIC, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
+  return { world, IN, CMD, JUMP, MODE, MISSION, TRAFFIC, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
 })();

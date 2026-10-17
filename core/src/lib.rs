@@ -14,6 +14,7 @@ pub mod atlas;
 pub mod cols;
 pub mod ffi;
 pub mod flight;
+pub mod jump;
 pub mod market;
 pub mod math;
 pub mod mission;

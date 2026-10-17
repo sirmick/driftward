@@ -12,7 +12,7 @@
 //! start, while the ship is still launching) follows it, and a loiter's whole loop round it. A route's waypoints
 //! between are left where they were laid.
 
-use crate::math::sin_cos;
+use crate::math::{hypot, sin_cos};
 use crate::port::{MODE_FLYING, MODE_DEAD};
 use crate::traffic::{End, LOITER, MAX_PTS, T_LAUNCH, T_LAND};
 use crate::world::{World, DT};
@@ -90,7 +90,7 @@ impl World {
         let r = &mut self.route;
         let mut len = 0.0;
         for p in 0..n {
-            if p > 0 { len += (r.x[base + p] - r.x[base + p - 1]).hypot(r.y[base + p] - r.y[base + p - 1]); }
+            if p > 0 { len += hypot(r.x[base + p] - r.x[base + p - 1], r.y[base + p] - r.y[base + p - 1]); }
             r.s[base + p] = len;
         }
         self.traffic.len[k] = len;
@@ -102,7 +102,7 @@ impl World {
         let b = &self.bodies;
         if b.orb_w[j] == 0.0 { return (0.0, 0.0); }
         let reach = b.r[j] * self.p(crate::world::P::match_reach);
-        let d = (x - b.x[j]).hypot(y - b.y[j]);
+        let d = hypot(x - b.x[j], y - b.y[j]);
         let q = ((reach - d) / (reach * 0.5)).clamp(0.0, 1.0);
         let k = q * q * (3.0 - 2.0 * q);
         (b.vx[j] * k, b.vy[j] * k)
@@ -114,7 +114,7 @@ impl World {
         let mut best: Option<(usize, f64)> = None;
         for j in 0..self.n_bodies {
             if b.orb_w[j] == 0.0 || b.port[j] == 0 { continue; }
-            let q = (x - b.x[j]).hypot(y - b.y[j]) / b.r[j].max(1.0);
+            let q = hypot(x - b.x[j], y - b.y[j]) / b.r[j].max(1.0);
             if q < reach && best.is_none_or(|(_, bq)| q < bq) { best = Some((j, q)); }
         }
         best.map_or((0.0, 0.0), |(j, _)| self.frame_of(j, x, y))

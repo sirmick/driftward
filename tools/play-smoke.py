@@ -225,6 +225,37 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     check(mk['marked'] == [mk['here']] and mk['listed'] == 1, f"a mission's system is marked on the galaxy map and its card lists it: {mk}")
 
+    # jumping (core/src/jump.rs): J is refused away from the zones, and in a lane's zone takes a ship lined up and moving out: the
+    # torch, the blink (fuel, the lane's days, the destination's system), the transit on the galaxy map, the arrival in
+    # the destination's zone for the lane come by. Along a course, a J in the transit's window chains through the next
+    # system and straight out again; the whole session replays natively
+    if len(ev('__play.systems()')) > 1:
+        ev("(() => { const P = __play, C = P.CMD; P.newGame(41); P.hold(true); P.command(C.launch); P.command(C.skip); P.advance(0.3, []); })()")
+        ev("__play.preload()")
+        until = lambda cond: ev("(() => { const P = __play, g = P.sim.game; let n = 0; while (!(%s) && n++ < 1500) P.advance(1 / 60, []); return n < 1500; })()" % cond)
+        jz = ev("""(() => { const P = __play, C = P.CMD, U = P.universe, id = n => U.systems.find(s => s.name === n).id, out = {};
+          P.setCourse(id('Merrow'), 'days'); const g = P.gates().findIndex(x => x.name === 'Calder');
+          out.away = P.command(C.hyper, -1); P.command(C.zone, g); P.advance(0.2, []); out.fuel = P.probe().fuel; out.day = P.probe().day;
+          P.jumpKey(); out.phase = P.sim.game.jump[0]; return out; })()""")
+        check(jz['away'] == 15 and jz['phase'] == 1, f"J refused away from every zone (15); in a lane's zone, lined up, the torch lights (phase {jz['phase']})")
+        until('g.jump[0] === 2')
+        ev("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")  # a frame draws the transit
+        tb = ev("({ sys: __play.system(), fuel: __play.probe().fuel, day: __play.probe().day, map: !document.getElementById('galaxy').hidden && document.getElementById('galaxy').classList.contains('gx-transit') })")
+        check(tb['sys'] == 'calder' and tb['day'] == jz['day'] + 1 and jz['fuel'] - tb['fuel'] > 0.5 and tb['map'], f"it blinks out toward Calder: {jz['fuel'] - tb['fuel']:.2f} t, day {tb['day']}, the transit on the galaxy map")
+        until('g.jt[0] > P.sim.param("transit_secs") - P.sim.param("chain_window") + 0.1')
+        ch = ev("(() => { __play.jumpKey(); return __play.sim.game.jchain[0]; })()")
+        until('g.jump[0] !== 2')
+        cx = ev("({ phase: __play.sim.game.jump[0], sys: __play.system() })")
+        until('g.jump[0] === 3')
+        ar = ev("({ sys: __play.system(), course: __play.course(), v: __play.probe().v, r: Math.hypot(__play.probe().x, __play.probe().y) })")
+        until('g.jump[0] === 0')
+        check(ch >= 0 and cx == {'phase': 1, 'sys': 'calder'} and ar['sys'] == 'merrow' and ar['course'] is None and ar['v'] > 1000 and ar['r'] > 30000,
+              f"a J in the window chains through Calder and on to Merrow, arriving at speed in the zone at its edge ({ar['r']/1000:.0f} km out), the course done")
+        jrep = ev("(() => { const P = __play, r = P.exportReplay(); return { save: P.b64(r.save), log: r.log, ticks: r.ticks, tick: r.tick, hash: r.hash }; })()")
+        out = native_replay(base64.b64decode(jrep['save']), jrep['log'], jrep['ticks'])
+        check(out == f"tick {jrep['tick']} hash {jrep['hash']}" and jrep['log'].count(' atlas ') == 2, f"the chained session replays natively, its two systems stored on the way: {out}")
+        ev("__play.hold(false)")
+
     # the debug jump: the debug screen's box completes place@system and jumps there (a logged core command); systems are
     # read and stored into the atlas only when first jumped to, so a new game holds the start system alone; a session
     # that jumps between systems replays natively (the stores logged with it), and a save made after a jump loads back

@@ -19,6 +19,7 @@
 use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL, NO_CREDITS};
 use crate::mission::{CMD_ABANDON, CMD_ACCEPT};
 use crate::service::{CMD_REFUEL, CMD_REPAIR};
+use crate::jump::{CMD_HYPER, CMD_ZONE, J_NONE};
 use crate::math::{atan2, hypot};
 use crate::world::{World, DT, P};
 
@@ -79,17 +80,19 @@ impl World {
         let mut best: Option<(usize, f64)> = None;
         for j in 0..self.n_bodies {
             if b.port[j] == 0 { continue; }
-            let d = (b.x[j] - s.x[i]).hypot(b.y[j] - s.y[i]);
+            let d = hypot(b.x[j] - s.x[i], b.y[j] - s.y[i]);
             if d < zone(b.kind[j], b.r[j]) && best.is_none_or(|(_, bd)| d < bd) { best = Some((j, d)); }
         }
         let (j, _) = best?;
         let limit = if b.kind[j] == BODY_STATION { self.p(P::dock_speed) } else { self.p(P::land_speed) };
-        Some((j, (s.vx[i] - b.vx[j]).hypot(s.vy[i] - b.vy[j]) <= limit))
+        Some((j, hypot(s.vx[i] - b.vx[j], s.vy[i] - b.vy[j]) <= limit))
     }
 
     /// Apply a command now (between ticks). Returns OK or why not.
     pub fn command(&mut self, code: u32, a: i32, b: i32) -> i32 {
         let mode = self.mode();
+        // while the drive has the ship (jump.rs), only the jump's own command
+        if self.game.jump[0] != J_NONE && code != CMD_HYPER { return WRONG_MODE; }
         match code {
             CMD_LAND => {
                 if mode != MODE_FLYING { return WRONG_MODE; }
@@ -153,6 +156,8 @@ impl World {
                 OK
             }
             CMD_JUMP => self.jump_to(a, b),
+            CMD_HYPER => self.hyper(a),
+            CMD_ZONE => self.to_zone(a),
             _ => UNKNOWN_COMMAND,
         }
     }

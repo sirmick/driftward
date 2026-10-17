@@ -46,6 +46,24 @@ function addSystem(id, bundle) {
   SYSTEMS.set(id, rec);
   return rec;
 }
+// A system's lanes as its gates (core/src/jump.rs): each takes the zone of the 16 round the system (zone k on the
+// bearing k x 22.5 degrees counter-clockwise from +x, the galactic plane's x and y) nearest its bearing toward its
+// destination, the next free one where two want the same (in the index's lane order, so every page agrees). Each:
+// { dest (star id), zone, ly, days, name, file (the destination's system file, if it can be flown), owner }.
+function gatesOf(S) {
+  if (S.gates) return S.gates;
+  const me = S.entry, taken = new Set(), out = [];
+  for (const l of UNIVERSE.lanes) {
+    if (l.a !== me.id && l.b !== me.id) continue;
+    const o = BY_STAR.get(l.a === me.id ? l.b : l.a), a = Math.atan2(o.pos[1] - me.pos[1], o.pos[0] - me.pos[0]);
+    const off = z => { const d = Math.abs(((a - z * Math.PI / 8) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI); return d; };
+    const free = [...Array(16).keys()].filter(z => !taken.has(z)).sort((p, q) => off(p) - off(q));
+    if (!free.length) break;
+    taken.add(free[0]);
+    out.push({ dest: o.id, zone: free[0], ly: l.ly, days: l.days, name: o.name, file: o.file || null, owner: o.owner });
+  }
+  return (S.gates = out);
+}
 // read the systems not read yet; resolves once each has its record (an unusable one has none)
 const needSystems = ids => Promise.all(ids.filter(id => !SYSTEMS.has(id)).map(id => DATA.system(id).then(b => { if (!SYSTEMS.has(id)) addSystem(id, b); })));
 // the system the page draws now, set by setSystem (below, once the bake helpers exist)
@@ -60,7 +78,7 @@ const galaxy = makeGalaxyMap({ el: $('galaxy'), universe: UNIVERSE, econ: ECON, 
   // the star map, once the real stars are read (asked for here the first time)
   makeMap: labels => DATA.has('stars.json') ? makeStarMap(G, canvas, labels, { catalogue: DATA.peek('stars.json'), universe: UNIVERSE }) : (DATA.catalogue(), null) });
 let galaxyMissions = () => []; // the active missions as the galaxy map shows them (bound once the core has loaded)
-const openGalaxy = () => { if (debug.isOpen()) return; galaxy.open(); keys.clear(); };
+const openGalaxy = () => { if (debug.isOpen() || jumping()) return; galaxy.open(); keys.clear(); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3, belt: 4, field: 5 };
 // planets and moons, drawn by the planet shader (worldsOf, per system)
@@ -310,7 +328,8 @@ window.addEventListener('keydown', e => {
     // pixels (see postProcess)
     if (e.code === 'KeyB' || e.code === 'KeyN') sceneStale = true;
     if (e.code === 'KeyB' && !inPort()) { bloomOn = !bloomOn; toast(`Bloom ${bloomOn ? 'on' : 'off'}`); }
-    if (e.code === 'KeyJ') toast(jitterToggle() ? 'Jitter probe: frame times, and motion jitter in pixels of a 1080p view (see src/play/jitter.js)' : 'Jitter probe off');
+    if (e.code === 'KeyJ' && e.shiftKey) toast(jitterToggle() ? 'Jitter probe: frame times, and motion jitter in pixels of a 1080p view (see src/play/jitter.js)' : 'Jitter probe off');
+    else if (e.code === 'KeyJ') jumpKey();
     if (e.code === 'KeyN') { nanView = 1 - nanView; toast(nanView ? 'NaN view: magenta = bad scene pixel, cyan = bad bloom, yellow = negative' : 'NaN view off'); }
     if (e.code === 'KeyL') landOrLaunch();
     if (e.code === 'Enter') skipSequence();
@@ -356,7 +375,7 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
 let inFlight = () => false, cycleTarget = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false, portService = () => {};
 let pauseGame = () => {}, shellBack = () => {}, jitterToggle = () => false, barrierUp = () => false, noticeUp = () => false, closeNotice = () => {};
-let lostUp = () => false, closeLost = () => {};
+let lostUp = () => false, closeLost = () => {}, jumpKey = () => {}, jumping = () => false;
 // Esc steps back: a sequence skips; in port, an open panel closes; in flight, the map closes, then the target
 // clears; otherwise the game pauses
 function onEscape() {
@@ -383,6 +402,10 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // body capacity: the schema's caps on bodies and belts, the star, and the most environmental stations a system holds
   const CFG = { maxShips: 128, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + SYSTEM_SCHEMA.properties.belts.maxItems + 1 + MAX_ENVIRONS, envN: 16, envW: 40000, seed: 1 };
   const sim = CORE.world(CFG);
+  // a second world, never stepped, that systems are laid out in (layoutSystem); making it grows WASM memory, so the
+  // first's views are made again before anything holds on to them
+  const lay = CORE.world(CFG);
+  sim.rebind();
   const SH = sim.ship, IN = CORE.IN;
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; sim.type.hull[k] = T.hull; sim.type.fuel[k] = T.fuel; });
   const CMD = CORE.CMD, MODE = CORE.MODE;
@@ -443,12 +466,13 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // split over its classes by weight, one core mix row per line and class; loiter rows carry ships to keep up
   const TRAFFIC = CORE.TRAFFIC;
   const kindOf = (line, cls) => { const bi = catalog.brands.findIndex(b => b.id === line), zi = catalog.sizes.findIndex(z => z.id === cls); return bi < 0 || zi < 0 ? -1 : bi * nSizes + zi; };
-  function writeTraffic() {
-    const M = sim.mix, B_ = sim.body, TCFG = SYS.traffic || {}; let m = 0;
+  // (into world w's live columns, for system record S)
+  function writeTraffic(w, S) {
+    const M = w.mix, B_ = w.body, BODIES = S.loaded.bodies, TCFG = S.loaded.system.traffic || {}; let m = 0;
     for (const k of ['stream', 'body', 'kind', 'weight', 'rate', 'dwell']) M[k].fill(0);
     const add = (stream, body, e, total) => {
       const cls = Object.entries(e.classes || {}).filter(([c, w]) => w > 0 && kindOf(e.line, c) >= 0), sum = cls.reduce((s, [, w]) => s + w, 0);
-      for (const [c, w] of cls) { if (m >= sim.maxMix) { console.warn('traffic mix: too many rows'); return; } M.stream[m] = stream; M.body[m] = body; M.kind[m] = kindOf(e.line, c); M.weight[m] = total * w / sum; m++; }
+      for (const [c, wt] of cls) { if (m >= w.maxMix) { console.warn('traffic mix: too many rows'); return; } M.stream[m] = stream; M.body[m] = body; M.kind[m] = kindOf(e.line, c); M.weight[m] = total * wt / sum; m++; }
     };
     (TCFG.local || []).forEach(e => add(TRAFFIC.mix.local, -1, e, e.share));
     (TCFG.through || []).forEach(e => add(TRAFFIC.mix.through, -1, e, e.share));
@@ -467,21 +491,21 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       }
       B_.env[j] = groups.get(gk) + 1; B_.env_rate[j] = E.perMinute / 60 * b.env.scale; B_.env_jump[j] = E.jump;
     });
-    if (TCFG.ships !== undefined) sim.param('traffic_ships', TCFG.ships);
-    if (TCFG.throughShare !== undefined) sim.param('share_through', TCFG.throughShare);
-    if (TCFG.jumpRadius !== undefined) sim.param('jump_radius', TCFG.jumpRadius);
+    if (TCFG.ships !== undefined) w.param('traffic_ships', TCFG.ships);
+    if (TCFG.throughShare !== undefined) w.param('share_through', TCFG.throughShare);
+    if (TCFG.jumpRadius !== undefined) w.param('jump_radius', TCFG.jumpRadius);
   }
   const mixKinds = () => [...new Set([...sim.mix.kind].filter((k, m) => sim.mix.stream[m]))];
   let bakeKinds = []; // every ship type the mix can fly, baked up front
   // Market prices: a port with a market trades what its role lists, at base price times the tier. Written at each new
   // game; a loaded save brings its own (prices are world state).
   if (GOODS.length > sim.maxGoods) console.error(`economy.json has ${GOODS.length} commodities; the core holds ${sim.maxGoods}`);
-  function writePrices() {
-    sim.market.price.fill(0);
+  function writePrices(w, BODIES) {
+    w.market.price.fill(0);
     BODIES.forEach((b, j) => {
       if (!b.port || !(b.port.services || []).includes('market')) return;
       const table = ECON.roles[b.port.role] || {};
-      GOODS.slice(0, sim.maxGoods).forEach((c, g) => { const t = table[c.id]; if (t) sim.market.price[j * sim.maxGoods + g] = Math.round(c.base * ECON.tiers[t]); });
+      GOODS.slice(0, w.maxGoods).forEach((c, g) => { const t = table[c.id]; if (t) w.market.price[j * w.maxGoods + g] = Math.round(c.base * ECON.tiers[t]); });
     });
   }
   // orbiting debris and small traffic (core/src/orbit.rs, looks only): rocky worlds wear the most debris, the busier
@@ -522,26 +546,36 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // a port's services the core runs (core/src/service.rs SVC_*), and its fuel price: the market's, where it sells fuel,
   // else dear (the base price at the high tier)
   const SVC = { refuel: 1, repair: 2 }, FUEL = GOODS.findIndex(c => c.id === 'fuel');
+  // Laid out in a world of its own (lay: the same config, never stepped), so the live system is never touched, even
+  // mid-flight; its slot's bytes then go into the game's atlas, as a replay puts them back. Returns those bytes.
   function layoutSystem(S, k) {
-    setSystem(S, false);
-    sim.setBodies(BODIES.length);
+    const w = lay, BODIES = S.loaded.bodies;
+    const WORLDS = S.worlds || (S.worlds = worldsOf(BODIES)), STATIONS = S.stations || (S.stations = stationsOf(BODIES));
+    w.setBodies(BODIES.length);
     BODIES.forEach((b, j) => {
-      const B = sim.body; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
+      const B = w.body; B.r[j] = b.r; B.g[j] = b.g; B.kind[j] = BODY_KIND[b.kind]; B.port[j] = b.port ? 1 : 0;
       // the stars' wells reach and hazard zones (src/stars.js); nothing else has either
       B.reach[j] = b.reach || 0; B.hazard[j] = b.hazard || 0; B.rad[j] = b.rad || 0;
       if (!j) { B.x[0] = 0; B.y[0] = 0; }
-      sim.placeBody(j, j ? BODIES.findIndex(p => p.id === b.parent) : 0, !j || b.kind === 'belt' ? 0 : b.orbit.radius, j ? b.orbit.angle : 0); // a belt is centred on its parent
+      w.placeBody(j, j ? BODIES.findIndex(p => p.id === b.parent) : 0, !j || b.kind === 'belt' ? 0 : b.orbit.radius, j ? b.orbit.angle : 0); // a belt is centred on its parent
       b.x0 = B.x[j]; b.y0 = B.y[j]; // (x0, y0): where it is at time 0, as placed
-      if (b.motion) sim.bodyMotion(j, b.motion.period * (b.motion.clockwise ? -1 : 1)); // a station that orbits (core/src/motion.rs): where it is now
+      if (b.motion) w.bodyMotion(j, b.motion.period * (b.motion.clockwise ? -1 : 1)); // a station that orbits (core/src/motion.rs)
       b.x = B.x[j]; b.y = B.y[j];
       B.pop[j] = b.port ? TRAFFIC_DATA.population[b.port.population] || 1 : 0; // traffic's gravity model
       const sv = (b.port && b.port.services) || [];
       B.svc[j] = sv.reduce((n, v) => n | (SVC[v] || 0), 0);
     });
     for (const o of [...WORLDS, ...STATIONS]) { const b = BODIES.find(b => b.id === o.id); o.x = b.x; o.y = b.y; }
-    writeTraffic(); writePrices();
-    BODIES.forEach((b, j) => { if (!b.port) return; const m = FUEL >= 0 ? sim.price(j, FUEL) : 0; sim.body.fuel_price[j] = m || Math.round((FUEL >= 0 ? GOODS[FUEL].base : 45) * ECON.tiers.high); });
-    if (!sim.atlasStore(k, S.entry.id)) throw new Error(`atlas slot ${k} refused system ${SYS.id}`);
+    writeTraffic(w, S); writePrices(w, BODIES);
+    BODIES.forEach((b, j) => { if (!b.port) return; const m = FUEL >= 0 ? w.price(j, FUEL) : 0; w.body.fuel_price[j] = m || Math.round((FUEL >= 0 ? GOODS[FUEL].base : 45) * ECON.tiers.high); });
+    // its lanes (core/src/jump.rs): a gate per lane, in the zone nearest its bearing (gatesOf)
+    w.gate.dest.fill(0xffffffff);
+    gatesOf(S).forEach((G, n) => { w.gate.dest[n] = G.dest; w.gate.zone[n] = G.zone; w.gate.ly[n] = G.ly; w.gate.days[n] = G.days; });
+    w.atlasReset();
+    if (!w.atlasStore(0, S.entry.id)) throw new Error(`could not lay out system ${S.id}`);
+    const row = w.atlasRow(0);
+    if (!sim.atlasPut(k, row)) throw new Error(`atlas slot ${k} refused system ${S.id}`);
+    return row;
   }
   // the atlas's slots, by system: slot k's record (every system in the atlas has been read: it was laid out from its
   // record, or a load read it first), and the slot a system is in (-1: none)
@@ -554,8 +588,11 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // frame (syncMovers)
   let MOVERS = [];
   function syncMovers() { for (const m of MOVERS) { m.b.x = sim.body.rx[m.j]; m.b.y = sim.body.ry[m.j]; if (m.st) { m.st.x = m.b.x; m.st.y = m.b.y; } } }
-  function showSystem(S) {
+  // (quiet: no barrier yet: in transit the clock runs on, and the barrier goes up on arrival)
+  let shownSlot = -1;
+  function showSystem(S, quiet) {
     setSystem(S);
+    shownSlot = sim.game.system[0];
     MOVERS = BODIES.map((b, j) => b.motion ? { j, b, st: STATIONS.find(o => o.id === b.id) } : null).filter(Boolean);
     syncMovers();
     ({ list: ROCKS, grid: rockGrid, reach: rockReach } = rocksOf(S));
@@ -563,7 +600,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     startBody = Math.max(1, BODIES.findIndex(b => b.id === SYS.start && b.port), BODIES.findIndex(b => b.port));
     bakeKinds = mixKinds();
     systemViews();
-    raiseBarrier();
+    if (!quiet) raiseBarrier();
+    // the systems its lanes lead to, read ahead so a jump or a chain need not wait
+    needSystems(gatesOf(S).map(G => G.file).filter(Boolean));
   }
   // The system barrier: the world stops (the clock holds; the scene keeps drawing, blurred) behind a small dialog until
   // the system's stations, the hulls its traffic flies and the player's own are baked. The bakes themselves still run
@@ -605,7 +644,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     sim.clear(); sim.reseed(seedNow);
     // the start system alone in the atlas, live in the core and drawn
     const S0 = SYSTEMS.get(START_ID);
-    sim.atlasReset(); layoutSystem(S0, 0); sim.atlasLoad(0); showSystem(S0);
+    sim.atlasReset(); layoutSystem(S0, 0); sim.atlasLoad(0); showSystem(S0); galaxy.endTransit(); resetFollow();
     sim.setCount(1);
     SH.kind[0] = playerTypeIndex(opts && opts.ship); SH.alive[0] = 1; SH.ang[0] = 0; // opts.ship: 'faction.line:class' (dev and tests)
     SH.hull[0] = sim.type.hull[SH.kind[0]]; sim.game.fuel[0] = sim.type.fuel[SH.kind[0]]; // sound, and a full tank
@@ -632,16 +671,90 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     if (r === 0) rec.log.push([sim.tick(), 'cmd', code, a || 0, b || 0]);
     return r;
   }
-  // a system into the atlas mid-session: laid out over the live columns (which the jump that follows replaces), stored
-  // in the slot the core picks for it, and logged for replays; the slot, or -1 if every one is needed
+  // a system into the atlas mid-session: laid out (in its own world), stored in the slot the core picks for it, and
+  // logged for replays; the slot, or -1 if every one is needed
   function storeSystem(S) {
     let k = slotOf(S);
     if (k >= 0) return k;
     k = sim.atlasSlotFor(S.entry.id);
     if (k < 0) return -1;
-    layoutSystem(S, k);
-    rec.log.push([sim.tick(), 'atlas', k, sim.atlasRow(k)]);
+    rec.log.push([sim.tick(), 'atlas', k, layoutSystem(S, k)]);
     return k;
+  }
+
+  // ---------- jumping (core/src/jump.rs; docs/jumping.md) ----------
+  // J in a lane's jump zone, moving out along it: the torch, the blink, a transit played on the galaxy map, the
+  // arrival. In the transit's last moments a J chains on along the course: out in the next lane's zone, at speed, and
+  // straight out again. The destination is stored in the atlas before each command (logged, for replays).
+  const JUMP = CORE.JUMP, jumpPhase = () => sim.game.jump[0];
+  jumping = () => jumpPhase() !== JUMP.none;
+  const starName = id => (BY_STAR.get(id) || {}).name || '?';
+  // the course's next lane out of this system: its gate here, or null
+  function courseNext() {
+    if (!course || course.dest === sysRec.entry.id) return null;
+    const R = galaxyRoute(UNIVERSE, sysRec.entry.id, course.dest, course.by), G = gatesOf(sysRec);
+    const g = R && R.ids.length > 1 ? G.findIndex(x => x.dest === R.ids[1]) : -1;
+    return g < 0 ? null : { g, G: G[g] };
+  }
+  jumpKey = () => {
+    const ph = jumpPhase();
+    if (ph === JUMP.transit) { chainKey(); return; }
+    if (ph !== JUMP.none || sim.mode() !== MODE.flying) return;
+    const g = sim.zoneAt(SH.x[0], SH.y[0]), G = gatesOf(sysRec)[g];
+    if (!G) { toast('Not in a jump zone: fly out to one (Shift+M shows them)'); return; }
+    if (!G.file) { toast(`${G.name} is uncharted: no system to fly to yet`); return; }
+    const S = SYSTEMS.get(G.file);
+    if (!S) { needSystems([G.file]); toast(`Charting the lane to ${G.name}: J again`); return; }
+    if (storeSystem(S) < 0) { toast("Can't jump: the atlas is full, with missions bound for every system in it"); return; }
+    const r = command(CMD.hyper, -1);
+    if (r !== 0) toast(`Can't jump to ${G.name}: ${CORE.RESULT[r] || r}`);
+  };
+  function chainKey() {
+    const n = courseNext();
+    if (!n) { toast(course ? 'The course ends here: no chain' : 'No course to chain along: set one on the galaxy map (M)'); return; }
+    const S = n.G.file && SYSTEMS.get(n.G.file);
+    if (!S) { toast(`${n.G.name} ${n.G.file ? 'is still being charted' : 'is uncharted'}: no chain`); return; }
+    const cost = sim.laneFuel(SH.kind[0], n.G.ly) * sim.param('chain_cost');
+    if (sim.game.fuel[0] < cost) { toast(`Not enough fuel to chain on to ${n.G.name}: ${cost.toFixed(1)} t, ${sim.game.fuel[0].toFixed(1)} t aboard`); return; }
+    if (storeSystem(S) < 0) return;
+    const r = command(CMD.hyper, n.g);
+    if (r !== 0 && r !== 20) toast(`No chain: ${CORE.RESULT[r] || r}`);
+  }
+  // Following the core: a blink switches system inside a tick, so the page catches up after the steps (each frame,
+  // and after a test's advance): the new system drawn (quietly, in transit), and each phase change answered.
+  let lastPhase = JUMP.none;
+  function follow() {
+    const k = sim.game.system[0];
+    if (k !== shownSlot && k < sim.atlasCount()) { const S = slotRec(k); if (S) showSystem(S, jumpPhase() === JUMP.transit); }
+    const ph = jumpPhase();
+    if (ph === lastPhase) return;
+    const prev = lastPhase; lastPhase = ph;
+    if (prev === JUMP.transit) { // out of the transit: the view snaps to the ship, the barrier if bakes are left
+      galaxy.endTransit();
+      camX = SH.x[0]; camY = SH.y[0]; viewScale = 0; navTarget = null;
+      if (ph !== JUMP.torch) raiseBarrier(); // (a chained pass straight through doesn't wait for its bakes)
+      if (ph === JUMP.torch) toast(`Chained through ${SYS.name}`);
+      else if (course && course.dest === sysRec.entry.id) { course = null; toast(`Arrived at ${SYS.name}: course complete`); }
+      else toast(`Arrived at ${SYS.name}`);
+    }
+  }
+  const resetFollow = () => { lastPhase = jumpPhase(); };
+  // the transit as the galaxy map draws it
+  function transitInfo() {
+    const T = sim.param('transit_secs'), t = sim.game.jt[0], n = courseNext();
+    return { from: sim.game.jfrom[0], to: sysRec.entry.id, next: n ? n.G.dest : null, f: Math.min(1, t / T), window: t >= T - sim.param('chain_window'), chain: sim.game.jchain[0] };
+  }
+  // the HUD's jump line: the zone the player is in and what a jump needs, the torch, the arrival
+  function jumpLine() {
+    const ph = jumpPhase(), Gs = gatesOf(sysRec), vmax = sim.type.vmax[SH.kind[0]], v = Math.hypot(SH.vx[0], SH.vy[0]);
+    if (ph === JUMP.torch) { const G = Gs[sim.game.jgate[0]]; return [`TORCH → ${G ? G.name.toUpperCase() : '?'}  ${(v / vmax).toFixed(1)}× OF ${sim.param('jump_speed')}×`, '#ffd08a', true]; }
+    if (ph === JUMP.arrive) return [`ARRIVED FROM ${starName(sim.game.jfrom[0]).toUpperCase()}`, '#8fd3ff', false];
+    const g = sim.zoneAt(SH.x[0], SH.y[0]), G = Gs[g];
+    if (!G) return null;
+    const cost = sim.laneFuel(SH.kind[0], G.ly), [dx, dy] = [Math.cos(G.zone * Math.PI / 8), Math.sin(G.zone * Math.PI / 8)];
+    const need = !G.file ? 'UNCHARTED' : sim.game.fuel[0] < cost ? 'NOT ENOUGH FUEL' : v < sim.param('jump_min') * vmax ? `FASTER: ${Math.ceil(sim.param('jump_min') * vmax)} M/S`
+      : (SH.vx[0] * dx + SH.vy[0] * dy) < v * Math.cos(sim.param('jump_align') * Math.PI / 180) ? 'LINE UP OUTWARD' : null;
+    return [`${G.name.toUpperCase()} JUMP ZONE  ·  ${cost.toFixed(1)} T  ·  ${G.days} D  ·  ${need || 'J TO JUMP'}`, need ? '#e2b866' : '#7fd08a', !need];
   }
   landOrLaunch = () => {
     const m = sim.mode();
@@ -702,7 +815,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     }
     const meta = JSON.parse(localStorage.getItem(key + '.meta') || '{}');
     seedNow = meta.seed >>> 0;
-    showSystem(slotRec(sim.game.system[0])); // the save's system, live in the core already
+    showSystem(slotRec(sim.game.system[0]), sim.game.jump[0] === CORE.JUMP.transit); resetFollow(); // the save's system, live in the core already
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navTarget = null; viewScale = 0; missionSeen.set(sim.mission.state); closeNotice(); closeLost(); startRecording();
     closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav);
     toast(`Loaded day ${sim.day()}`);
@@ -785,7 +898,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
 
   // ---------- frame ----------
   let last = 0, camX = 0, camY = 0, fps = 60, fpsAcc = 0, fpsN = 0, lastMode = -1;
-  const JIT = makeJitter(CFG.maxShips); // motion smoothness, frame by frame (src/play/jitter.js; J shows it)
+  let held = false; // tests: the clock held while the page still draws (__play.hold), so only the script steps it
+  const JIT = makeJitter(CFG.maxShips); // motion smoothness, frame by frame (src/play/jitter.js; Shift+J shows it)
   // a ship's motion state for the probe: 0 while a landing or launch sequence draws it, else 1 + phase + 4 x on rails
   const jitState = i => { const ph = sim.traffic.phase[i]; return sim.traffic.role[i] && ph !== TRAFFIC.cruise ? 0 : 1 + ph + 4 * sim.ship.rail[i]; };
   jitterToggle = () => JIT.toggle();
@@ -838,13 +952,14 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     for (const k of bakeKinds) typeReady(types[k]);
     let ran = 0;
     checkBarrier();
-    if (!paused && !debug.isOpen() && !galaxy.isOpen() && !barrier && !notice && !lost) { // paused, debugging, on the galaxy map, behind the system barrier or a dialog: the clock stops (the replay log is by tick, so a pause leaves no trace)
+    if (!paused && !held && !debug.isOpen() && !galaxy.isOpen() && !barrier && !notice && !lost) { // paused, debugging, on the galaxy map, behind the system barrier or a dialog: the clock stops (the replay log is by tick, so a pause leaves no trace)
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
       ran = sim.due(dt);
       for (let n = ran; n > 0; n--) sim.step();
     }
     const c1 = performance.now();
+    follow();
     sim.interpolate();
     syncMovers();
     const mode = sim.mode();
@@ -854,6 +969,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     // frame (a hitch, a dropped frame) moves it as far as the short frames it replaced would have, with no lurch
     const k = 1 - Math.exp(-3.5 * dt);
     if (mode === MODE.landed) { const B = BODIES[sim.game.at[0]]; camX += (B.x - camX) * k; camY += (B.y - camY) * k; }
+    else if (mode === MODE.flying && jumping()) { camX = SH.rx[0]; camY = SH.ry[0]; } // the drive has the ship: the view holds it, however fast
     else if (mode === MODE.flying) { const lead = 0.35; camX += (SH.rx[0] + SH.vx[0] * lead - camX) * k; camY += (SH.ry[0] + SH.vy[0] * lead - camY) * k; }
     else { const q = playerSeq().pose, lead = 0.35; camX += (q.x + q.vx * lead - camX) * k; camY += (q.y + q.vy * lead - camY) * k; } // following the curl, leading as in flight
     const yv = debug.yardView(); // the debug screen's Ships tab draws the shipyard instead of the game
@@ -862,6 +978,12 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     if (sv) { sunGallery.render((now - t0) / 1000, sv.cells, sv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     const mv = debug.mapView(); // and its Map tab, the star map
     if (mv) { mv.tick(dt); mv.draw(bloomOn ? 0.8 : 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
+    if (jumpPhase() === JUMP.transit) { // between systems: the trip on the galaxy map, and the chain prompt
+      const tv = galaxy.transit(transitInfo());
+      if (tv) { tv.tick(dt); tv.draw(bloomOn ? 0.8 : 0); }
+      else { gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); }
+      $('loc').hidden = true; drawTransit(); return;
+    }
     const gv = galaxy.view(); // the galaxy map: the star map instead of the game
     if (gv) { gv.tick(dt); gv.draw(bloomOn ? 0.8 : 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     // nothing to see under the port's painted vista, the map, the debug screen or the pause menu: the canvas keeps
@@ -963,7 +1085,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   const missionDest = k => portName(MS.dest[k], MS.sys[k]) + (MS.sys[k] !== here() && slotRec(MS.sys[k]) ? ` (${slotRec(MS.sys[k]).loaded.system.name})` : '');
   const activeHere = () => activeMissions().filter(k => MS.sys[k] === here()); // the ones bound for this system's ports
   // a traffic route's end: a port, or jump zone z (coded -1 - z)
-  const endName = c => c < 0 ? `the ${TRAFFIC.zones[-1 - c]} jump zone` : portName(c);
+  const endName = c => c < 0 ? `the ${(gatesOf(sysRec)[-1 - c] || {}).name || TRAFFIC.zones[(-1 - c) % 4]} jump zone` : portName(c);
   const cargoText = (tons, g) => `${tons} t ${(GOODS[g] || { name: '?' }).name.toLowerCase()}`;
   // each active mission for the galaxy map: the system it is bound to (its atlas slot's star id), the port, the cargo,
   // the pay and the days left
@@ -1488,6 +1610,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     }
     typeCount.fill(0);
     let nL = 0, nPl = 0;
+    // the torch: the player's plume grows long as the drive takes it toward jump speed
+    const torch = jumpPhase() === JUMP.torch ? 2 + 4 * Math.min(1, Math.hypot(SH.vx[0], SH.vy[0]) / (sim.param('jump_speed') * sim.type.vmax[SH.kind[0]])) : 0;
     for (let i = 0; i < live; i++) {
       if (!shown(i, cx, cy, halfW, halfH)) continue;
       const T = types[SH.kind[i]], c = Math.cos(SH.ra[i]), s = Math.sin(SH.ra[i]), th = SH.thr[i];
@@ -1528,7 +1652,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
         const E = T.eng[e], o = nPl * 10;
         plumeInst[o] = SH.rx[i] + c * E.lx - s * E.ly; plumeInst[o + 1] = SH.ry[i] + s * E.lx + c * E.ly;
         plumeInst[o + 2] = c * E.dx - s * E.dy; plumeInst[o + 3] = s * E.dx + c * E.dy;
-        plumeInst[o + 4] = E.w * T.br.plLen * (0.5 + 2.6 * th) * (1 + 1.2 * bi); plumeInst[o + 5] = E.w * T.br.plWid * 1.35 * (1 + 0.3 * bi);
+        const tk = i === 0 && torch ? torch : 1;
+        plumeInst[o + 4] = E.w * T.br.plLen * (0.5 + 2.6 * th) * (1 + 1.2 * bi) * tk; plumeInst[o + 5] = E.w * T.br.plWid * 1.35 * (1 + 0.3 * bi) * Math.sqrt(tk);
         plumeInst[o + 6] = i * 7.3 + e * 1.37; plumeInst[o + 7] = pw; plumeInst[o + 8] = T.bi; plumeInst[o + 9] = bi;
         nPl++;
       }
@@ -1612,6 +1737,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       label(`${mode === MODE.descending ? (B.kind === 'station' ? 'DOCKING AT' : 'LANDING AT') : 'LAUNCHING FROM'} ${B.port.name.toUpperCase()}  ·  ENTER TO SKIP`, W / 2, H - stripH - 40);
       hx.textAlign = 'left'; return;
     }
+    drawBuoys();
     const T0 = types[SH.kind[0]], sp = Math.hypot(SH.vx[0], SH.vy[0]), hd = ((-SH.ang[0] * 180 / Math.PI) % 360 + 360) % 360;
     const burn = SH.burn[0] && SH.main[0] > 0;
     // top speed along the nose here, by the core's rule: raised pointing into a well, lowered pointing out
@@ -1635,12 +1761,14 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const ms = activeMissions().map(k => { const left = MS.due[k] - sim.day(); return [`→ ${missionDest(k).toUpperCase()}  ${MS.tons[k]} T  ${fmtCr(MS.pay[k])} CR  ${daysText(left).toUpperCase()}`, left <= 1 ? NAV_HOT : MIS_COL]; });
     if (auto >= 0) ms.unshift([`AUTOPILOT → ${BODIES[auto].name.toUpperCase()}  ·  STICK TO TAKE OVER`, '#7fd08a']);
     const cl = courseLine(); if (cl) ms.unshift([cl, '#a8f0c4']);
+    const jl = jumpLine(); if (jl) ms.unshift(jl.slice(0, 2));
     hx.fillStyle = 'rgba(7,9,12,.55)'; hx.fillRect(6, 6, 380, (lines.length + ms.length) * 17 + 31); // + the nearest-body line
     lines.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + k * 17); });
     ms.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + (lines.length + 1 + k) * 17); });
     if (!typeReady(T0)) { hx.fillStyle = '#e2b866'; hx.fillText('Baking your ship…', 14, 20 + lines.length * 17 + 28); }
     drawShipMarks(T0);
     drawLandingPrompt();
+    drawJumpPrompt();
     const navs = navObjects().map(o => Object.assign(o, navInfo(o)));
     drawNav(navs);
     drawTargetMark();
@@ -1677,6 +1805,57 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     }
   }
 
+  // between systems: where from and to, the timing bar with the chain window at its end, and the chain prompt
+  function drawTransit() {
+    hx.setTransform(dpr, 0, 0, dpr, 0, 0); hx.clearRect(0, 0, W, H);
+    const T = transitInfo(), n = courseNext(), y = H - stripH - 70;
+    hx.textAlign = 'center'; hx.textBaseline = 'middle';
+    hx.font = '600 16px "Saira Semi Condensed", sans-serif'; hx.fillStyle = '#dbe0e7';
+    label(`IN TRANSIT  ·  ${starName(T.from).toUpperCase()} → ${SYS.name.toUpperCase()}`, W / 2, 34);
+    // the bar: the trip so far, the window lit at its end
+    const bw = Math.min(420, W * 0.5), bx = W / 2 - bw / 2, wf = 1 - sim.param('chain_window') / sim.param('transit_secs');
+    hx.fillStyle = 'rgba(7,9,12,.7)'; hx.fillRect(bx - 2, y + 22, bw + 4, 10);
+    hx.fillStyle = n ? (T.window ? 'rgba(255,208,138,.9)' : 'rgba(255,208,138,.35)') : 'rgba(138,149,164,.35)'; hx.fillRect(bx + bw * wf, y + 24, bw * (1 - wf), 6);
+    hx.fillStyle = '#dbe0e7'; hx.fillRect(bx, y + 24, bw * T.f, 6);
+    hx.font = '600 20px "Saira Semi Condensed", sans-serif';
+    if (T.chain >= 0) { hx.fillStyle = '#7fd08a'; label(`CHAINED  ·  ON TO ${starName((gatesOf(sysRec)[T.chain] || {}).dest).toUpperCase()}`, W / 2, y); }
+    else if (T.chain === -2) { hx.fillStyle = '#f08a72'; label('TOO EARLY: NO CHAIN THIS TIME', W / 2, y); }
+    else if (n && sim.game.fuel[0] < sim.laneFuel(SH.kind[0], n.G.ly) * sim.param('chain_cost')) { hx.fillStyle = 'rgba(240,138,114,.85)'; label(`NOT ENOUGH FUEL TO CHAIN ON TO ${n.G.name.toUpperCase()}`, W / 2, y); }
+    else if (n) { hx.fillStyle = T.window ? '#ffd08a' : 'rgba(219,224,231,.7)'; label(T.window ? `J  ·  CHAIN ON TO ${n.G.name.toUpperCase()}` : `J AS THE BAR LIGHTS TO CHAIN ON TO ${n.G.name.toUpperCase()}`, W / 2, y); }
+    hx.textAlign = 'left';
+  }
+  // in a jump zone, lined up and ready: say so where the landing prompt goes
+  function drawJumpPrompt() {
+    const jl = jumpLine();
+    if (!jl || !jl[2]) return;
+    hx.font = '600 13px "IBM Plex Mono", ui-monospace, monospace'; hx.textAlign = 'center'; hx.textBaseline = 'middle';
+    hx.fillStyle = jumpPhase() === JUMP.torch ? '#ffd08a' : '#7fd08a';
+    label(jumpPhase() === JUMP.torch ? jl[0] : `J  JUMP TO ${gatesOf(sysRec)[sim.zoneAt(SH.x[0], SH.y[0])].name.toUpperCase()}`, W / 2, H - stripH - 62);
+    hx.textAlign = 'left';
+  }
+  // The jump zones' buoys: a field across each lane's runway, a buoy every 500 m along it and across it (so some are in
+  // view wherever the ship is in the zone, at any zoom), lit in the colour of who holds the far end (the course's next
+  // lane in green), the lights chasing outward along the bearing. Drawn on the HUD's canvas, in the world's place.
+  const hexCol = c => `rgb(${c.map(v => Math.round(Math.pow(Math.min(1, v), 1 / 2.2) * 255)).join(',')})`;
+  const gateCol = (G, g, n) => n && n.g === g ? '#7fd08a' : UNIVERSE.factions[G.owner] ? hexCol(UNIVERSE.factions[G.owner].colour) : '#9fb4c8';
+  function drawBuoys() {
+    const Gs = gatesOf(sysRec);
+    if (!Gs.length) return;
+    const R = sim.param('jump_radius'), L = sim.param('zone_len'), ZW = sim.param('zone_width'), pxm = scale / dpr, t = performance.now() / 1000, n = courseNext();
+    const reachX = W / 2 / pxm + 100, reachY = H / 2 / pxm + 100, hull = Math.max(2, 10 * pxm), lamp = Math.max(1.2, 2.5 * pxm);
+    for (let g = 0; g < Gs.length; g++) {
+      const G = Gs[g], dx = Math.cos(G.zone * Math.PI / 8), dy = Math.sin(G.zone * Math.PI / 8), col = gateCol(G, g, n);
+      for (let d = R - L / 2; d <= R + L / 2 + 1; d += 500) for (let a = -ZW / 2; a <= ZW / 2 + 1; a += 500) {
+        const x = dx * d - dy * a, y = dy * d + dx * a;
+        if (Math.abs(x - camX) > reachX || Math.abs(y - camY) > reachY) continue;
+        const [sx, sy] = toScreen(x, y), ph = ((t * 0.7 - (d - R + L / 2) / L) % 1 + 1) % 1, lit = 0.2 + 0.8 * Math.exp(-ph * 9);
+        hx.fillStyle = 'rgba(70,76,86,.95)'; stationMark(sx, sy, hull / 2); hx.fill(); // the buoy, a small dark diamond
+        hx.globalAlpha = lit * 0.22; hx.fillStyle = col; hx.beginPath(); hx.arc(sx, sy, lamp * 6, 0, 6.283); hx.fill(); // its lamp's glow
+        hx.globalAlpha = 0.35 + 0.65 * lit; hx.beginPath(); hx.arc(sx, sy, lamp, 0, 6.283); hx.fill();
+        hx.globalAlpha = 1;
+      }
+    }
+  }
   // over a port: say so, and whether the ship is slow enough to land (the Book: be over it and nearly still)
   function drawLandingPrompt() {
     const pb = sim.portBelow();
@@ -1985,6 +2164,15 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       hx.setLineDash([]);
       hx.fillStyle = tgt || hot ? NAV_HOT : o.mission ? MIS_COL : o.port ? 'rgba(127,208,138,.9)' : 'rgba(159,180,200,.85)'; hx.fillText(o.short.slice(0, 3).toUpperCase(), cx + mx, cy + my - rr - 7);
     }
+    // the jump zones: a pip on the rim toward each (inside, its runway's middle), in the colour of its far end
+    { const Gs = gatesOf(sysRec), nx = courseNext(), JR = sim.param('jump_radius');
+      Gs.forEach((G, g) => {
+        let mx = (Math.cos(G.zone * Math.PI / 8) * JR - px) * k, my = -(Math.sin(G.zone * Math.PI / 8) * JR - py) * k;
+        const md = Math.hypot(mx, my), out = md > R - 6;
+        if (out) { mx *= (R - 6) / md; my *= (R - 6) / md; }
+        hx.fillStyle = gateCol(G, g, nx); hx.fillRect(cx + mx - 3, cy + my - 3, 6, 6);
+        hx.fillText(G.name.slice(0, 3).toUpperCase(), cx + mx * (out ? 0.82 : 1), cy + my * (out ? 0.82 : 1) - (out ? 0 : 9));
+      }); }
     // hazard zones round the exotic stars: a red dashed ring
     hx.setLineDash([4, 4]); hx.strokeStyle = 'rgba(240,138,114,.7)'; hx.lineWidth = 1;
     for (const S of SUNS) if (S.hazard) { hx.beginPath(); hx.arc(cx + (S.x - px) * k, cy - (S.y - py) * k, S.hazard * k, 0, 6.283); hx.stroke(); }
@@ -2054,9 +2242,19 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       c.setLineDash([5, 5]); c.strokeStyle = 'rgba(240,138,114,.75)'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, S.hazard * v.s, 0, 6.283); c.stroke(); c.setLineDash([]);
       c.font = '600 11px "IBM Plex Mono", ui-monospace, monospace'; c.textAlign = 'center'; c.fillStyle = 'rgba(240,138,114,.9)'; c.fillText('RADIATION HAZARD', x, y + S.hazard * v.s + 12);
     }
-    // the jump zones: where through traffic arrives and leaves
+    // the jump zones: each lane's runway, in the colour of who holds its far end (the course's next lane green), named;
+    // a system without lanes keeps the four compass zones through traffic uses
     c.font = '600 11px "IBM Plex Mono", ui-monospace, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    TRAFFIC.zones.forEach((name, z) => {
+    const Gs = gatesOf(sysRec), nx = courseNext(), ZL = sim.param('zone_len'), ZW = sim.param('zone_width');
+    Gs.forEach((G, g) => {
+      const R = jumpR(), dx = Math.cos(G.zone * Math.PI / 8), dy = Math.sin(G.zone * Math.PI / 8), col = gateCol(G, g, nx);
+      const pt = (a, b) => mapPos(dx * a - dy * b, dy * a + dx * b, v);
+      c.beginPath(); [[R - ZL / 2, -ZW / 2], [R + ZL / 2, -ZW / 2], [R + ZL / 2, ZW / 2], [R - ZL / 2, ZW / 2]].forEach(([a, b], k) => { const [x, y] = pt(a, b); k ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath();
+      c.globalAlpha = 0.18; c.fillStyle = col; c.fill(); c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = nx && nx.g === g ? 2 : 1; c.stroke();
+      const [lx, ly] = pt(R + ZL / 2 + 5000, 0);
+      c.fillStyle = col; c.fillText(`${G.name.toUpperCase()}${G.file ? '' : ' (UNCHARTED)'} · ${G.days} D`, lx, ly);
+    });
+    if (!Gs.length) TRAFFIC.zones.forEach((name, z) => {
       const R = jumpR(), [x, y] = mapPos([0, R, 0, -R][z], [R, 0, -R, 0][z], v), r = Math.max(6, jumpSpread() * v.s);
       c.setLineDash([3, 4]); c.strokeStyle = 'rgba(143,211,255,.55)'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.stroke(); c.setLineDash([]);
       c.fillStyle = 'rgba(143,211,255,.75)'; c.fillText(`${name.toUpperCase()} JUMP`, x, y + (z === 0 ? -r - 10 : r + 10));
@@ -2103,7 +2301,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     c.textAlign = 'left'; c.font = '700 18px "Saira Semi Condensed", system-ui, sans-serif'; c.fillStyle = '#dbe0e7';
     c.fillText(`${SYS.name.toUpperCase()} SYSTEM`, 20, 26);
     c.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace'; c.fillStyle = '#8a95a4';
-    c.fillText('Click a body or ship to target it  ·  G fly to the target (full assist)  ·  M or Esc close', 20, 48);
+    c.fillText(`Click a body or ship to target it  ·  G fly to the target (full assist)  ·  Shift+M or Esc close  ·  round the edge, each lane's jump zone: J in one, moving out along it`, 20, 48);
     if (navTarget) { c.fillStyle = TGT_COL; c.fillText(`Target: ${targetName(navTarget)}${auto >= 0 ? '  ·  autopilot engaged' : ''}`, 20, 66); }
   }
   mapEl.addEventListener('pointerdown', e => {
@@ -2137,7 +2335,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   window.__play = {
     sim, IN, CMD, MODE, newGame, exportReplay, command, ECON, showTitle, pauseGame,
     get BODIES() { return BODIES; }, // the current system's
-    galaxy, course: () => course, route: (from, to, by) => galaxyRoute(UNIVERSE, from, to, by), // the galaxy map, the course set on it, a route between star ids
+    hold: on => { held = !!on; }, galaxy, course: () => course, setCourse: (dest, by) => { course = dest == null ? null : { dest, by: by || 'days' }; }, jumpKey: () => jumpKey(), gates: () => gatesOf(sysRec), route: (from, to, by) => galaxyRoute(UNIVERSE, from, to, by), // the galaxy map, the course set on it, a route between star ids
     // the flyable systems (ids, the start first), the one being played, the debug jump (a promise if the system must be
     // read first) and every place it can go in the systems read so far; preload() reads them all; atlas() lists each
     // slot's system
@@ -2190,6 +2388,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
       for (let k = 0; k < Math.round(sec / sim.DT); k++) sim.step();
+      follow();
       keys.clear(); saved.forEach(k => keys.add(k));
     },
     save: () => saveGame(), load: () => loadGame(), b64, unb64,

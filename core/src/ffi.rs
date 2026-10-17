@@ -313,3 +313,15 @@ pub unsafe extern "C" fn dw_orbit_eval(w: *mut World, t: f64, sx: f64, sy: f64, 
     let (bx, by, br) = (&w.bodies.x[..n], &w.bodies.y[..n], &w.bodies.r[..n]);
     w.orbit.eval(bx, by, br, t, sx, sy, cx, cy, hw, hh, min_m) as u32
 }
+
+/// The gate whose jump zone holds (x, y) in the live system, or -1 (jump.rs).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_zone_at(w: *mut World, x: f64, y: f64) -> i32 { unsafe { world(w) }.zone_at(x, y).map_or(-1, |g| g as i32) }
+
+/// Tons of fuel a lane of `ly` light years costs a ship of type `kind` (jump.rs).
+/// # Safety
+/// See `world`; `kind` must be below the type capacity.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_lane_fuel(w: *mut World, kind: u32, ly: f64) -> f64 { unsafe { world(w) }.lane_fuel(kind as usize, ly) }

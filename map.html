@@ -1731,7 +1731,7 @@ function makeStarMap(G, canvas, labels, data) {
   // game: show the game's systems over the faint catalogue (with lanes), or every star alike
   // here: the star the player is at (-1 none); route: star indices to draw as a course, or null; marks: star indices to
   // mark (missions); ruler: a line from the last selection to this one
-  const st = { hover: -1, sel: -1, prev: -1, here: -1, route: null, marks: null, ruler: true, range: OUTER, labels: true, drops: false, grid: true, lanes: true, regions: true, areas: true, game: lanes.length > 0, focusR: 22, filter: null };
+  const st = { hover: -1, sel: -1, prev: -1, here: -1, route: null, marks: null, ship: null, ruler: true, range: OUTER, labels: true, drops: false, grid: true, lanes: true, regions: true, areas: true, game: lanes.length > 0, focusR: 22, filter: null };
   const shown = i => !(stars[i].ly > st.range || (st.filter && !st.filter(stars[i], sys[i])) || (st.game && !sys[i]));
   function setFlags() {
     for (let i = 0; i < N; i++) {
@@ -1776,6 +1776,15 @@ function makeStarMap(G, canvas, labels, data) {
       const [x, y, z] = h.pos;
       seg(L, h.pos, [x, y, 0], [.9, .92, 1], .8);
       for (const R of [.7, 1.4]) for (let i = 0; i < 32; i++) { const a0 = i / 32 * Math.PI * 2, a1 = (i + 1) / 32 * Math.PI * 2; seg(L, [x + R * Math.cos(a0), y + R * Math.sin(a0), R === .7 ? z : 0], [x + R * Math.cos(a1), y + R * Math.sin(a1), R === .7 ? z : 0], [.9, .92, 1], .9); }
+    }
+    // a ship between systems (st.ship: { from, pos, window, chained, missed }): its trail down the lane and a ring round
+    // it, amber while a chain can be asked for, green once it is, red when it was missed
+    const sh = st.ship;
+    if (sh) {
+      const col = sh.chained ? [.45, 1, .7] : sh.missed ? [1, .45, .35] : sh.window ? [1, .82, .45] : [.95, .95, 1];
+      seg(L, sh.from, sh.pos, col, .9);
+      const r = Math.max(.3, distLy(sh.pos, view.eye) * (sh.window ? .03 + .012 * Math.sin(performance.now() / 60) : .022)), R = view.right, U = view.up;
+      for (let i = 0; i < 20; i++) { const a0 = i / 20 * 6.283, a1 = (i + 1) / 20 * 6.283; const at = a => sh.pos.map((p, d) => p + (R[d] * Math.cos(a) + U[d] * Math.sin(a)) * r); seg(L, at(a0), at(a1), col, 1); }
     }
     // marked systems (st.marks: star indices; the game's, those the player holds a mission for): a diamond facing the
     // camera round each, a constant size on screen, in the HUD's mission blue

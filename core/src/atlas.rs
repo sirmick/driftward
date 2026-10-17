@@ -16,6 +16,7 @@
 //! (credits, hold, missions; a mission is delivered only in the system it was taken for).
 
 use crate::cols::{soa, ColumnDesc};
+use crate::jump::MAX_GATES;
 use crate::market::MAX_GOODS;
 use crate::mission::{MAX_MISSIONS, M_ACTIVE};
 use crate::port::{BODY_BELT, MODE_DEAD, MODE_DESCENDING, MODE_FLYING, MODE_LAUNCHING, NO_SUCH_BODY, OK, WRONG_MODE};
@@ -52,6 +53,11 @@ soa! {
 }
 
 soa! {
+    /// Per system and gate (system * MAX_GATES + gate): its lanes (jump.rs Gates).
+    pub struct AtlasGates { dest: u32, zone: u8, ly: f64, days: f64 }
+}
+
+soa! {
     /// Per system and mix row (system * MAX_MIX + row): the traffic mix as the page wrote it (world.rs Mix).
     pub struct AtlasMix { stream: u8, body: i16, kind: u16, weight: f64 }
 }
@@ -64,6 +70,7 @@ impl World {
     pub fn atlas_reset(&mut self) {
         self.atlas_head.n[0] = 0;
         self.atlas_sys.id.fill(NO_SYSTEM);
+        self.atlas_gates.dest.fill(NO_SYSTEM);
     }
 
     /// The slot holding system `id`, if one does.
@@ -104,6 +111,10 @@ impl World {
             let (x, mx) = (&mut self.atlas_mix, &self.mix);
             (x.stream[o], x.body[o], x.kind[o], x.weight[o]) = (mx.stream[m], mx.body[m], mx.kind[m], mx.weight[m]);
         }
+        for g in 0..MAX_GATES {
+            let (o, (x, l)) = (k * MAX_GATES + g, (&mut self.atlas_gates, &self.gates));
+            (x.dest[o], x.zone[o], x.ly[o], x.days[o]) = (l.dest[g], l.zone[g], l.ly[g], l.days[g]);
+        }
         let (jr, ts, st) = (self.p(P::jump_radius), self.p(P::traffic_ships), self.p(P::share_through));
         let s = &mut self.atlas_sys;
         (s.id[k], s.bodies[k]) = (id, nb as u16);
@@ -141,6 +152,10 @@ impl World {
             (mx.stream[m], mx.body[m], mx.kind[m], mx.weight[m]) = (x.stream[o], x.body[o], x.kind[o], x.weight[o]);
             (mx.rate[m], mx.dwell[m], mx.next[m]) = (0.0, 0.0, 0.0);
         }
+        for g in 0..MAX_GATES {
+            let (o, (x, l)) = (k * MAX_GATES + g, (&self.atlas_gates, &mut self.gates));
+            (l.dest[g], l.zone[g], l.ly[g], l.days[g]) = (x.dest[o], x.zone[o], x.ly[o], x.days[o]);
+        }
         let s = &self.atlas_sys;
         let (jr, ts, st) = (s.jump_radius[k], s.traffic_ships[k], s.share_through[k]);
         self.params[P::jump_radius as usize] = jr;
@@ -156,7 +171,7 @@ impl World {
     /// The per-slot atlas columns (every one holds MAX_SYSTEMS slots' worth, a slot's part contiguous), from the cached
     /// column list: nothing here allocates, so WASM memory never grows under the page's views.
     fn atlas_row_cols(&self) -> impl Iterator<Item = &ColumnDesc> {
-        self.cols.iter().filter(|c| matches!(c.group, "atlas_sys" | "atlas_body" | "atlas_market" | "atlas_mix"))
+        self.cols.iter().filter(|c| matches!(c.group, "atlas_sys" | "atlas_body" | "atlas_market" | "atlas_mix" | "atlas_gate"))
     }
 
     /// Slot `k`'s row as bytes, into `out` (atlas_row_len long): what the page logs for a replay when it stores a

@@ -17,6 +17,7 @@
 //! does as much as the player can pay for. Both are commands, so they replay.
 
 use crate::market::NO_CREDITS;
+use crate::math::hypot;
 use crate::port::{MODE_DEAD, MODE_LANDED, OK, WRONG_MODE};
 use crate::world::{World, DT, P};
 
@@ -53,7 +54,7 @@ impl World {
         let mut dose = 0.0;
         for j in 0..self.n_bodies {
             if b.hazard[j] <= 0.0 || b.rad[j] <= 0.0 { continue; }
-            let d = (x - b.x[j]).hypot(y - b.y[j]);
+            let d = hypot(x - b.x[j], y - b.y[j]);
             if d < b.hazard[j] { let q = 1.0 - d / b.hazard[j]; dose += b.rad[j] * q * q; }
         }
         dose
