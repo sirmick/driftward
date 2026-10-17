@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://driftward.game/schema/economy.schema.json",
+  "title": "Driftward economy",
+  "description": "Fixed prices by port role (src/economy.json): a port trades the commodities its role lists, at the base price times the tier. Also where a new game starts. tools/validate.js cross-checks the commodities each table names.",
+  "type": "object",
+  "required": [
+    "start",
+    "tiers",
+    "commodities",
+    "roles"
+  ],
+  "properties": {
+    "description": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 2000
+    },
+    "start": {
+      "type": "object",
+      "properties": {
+        "system": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "maxLength": 40,
+          "description": "The system a new game starts in (a system file's id)."
+        },
+        "credits": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "debt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        }
+      },
+      "required": [
+        "system",
+        "credits",
+        "debt"
+      ],
+      "description": "A new game."
+    },
+    "tiers": {
+      "type": "object",
+      "properties": {
+        "low": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Price multiplier."
+        },
+        "medium": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Price multiplier."
+        },
+        "high": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Price multiplier."
+        }
+      },
+      "required": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "low: where a role makes it; high: where it needs it."
+    },
+    "commodities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "description": "Core rows, in this order (the core holds 16).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "base": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "Base price, credits a ton."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "base"
+        ]
+      }
+    },
+    "roles": {
+      "type": "object",
+      "properties": {
+        "mining": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "ice": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "gas": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "refinery": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "forge": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "agri": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "habitat": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "container-port": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "shipyard": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "relay": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "military": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "research": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        },
+        "haven": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "description": "Commodity id: its price tier here."
+        }
+      },
+      "required": [
+        "mining",
+        "ice",
+        "gas",
+        "refinery",
+        "forge",
+        "agri",
+        "habitat",
+        "container-port",
+        "shipyard",
+        "relay",
+        "military",
+        "research",
+        "haven"
+      ],
+      "description": "A price table for every port role (the system schema's)."
+    }
+  }
+}

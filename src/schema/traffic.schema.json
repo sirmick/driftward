@@ -1,0 +1,532 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://driftward.game/schema/traffic.schema.json",
+  "title": "Driftward traffic",
+  "description": "Ambient traffic (src/traffic.json): each population tier's weight in the traffic models, and the traffic of each environmental station archetype. tools/validate.js checks every line and class it names against the catalog.",
+  "type": "object",
+  "required": [
+    "population",
+    "environs"
+  ],
+  "properties": {
+    "description": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 2000
+    },
+    "population": {
+      "type": "object",
+      "properties": {
+        "outwatch": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "outpost": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "colony": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "complex": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "world": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "outwatch",
+        "outpost",
+        "colony",
+        "complex",
+        "world"
+      ],
+      "description": "Each port population tier's weight (the system schema's tiers)."
+    },
+    "environs": {
+      "type": "object",
+      "properties": {
+        "ring": {
+          "type": "object",
+          "properties": {
+            "perMinute": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60,
+              "description": "Launches a minute per station."
+            },
+            "jump": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The share of trips to or from a jump zone."
+            },
+            "mix": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "string",
+                    "pattern": "^(own|[a-z0-9-]+)\\.[a-z0-9-]+$",
+                    "description": "A catalog line (faction.line), or own.<line>: the station owner's faction's."
+                  },
+                  "share": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "classes": {
+                    "type": "object",
+                    "properties": {
+                      "c1": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c2": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c3": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c4": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c5": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "description": "Weights by size class."
+                  }
+                },
+                "required": [
+                  "line",
+                  "share",
+                  "classes"
+                ]
+              }
+            }
+          },
+          "required": [
+            "perMinute",
+            "jump",
+            "mix"
+          ]
+        },
+        "port": {
+          "type": "object",
+          "properties": {
+            "perMinute": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60,
+              "description": "Launches a minute per station."
+            },
+            "jump": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The share of trips to or from a jump zone."
+            },
+            "mix": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "string",
+                    "pattern": "^(own|[a-z0-9-]+)\\.[a-z0-9-]+$",
+                    "description": "A catalog line (faction.line), or own.<line>: the station owner's faction's."
+                  },
+                  "share": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "classes": {
+                    "type": "object",
+                    "properties": {
+                      "c1": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c2": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c3": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c4": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c5": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "description": "Weights by size class."
+                  }
+                },
+                "required": [
+                  "line",
+                  "share",
+                  "classes"
+                ]
+              }
+            }
+          },
+          "required": [
+            "perMinute",
+            "jump",
+            "mix"
+          ]
+        },
+        "forge": {
+          "type": "object",
+          "properties": {
+            "perMinute": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60,
+              "description": "Launches a minute per station."
+            },
+            "jump": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The share of trips to or from a jump zone."
+            },
+            "mix": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "string",
+                    "pattern": "^(own|[a-z0-9-]+)\\.[a-z0-9-]+$",
+                    "description": "A catalog line (faction.line), or own.<line>: the station owner's faction's."
+                  },
+                  "share": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "classes": {
+                    "type": "object",
+                    "properties": {
+                      "c1": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c2": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c3": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c4": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c5": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "description": "Weights by size class."
+                  }
+                },
+                "required": [
+                  "line",
+                  "share",
+                  "classes"
+                ]
+              }
+            }
+          },
+          "required": [
+            "perMinute",
+            "jump",
+            "mix"
+          ]
+        },
+        "refinery": {
+          "type": "object",
+          "properties": {
+            "perMinute": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60,
+              "description": "Launches a minute per station."
+            },
+            "jump": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The share of trips to or from a jump zone."
+            },
+            "mix": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "string",
+                    "pattern": "^(own|[a-z0-9-]+)\\.[a-z0-9-]+$",
+                    "description": "A catalog line (faction.line), or own.<line>: the station owner's faction's."
+                  },
+                  "share": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "classes": {
+                    "type": "object",
+                    "properties": {
+                      "c1": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c2": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c3": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c4": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c5": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "description": "Weights by size class."
+                  }
+                },
+                "required": [
+                  "line",
+                  "share",
+                  "classes"
+                ]
+              }
+            }
+          },
+          "required": [
+            "perMinute",
+            "jump",
+            "mix"
+          ]
+        },
+        "shipyard": {
+          "type": "object",
+          "properties": {
+            "perMinute": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60,
+              "description": "Launches a minute per station."
+            },
+            "jump": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The share of trips to or from a jump zone."
+            },
+            "mix": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "string",
+                    "pattern": "^(own|[a-z0-9-]+)\\.[a-z0-9-]+$",
+                    "description": "A catalog line (faction.line), or own.<line>: the station owner's faction's."
+                  },
+                  "share": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "classes": {
+                    "type": "object",
+                    "properties": {
+                      "c1": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c2": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c3": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c4": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c5": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "description": "Weights by size class."
+                  }
+                },
+                "required": [
+                  "line",
+                  "share",
+                  "classes"
+                ]
+              }
+            }
+          },
+          "required": [
+            "perMinute",
+            "jump",
+            "mix"
+          ]
+        },
+        "relay": {
+          "type": "object",
+          "properties": {
+            "perMinute": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60,
+              "description": "Launches a minute per station."
+            },
+            "jump": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The share of trips to or from a jump zone."
+            },
+            "mix": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "string",
+                    "pattern": "^(own|[a-z0-9-]+)\\.[a-z0-9-]+$",
+                    "description": "A catalog line (faction.line), or own.<line>: the station owner's faction's."
+                  },
+                  "share": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "classes": {
+                    "type": "object",
+                    "properties": {
+                      "c1": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c2": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c3": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c4": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "c5": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "description": "Weights by size class."
+                  }
+                },
+                "required": [
+                  "line",
+                  "share",
+                  "classes"
+                ]
+              }
+            }
+          },
+          "required": [
+            "perMinute",
+            "jump",
+            "mix"
+          ]
+        }
+      },
+      "required": [
+        "ring",
+        "port",
+        "forge",
+        "refinery",
+        "shipyard",
+        "relay"
+      ],
+      "description": "Per station archetype."
+    }
+  }
+}

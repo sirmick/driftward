@@ -3,10 +3,16 @@
 // validator that clamps what it writes before the game uses it (the Book: "output is clamped to schema ranges and
 // enumerations before use"). clampToSchema walks a value against the subset of JSON Schema the schemas use
 // (type, properties, additionalProperties, required, items, minItems, maxItems, enum, minimum, maximum, minLength,
-// maxLength, pattern, default) and returns a value that satisfies it, with a note for every change. A missing required field with no
-// default is fatal: the value cannot be used.
-function clampToSchema(schema, value, path, notes) {
-  path = path || '$'; notes = notes || [];
+// maxLength, pattern, default, anyOf, $ref to the root's $defs, and the null type) and returns a value that satisfies it, with a note for every change. A missing required field with no
+// default is fatal: the value cannot be used. anyOf takes the first form the value fits as it is; fitting none, the
+// first form's clamp, noted.
+function clampToSchema(schema, value, path, notes, root) {
+  path = path || '$'; notes = notes || []; root = root || schema;
+  if (schema.$ref) {
+    const m = /^#\/\$defs\/(.+)$/.exec(schema.$ref), def = m && root.$defs && root.$defs[m[1]];
+    if (!def) { notes.push({ path, msg: `unknown $ref ${schema.$ref}`, fatal: true }); return undefined; }
+    return clampToSchema(def, value, path, notes, root);
+  }
   const note = (msg, fatal) => notes.push({ path, msg, fatal: !!fatal });
   const fallback = why => {
     if (schema.default !== undefined) { note(`${why}; using the default`); return JSON.parse(JSON.stringify(schema.default)); }
@@ -15,7 +21,17 @@ function clampToSchema(schema, value, path, notes) {
   if (value === undefined) {
     if (schema.default === undefined) return undefined;
     const d = JSON.parse(JSON.stringify(schema.default));
-    return schema.type === 'object' ? clampToSchema(schema, d, path, notes) : d; // an object default gets its fields' defaults
+    return schema.type === 'object' ? clampToSchema(schema, d, path, notes, root) : d; // an object default gets its fields' defaults
+  }
+  if (schema.anyOf) {
+    let first = null;
+    for (const form of schema.anyOf) {
+      const n = [], v = clampToSchema(form, value, path, n, root);
+      if (!n.length) return v;
+      first = first || { v, n };
+    }
+    notes.push({ path, msg: `fits none of its ${schema.anyOf.length} forms`, fatal: false }, ...first.n);
+    return first.v;
   }
   if (schema.enum) return schema.enum.includes(value) ? value : fallback(`${JSON.stringify(value)} is not one of ${schema.enum.join(', ')}`);
   switch (schema.type) {
@@ -23,7 +39,7 @@ function clampToSchema(schema, value, path, notes) {
       if (typeof value !== 'object' || value === null || Array.isArray(value)) return fallback('not an object');
       const out = {};
       for (const [k, sub] of Object.entries(schema.properties || {})) {
-        const v = clampToSchema(sub, value[k], `${path}.${k}`, notes);
+        const v = clampToSchema(sub, value[k], `${path}.${k}`, notes, root);
         if (v !== undefined) out[k] = v;
         else if ((schema.required || []).includes(k)) notes.push({ path: `${path}.${k}`, msg: 'required', fatal: true });
       }
@@ -32,14 +48,14 @@ function clampToSchema(schema, value, path, notes) {
       for (const k of Object.keys(value)) {
         if ((schema.properties || {})[k]) continue;
         if (!extra) { note(`unknown field ${k} dropped`); continue; }
-        const v = clampToSchema(extra, value[k], `${path}.${k}`, notes);
+        const v = clampToSchema(extra, value[k], `${path}.${k}`, notes, root);
         if (v !== undefined) out[k] = v;
       }
       return out;
     }
     case 'array': {
       if (!Array.isArray(value)) return fallback('not an array');
-      let arr = value.map((v, i) => clampToSchema(schema.items || {}, v, `${path}[${i}]`, notes)).filter(v => v !== undefined);
+      let arr = value.map((v, i) => clampToSchema(schema.items || {}, v, `${path}[${i}]`, notes, root)).filter(v => v !== undefined);
       if (schema.maxItems !== undefined && arr.length > schema.maxItems) { note(`more than ${schema.maxItems} items; extra dropped`); arr = arr.slice(0, schema.maxItems); }
       if (schema.minItems !== undefined && arr.length < schema.minItems) return fallback(`fewer than ${schema.minItems} items`);
       return arr;
@@ -61,6 +77,7 @@ function clampToSchema(schema, value, path, notes) {
       return v;
     }
     case 'boolean': return typeof value === 'boolean' ? value : fallback('not a boolean');
+    case 'null': return value === null ? null : fallback('not null');
     default: return value;
   }
 }

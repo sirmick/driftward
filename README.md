@@ -44,7 +44,7 @@ Flight controls: W/S set speed (assist on) or main/reverse thrust (assist off), 
 
 **Flight** keeps all entity state in typed arrays (structure of arrays): ships, bolts, particles and lights. Every ship has main, reverse and lateral thrusters under one Newtonian model; a drive taper caps self-propelled speed and dampers bleed off anything gravity or slingshots add. Flight assist is a controller that turns a desired velocity into thruster commands, and NPCs fly through the same controller. The sector carries coarse gas and radiation fields: gas adds drag, attenuates sensors and (ionized) drains shields; radiation follows the star with shadows behind planets and spikes during flares. Detection is signature over range squared, times gas transmission, over local noise. Rendering is instanced: one draw per ship type, one each for plumes, shields, bolts and particles. Hits test against the baked shield/hull field, so bolts strike the actual silhouette.
 
-**Everything is parameterized** for LLM authoring: categorical choices are enums (brand part roles, planet surfaces, star classes), everything else is a bounded number. The lab's planet builder shows exactly the `look` a model would emit for a body; the other tabs' JSON panels show the catalog's own shapes, which have no schema yet.
+**Everything is parameterized** for LLM authoring: categorical choices are enums (brand part roles, planet surfaces, star classes), everything else is a bounded number. The lab's planet builder shows exactly the `look` a model would emit for a body; the other tabs' JSON panels show the catalog's own shapes, whose contract is `src/schema/catalog.schema.json` (part templates, style grammar, loadouts, lines).
 
 ## Layout
 
@@ -82,8 +82,9 @@ src/
   bake.js           the bake worker pool and its texture uploads
   look.js           colour helpers, star presets, brand plume and shield looks
   schema.js         clamps content to its JSON Schema before use; lays out a star system; checks lore against it
-  schema/           JSON Schemas: the contract for LLM-authored content (system.schema.json, lore.schema.json) and for the
-                    universe index (universe.schema.json)
+  schema/           JSON Schemas: the contract for LLM-authored content (system.schema.json, lore.schema.json, and the
+                    catalog's ships and stations: catalog.schema.json), and for the universe index, economy, traffic and real stars
+                    (universe, economy, traffic, stars.schema.json); src/schema.js checks and clamps against them
   systems/          the flyable star systems, each read when the game first goes there: m1.json (Brannock, the Book's M1 system, where a game starts) and the rest of the Calder March
   lore/             each system's lore, written by tools/gen-content.js: history, culture, art bible, ports' people and rumors
                     setting.md (the universe's backstory and recent events) and regions/ (a region's systems), canon for the lore
@@ -117,8 +118,8 @@ tools/
   jitter.py         drives the game page at exact refresh rates (60 to 240 Hz, timer noise, dropped frames) and reports motion jitter per frame
   exit-test.py      M1's exit test: a trade and a delivery end to end in the game page, then save, reload and replay (in the page and natively) reach the same state
   play-smoke.py     drives the game page: start landed, the market, ambient traffic, the mission board and a delivery, flight, a port visit, save and load, a browser session replayed natively
-  validate.js       validates every system file and its lore against their schemas, the universe index against its own and
-                    every system file against its index entry, and checks the clamp itself
+  validate.js       validates every data file against its schema (systems, lore, the universe index, catalog, economy, traffic,
+                    the real stars), every system file against its index entry and the catalog's ids, and checks the clamp itself
   hyg.py            pulls the HYG star catalogue and writes src/galaxy/stars.json (positions, classes, names)
   galaxy.py         chooses the game's systems, lanes and factions among those stars as MIPs (needs scipy), into src/galaxy/galaxy.json;
                     how and why: docs/galaxy.md

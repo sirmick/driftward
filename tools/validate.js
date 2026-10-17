@@ -75,6 +75,48 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
   else console.log(`${f}: valid; ${bodies.length} bodies, ${ports.length} ports (${ports.join(', ')})`);
 }
 
+// the hand-made data files, each against its schema (src/schema/): any note is a problem (unlike content the game
+// clamps at load, these are written once and should be right as written)
+const schemaOf = f => JSON.parse(fs.readFileSync(path.join(root, 'src', 'schema', f), 'utf8'));
+function against(schemaFile, value, label) {
+  const n = []; clampToSchema(schemaOf(schemaFile), value, '$', n);
+  if (n.length) { bad += n.length; n.slice(0, 20).forEach(x => console.log(`${label}: ${x.fatal ? 'FATAL ' : ''}${x.path}: ${x.msg}`)); if (n.length > 20) console.log(`${label}: and ${n.length - 20} more`); }
+  return !n.length;
+}
+{
+  const raw = JSON.parse(fs.readFileSync(path.join(root, 'src', 'catalog.json'), 'utf8')), cBad = [];
+  const ok = against('catalog.schema.json', raw, 'catalog.json');
+  // what the schema can't say: every id a line or loadout names exists, part ids are unique in a faction, every class
+  // has a core, a line's series names each class
+  const sizes = raw.sizes.map(z => z.id);
+  for (const f of raw.factions) {
+    const ids = new Map(), at = `catalog.json ${f.id}`;
+    for (const p of [...f.parts, ...f.lines.flatMap(l => l.parts || [])]) { if (ids.has(p.id) && ids.get(p.id) !== p) cBad.push(`${at}: part ${p.id} twice`); ids.set(p.id, p); }
+    const cores = (where, core) => { for (const [z, list] of Object.entries(core || {})) for (const id of list) if (!ids.has(id) || ids.get(id).role !== 'core') cBad.push(`${at}${where}: ${z} core ${id} is not a core part`); };
+    cores('', f.core);
+    for (const z of sizes) if (!(f.core[z] || []).length) cBad.push(`${at}: no core for ${z}`);
+    for (const l of f.lines) {
+      const w = ` line ${l.id}`;
+      cores(w, l.core);
+      if (l.hullFrom && !f.lines.some(o => o.id === l.hullFrom && o !== l)) cBad.push(`${at}${w}: hullFrom ${l.hullFrom} is no other line`);
+      for (const id of l.drop || []) if (!f.parts.some(p => p.id === id)) cBad.push(`${at}${w}: drops ${id}, not a faction part`);
+      if (l.series && l.series.length !== sizes.length) cBad.push(`${at}${w}: ${l.series.length} series names for ${sizes.length} classes`);
+      for (const z of l.classes || []) if (!sizes.includes(z)) cBad.push(`${at}${w}: no class ${z}`);
+    }
+  }
+  if (new Set(sizes).size !== sizes.length) cBad.push('catalog.json: a size class twice');
+  if (cBad.length) { bad += cBad.length; cBad.forEach(m => console.log(m)); }
+  else if (ok) console.log(`catalog.json: valid; ${raw.sizes.length} classes, ${raw.factions.length} factions, ${raw.factions.reduce((n, f) => n + f.lines.length, 0)} lines, ${raw.stations.length} stations, ${(raw.heavies || []).length} heavies`);
+}
+if (against('economy.schema.json', JSON.parse(fs.readFileSync(path.join(root, 'src', 'economy.json'), 'utf8')), 'economy.json')) console.log('economy.json: matches its schema');
+if (against('traffic.schema.json', JSON.parse(fs.readFileSync(path.join(root, 'src', 'traffic.json'), 'utf8')), 'traffic.json')) console.log('traffic.json: matches its schema');
+{
+  const stars = JSON.parse(fs.readFileSync(path.join(root, 'src', 'galaxy', 'stars.json'), 'utf8')), ids = new Set(stars.stars.map(s => s.id));
+  const ok = against('stars.schema.json', stars, 'stars.json');
+  if (ids.size !== stars.stars.length) { bad++; console.log('stars.json: a star id twice'); }
+  else if (ok) console.log(`stars.json: valid; ${stars.stars.length} stars`);
+}
+
 // the economy: at most the core's 16 commodities, a price table for every port role the schema allows, naming only
 // known commodities and tiers
 const econ = JSON.parse(fs.readFileSync(path.join(root, 'src', 'economy.json'), 'utf8'));

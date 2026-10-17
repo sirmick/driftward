@@ -1,0 +1,1955 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://driftward.game/schema/catalog.schema.json",
+  "title": "Driftward catalog",
+  "description": "Ships, stations and heavy hulls as data (src/catalog.json): size classes, factions with their style grammar, part templates, loadouts and lines, station archetypes and heavy hulls. src/gen.js turns a line, a class and a seed into a ship; npm run check validates the catalog against this and cross-checks its ids (tools/validate.js).",
+  "type": "object",
+  "required": [
+    "sizes",
+    "factions",
+    "stations"
+  ],
+  "$defs": {
+    "part": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)+$",
+          "maxLength": 40,
+          "description": "Unique in its faction: brand prefix, role, name (cn.hull.armor)."
+        },
+        "role": {
+          "enum": [
+            "core",
+            "hull",
+            "wing",
+            "fin",
+            "nacelle",
+            "engine",
+            "weapon",
+            "pod",
+            "bridge",
+            "ring",
+            "cargo"
+          ],
+          "description": "Where the assembler puts it (src/gen.js assemble): the core runs the ship's length; hull plates sit along it; wings and fins are outlines from its sides; nacelles hang off struts with an engine bell; engines are bells at the stern; weapons are turrets with barrels; pods ride the flanks; the bridge on the spine; rings circle it; cargo is rows of containers."
+        },
+        "prim": {
+          "enum": [
+            "trap",
+            "ucap",
+            "rbox",
+            "circle",
+            "spine"
+          ],
+          "description": "Its shape: trap (a tapered body: rear and nose half-widths, len), ucap (a capsule: rear, nose or r, len), rbox (a rounded box: hw, len, rad), circle (r), spine (a core of segs boxes with gaps, tapering). Wings, fins, engines, weapons, rings and cargo have their own shapes and need none."
+        },
+        "prof": {
+          "enum": [
+            "bevel",
+            "chamfer",
+            "round",
+            "ridge"
+          ],
+          "description": "Its edge profile; the style's bevel if not given."
+        },
+        "paint": {
+          "enum": [
+            "any",
+            "trim"
+          ],
+          "description": "any: a random hull colour; trim: the trim colour. Otherwise by role."
+        },
+        "w": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10
+              }
+            }
+          ],
+          "description": "Weight when the assembler picks among a role's templates (default 1); cargo: a container's half-width, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "accent": {
+          "type": "boolean",
+          "description": "Carries accent lines."
+        },
+        "glass": {
+          "type": "boolean",
+          "description": "Bridge: a glass canopy."
+        },
+        "eye": {
+          "type": "boolean",
+          "description": "Bridge: a glowing eye (no windows)."
+        },
+        "len": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1.2
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1.2
+              }
+            }
+          ],
+          "description": "Length, as a fraction of the ship's length L. A number, or [min, max] to pick between."
+        },
+        "rear": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.3
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.3
+              }
+            }
+          ],
+          "description": "Trap, ucap, engine: half-width at the rear, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "nose": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1.2
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1.2
+              }
+            }
+          ],
+          "description": "Trap, ucap: half-width at the nose, a fraction of L; nacelle: the nose as a fraction of its radius. A number, or [min, max] to pick between."
+        },
+        "front": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.3
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.3
+              }
+            }
+          ],
+          "description": "Engine: the bell's half-width at its front, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "hw": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.3
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.3
+              }
+            }
+          ],
+          "description": "Rbox, spine: half-width, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "r": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 3
+              }
+            }
+          ],
+          "description": "Radius, a fraction of L (circle, ucap, nacelle, weapon); ring: times the core's half-width there. A number, or [min, max] to pick between."
+        },
+        "rad": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Rbox: corner radius, a fraction of its smaller half-size."
+        },
+        "t": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.1
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.1
+              }
+            }
+          ],
+          "description": "Ring: thickness, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "along": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -0.6,
+              "maximum": 0.6
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": -0.6,
+                "maximum": 0.6
+              }
+            }
+          ],
+          "description": "Hull: where along the core, -0.5 stern to 0.5 nose. A number, or [min, max] to pick between."
+        },
+        "out": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2
+              }
+            }
+          ],
+          "description": "Hull: how far out, in the core's half-widths at that point. A number, or [min, max] to pick between."
+        },
+        "ang": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              }
+            }
+          ],
+          "description": "Hull: angle, degrees. A number, or [min, max] to pick between."
+        },
+        "at": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": -0.6,
+                  "maximum": 0.6
+                },
+                {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number",
+                    "minimum": -0.6,
+                    "maximum": 0.6
+                  }
+                }
+              ]
+            },
+            {
+              "enum": [
+                "rear",
+                "wingtip",
+                "mixed"
+              ]
+            }
+          ],
+          "description": "Where along the core, -0.5 stern to 0.5 nose (a number or [min, max]); a fin: rear, wingtip, or mixed (either)."
+        },
+        "z": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 1
+              }
+            }
+          ],
+          "description": "Height of its base, in core heights. A number, or [min, max] to pick between."
+        },
+        "H": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1.5
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1.5
+              }
+            }
+          ],
+          "description": "Its height (thickness for the bake), in core heights; the core's, as a fraction of L. A number, or [min, max] to pick between."
+        },
+        "span": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.6
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.6
+              }
+            }
+          ],
+          "description": "Wing, fin: span, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "root": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.6
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.6
+              }
+            }
+          ],
+          "description": "Wing, fin: root chord, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "tip": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.3
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.3
+              }
+            }
+          ],
+          "description": "Wing, fin: tip chord, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "sweep": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 3
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 3
+              }
+            }
+          ],
+          "description": "Wing, fin: leading-edge sweep, back per unit of span. A number, or [min, max] to pick between."
+        },
+        "curve": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Wing, fin: how much its edges bow."
+        },
+        "gap": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -0.5,
+              "maximum": 360
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": -0.5,
+                "maximum": 360
+              }
+            }
+          ],
+          "description": "Spine: the gap between segments, a fraction of each (negative overlaps); nacelle: its gap from the hull, in its radii; ring: an opening, degrees. A number, or [min, max] to pick between."
+        },
+        "segs": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16
+              }
+            }
+          ],
+          "description": "Spine: segments. An integer, or [min, max] to pick between."
+        },
+        "taper": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0.2,
+              "maximum": 2
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0.2,
+                "maximum": 2
+              }
+            }
+          ],
+          "description": "Spine: the last segment's width over the first's. A number, or [min, max] to pick between."
+        },
+        "glow": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Engine: exhaust glow."
+        },
+        "barrels": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6,
+          "description": "Weapon: barrels."
+        },
+        "blen": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.3
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.3
+              }
+            }
+          ],
+          "description": "Weapon: barrel length, a fraction of L. A number, or [min, max] to pick between."
+        },
+        "bw": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.03,
+          "description": "Weapon: barrel half-width, a fraction of L."
+        },
+        "style": {
+          "enum": [
+            "turret",
+            "blister",
+            "drill"
+          ],
+          "description": "Weapon: a turret, a glowing blister, or a drill with a hot tip."
+        },
+        "across": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6,
+          "description": "Cargo: columns of containers a side."
+        },
+        "from": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Cargo: where the rows start along the core, 0 stern to 1 nose."
+        },
+        "to": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Cargo: where they end."
+        },
+        "fill": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Cargo: the chance a slot holds a container."
+        },
+        "stack": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Cargo: the chance of a second tier."
+        }
+      },
+      "required": [
+        "id",
+        "role"
+      ],
+      "description": "A part template: the assembler picks templates by role and samples each range per ship. Shape values are fractions of the ship's length L; z and H of a non-core part are in core heights."
+    },
+    "loadout": {
+      "type": "object",
+      "properties": {
+        "hull": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "wing": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "fin": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "nacelle": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "weapon": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "pod": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "ring": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "bridge": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        },
+        "cargo": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ]
+        }
+      },
+      "description": "How many of each role a hull of this class gets (a mirrored pair counts once; cargo: columns a side)."
+    },
+    "core": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "maxLength": 40
+      },
+      "description": "The core templates (part ids, role core) a hull of this class may take."
+    },
+    "detail": {
+      "type": "object",
+      "properties": {
+        "panelSpacing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "Panel size, metres (the same on every hull class)."
+        },
+        "panelAspect": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 4
+        },
+        "panelDepth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "panelDark": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "panelTone": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rivets": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rust": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "patches": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "grime": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ribs": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ribSpacing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Rib spacing, metres."
+        },
+        "veins": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "spots": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "stripes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "accentLines": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "windows": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "lamps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "description": "Surface detail, 0 to 1 unless given."
+    },
+    "palette": {
+      "type": "object",
+      "properties": {
+        "hull": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "description": "Hull colours; the core takes the first."
+        },
+        "trim": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "glass": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "engine": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "window": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "emissive": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "rust": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "cargo": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "description": "Container colours (cargo parts); a shipping-line set if not given."
+        }
+      }
+    },
+    "material": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "gloss": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 128
+        },
+        "wrap": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "irid": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Iridescence."
+        },
+        "rim": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "plume": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "burn": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "core": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "len": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 10
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0.2,
+          "maximum": 3
+        },
+        "turb": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "diamonds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Shock diamonds."
+        },
+        "sputter": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pulse": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "spread": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "description": "The engine plume."
+    },
+    "shield": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "pattern": {
+          "enum": [
+            "hex",
+            "grid",
+            "flow",
+            "ragged"
+          ]
+        },
+        "standoff": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.1,
+          "description": "Its distance from the hull, a fraction of L."
+        },
+        "strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        }
+      },
+      "description": "The shield's look."
+    },
+    "flight": {
+      "type": "object",
+      "properties": {
+        "accel": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "turn": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "vmax": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "hull": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "shield": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "cargo": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "fuel": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        }
+      },
+      "description": "Multipliers on the size class's flight numbers (a line's multiply its faction's)."
+    }
+  },
+  "properties": {
+    "units": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400
+    },
+    "sizes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "length": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Hull length, metres."
+          },
+          "res": {
+            "type": "integer",
+            "minimum": 64,
+            "maximum": 4096,
+            "description": "Bake resolution, texels."
+          },
+          "flight": {
+            "type": "object",
+            "properties": {
+              "accel": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 500,
+                "description": "m/s²"
+              },
+              "well": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "How much gravity wells pull it."
+              },
+              "turn": {
+                "type": "number",
+                "minimum": 0.05,
+                "maximum": 10,
+                "description": "rad/s"
+              },
+              "vmax": {
+                "type": "number",
+                "minimum": 10,
+                "maximum": 2000,
+                "description": "m/s"
+              },
+              "hull": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 100000
+              },
+              "shield": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100000
+              },
+              "rate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 60,
+                "description": "Shots a second."
+              },
+              "dmg": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "cargo": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10000,
+                "description": "Tons."
+              },
+              "fuel": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000,
+                "description": "Tons."
+              }
+            },
+            "required": [
+              "accel",
+              "well",
+              "turn",
+              "vmax",
+              "hull",
+              "shield",
+              "rate",
+              "dmg",
+              "cargo",
+              "fuel"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "length",
+          "res",
+          "flight"
+        ],
+        "description": "A size class (I to V): its length, bake resolution and flight numbers."
+      }
+    },
+    "factions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "description": "What it is (Navy, Miners)."
+          },
+          "design": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400,
+            "description": "Its design language, in words."
+          },
+          "style": {
+            "type": "object",
+            "properties": {
+              "union": {
+                "enum": [
+                  "hard",
+                  "smooth"
+                ],
+                "description": "hard: parts meet at seams; smooth: they blend into one skin."
+              },
+              "blend": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.1,
+                "description": "Smooth union's blend radius, a fraction of L."
+              },
+              "symmetry": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "The chance a part is mirrored exactly; below 1, the other side may be re-rolled or left off."
+              },
+              "drift": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.3,
+                "description": "How much a mirrored copy differs."
+              },
+              "posJitter": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.05,
+                "description": "Random offset of parts, a fraction of L."
+              },
+              "angJitter": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 15,
+                "description": "Random turn of parts, degrees."
+              },
+              "angleQuant": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 45,
+                "description": "Angles snap to this many degrees (0: free)."
+              },
+              "bevel": {
+                "enum": [
+                  "bevel",
+                  "chamfer",
+                  "round",
+                  "ridge"
+                ],
+                "description": "The default edge profile."
+              },
+              "bevelW": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Bevel width, a fraction of a part's inner radius."
+              },
+              "heightScale": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 2
+              },
+              "detail": {
+                "$ref": "#/$defs/detail"
+              },
+              "palette": {
+                "type": "object",
+                "properties": {
+                  "hull": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$"
+                    },
+                    "description": "Hull colours; the core takes the first."
+                  },
+                  "trim": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "accent": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "glass": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "engine": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "window": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "emissive": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "rust": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "cargo": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 12,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$"
+                    },
+                    "description": "Container colours (cargo parts); a shipping-line set if not given."
+                  }
+                },
+                "required": [
+                  "hull",
+                  "trim",
+                  "accent",
+                  "glass",
+                  "engine",
+                  "window",
+                  "emissive",
+                  "rust"
+                ]
+              },
+              "material": {
+                "type": "object",
+                "properties": {
+                  "spec": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "gloss": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 128
+                  },
+                  "wrap": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "irid": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Iridescence."
+                  },
+                  "rim": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "spec",
+                  "gloss",
+                  "wrap",
+                  "irid",
+                  "rim"
+                ]
+              },
+              "plume": {
+                "type": "object",
+                "properties": {
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "burn": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "core": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "len": {
+                    "type": "number",
+                    "minimum": 0.5,
+                    "maximum": 10
+                  },
+                  "width": {
+                    "type": "number",
+                    "minimum": 0.2,
+                    "maximum": 3
+                  },
+                  "turb": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "diamonds": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Shock diamonds."
+                  },
+                  "sputter": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "pulse": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "spread": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "description": "The engine plume.",
+                "required": [
+                  "color",
+                  "burn",
+                  "core",
+                  "len",
+                  "width"
+                ]
+              },
+              "shield": {
+                "type": "object",
+                "properties": {
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "pattern": {
+                    "enum": [
+                      "hex",
+                      "grid",
+                      "flow",
+                      "ragged"
+                    ]
+                  },
+                  "standoff": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.1,
+                    "description": "Its distance from the hull, a fraction of L."
+                  },
+                  "strength": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 3
+                  }
+                },
+                "description": "The shield's look.",
+                "required": [
+                  "color",
+                  "pattern",
+                  "standoff",
+                  "strength"
+                ]
+              },
+              "flight": {
+                "$ref": "#/$defs/flight"
+              }
+            },
+            "required": [
+              "union",
+              "blend",
+              "symmetry",
+              "drift",
+              "posJitter",
+              "angJitter",
+              "angleQuant",
+              "bevel",
+              "bevelW",
+              "heightScale",
+              "detail",
+              "palette",
+              "material",
+              "plume",
+              "shield",
+              "flight"
+            ],
+            "description": "The faction's style grammar: every line's, unless the line patches it."
+          },
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/part"
+            }
+          },
+          "core": {
+            "type": "object",
+            "properties": {
+              "c1": {
+                "$ref": "#/$defs/core"
+              },
+              "c2": {
+                "$ref": "#/$defs/core"
+              },
+              "c3": {
+                "$ref": "#/$defs/core"
+              },
+              "c4": {
+                "$ref": "#/$defs/core"
+              },
+              "c5": {
+                "$ref": "#/$defs/core"
+              }
+            },
+            "description": "Core templates per class."
+          },
+          "loadout": {
+            "type": "object",
+            "properties": {
+              "c1": {
+                "$ref": "#/$defs/loadout"
+              },
+              "c2": {
+                "$ref": "#/$defs/loadout"
+              },
+              "c3": {
+                "$ref": "#/$defs/loadout"
+              },
+              "c4": {
+                "$ref": "#/$defs/loadout"
+              },
+              "c5": {
+                "$ref": "#/$defs/loadout"
+              }
+            },
+            "description": "Loadout per class."
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+$",
+                  "maxLength": 40
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "blurb": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 400
+                },
+                "series": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 30
+                  },
+                  "description": "Each class's hull name, Class I first (one per size; empty where the line builds none)."
+                },
+                "classes": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "enum": [
+                      "c1",
+                      "c2",
+                      "c3",
+                      "c4",
+                      "c5"
+                    ]
+                  },
+                  "description": "The classes it builds; all if not given."
+                },
+                "unique": {
+                  "type": "boolean",
+                  "description": "One special hull (a container ship), built only in its classes."
+                },
+                "hullFrom": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+$",
+                  "maxLength": 40,
+                  "description": "Another line of this faction whose hulls it shares: the same seed gives the same vessel, outfitted differently."
+                },
+                "drop": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "description": "Faction part ids this line leaves out."
+                },
+                "flight": {
+                  "$ref": "#/$defs/flight"
+                },
+                "style": {
+                  "type": "object",
+                  "properties": {
+                    "union": {
+                      "enum": [
+                        "hard",
+                        "smooth"
+                      ],
+                      "description": "hard: parts meet at seams; smooth: they blend into one skin."
+                    },
+                    "blend": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 0.1,
+                      "description": "Smooth union's blend radius, a fraction of L."
+                    },
+                    "symmetry": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "The chance a part is mirrored exactly; below 1, the other side may be re-rolled or left off."
+                    },
+                    "drift": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 0.3,
+                      "description": "How much a mirrored copy differs."
+                    },
+                    "posJitter": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 0.05,
+                      "description": "Random offset of parts, a fraction of L."
+                    },
+                    "angJitter": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 15,
+                      "description": "Random turn of parts, degrees."
+                    },
+                    "angleQuant": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 45,
+                      "description": "Angles snap to this many degrees (0: free)."
+                    },
+                    "bevel": {
+                      "enum": [
+                        "bevel",
+                        "chamfer",
+                        "round",
+                        "ridge"
+                      ],
+                      "description": "The default edge profile."
+                    },
+                    "bevelW": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Bevel width, a fraction of a part's inner radius."
+                    },
+                    "heightScale": {
+                      "type": "number",
+                      "minimum": 0.5,
+                      "maximum": 2
+                    },
+                    "detail": {
+                      "$ref": "#/$defs/detail"
+                    },
+                    "palette": {
+                      "$ref": "#/$defs/palette"
+                    },
+                    "material": {
+                      "$ref": "#/$defs/material"
+                    },
+                    "plume": {
+                      "$ref": "#/$defs/plume"
+                    },
+                    "shield": {
+                      "$ref": "#/$defs/shield"
+                    },
+                    "flight": {
+                      "$ref": "#/$defs/flight"
+                    }
+                  },
+                  "description": "A patch on the faction's style: only what differs (merged key by key)."
+                },
+                "parts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/part"
+                  },
+                  "description": "Extra part templates."
+                },
+                "loadout": {
+                  "type": "object",
+                  "properties": {
+                    "c1": {
+                      "$ref": "#/$defs/loadout"
+                    },
+                    "c2": {
+                      "$ref": "#/$defs/loadout"
+                    },
+                    "c3": {
+                      "$ref": "#/$defs/loadout"
+                    },
+                    "c4": {
+                      "$ref": "#/$defs/loadout"
+                    },
+                    "c5": {
+                      "$ref": "#/$defs/loadout"
+                    }
+                  },
+                  "description": "Loadout entries that differ from the faction's, per class."
+                },
+                "core": {
+                  "type": "object",
+                  "properties": {
+                    "c1": {
+                      "$ref": "#/$defs/core"
+                    },
+                    "c2": {
+                      "$ref": "#/$defs/core"
+                    },
+                    "c3": {
+                      "$ref": "#/$defs/core"
+                    },
+                    "c4": {
+                      "$ref": "#/$defs/core"
+                    },
+                    "c5": {
+                      "$ref": "#/$defs/core"
+                    }
+                  },
+                  "description": "Core templates that differ from the faction's, per class."
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "description": "A line: a faction's family of hulls (military, civilian, a unique hull), overriding what differs."
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "design",
+          "style",
+          "parts",
+          "core",
+          "loadout",
+          "lines"
+        ],
+        "description": "A faction: a style, part templates, a core and loadout per class, and its lines."
+      }
+    },
+    "stations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "blurb": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 400
+          },
+          "layout": {
+            "enum": [
+              "ring",
+              "port",
+              "forge",
+              "refinery",
+              "shipyard",
+              "relay"
+            ],
+            "description": "Its layout in src/gen.js assembleStation."
+          },
+          "diameter": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number",
+              "minimum": 50,
+              "maximum": 5000
+            },
+            "description": "[min, max] metres."
+          },
+          "res": {
+            "type": "integer",
+            "minimum": 256,
+            "maximum": 4096,
+            "description": "Bake resolution, texels."
+          },
+          "spin": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 0.5,
+            "description": "Turn rate, rad/s."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "layout",
+          "diameter",
+          "res"
+        ]
+      },
+      "description": "Station archetypes (the system schema's station.archetype)."
+    },
+    "heavies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "blurb": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 400
+          },
+          "layout": {
+            "enum": [
+              "freighter",
+              "agri",
+              "miner",
+              "colony",
+              "carrier",
+              "explorer"
+            ],
+            "description": "Its layout in src/gen.js assembleStation."
+          },
+          "diameter": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number",
+              "minimum": 50,
+              "maximum": 5000
+            },
+            "description": "[min, max] metres."
+          },
+          "res": {
+            "type": "integer",
+            "minimum": 256,
+            "maximum": 4096,
+            "description": "Bake resolution, texels."
+          },
+          "detailScale": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Paneling scale, so detail stays legible at kilometre size."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "layout",
+          "diameter",
+          "res"
+        ]
+      },
+      "description": "Specialist hulls built like stations (the lab's Heavies tab)."
+    }
+  }
+}

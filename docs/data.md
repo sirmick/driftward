@@ -8,16 +8,16 @@ Status, 2026-10-16: **steps 1 to 3 of the plan below are built; 4 and 5 are next
 | :-- | :-- | :-- | :-- | :-- |
 | Universe canon | `src/lore/setting.md` | – | by hand | fed to every lore and story prompt as canon; prose |
 | Region notes | `src/lore/regions/<region>.md` | – | by hand | only `calder-march.md` so far; merged into the index as the region's `notes` |
-| Real stars | `src/galaxy/stars.json` (472 KB) | ✗ | `tools/hyg.py` | only the map reads it |
-| Map: systems, lanes, factions, regions, the Drift | `src/galaxy/galaxy.json` | ✗ | `tools/galaxy.py` | a source for the index; the faction keys are now the system schema's |
-| Worlds | `src/galaxy/worlds.json` | ✗ | `tools/worlds.py` | a source for the index; records the galaxy hash it was made from |
-| Stories | `src/galaxy/stories.json` | ✗ | `tools/stories.py` | a source for the index; each region records the galaxy hash it was told from |
+| Real stars | `src/galaxy/stars.json` (472 KB) | **✓** `stars.schema.json` | `tools/hyg.py` | only the map reads it |
+| Map: systems, lanes, factions, regions, the Drift | `src/galaxy/galaxy.json` | via the index | `tools/galaxy.py` | a source for the index; the faction keys are now the system schema's |
+| Worlds | `src/galaxy/worlds.json` | via the index | `tools/worlds.py` | a source for the index; records the galaxy hash it was made from |
+| Stories | `src/galaxy/stories.json` | via the index | `tools/stories.py` | a source for the index; each region records the galaxy hash it was told from |
 | **Universe index** | `src/galaxy/universe.json` (447 KB) | **✓** `src/schema/universe.schema.json` | `tools/universe.py`, on every build | factions, regions, every system once by star id, lanes; what the game, the map and the debug screen read |
 | **System** (the flyable layout) | `src/systems/*.json` | **✓** `system.schema.json` | by hand | 6 systems (the Calder March); each must agree with its index entry |
 | **System lore** | `src/lore/<id>.json` | **✓** `lore.schema.json` | `tools/gen-content.js` | the same 6 |
-| Ships, stations, factions' looks | `src/catalog.json` | ✗ (enums cross-checked) | by hand | |
+| Ships, stations, factions' looks | `src/catalog.json` | **✓** `catalog.schema.json` | by hand | plus cross-checks: core and dropped part ids, `hullFrom`, classes, series |
 | Art | `art/<id>/*.webp`, `art/<id>/log.json` | ✗ | `tools/gen-content.js` | the build lists what exists; images load on demand |
-| Economy, traffic | `src/economy.json`, `src/traffic.json` | ✗ (checked in `validate.js`) | by hand | `economy.json`'s `start.system` is where a new game begins |
+| Economy, traffic | `src/economy.json`, `src/traffic.json` | **✓** `economy.schema.json`, `traffic.schema.json` | by hand | plus cross-checks against the catalog and commodities; `economy.json`'s `start.system` is where a new game begins |
 | Generation records | `src/lore/*.log.json`, `src/galaxy/stories.log.json`, `art/*/log.json` | ✗ | the generators | debug only, read when the debug screen asks |
 
 `npm run check` validates the index against its schema and checks:

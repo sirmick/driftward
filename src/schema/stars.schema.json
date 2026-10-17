@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://driftward.game/schema/stars.schema.json",
+  "title": "Driftward star catalogue",
+  "description": "The real stars round Sol (src/galaxy/stars.json, from the HYG database by tools/hyg.py): what the map draws, and what tools/galaxy.py chooses the game's systems from.",
+  "type": "object",
+  "required": [
+    "source",
+    "stars"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "units": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "range": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Every star within this many ly."
+    },
+    "coreRange": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "And this far toward the galactic core."
+    },
+    "coreCone": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "stars": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8999999,
+            "description": "HYG id (the game's star id; generated Drift stars start at 9,000,000)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "description": "Proper name, else Bayer or Flamsteed, else a catalogue number."
+          },
+          "ly": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "pos": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number",
+              "minimum": -200,
+              "maximum": 200
+            },
+            "description": "ly, galactic coordinates, Sol at the origin."
+          },
+          "class": {
+            "enum": [
+              "yellow",
+              "orange",
+              "red-dwarf",
+              "brown-dwarf",
+              "red-giant",
+              "white",
+              "blue-giant",
+              "wolf-rayet",
+              "white-dwarf",
+              "pulsar",
+              "black-hole",
+              "quasar"
+            ],
+            "description": "The game's star class, from the spectral type."
+          },
+          "spect": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Spectral type; null where the catalogue has none."
+          },
+          "absmag": {
+            "type": "number",
+            "minimum": -15,
+            "maximum": 25
+          },
+          "desig": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "description": "Its other designations."
+          },
+          "catalog": {
+            "type": "boolean",
+            "description": "Its name is only a catalogue number."
+          },
+          "companions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "class": {
+                  "enum": [
+                    "yellow",
+                    "orange",
+                    "red-dwarf",
+                    "brown-dwarf",
+                    "red-giant",
+                    "white",
+                    "blue-giant",
+                    "wolf-rayet",
+                    "white-dwarf",
+                    "pulsar",
+                    "black-hole",
+                    "quasar"
+                  ]
+                },
+                "spect": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 0,
+                      "maxLength": 20
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Spectral type; null where the catalogue has none."
+                }
+              },
+              "required": [
+                "name",
+                "class"
+              ]
+            },
+            "description": "Companions folded into it."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "ly",
+          "pos",
+          "class",
+          "spect",
+          "absmag"
+        ]
+      }
+    }
+  }
+}
