@@ -4,7 +4,7 @@ Checks: the page starts on the sim core at the title, and a new game from a seed
 port, with no console errors; pause stops the clock; Continue on the title restores the last landing; the market
 buys and sells through the core (panel and commands), within credits and hold space; the mission board offers
 deliveries, and one accepted, flown there by the autopilot and landed pays; the flight HUD's keys (locations,
-targets, the map) work; ambient traffic starts mid-flow and turns
+targets, the system map) work; the galaxy map opens on the player's system, plots courses and sets one, and marks missions' systems; ambient traffic starts mid-flow and turns
 over (ships land and new ones launch); assist flight in open space
 matches the lab's numbers; asteroid belts are listed in orbital order and the autopilot flies into one; launch, landing and a day passing (with its docking fee) work; save then load restores
 the exact state; a replay exported from the browser (snapshot + input log, trades included) reruns natively to the
@@ -167,10 +167,10 @@ with sync_playwright() as p:
     check(tgt is not None and tgt.get('ship', -1) > 0, 'T targets the nearest ship')
     pg.keyboard.press('Digit2'); pg.keyboard.press('KeyG'); pg.wait_for_timeout(100)
     check(ev('__play.probe().auto') == h[1]['j'], 'G engages the autopilot to the target body')
-    pg.keyboard.press('KeyM')
+    pg.keyboard.press('Shift+KeyM')
     try: pg.wait_for_function("!document.getElementById('map').hidden && document.getElementById('loc').hidden", timeout=5000) # the HUD hides the list next frame
     except Exception: pass
-    check(pg.is_visible('#map') and not pg.is_visible('#loc'), 'M opens the system map')
+    check(pg.is_visible('#map') and not pg.is_visible('#loc'), 'Shift+M opens the system map')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     check(not pg.is_visible('#map'), 'Escape closes it')
 
@@ -186,6 +186,44 @@ with sync_playwright() as p:
         check('The Scree' in n and n.index('Halde') < n.index('The Scree') < n.index('Vast'), f"the belt is in the location list in orbital order: {', '.join(n)}")
         check(bt['auto'] == 0 and bt['t'] < 300 and bt['off'] < bt['half'] and bt['v'] < 30, f"the autopilot flies into the belt in {bt['t']} s and stops {bt['off']:.0f} m from its middle")
         check(bt['rocks'] > 1000, f"the belts and fields hold {bt['rocks']} rocks")
+
+    # the galaxy map: M in flight opens it over the game with the clock stopped, on the system the player is in; a system
+    # picked plots the course from here along the lanes (fewest days, or fewest jumps with J), Enter sets it, M closes it
+    # and the clock runs again; in port, G and its button open it; a new game clears the course
+    ev("(() => { const P = __play, C = P.CMD; P.newGame(31); P.command(C.launch); P.command(C.skip); P.advance(0.5, []); })()")
+    pg.wait_for_function('!__play.probe().barrier', timeout=120000)
+    pg.focus('#view'); pg.keyboard.press('KeyM')
+    pg.wait_for_function('__play.galaxy.selected() !== null', timeout=60000)
+    here = ev("__play.universe.systems.find(c => c.file === __play.system()).id")
+    t0 = ev('__play.probe().tick'); pg.wait_for_timeout(400)
+    g = ev("({ open: __play.galaxy.isOpen(), sel: __play.galaxy.selected(), tick: __play.probe().tick, card: document.querySelector('.gx-card').innerText })")
+    check(g['open'] and g['sel'] == here and g['tick'] == t0 and 'You are here' in g['card'], f"M opens the galaxy map on the system the player is in ({g['sel']}), the clock stopped")
+    gr = ev("""(() => { const P = __play, G = P.galaxy; G.choose(0); const days = G.route(), best = P.route(%d, 0, 'days');
+      return { days, best: best.ids, card: document.querySelector('.gx-card').innerText, lanes: document.querySelectorAll('.gx-lanes li').length }; })()""" % here)
+    check(gr['days'] and gr['days'][0] == here and gr['days'][-1] == 0 and gr['days'] == gr['best'] and f"{len(gr['days']) - 1} jumps" in gr['card'] and gr['lanes'] > 0,
+          f"picking Sol plots the fewest-days course from here, {len(gr['days']) - 1} jumps, and lists Sol's {gr['lanes']} lanes out")
+    pg.keyboard.press('KeyJ'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
+    gj = ev("({ route: __play.galaxy.route(), course: __play.course(), best: __play.route(%d, 0, 'jumps').ids })" % here)
+    check(gj['route'] == gj['best'] and len(gj['route']) <= len(gr['days']) and gj['course'] == {'dest': 0, 'by': 'jumps'}, f"J plots by fewest jumps ({len(gj['route']) - 1}) and Enter sets the course: {gj['course']}")
+    pg.keyboard.press('KeyM'); pg.wait_for_timeout(600)
+    gc = ev("({ open: __play.galaxy.isOpen(), tick: __play.probe().tick, course: __play.course() })")
+    check(not gc['open'] and gc['tick'] > t0 and gc['course'] == {'dest': 0, 'by': 'jumps'}, 'M closes it, the clock runs again and the course stays set')
+    ev("__play.newGame(32)"); pg.wait_for_function('!__play.probe().barrier', timeout=120000); pg.focus('#view')
+    pg.keyboard.press('KeyG'); pg.wait_for_timeout(300)
+    gp = ev("({ open: __play.galaxy.isOpen(), course: __play.course(), landed: __play.probe().mode })")
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+    closed = ev("__play.galaxy.isOpen()")
+    pg.click('#svc-map'); pg.wait_for_timeout(300)
+    by_button = ev("__play.galaxy.isOpen()")
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+    check(gp == {'open': True, 'course': None, 'landed': 2} and not closed and by_button and not ev("__play.galaxy.isOpen()"),
+          'in port G and the Galaxy map button open it and Esc closes it; a new game cleared the course')
+    # a system the player holds a mission for is marked on it, and its card lists the mission
+    gm = ev("""(() => { const P = __play, o = P.offers().sort((a, b) => a.tons - b.tons)[0]; P.accept(o.k); return o; })()""")
+    pg.keyboard.press('KeyG'); pg.wait_for_timeout(300)
+    mk = ev("({ marked: __play.galaxy.marked(), listed: document.querySelectorAll('.gx-mis li').length, here: __play.universe.systems.find(c => c.file === __play.system()).id })")
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+    check(mk['marked'] == [mk['here']] and mk['listed'] == 1, f"a mission's system is marked on the galaxy map and its card lists it: {mk}")
 
     # the debug jump: the debug screen's box completes place@system and jumps there (a logged core command); systems are
     # read and stored into the atlas only when first jumped to, so a new game holds the start system alone; a session

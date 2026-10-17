@@ -241,6 +241,54 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 .dbg-grid td.best { outline: 1px solid var(--amber); outline-offset: -2px; }
 /* the Ships tab: see-through, so the hulls the game's canvas draws behind it show; the rest of the page hides */
 body.dbg-clear > :not(#debug):not(#view) { visibility: hidden; }
+/* the galaxy map (src/play/galaxy.js): the star map in the game's canvas, a bar over it and the selection's card beside */
+body.gx-open > :not(#galaxy):not(#view):not(#toast) { visibility: hidden; }
+#galaxy { position: fixed; inset: 0; z-index: 9; font: 13px/1.5 var(--f-body); }
+#galaxy[hidden] { display: none; }
+body.gx-open #toast { z-index: 11; top: 62px; }
+.gx-surface { position: absolute; inset: 0; cursor: grab; }
+.gx-labels { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.gx-bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: rgba(7,9,12,.88); border-bottom: 1px solid var(--line); }
+.gx-bar h2 { margin: 0 10px 0 0; font: 700 17px/1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--amber); }
+.gx-bar button, .gx-set { background: #121821; border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer; font: 600 12.5px var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: var(--fg); }
+.gx-bar button:hover, .gx-set:hover { border-color: var(--amber); }
+.gx-bar button span, .gx-set span { margin-left: 6px; color: var(--muted); font: 11px var(--f-mono); }
+.gx-by { display: flex; } .gx-by button { border-radius: 0; } .gx-by button:first-child { border-radius: 6px 0 0 6px; } .gx-by button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+.gx-by button[aria-pressed="true"] { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+.gx-search { width: 200px; background: #0a0d12; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; color: var(--fg); font: 13px var(--f-body); }
+.gx-search:focus { outline: none; border-color: var(--amber); }
+.gx-keys { flex: 1; min-width: 0; color: var(--muted); font: 11.5px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+.gx-card { position: absolute; top: 64px; right: 16px; bottom: 16px; width: 340px; overflow: auto; padding: 14px 18px 16px; background: rgba(12,16,21,.93); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 36px rgba(0,0,0,.5); }
+.gx-card h3 { margin: 16px 0 6px; font: 600 12px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.gx-name { margin: 0; font: 600 24px/1.1 var(--f-display); color: #ffe2a6; }
+.gx-sub { margin: 3px 0 8px; color: var(--muted); font: 11.5px/1.4 var(--f-mono); }
+.gx-owner { margin: 0; font: 600 14px var(--f-display); letter-spacing: .03em; }
+.gx-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; box-shadow: 0 0 6px currentColor; vertical-align: 0; }
+.gx-here { margin: 0; color: #eef0f6; }
+.gx-mis-h { color: #8fd3ff !important; } .gx-mis { margin: 0; padding-left: 16px; font-size: 12.5px; } .gx-mis li { margin: 0 0 4px; } .gx-mis li::marker { content: '◆ '; color: #8fd3ff; } .gx-hot { color: var(--amber); }
+.gx-route { margin: 0 0 4px; color: #a8f0c4; font: 13px var(--f-mono); }
+.gx-hops { margin: 0 0 6px; padding-left: 22px; font-size: 13px; } .gx-hops li::marker { color: #6fd39a; font: 11px var(--f-mono); }
+.gx-card ol button, .gx-lanes button { background: none; border: 0; padding: 0; color: var(--fg); font: inherit; cursor: pointer; text-align: left; }
+.gx-card ol button:hover, .gx-lanes button:hover { color: var(--amber); }
+.gx-lanes { list-style: none; margin: 0; padding: 0; } .gx-lanes li { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; font-size: 13px; }
+.gx-lanes li > span { color: var(--muted); font: 11.5px var(--f-mono); white-space: nowrap; }
+.gx-warn { margin: 4px 0; color: #f0b072; font-size: 12.5px; }
+.gx-muted { margin: 0; color: var(--muted); }
+.gx-set.on { border-color: #6fd39a; color: #a8f0c4; }
+.gx-pop { margin: 0 0 6px; } .gx-pop b { font: 600 17px var(--f-display); }
+.gx-popbar, .gx-meter b { position: relative; height: 6px; border-radius: 3px; background: #1a212b; overflow: hidden; }
+.gx-popbar b, .gx-meter b::after { position: absolute; inset: 0 auto 0 0; width: var(--v); border-radius: 3px; content: ''; }
+.gx-popbar b { display: block; background: linear-gradient(90deg, #4b6b8f, #8fc6ff); }
+.gx-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 8px; } .gx-flags { margin-top: 12px; }
+.gx-chip { display: inline-block; padding: 1px 8px; border: 1px solid var(--line); border-radius: 10px; background: #121821; font: 500 11.5px var(--f-mono); color: #c4ccd6; cursor: help; }
+.gx-chip.tag { border-color: rgba(226,184,102,.4); color: var(--amber); }
+.gx-trade { margin: 2px 0; font-size: 12.5px; } .gx-trade span { display: inline-block; width: 98px; color: var(--muted); }
+.gx-meter { display: grid; grid-template-columns: 70px 1fr 28px; align-items: center; gap: 8px; margin: 5px 0; font: 11.5px var(--f-mono); cursor: help; }
+.gx-meter span { color: var(--muted); text-transform: capitalize; } .gx-meter i { font-style: normal; text-align: right; }
+.gx-meter b { display: block; }
+.gx-meter.wealth b::after { background: #e2b866; } .gx-meter.security b::after { background: #6ea0e6; } .gx-meter.unrest b::after { background: #f07864; }
+.gx-fold { margin-top: 10px; } .gx-fold summary { cursor: pointer; color: var(--muted); font: 600 12px var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+.gx-fold ul { margin: 6px 0 0; padding-left: 16px; font-size: 12.5px; } .gx-fold li { margin: 0 0 5px; }
 body.dbg-clear #debug { background: rgba(7,9,12,0); }
 body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 .dbg-link { background: none; border: 0; padding: 0; color: var(--amber); font: 600 12.5px var(--f-mono); cursor: pointer; text-align: left; }
@@ -325,6 +373,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
       <button type="button" id="svc-refuel">Refuel<span id="svc-refuel-k">F</span></button>
       <button type="button" id="svc-repair">Repair<span id="svc-repair-k">R</span></button>
       <button type="button" id="svc-wait">Wait a day<span>W</span></button>
+      <button type="button" id="svc-map">Galaxy map<span>G</span></button>
       <button type="button" id="svc-launch" class="primary">Launch<span>L</span></button>
     </div>
     <p class="port-day" id="port-day"></p>
@@ -414,6 +463,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
     <p class="note">Settings are kept in this browser.</p>
   </div>
 </section>
+<section id="galaxy" hidden aria-label="Galaxy map"></section>
 <section id="debug" hidden aria-label="Debug">
   <div class="dbg-head"><h2>Debug</h2><div class="dbg-tabs"></div>
     <div class="dbg-jump"><input id="dbg-jump" type="text" placeholder="Jump to place@system, or *@system" autocomplete="off" spellcheck="false" aria-label="Jump to place@system"><div class="dbg-jump-list" hidden></div></div>
@@ -422,7 +472,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 </section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · P pause · Tab assist · L land · T target · 1–9 locations · G fly to · M map · I nav · wheel zoom · ` debug</span>
+  <span class="keys">W S speed · A D turn · Q E strafe · X retro · Shift burn · P pause · Tab assist · L land · T target · 1–9 locations · G fly to · M galaxy map · Shift M system map · I nav · wheel zoom · ` debug</span>
   <span class="spacer"></span>
   <button type="button" id="b-menu" title="P">Menu</button>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>
@@ -453,6 +503,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 /*STARS*/
 /*SCHEMA*/
 /*DEBUG*/
+/*GALAXYMAP*/
 /*SHIPYARD*/
 /*SUNS*/
 /*MAP*/

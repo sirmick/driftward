@@ -211,7 +211,13 @@ function mountStarMapPanel(root, M, surface) {
     if (i >= 0) { choose(i, true); search.value = ''; }
   });
 
-  // ---------- the mouse on the map's surface ----------
+  starMapMouse(M, surface, { click: i => choose(i), double: i => { if (i >= 0) { choose(i); openDetail(i); } } });
+  return { choose, openDetail, closeDetail, home() { choose(0); M.focusOn([0, 0, 0], 38); }, centre() { if (M.st.sel >= 0) M.focusOn(stars[M.st.sel].pos); } };
+}
+
+// The mouse on a star map's surface: drag to orbit, right- or shift-drag to pan, wheel to zoom, hover to highlight;
+// on.click(star index, -1 for none) for a click that didn't drag, on.double(i) for a double-click.
+function starMapMouse(M, surface, on) {
   let drag = null;
   // where the pointer is on the map's canvas (stars are drawn there; the surface may sit elsewhere, under a header)
   const at = e => { const r = M.canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
@@ -226,8 +232,7 @@ function mountStarMapPanel(root, M, surface) {
     if (Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) > 4) { drag.moved = true; surface.style.cursor = 'grabbing'; }
     if (drag.moved) drag.pan ? M.pan(dx, dy) : M.orbit(dx, dy);
   });
-  surface.addEventListener('pointerup', e => { if (drag && !drag.moved) choose(M.pick(...at(e))); drag = null; surface.style.cursor = ''; });
-  surface.addEventListener('dblclick', e => { const i = M.pick(...at(e)); if (i >= 0) { choose(i); openDetail(i); } });
+  surface.addEventListener('pointerup', e => { if (drag && !drag.moved) on.click(M.pick(...at(e))); drag = null; surface.style.cursor = ''; });
+  surface.addEventListener('dblclick', e => { if (on.double) on.double(M.pick(...at(e))); });
   surface.addEventListener('wheel', e => { e.preventDefault(); M.zoom(Math.exp(e.deltaY * .0012)); }, { passive: false });
-  return { choose, openDetail, closeDetail, home() { choose(0); M.focusOn([0, 0, 0], 38); }, centre() { if (M.st.sel >= 0) M.focusOn(stars[M.st.sel].pos); } };
 }

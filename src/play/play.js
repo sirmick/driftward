@@ -52,6 +52,15 @@ const needSystems = ids => Promise.all(ids.filter(id => !SYSTEMS.has(id)).map(id
 let sysRec = null, SYS, BODIES, STAR, SUNS, LORE, ART, star, WORLDS, STATIONS;
 // the debug screen (backquote): how the current system's content was made (src/play/debug.js), and the jump box
 const debug = makeDebug({ el: $('debug'), econ: ECON, data: DATA, universe: UNIVERSE, system: () => sysRec });
+// the galaxy map (M in flight, G in port; src/play/galaxy.js), and the course set on it ({ dest: a star id, by: 'days'
+// or 'jumps' }), which the HUD shows with the next jump. Page state, not the core's: it changes nothing in the game.
+let course = null;
+const galaxy = makeGalaxyMap({ el: $('galaxy'), universe: UNIVERSE, econ: ECON, here: () => sysRec.entry.id, course: () => course, onCourse: c => { course = c; }, missions: () => galaxyMissions(),
+  onClose: () => canvas.focus(),
+  // the star map, once the real stars are read (asked for here the first time)
+  makeMap: labels => DATA.has('stars.json') ? makeStarMap(G, canvas, labels, { catalogue: DATA.peek('stars.json'), universe: UNIVERSE }) : (DATA.catalogue(), null) });
+let galaxyMissions = () => []; // the active missions as the galaxy map shows them (bound once the core has loaded)
+const openGalaxy = () => { if (debug.isOpen()) return; galaxy.open(); keys.clear(); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const BODY_KIND = { star: 0, planet: 1, moon: 2, station: 3, belt: 4, field: 5 };
 // planets and moons, drawn by the planet shader (worldsOf, per system)
@@ -278,8 +287,10 @@ window.addEventListener('keydown', e => {
   if (lostUp()) { if (['Enter', 'NumpadEnter'].includes(e.code) && !e.repeat) $('lost-reload').click(); e.preventDefault(); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'F6', 'F9'].includes(e.code)) e.preventDefault();
   // the debug screen takes every key but its own: backquote opens and closes it, as does Esc
-  if (e.code === 'Backquote' && !e.repeat) { if (debug.isOpen()) debug.close(); else { debug.open(); keys.clear(); } e.preventDefault(); return; }
+  if (e.code === 'Backquote' && !e.repeat) { if (debug.isOpen()) debug.close(); else { galaxy.close(); debug.open(); keys.clear(); } e.preventDefault(); return; }
   if (debug.isOpen()) { if (e.code === 'Escape') debug.close(); return; }
+  // the galaxy map takes every key while it is open
+  if (galaxy.isOpen()) { if (!e.repeat) galaxy.key(e); e.preventDefault(); return; }
   // with a shell screen up, the game takes no keys: Esc and P step back out
   if (shellOpen()) { if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyP')) shellBack(); return; }
   if (!keys.has(e.code)) {
@@ -291,7 +302,7 @@ window.addEventListener('keydown', e => {
     if (inFlight()) {
       if (e.code === 'KeyT') cycleTarget();
       if (e.code === 'KeyG') flyTo();
-      if (e.code === 'KeyM') toggleMap();
+      if (e.code === 'KeyM') { if (e.shiftKey) toggleMap(); else openGalaxy(); }
       if (/^Digit[1-9]$/.test(e.code)) pickLocation(+e.code.slice(5));
     }
     if (e.code === 'KeyI' && !inPort()) setNav(!navOn);
@@ -304,6 +315,7 @@ window.addEventListener('keydown', e => {
     if (e.code === 'KeyL') landOrLaunch();
     if (e.code === 'Enter') skipSequence();
     if (e.code === 'KeyW' && inPort()) waitDay();
+    if (e.code === 'KeyG' && inPort()) openGalaxy();
     if (e.code === 'KeyF' && inPort()) portService('refuel');
     if (e.code === 'KeyR' && inPort()) portService('repair');
     if (e.code === 'KeyT' && inPort()) showPanel(panelOpen() === 'trade' ? null : 'trade');
@@ -589,6 +601,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   let seedNow = 0;
   function newGame(seed, opts) {
     seedNow = seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed >>> 0;
+    course = null; galaxy.close();
     sim.clear(); sim.reseed(seedNow);
     // the start system alone in the atlas, live in the core and drawn
     const S0 = SYSTEMS.get(START_ID);
@@ -660,6 +673,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   $('svc-refuel').onclick = () => { portService('refuel'); canvas.focus(); };
   $('svc-repair').onclick = () => { portService('repair'); canvas.focus(); };
   $('svc-wait').onclick = () => { waitDay(); canvas.focus(); };
+  $('svc-map').onclick = () => openGalaxy();
   $('svc-trade').onclick = () => { showPanel(panelOpen() === 'trade' ? null : 'trade'); canvas.focus(); };
   $('svc-board').onclick = () => { showPanel(panelOpen() === 'board' ? null : 'board'); canvas.focus(); };
   $('svc-bar').onclick = () => { showPanel(panelOpen() === 'bar' ? null : 'bar'); canvas.focus(); };
@@ -824,7 +838,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     for (const k of bakeKinds) typeReady(types[k]);
     let ran = 0;
     checkBarrier();
-    if (!paused && !debug.isOpen() && !barrier && !notice && !lost) { // paused, debugging, behind the system barrier or a dialog: the clock stops (the replay log is by tick, so a pause leaves no trace)
+    if (!paused && !debug.isOpen() && !galaxy.isOpen() && !barrier && !notice && !lost) { // paused, debugging, on the galaxy map, behind the system barrier or a dialog: the clock stops (the replay log is by tick, so a pause leaves no trace)
       const bits = inputBits(IN);
       if (bits !== lastBits) { sim.setInput(bits); rec.log.push([sim.tick(), bits]); lastBits = bits; }
       ran = sim.due(dt);
@@ -848,6 +862,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     if (sv) { sunGallery.render((now - t0) / 1000, sv.cells, sv.opts); G.postProcess(bloomOn ? 0.9 : 0, 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     const mv = debug.mapView(); // and its Map tab, the star map
     if (mv) { mv.tick(dt); mv.draw(bloomOn ? 0.8 : 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
+    const gv = galaxy.view(); // the galaxy map: the star map instead of the game
+    if (gv) { gv.tick(dt); gv.draw(bloomOn ? 0.8 : 0); hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, hud.width, hud.height); return; }
     // nothing to see under the port's painted vista, the map, the debug screen or the pause menu: the canvas keeps
     // its last frame (pause shows it frozen behind the menu), and the GPU rests
     const covered = ($('vista').classList.contains('on') && !document.body.classList.contains('vista-framed')) || mapOn || debug.isOpen() || (paused && !titleUp());
@@ -949,6 +965,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // a traffic route's end: a port, or jump zone z (coded -1 - z)
   const endName = c => c < 0 ? `the ${TRAFFIC.zones[-1 - c]} jump zone` : portName(c);
   const cargoText = (tons, g) => `${tons} t ${(GOODS[g] || { name: '?' }).name.toLowerCase()}`;
+  // each active mission for the galaxy map: the system it is bound to (its atlas slot's star id), the port, the cargo,
+  // the pay and the days left
+  galaxyMissions = () => activeMissions().map(k => ({ star: sim.atlasId(MS.sys[k]), port: portName(MS.dest[k], MS.sys[k]), tons: MS.tons[k], good: (GOODS[MS.good[k]] || {}).id, pay: MS.pay[k], left: MS.due[k] - sim.day() }));
   const daysText = n => n <= 0 ? 'due today' : n === 1 ? '1 day' : `${n} days`;
   function refreshPort() {
     if (sim.mode() !== MODE.landed) return;
@@ -1004,6 +1023,17 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     }
     refreshPort();
   };
+  // the course set on the galaxy map, for the HUD: where to, the next jump, how many and how long (the route made again
+  // only when here or the course changes); none once here is the destination
+  let courseRoute = null, courseKey = '';
+  function courseLine() {
+    if (!course || course.dest === sysRec.entry.id) return null;
+    const key = `${sysRec.entry.id}|${course.dest}|${course.by}`;
+    if (key !== courseKey) { courseKey = key; courseRoute = galaxyRoute(UNIVERSE, sysRec.entry.id, course.dest, course.by); }
+    const name = id => (BY_STAR.get(id) || {}).name || '?', R = courseRoute;
+    return R ? `COURSE → ${name(course.dest).toUpperCase()}  ·  NEXT JUMP ${name(R.ids[1]).toUpperCase()}  ·  ${R.jumps} JUMP${R.jumps === 1 ? '' : 'S'} ${R.days.toFixed(1)} D`
+      : `COURSE → ${name(course.dest).toUpperCase()}  ·  NO LANE FROM HERE`;
+  }
   // the debug screen's Player tab: a snapshot of the player's ship, flight, money, hold and missions
   debug.setLive(() => {
     const k = SH.kind[0], T = types[k], at = sim.game.at[0], mode = sim.mode(), landed = mode === MODE.landed, below = sim.portBelow();
@@ -1604,6 +1634,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     // under the nearest-body line: the autopilot, then the active missions with days left
     const ms = activeMissions().map(k => { const left = MS.due[k] - sim.day(); return [`→ ${missionDest(k).toUpperCase()}  ${MS.tons[k]} T  ${fmtCr(MS.pay[k])} CR  ${daysText(left).toUpperCase()}`, left <= 1 ? NAV_HOT : MIS_COL]; });
     if (auto >= 0) ms.unshift([`AUTOPILOT → ${BODIES[auto].name.toUpperCase()}  ·  STICK TO TAKE OVER`, '#7fd08a']);
+    const cl = courseLine(); if (cl) ms.unshift([cl, '#a8f0c4']);
     hx.fillStyle = 'rgba(7,9,12,.55)'; hx.fillRect(6, 6, 380, (lines.length + ms.length) * 17 + 31); // + the nearest-body line
     lines.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + k * 17); });
     ms.forEach(([t, c], k) => { hx.fillStyle = c; hx.fillText(t, 14, 20 + (lines.length + 1 + k) * 17); });
@@ -1786,8 +1817,10 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const r = command(CMD.jump, k, j);
     if (r !== 0) { console.error(`jump to ${id} refused after storing it: ${CORE.RESULT[r] || r}`); return no(r); }
     showSystem(S); closeNotice();
+    const arrived = course && course.dest === S.entry.id; // the course set on the galaxy map, done
+    if (arrived) course = null;
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; viewScale = 0;
-    toast(`Jumped to ${BODIES[j].name}, ${SYS.name} system`);
+    toast(`Jumped to ${BODIES[j].name}, ${SYS.name} system${arrived ? ': course complete' : ''}`);
     return r;
   }
   // every place a jump can go: each read system's bodies but its star (n: the system's place among the flyable ones)
@@ -2104,6 +2137,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   window.__play = {
     sim, IN, CMD, MODE, newGame, exportReplay, command, ECON, showTitle, pauseGame,
     get BODIES() { return BODIES; }, // the current system's
+    galaxy, course: () => course, route: (from, to, by) => galaxyRoute(UNIVERSE, from, to, by), // the galaxy map, the course set on it, a route between star ids
     // the flyable systems (ids, the start first), the one being played, the debug jump (a promise if the system must be
     // read first) and every place it can go in the systems read so far; preload() reads them all; atlas() lists each
     // slot's system
