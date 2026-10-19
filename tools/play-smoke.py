@@ -114,9 +114,10 @@ with sync_playwright() as p:
     pg.locator('#trade-rows button[data-act="buy"][data-g="%d"]' % ev("__play.good('goods')")).click()
     m = ev('__play.probe()')
     check(m['credits'] == start['credits'] - goods and m['hold'].get('goods') == 1, f"buying a ton of goods at {goods} cr from the panel")
+    room = ev("__play.roomFor('goods')")  # consumer goods go in the racks (or a climate hold): core/src/fit.rs
     pg.locator('#trade-rows button[data-act="buy"][data-g="%d"]' % ev("__play.good('goods')")).click(modifiers=['Shift'])
     m = ev('__play.probe()')
-    check(m['hold'].get('goods') == min(m['holdCap'], start['credits'] // goods), f"shift-click buys all that fits ({m['hold'].get('goods')} t, {m['credits']} cr left)")
+    check(m['hold'].get('goods') == min(1 + room, start['credits'] // goods), f"shift-click buys all that fits ({m['hold'].get('goods')} t, {m['credits']} cr left)")
     # sell the goods back, fill the hold with water (cheap enough to fill any hold), then the core refuses more
     t = ev("(() => { const P = __play, C = P.CMD, g = P.good('goods'), w = P.good('water'); const back = P.trade('sell', g), fill = P.trade('buy', w); return { back, fill, full: P.command(C.buy, w, 1), notHere: P.command(C.buy, P.good('ore'), 1), tooMany: P.command(C.sell, g, 99), sell: P.trade('sell', w), after: P.probe() }; })()")
     check(t['full'] == 6 and t['notHere'] == 7 and t['tooMany'] == 8, f"the core refuses a full hold, an untraded good, cargo not aboard ({t['full']}, {t['notHere']}, {t['tooMany']})")
@@ -146,7 +147,8 @@ with sync_playwright() as p:
     offers = ev('__play.offers()')
     check(pg.is_visible('#board') and 3 <= len(offers) <= 8 and pg.locator('#board-rows button[data-act="accept"]').count() == len(offers),
           f'the board shows {len(offers)} offers')
-    small = min(offers, key=lambda o: o['tons'])
+    fits = ev('__play.offers().filter(o => o.tons <= __play.sim.roomFor(o.good))')  # (food and medicine need a climate hold)
+    small = min(fits, key=lambda o: o['tons'])
     pg.locator(f'#board-rows button[data-k="{small["k"]}"]').click()
     m = ev('__play.missions()')[0]
     check(m['state'] == 1 and m['dest'] == small['dest'] and m['due'] == 1 + small['days'] and ev('__play.probe()')['holdCap'] > 0
@@ -229,7 +231,7 @@ with sync_playwright() as p:
     check(gp == {'open': True, 'course': None, 'landed': 2} and not closed and by_button and not ev("__play.galaxy.isOpen()"),
           'in port G and the Galaxy map button open it and Esc closes it; a new game cleared the course')
     # a system the player holds a mission for is marked on it, and its card lists the mission
-    gm = ev("""(() => { const P = __play, o = P.offers().sort((a, b) => a.tons - b.tons)[0]; P.accept(o.k); return o; })()""")
+    gm = ev("""(() => { const P = __play, o = P.offers().filter(o => o.tons <= P.sim.roomFor(o.good)).sort((a, b) => a.tons - b.tons)[0]; P.accept(o.k); return o; })()""")
     pg.keyboard.press('KeyG'); pg.wait_for_timeout(300)
     mk = ev("({ marked: __play.galaxy.marked(), listed: document.querySelectorAll('.gx-mis li').length, here: __play.universe.systems.find(c => c.file === __play.system()).id })")
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
@@ -296,12 +298,14 @@ with sync_playwright() as p:
     # flight: assist from rest, then the burner (as the lab's Fly tab: the Prism military class I, the M0 Halcyon fighter, from rest, clear space,
     # far from every well: a well raises the top speed heading into it; open space's raised top speed off, which the lab
     # doesn't have)
-    a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -30000], ship: 'prism.military:c1' }); const c0 = P.sim.param('cruise_max'); P.sim.param('cruise_max', 1); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); P.sim.param('cruise_max', c0); return [a, P.probe(), P.sim.type.vmax[P.sim.ship.kind[0]]]; })()")
+    a = ev("(() => { const P = __play; P.newGame(4242, { space: [0, -30000], ship: 'prism.military:c1' }); const c0 = P.sim.param('cruise_max'); P.sim.param('cruise_max', 1); P.advance(4, ['KeyW']); const a = P.probe(); P.advance(3, ['KeyW', 'ShiftLeft']); P.sim.param('cruise_max', c0); return [a, P.probe(), P.sim.type.vmax[P.sim.ship.kind[0]], P.sim.type.accel[P.sim.ship.kind[0]] / P.sim.type.accel[P.sim.game.base[0]]]; })()")
     print('after 4 s W   ', json.dumps({k: a[0][k] for k in ('tick', 'v', 'set')}))
     print('after 3 s burn', json.dumps({k: a[1][k] for k in ('tick', 'v', 'set')}))
     # (562.5: W sweeps the assist's throttle to full in a second, and the ship follows at its own acceleration. The lab's
     # frozen prototype raises a set speed at the hull's acceleration instead, and gives 546.1)
-    check(557 < a[0]['v'] < 568, f"cruise speed {a[0]['v']:.1f} m/s (562.5)")
+    # (the ship is stock-fitted, core/src/fit.rs: its torches come in whole tonnes, so its acceleration is a little over
+    # the catalog's, by a[3], and its speed after 4 s with it)
+    check(557 < a[0]['v'] < 568 * max(1, a[3]), f"cruise speed {a[0]['v']:.1f} m/s (562.5; the stock fit's acceleration is {a[3]:.3f} of the catalog's)")
     check(a[1]['v'] > a[0]['v'] + 50 and a[1]['set'] <= a[2] + 1e-6 and a[1]['v'] <= a[2] + 1, f"the burner adds thrust, not top speed ({a[1]['v']:.1f} m/s, set {a[1]['set']:.0f}, top speed {a[2]:.0f})")
 
     # save, fly on, load: back to exactly the saved state
@@ -326,7 +330,7 @@ with sync_playwright() as p:
     # autopilot fly there (round the star if it is in the way) until it stops over the port; land: delivered, paid
     d = ev("""(() => { const P = __play, C = P.CMD, out = {};
       out.teleHome = P.teleport(P.probe().at); P.advance(0.5, []); out.landHome = P.command(C.land); P.advance(3.4, []);
-      const o = P.offers().sort((a, b) => a.tons - b.tons)[0]; out.offer = o;
+      const o = P.offers().filter(o => o.tons <= P.sim.roomFor(o.good)).sort((a, b) => a.tons - b.tons)[0]; out.offer = o;
       out.accept = P.accept(o.k); out.before = P.probe(); out.launch = P.command(C.launch); P.advance(3.4, []);
       out.auto = P.command(C.autopilot, o.dest); let t = 0;
       while (P.probe().auto >= 0 && t < 600) { P.advance(1, []); t++; }

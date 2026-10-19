@@ -79,6 +79,24 @@ pub unsafe extern "C" fn dw_service_cost(w: *mut World, code: u32) -> u32 {
     if code == crate::service::CMD_REFUEL { w.refuel_cost((w.game.at[0].max(0) as usize).min(w.n_bodies.saturating_sub(1))) } else { w.repair_cost() }
 }
 
+/// Fit the player's ship (its kind the catalog type it is built on) with that type's stock fit: a new game (fit.rs).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_fit_stock(w: *mut World) { unsafe { world(w) }.fit_stock() }
+
+/// Write the ship's fit (0) or the outfitter's draft (1) into the "fit/view" column (fit.rs STAT_NAMES).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_view_fit(w: *mut World, which: u32) { unsafe { world(w) }.view_fit(which) }
+
+/// The most tons of commodity `g` that still fit aboard, by hold class (fit.rs).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_room_for(w: *mut World, g: u32) -> u32 { unsafe { world(w) }.room_for(g as usize) }
+
 /// Radiation at (x, y): the share of a sound hull lost a second (service.rs).
 /// # Safety
 /// See `world`.

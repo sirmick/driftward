@@ -56,7 +56,8 @@ impl World {
         if b <= 0 { return BAD_AMOUNT; }
         let (tons, total) = (b as u32, self.price(at, g) as u64 * b as u64);
         if code == CMD_BUY {
-            if self.hold_used() as u64 + tons as u64 > self.hold_cap() as u64 { return NO_ROOM; }
+            let fits = self.cargo_fits(g, tons); // by hold class, on a fitted ship (fit.rs)
+            if fits != OK { return fits; }
             if total > self.credits() as u64 { return NO_CREDITS; }
             self.game.credits[0] -= total as u32;
             self.hold.tons[g] += tons;

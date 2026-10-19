@@ -8,11 +8,12 @@
 //! snapshot plus an input log replays a session exactly (`replay`). Ports, landings and the day clock are in `port`;
 //! cargo, credits and markets in `market`; the mission board and deliveries in `mission`; ambient traffic in
 //! `traffic`; every system's layout, for jumps between them, in `atlas`; stations moving along their orbits in `motion`;
-//! fuel, heat, hull, hazards and the port's refuelling and repair in `service`; signature, detection, scanning, stellar radiation and flares in `sensors`. Orbiting debris and small traffic, for looks only and outside the sim's state, are in `orbit`.
+//! fuel, heat, hull, hazards and the port's refuelling and repair in `service`; the ship's fit (components by the tonne, power, heat and shields) and the outfitter in `fit`; signature, detection, scanning, stellar radiation and flares in `sensors`. Orbiting debris and small traffic, for looks only and outside the sim's state, are in `orbit`.
 
 pub mod atlas;
 pub mod cols;
 pub mod ffi;
+pub mod fit;
 pub mod flight;
 pub mod jump;
 pub mod market;

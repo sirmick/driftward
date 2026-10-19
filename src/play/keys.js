@@ -42,6 +42,7 @@ const KEY_ACTIONS = [
   { id: 'missions', group: 'In port', ctx: 'port', label: 'Missions', keys: ['KeyM'] },
   { id: 'bar', group: 'In port', ctx: 'port', label: 'Bar', keys: ['KeyB'] },
   { id: 'about', group: 'In port', ctx: 'port', label: 'About the port', keys: ['KeyI'] },
+  { id: 'outfit', group: 'In port', ctx: 'port', label: 'Outfitter', keys: ['KeyO'] },
   { id: 'refuel', group: 'In port', ctx: 'port', label: 'Refuel', keys: ['KeyF'] },
   { id: 'repair', group: 'In port', ctx: 'port', label: 'Repair', keys: ['KeyR'] },
   { id: 'wait', group: 'In port', ctx: 'port', label: 'Wait a day', keys: ['KeyW'] },

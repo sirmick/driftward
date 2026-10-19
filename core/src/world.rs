@@ -3,6 +3,7 @@
 use crate::atlas::{AtlasBodies, AtlasGates, AtlasHead, AtlasMarket, AtlasMix, AtlasSys, MAX_SYSTEMS, NO_SYSTEM};
 use crate::jump::{Gates, MAX_GATES};
 use crate::cols::{params, soa, ColumnDesc};
+use crate::fit::{MAX_FIT, N_STATS, SLOT_NAMES, STAT_NAMES};
 use crate::flight;
 use crate::market::MAX_GOODS;
 use crate::mission::{MAX_MISSIONS, MAX_OFFERS};
@@ -68,7 +69,14 @@ soa! {
     /// Ship types (one per brand x size): flight stats from the catalog. `well` is how strongly gravity wells
     /// affect the hull (0 not at all; fighters about .35, capital ships about .75); `cargo` is the hold, in tons;
     /// `hull` the hull's points when sound; `fuel` the tank, in tons (service.rs).
-    pub struct Types { accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32, hull: f64, fuel: f64, len: f64 }
+    /// The frame (fit.rs; docs/outfitting.md), content too: its mass (t), its bay's pressurised and unpressurised
+    /// tonnes, its plumes (torch mounts), its structure (hull points before armour), its minimum crew, and the stock
+    /// fit's sensors (t) and shield (points). The last row is the player's fitted ship, written by the core from the
+    /// fit (fit.rs `player_kind`).
+    pub struct Types {
+        accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32, hull: f64, fuel: f64, len: f64,
+        frame: f64, bay_p: f64, bay_u: f64, plumes: u8, structure: f64, crew: u8, sensors: f64, shield: f64,
+    }
 }
 
 soa! {
@@ -119,7 +127,23 @@ soa! {
         // stellar flares (sensors.rs): phase (0 quiet, 1 warning, 2 flaring), seconds into it, when the next is due
         // (game seconds; 0 not drawn yet), the flaring star, and the flare's level now (0 to 1)
         flare: u8, flare_t: f64, flare_due: f64, flare_star: i16, flare_lvl: f64,
+        // the fit (fit.rs): whether the player's ship is fitted (its type the last row, built from `fit`), the catalog
+        // type it is built on; its shield's points and the seconds left in a collapsed shield's restart; the battery
+        // (MJ); the share of the helm's and drive's power met last tick (a brownout below 1), and the power drawn (MW)
+        fitted: u8, base: u16, shield: f64, shield_t: f64, energy: f64, drive: f64, mw_use: f64,
     }
+}
+
+soa! {
+    /// A ship's fit (fit.rs, docs/outfitting.md): tonnes of each component in its slot (fit.rs F_*; bunks a count, the
+    /// bulkhead signed). The player's ship has one, `fit`, and the outfitter's draft beside it, `draft`.
+    pub struct Fit { t: f64 }
+}
+
+soa! {
+    /// Each commodity's hold (content: economy.json's `hold`; fit.rs CLASS_*): bulk goes in hoppers, general cargo in
+    /// container racks, climate cargo (food, medicine) only in a climate hold; every hold takes the classes below it.
+    pub struct Goods { class: u8 }
 }
 
 soa! {
@@ -288,6 +312,61 @@ params! {
     rad_hull = 0.0018;    "share of a sound hull lost a second per unit of stellar radiation above rad_safe: a full flare in the open costs about a tenth of a hull"
     repair_cost = 2.0;    "credits a hull point costs to repair"
     match_reach = 4.0;    "full assist and the autopilot match a moving port's velocity within this many of its radii (fading in from there to half as near)"
+    // outfitting (fit.rs; docs/outfitting.md): Ironhull gear's ratings per tonne, then prices
+    torch_mn = 1.0;       "torch thrust, MN per tonne (MN over tonnes of ship is thousands of m/s^2)"
+    torch_room = 1.4;     "a hull's plumes take this many times its stock fit's torch tonnes, in all"
+    torch_mw = 0.1;       "torch draw at full thrust, MW per MN"
+    torch_heat = 0.25;    "torch heat at full thrust, MW per MN"
+    burn_mw = 0.3;        "the burner's extra draw, MW per MN of torch"
+    burn_heat = 2.0;      "the burner's extra heat, MW per MN of torch"
+    jet_turn = 3450.0;    "turn rate, rad/s: this x jet tonnes / (tonnes of ship x length in metres)"
+    jet_mw = 0.25;        "jets' draw while firing, MW per tonne"
+    furnace_mw = 0.6;     "reactor output, MW per tonne (3 MW a 5 t step)"
+    furnace_waste = 0.1667; "reactor waste heat, MW per MW it produces"
+    battery_mj = 40.0;    "battery store, MJ per tonne"
+    defl_regen = 1.25;    "deflector regen, shield points a second per tonne"
+    defl_mw = 0.5;        "deflector draw while regenerating, MW per tonne"
+    defl_hold = 0.05;     "deflector draw holding a full shield, MW per tonne"
+    bank_pts = 30.0;      "shield bank capacity, points per tonne"
+    shield_rad = 2.0;     "radiation drains a shield this many times faster than it would wear the hull (points per point)"
+    shield_heat = 0.25;   "the share of radiation's heat that reaches a shielded hull"
+    shield_restart = 6.0; "seconds a collapsed shield (or one dropped to run cold) takes to restart"
+    fin_mw = 4.0;         "fin radiators' shedding at full heat, MW per tonne"
+    skin_mw = 0.05;       "the hull's own shedding at full heat, MW per tonne of frame"
+    sink_mj = 5.0;        "heat sinks' capacity, MJ per tonne"
+    heat_mj = 1.0;        "heat capacity, MJ per tonne of ship"
+    armour_pts = 5.0;     "armour, hull points per tonne"
+    jump_t = 40.0;        "jump drive rating, tonnes of laden ship per tonne of drive"
+    sensor_mw = 0.2;      "sensors' draw, MW per tonne"
+    sensor_ref = 2.0;     "tonnes of sensors that give the base gain, sens_k (gain goes with tonnes)"
+    bunk_t = 2.0;         "a bunk's tonnes"
+    bunk_mw = 0.05;       "a bunk's life support, MW"
+    avionics_mw = 0.002;  "the bridge and avionics, MW per tonne of frame"
+    tank_fuel = 0.8;      "fuel per tonne of tank (the rest of the tonne is the tank)"
+    hopper_mass = 0.1;    "a hopper's mass per tonne of hold"
+    rack_mass = 0.15;     "a container rack's mass per tonne of hold"
+    climate_mass = 0.3;   "a climate hold's mass per tonne of hold"
+    bulkhead_max = 0.15;  "the bulkhead moves at most this share of the bay either way"
+    bulkhead_mass = 0.2;  "pressure hull and life support, tonnes per tonne of bay pressurised"
+    climate_pay = 2.5;    "a delivery of climate cargo (food, medicine) pays this many times as much"
+    resale = 0.6;         "the outfitter buys components back at this share of their price"
+    price_torch = 12.0;   "a torch's price: this x its tonnes cubed, credits"
+    price_jet = 300.0;    "credits a tonne: jets"
+    price_furnace = 400.0; "credits a tonne: reactor"
+    price_battery = 150.0; "credits a tonne: battery"
+    price_deflector = 500.0; "credits a tonne: deflector"
+    price_bank = 350.0;   "credits a tonne: shield banks"
+    price_fin = 120.0;    "credits a tonne: fin radiators"
+    price_sink = 100.0;   "credits a tonne: heat sinks"
+    price_armour = 80.0;  "credits a tonne: armour"
+    price_jump = 900.0;   "credits a tonne: jump drive"
+    price_sensor = 600.0; "credits a tonne: sensors"
+    price_bunk = 400.0;   "credits a bunk"
+    price_tank = 60.0;    "credits a tonne: fuel tank"
+    price_hopper = 40.0;  "credits a tonne: hoppers"
+    price_rack = 50.0;    "credits a tonne: container racks"
+    price_climate = 250.0; "credits a tonne: climate hold"
+    price_bulkhead = 150.0; "credits a tonne the bulkhead moves (labour: nothing back)"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -309,6 +388,12 @@ pub struct World {
     pub env: Env,
     pub game: Game,
     pub hold: Hold,
+    /// the player's fit and the outfitter's draft (fit.rs), and each commodity's hold class (content)
+    pub fit: Fit,
+    pub draft: Fit,
+    pub goods: Goods,
+    /// the outfitter's view of a fit (fit.rs `view_fit`): its stats, for the page; not state
+    pub fitview: Vec<f64>,
     pub market: Market,
     pub offers: Offers,
     pub missions: Missions,
@@ -354,6 +439,10 @@ impl World {
             env: Env::with_capacity(cfg.env_n * cfg.env_n),
             game: Game::with_capacity(1),
             hold: Hold::with_capacity(MAX_GOODS),
+            fit: Fit::with_capacity(MAX_FIT),
+            draft: Fit::with_capacity(MAX_FIT),
+            goods: Goods::with_capacity(MAX_GOODS),
+            fitview: vec![0.0; N_STATS],
             market: Market::with_capacity(cfg.max_bodies * MAX_GOODS),
             offers: Offers::with_capacity(cfg.max_bodies * MAX_OFFERS),
             missions: Missions::with_capacity(MAX_MISSIONS),
@@ -402,6 +491,9 @@ impl World {
         self.env.describe("env", &mut c);
         self.game.describe("game", &mut c);
         self.hold.describe("hold", &mut c);
+        self.fit.describe("fit", &mut c);
+        self.draft.describe("draft", &mut c);
+        self.goods.describe("goods", &mut c);
         self.market.describe("market", &mut c);
         self.offers.describe("offer", &mut c);
         self.missions.describe("mission", &mut c);
@@ -426,16 +518,16 @@ impl World {
 
     fn build_manifest(&self) -> String {
         // the snapshot buffer and the orbiters' output are exposed too, but are not state
-        let mut extra = vec![ColumnDesc::of("world", "snapshot", &self.snap)];
+        let mut extra = vec![ColumnDesc::of("world", "snapshot", &self.snap), ColumnDesc::of("fit", "view", &self.fitview)];
         self.orbit.describe(&mut extra);
         let cols: Vec<String> = self.cols.iter().chain(extra.iter()).map(|c| format!(
             r#"{{"group":"{}","name":"{}","kind":"{}","ptr":{},"len":{}}}"#, c.group, c.name, c.kind, c.ptr, c.len
         )).collect();
-        let names: Vec<String> = PARAM_NAMES.iter().map(|n| format!("\"{n}\"")).collect();
+        let quote = |l: &[&str]| l.iter().map(|n| format!("\"{n}\"")).collect::<Vec<_>>().join(",");
         format!(
-            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"maxMix":{},"launchS":{},"descentS":{},"envN":{},"envW":{},"params":[{}],"columns":[{}]}}"#,
+            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"maxMix":{},"launchS":{},"descentS":{},"envN":{},"envW":{},"playerKind":{},"fitSlots":[{}],"fitStats":[{}],"params":[{}],"columns":[{}]}}"#,
             DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, MAX_OFFERS, MAX_MISSIONS, MAX_MIX, LAUNCH_S, DESCENT_S, self.cfg.env_n, self.cfg.env_w,
-            names.join(","), cols.join(",")
+            self.player_kind(), quote(&SLOT_NAMES), quote(&STAT_NAMES), quote(PARAM_NAMES), cols.join(",")
         )
     }
 
@@ -448,6 +540,8 @@ impl World {
         self.game.clear();
         self.game.player[0] = player;
         self.hold.clear();
+        self.fit.clear();
+        self.draft.clear();
         self.offers.clear();
         self.missions.clear();
         self.traffic.clear();
@@ -510,6 +604,7 @@ impl World {
         self.move_bodies();
         self.step_game();
         self.step_jump();
+        self.fit_tick(); // the player's fitted type from its fit, its load and last tick's power (fit.rs)
         player::control(self);
         self.step_traffic();
         flight::control(self);
@@ -582,6 +677,10 @@ impl World {
         eat(g.jump[0] as u64 | (g.jgate[0] as u16 as u64) << 8 | (g.jchain[0] as u16 as u64) << 24 | (g.jfrom[0] as u64) << 32);
         for v in [g.jt[0], g.jcost[0], g.jburnt[0], g.day_part[0]] { eat(v.to_bits()); }
         for v in [self.game.hand_x[0], self.game.hand_y[0], self.game.hand_v[0], self.game.fuel[0]] { eat(v.to_bits()); }
+        // the fit (fit.rs): the player's power, shield and heat, the fit and the outfitter's draft
+        eat(g.fitted[0] as u64 | (g.base[0] as u64) << 8);
+        for v in [g.shield[0], g.shield_t[0], g.energy[0], g.drive[0], g.heat[0]] { eat(v.to_bits()); }
+        for (&a, &b) in self.fit.t.iter().zip(&self.draft.t) { eat(a.to_bits()); eat(b.to_bits()); }
         // tuning and the system: a live param change or a moved body shows in the hash at once
         for &p in &self.params { eat(p.to_bits()); }
         for j in 0..self.n_bodies { eat(self.bodies.x[j].to_bits()); eat(self.bodies.y[j].to_bits()); eat(self.bodies.r[j].to_bits()); eat(self.bodies.g[j].to_bits()); }

@@ -9,7 +9,7 @@
 //!
 //! The jump (`CMD_HYPER` with a = -1), in phases on the game row (`game.jump`):
 //! - TORCH: in a gate's zone, moving outward along it (within `jump_align` degrees) at `jump_min` of top speed or more,
-//!   with the lane's fuel aboard, the drive takes the ship (on rails: the flight stages skip it) and accelerates it
+//!   with the lane's fuel aboard (and a jump drive rated for the laden ship: fit.rs), the drive takes the ship (on rails: the flight stages skip it) and accelerates it
 //!   along the bearing at `torch_accel` top speeds a second, burning half the lane's fuel on the way, to `jump_speed`
 //!   times top speed;
 //! - TRANSIT: then it blinks out: the rest of the fuel goes, the clock advances by the lane's days, and the core
@@ -82,7 +82,8 @@ impl World {
 
     /// Tons of fuel gate `g`'s lane costs a ship of type `kind`: the lane's length times `jump_fuel`, as a share of the
     /// hull's tank (`ly` given, for a gate of another system).
-    pub fn lane_fuel(&self, kind: usize, ly: f64) -> f64 { self.types.fuel[kind] * ly * self.p(P::jump_fuel) }
+    /// The player's fitted ship pays its hull's (fit.rs `fuel_kind`), whatever its tank holds.
+    pub fn lane_fuel(&self, kind: usize, ly: f64) -> f64 { self.types.fuel[self.fuel_kind(kind)] * ly * self.p(P::jump_fuel) }
 
     fn jump_vmax(&self, i: usize) -> f64 { self.types.vmax[self.ships.kind[i] as usize] }
 
@@ -101,6 +102,8 @@ impl World {
                 if (vx * dx + vy * dy) < v * (self.p(P::jump_align) * PI / 180.0).cos() { return NOT_LINED_UP; }
                 let cost = self.lane_fuel(self.ships.kind[i] as usize, self.gates.ly[g]);
                 if self.game.fuel[0] < cost { return NO_FUEL; }
+                let drive = self.drive_ok(); // a fitted ship's jump drive must move its laden mass (fit.rs)
+                if drive != OK { return drive; }
                 self.start_torch(i, g, cost, 0.0);
                 OK
             }

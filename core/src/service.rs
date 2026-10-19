@@ -2,17 +2,17 @@
 //!
 //! Fuel: the player's tank (`game.fuel`, tons; a hull type's `fuel` when full), spent by jumps (jump.rs).
 //!
-//! Heat (the Book's Energy and heat, M2, built small): the player's `game.heat`, 0 cold to 1 full. The burner adds it,
-//! a cold ship reaching full in `heat_burn` seconds of burn; not burning, it sheds it, full to cold in `heat_cool`
-//! seconds, faster in gas (`heat_gas`); radiation adds it (`heat_rad`). At full the burner locks (`game.hot`, player.rs)
-//! until heat is down to `heat_unlock`. Hulls all hold the same heat for now; M2 brings capacity by mass, reactors,
-//! radiators and heat's signature.
+//! Heat: the player's `game.heat`, 0 cold to 1 full. A fitted ship (fit.rs) works it out in MJ from its fit, with its
+//! power and shield. An unfitted one (the core's tests, the lab) keeps the simple rule: the burner adds it, a cold
+//! ship reaching full in `heat_burn` seconds of burn; not burning, it sheds it, full to cold in `heat_cool` seconds,
+//! faster in gas (`heat_gas`). Radiation adds it to both (`heat_rad`). At full the burner locks (`game.hot`,
+//! player.rs) until heat is down to `heat_unlock`.
 //!
 //! Hull: every ship's points (`ships.hull`; a type's `hull` when sound). In M1 only radiation wears it down: the
 //! hazard zones round the exotic stars (the Book's System contents: pulsars and black holes "create hazard zones";
 //! Radiation: "above a threshold, unshielded hulls take damage"). Inside a zone `hazard` metres round a body, a hull
 //! loses up to `rad` of its sound points a second, scaled by (1 - d / hazard)^2, so the edge is safe enough to cross
-//! and the middle is not. Shields, which would soak it first, come with M2. A traffic ship that loses its hull is
+//! and the middle is not. A fitted player's shield soaks it first (fit.rs `shield_soak`). A traffic ship that loses its hull is
 //! gone; the player's ship lost is the game's MODE_DEAD, and the page reloads the last landing's save (the Book's
 //! death rule).
 //!
@@ -28,6 +28,8 @@ use crate::world::{World, DT, P};
 /// Port services, bits of `bodies.svc`.
 pub const SVC_REFUEL: u8 = 1;
 pub const SVC_REPAIR: u8 = 2;
+/// An outfitter: the fit's refits (fit.rs).
+pub const SVC_OUTFIT: u8 = 4;
 
 /// Fill the tank at the port the player is landed at (as far as the credits go).
 pub const CMD_REFUEL: u32 = 11;
@@ -70,13 +72,16 @@ impl World {
             && i < self.count && self.ships.alive[i] != 0 && self.ships.rail[i] == 0 {
             // (the jump drive's torch is not the burner: the ship is on rails then)
             let s = &self.ships;
-            let burning = s.burn[i] != 0 && s.main[i] > 0.0;
-            let dh = if burning { 1.0 / self.p(P::heat_burn).max(0.1) } else {
-                -(1.0 + self.p(P::heat_gas) * (s.gas_h[i] + s.gas_d[i] + s.gas_i[i])) / self.p(P::heat_cool).max(0.1)
-            } + self.p(P::heat_rad) * self.radiation(s.x[i], s.y[i]) + self.p(P::heat_star) * self.stellar(s.x[i], s.y[i], s.gas_i[i]);
-            let h = (self.game.heat[0] + dh * DT).clamp(0.0, 1.0);
-            self.game.heat[0] = h;
-            if h >= 1.0 { self.game.hot[0] = 1; } else if h <= self.p(P::heat_unlock) { self.game.hot[0] = 0; }
+            let rad_heat = self.p(P::heat_rad) * self.radiation(s.x[i], s.y[i]) + self.p(P::heat_star) * self.stellar(s.x[i], s.y[i], s.gas_i[i]);
+            if self.fitted() { self.fit_power(i, rad_heat); } else {
+                let burning = s.burn[i] != 0 && s.main[i] > 0.0;
+                let dh = if burning { 1.0 / self.p(P::heat_burn).max(0.1) } else {
+                    -(1.0 + self.p(P::heat_gas) * (s.gas_h[i] + s.gas_d[i] + s.gas_i[i])) / self.p(P::heat_cool).max(0.1)
+                } + rad_heat;
+                let h = (self.game.heat[0] + dh * DT).clamp(0.0, 1.0);
+                self.game.heat[0] = h;
+                if h >= 1.0 { self.game.hot[0] = 1; } else if h <= self.p(P::heat_unlock) { self.game.hot[0] = 0; }
+            }
         }
         let wear = self.p(P::rad_hull); // stellar radiation's wear on unshielded hulls (sensors.rs; 0 until M2's shields)
         if wear <= 0.0 && !(0..self.n_bodies).any(|j| self.bodies.hazard[j] > 0.0) { return; }
@@ -86,6 +91,7 @@ impl World {
             let (x, y) = (self.ships.x[i], self.ships.y[i]);
             let dose = self.radiation(x, y) + if wear > 0.0 { wear * (self.stellar(x, y, self.ships.gas_i[i]) - safe).max(0.0) } else { 0.0 };
             if dose <= 0.0 { continue; }
+            if Some(i) == player && self.fitted() && self.shield_soak(dose) { continue; } // the shield takes it
             self.ships.hull[i] -= dose * self.types.hull[self.ships.kind[i] as usize] * DT;
             if self.ships.hull[i] > 0.0 { continue; }
             self.ships.hull[i] = 0.0;

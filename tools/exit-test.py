@@ -60,9 +60,9 @@ with sync_playwright() as p:
       // the plan: the offer whose destination pays best for something this port sells, over the hold left after its cargo
       let plan = null;
       for (const o of P.offers()) {
-        const room = out.start.holdCap - o.tons;
+        if (o.tons > S.roomFor(o.good)) continue; // (food and medicine need a climate hold: core/src/fit.rs)
         for (const [g, id] of G.entries()) {
-          const buy = S.price(here, g), sell = S.price(o.dest, g);
+          const buy = S.price(here, g), sell = S.price(o.dest, g), room = Math.min(out.start.holdCap - o.tons, S.roomFor(g));
           if (!buy || !sell || sell <= buy) continue;
           const tons = Math.min(room, Math.floor(out.start.credits / buy)), gain = tons * (sell - buy);
           if (tons > 0 && (!plan || gain > plan.gain)) plan = { offer: o, g, id, buy, sell, tons, gain };
@@ -71,6 +71,7 @@ with sync_playwright() as p:
       out.plan = plan; if (!plan) return out;
       out.dest = P.BODIES[plan.offer.dest].port.name;
       out.accept = P.accept(plan.offer.k);
+      plan.tons = Math.min(plan.tons, S.roomFor(plan.g)); plan.gain = plan.tons * (plan.sell - plan.buy); // the room left by hold class, the delivery aboard
       out.buy = P.command(C.buy, plan.g, plan.tons);
       out.loaded = P.probe();
       out.launch = P.command(C.launch); P.advance(3.4, []);

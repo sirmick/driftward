@@ -27,6 +27,12 @@ const CORE_READY = (async () => {
       ship: groups.ship, type: groups.type, body: groups.body, env: groups.env, game: groups.game,
       // the player's hold (tons per commodity) and every market's prices (body * maxGoods + commodity; 0 not traded)
       hold: groups.hold, market: groups.market, maxGoods: M.maxGoods,
+      // the fit (core/src/fit.rs): the player's ship's fit and the outfitter's draft (tonnes per slot, slot names in
+      // fitSlots), each commodity's hold class (content), and the type row the fitted ship flies as; fitStock() fits a
+      // new game's ship (its kind the catalog type it is built on); viewFit(0 fit or 1 draft) writes that fit's stats
+      // into fitView (names in fitStats); roomFor(g) is the most tons of commodity g that still fit aboard
+      fit: groups.fit, draft: groups.draft, goods: groups.goods, fitView: groups.fit.view, playerKind: M.playerKind, fitSlots: M.fitSlots, fitStats: M.fitStats,
+      fitStock: () => X.dw_fit_stock(w), viewFit: which => X.dw_view_fit(w, which), roomFor: g => X.dw_room_for(w, g),
       // mission boards (body * maxOffers + slot) and the player's missions (core/src/mission.rs)
       offer: groups.offer, mission: groups.mission, maxOffers: M.maxOffers, maxMissions: M.maxMissions,
       postBoards: () => X.dw_post_boards(w), // fresh boards at every port, for a new game
@@ -109,14 +115,15 @@ const CORE_READY = (async () => {
     const views = () => Object.assign(o, {
       ship: groups.ship, type: groups.type, body: groups.body, env: groups.env, game: groups.game, hold: groups.hold, market: groups.market,
       offer: groups.offer, mission: groups.mission, traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
-      gate: groups.gate, orbitOut: groups.orbit.out });
+      gate: groups.gate, orbitOut: groups.orbit.out, fit: groups.fit, draft: groups.draft, goods: groups.goods, fitView: groups.fit.view });
     views();
     o.rebind = () => { if (mem.buffer !== buffer) { bind(); views(); } };
     return o;
   }
   // input bits, mirrored from core/src/player.rs
-  // game commands, modes and results, mirrored from core/src/port.rs, market.rs, mission.rs and service.rs
-  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, refuel: 11, repair: 12, hyper: 13, cold: 14, ping: 15, target: 16, teleport: 100, jump: 101, zone: 102, flare: 103 };
+  // game commands, modes and results, mirrored from core/src/port.rs, market.rs, mission.rs, service.rs and fit.rs
+  const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, refuel: 11, repair: 12, hyper: 13, cold: 14, ping: 15, target: 16,
+    draft: 17, draftFrom: 18, refit: 19, teleport: 100, jump: 101, zone: 102, flare: 103 };
   // a jump's phases (core/src/jump.rs, game.jump)
   const JUMP = { none: 0, torch: 1, transit: 2, arrive: 3 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
@@ -126,7 +133,8 @@ const CORE_READY = (async () => {
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3, dead: 4 };
   const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body', 13: 'not offered here', 14: 'nothing to do',
     15: 'not in a jump zone', 16: 'not lined up with the zone', 17: 'too slow to jump', 18: 'not enough fuel', 19: 'no chart of that system', 20: 'missed',
-    21: 'the ping is recharging', 22: 'not on your sensors' };
+    21: 'the ping is recharging', 22: 'not on your sensors', 23: "the jump drive can't move this much ship", 24: 'not enough crew', 25: 'not enough room in the bay',
+    26: "past the hull's limits", 27: "the cargo aboard wouldn't fit", 28: 'food and medicine need a climate hold' };
   const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };
   return { world, IN, CMD, JUMP, MODE, MISSION, TRAFFIC, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
 })();

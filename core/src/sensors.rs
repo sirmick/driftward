@@ -234,7 +234,9 @@ impl World {
             self.game.target[0] = 0.0;
             return;
         };
-        let (k, gain) = (self.p(P::sens_k), 1.0 + self.p(P::ping_gain) * self.game.ping[0]);
+        // a fitted ship's sensors by their tonnes (fit.rs: `sensor_ref` of them give sens_k)
+        let sens = if self.fitted() { self.fit.t[crate::fit::F_SENSORS] / self.p(P::sensor_ref).max(1e-9) } else { 1.0 };
+        let (k, gain) = (self.p(P::sens_k) * sens, 1.0 + self.p(P::ping_gain) * self.game.ping[0]);
         let (px, py) = (self.ships.x[p], self.ships.y[p]);
         let n_me = self.noise(px, py, self.ships.gas_i[p]);
         let (d_rise, d_fall, s_rise, s_fall) = (self.p(P::det_rise) * DT, self.p(P::det_fall) * DT, self.p(P::seen_rise) * DT, self.p(P::seen_fall) * DT);

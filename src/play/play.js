@@ -127,6 +127,9 @@ debug.setSuns(sunGallery);
 // built when the tab first opens
 debug.setStarMap((labels, data) => makeStarMap(G, canvas, labels, data));
 const nSizes = catalog.sizes.length;
+// a line's frame multipliers (catalog.json lines' `frame`), from the raw catalog (the resolved brands don't carry them)
+const RAW_LINES = new Map(JSON.parse($('catalog').textContent).factions.flatMap(f => f.lines.map(l => [f.id + '.' + l.id, l])));
+const lineFrame = b => (RAW_LINES.get(b.id) || {}).frame || {};
 const types = [];
 catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
   const fz = z.flight || {}, fb = b.style.flight || {};
@@ -136,6 +139,11 @@ catalog.brands.forEach((b, bi) => catalog.sizes.forEach((z, zi) => {
     well: fz.well == null ? 0.5 : fz.well, // how much gravity wells pull this hull and bend its top speed
     cargo: Math.round((fz.cargo || 0) * (fb.cargo == null ? 1 : fb.cargo)), // hold, tons: the class's, times the line's
     hull: (fz.hull || 100) * (fb.hull || 1), fuel: (fz.fuel || 4) * (fb.fuel || 1), // hull points when sound; the tank, tons
+    // the frame (core/src/fit.rs; docs/outfitting.md): the class's, its bay times the line's (a container line's is
+    // bigger), and its structure, the hull points before armour: those of the line it builds on (a Clad's are its
+    // Haul's, the rest welded on); the stock shield
+    frame: Object.assign({}, z.frame, { bayP: z.frame.bayP * (lineFrame(b).bayP || 1), bayU: z.frame.bayU * (lineFrame(b).bayU || 1) }), shield: (fz.shield || 0) * (fb.shield || 1),
+    structure: (fz.hull || 100) * ((catalog.brands.find(x => x.id === b.hullKey) || b).style.flight.hull || 1),
     s: null, half: z.length / 2
   });
 }));
@@ -359,7 +367,7 @@ const ACTIONS = {
   placeNext: () => cycleBody(1), placePrev: () => cycleBody(-1), zoneNext: () => nextZone(),
   autopilot: () => flyTo(), land: () => landOrLaunch(), jump: () => jumpKey(), skip: () => skipSequence(),
   cold: () => coldKey(), ping: () => pingKey(), galaxy: () => openGalaxy(), systemMap: () => toggleMap(), nav: () => setNav(!navOn),
-  trade: () => togglePanel('trade'), missions: () => togglePanel('board'), bar: () => togglePanel('bar'), about: () => togglePanel('about'),
+  trade: () => togglePanel('trade'), missions: () => togglePanel('board'), bar: () => togglePanel('bar'), about: () => togglePanel('about'), outfit: () => togglePanel('outfit'),
   refuel: () => portService('refuel'), repair: () => portService('repair'), wait: () => waitDay(), portMap: () => openGalaxy(),
   pause: () => pauseGame(true), save: () => saveGame(), load: () => loadGame(), zoomIn: () => setZoom(zoom * 1.25), zoomOut: () => setZoom(zoom / 1.25),
   // debugging the flashing black squares: bloom off, and a view of bad scene pixels (see postProcess)
@@ -374,7 +382,7 @@ function onEscape() {
   pauseGame(true);
 }
 // the port screen's panels beside the port card, one at a time: the market, the mission board, the bar, about
-const PANELS = ['trade', 'board', 'bar', 'about'];
+const PANELS = ['trade', 'board', 'bar', 'about', 'outfit'];
 const panelOpen = () => PANELS.find(p => !$(p).hidden) || null;
 let showPanel = () => {};
 const NUM = new Intl.NumberFormat('en-US'), fmtCr = n => NUM.format(n); // one formatter: toLocaleString builds one per call, and the HUD formats every frame
@@ -397,6 +405,21 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   sim.rebind();
   const SH = sim.ship, IN = CORE.IN;
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; sim.type.hull[k] = T.hull; sim.type.fuel[k] = T.fuel; sim.type.len[k] = T.L; });
+  // The frames (core/src/fit.rs): each type's class frame, structure and stock shield, and its plumes, the nozzles its
+  // generated hull has (assembled here, without the bake: the part list alone, from the seed it is baked from).
+  const PK = sim.playerKind, FIT = Object.fromEntries(sim.fitSlots.map((n, k) => [n, k]).filter(([n]) => n));
+  types.forEach((T, k) => {
+    const F = T.frame, t = sim.type, B = catalog.brands[T.bi], Z = catalog.sizes[T.zi];
+    const parts = ShipGen.assemble(B, Z, yard.seedOf(B.id, Z.id), T.zi).parts;
+    T.plumes = Math.max(1, Math.min(8, parts.filter(q => q.em && q.em.type === 'exhaust').length));
+    t.frame[k] = F.mass; t.bay_p[k] = F.bayP; t.bay_u[k] = F.bayU; t.crew[k] = F.crew; t.sensors[k] = F.sensors;
+    t.plumes[k] = T.plumes; t.structure[k] = T.structure; t.shield[k] = T.shield;
+  });
+  // the player's ship flies as the core's last type row, built from its fit; it looks like the type it is built on
+  const fittedLooks = () => { if (sim.game.fitted[0]) types[PK] = types[sim.game.base[0]]; };
+  types[PK] = types[0];
+  // each commodity's hold (economy.json: bulk, general, climate)
+  GOODS.slice(0, sim.maxGoods).forEach((c, g) => { sim.goods.class[g] = { bulk: 0, general: 1, climate: 2 }[c.hold] || 0; });
   const CMD = CORE.CMD, MODE = CORE.MODE;
   // Asteroid belts and fields: their rocks (src/rocks.js), placed once from each one's seed round where the core put
   // it. Scenery: not in the sim (ships fly through them), so the page owns them. Density 1 is a rock per 22,000 m²;
@@ -534,7 +557,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // copies take the core's positions, so routes, wells and the drawing agree in every browser
   // a port's services the core runs (core/src/service.rs SVC_*), and its fuel price: the market's, where it sells fuel,
   // else dear (the base price at the high tier)
-  const SVC = { refuel: 1, repair: 2 }, FUEL = GOODS.findIndex(c => c.id === 'fuel');
+  const SVC = { refuel: 1, repair: 2, outfitter: 4 }, FUEL = GOODS.findIndex(c => c.id === 'fuel');
   // Laid out in a world of its own (lay: the same config, never stepped), so the live system is never touched, even
   // mid-flight; its slot's bytes then go into the game's atlas, as a replay puts them back. Returns those bytes.
   function layoutSystem(S, k) {
@@ -635,8 +658,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     sim.atlasReset(); layoutSystem(S0, 0); sim.atlasLoad(0); showSystem(S0); galaxy.endTransit(); resetFollow();
     sim.setCount(1);
     SH.kind[0] = playerTypeIndex(opts && opts.ship); SH.alive[0] = 1; SH.ang[0] = 0; // opts.ship: 'faction.line:class' (dev and tests)
-    SH.hull[0] = sim.type.hull[SH.kind[0]]; sim.game.fuel[0] = sim.type.fuel[SH.kind[0]]; // sound, and a full tank
     sim.setPlayer(0);
+    sim.fitStock(); fittedLooks(); // its stock fit: sound, fuelled and charged (core/src/fit.rs)
     if (opts && opts.space) { SH.x[0] = opts.space[0]; SH.y[0] = opts.space[1]; sim.slotReset(0, true); }
     else { sim.slotReset(0, true); sim.placeLanded(startBody); }
     sim.game.day[0] = 1; // day one
@@ -794,6 +817,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   $('svc-board').onclick = () => { showPanel(panelOpen() === 'board' ? null : 'board'); canvas.focus(); };
   $('svc-bar').onclick = () => { showPanel(panelOpen() === 'bar' ? null : 'bar'); canvas.focus(); };
   $('svc-about').onclick = () => { showPanel(panelOpen() === 'about' ? null : 'about'); canvas.focus(); };
+  $('svc-outfit').onclick = () => { showPanel(panelOpen() === 'outfit' ? null : 'outfit'); canvas.focus(); };
   $('svc-launch').onclick = () => { landOrLaunch(); canvas.focus(); };
   // saves: the world's bytes, and a note of where and when for the title's Continue
   function store(key) {
@@ -818,6 +842,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     }
     const meta = JSON.parse(localStorage.getItem(key + '.meta') || '{}');
     seedNow = meta.seed >>> 0;
+    fittedLooks();
     showSystem(slotRec(sim.game.system[0]), sim.game.jump[0] === CORE.JUMP.transit); resetFollow(); // the save's system, live in the core already
     camX = SH.x[0]; camY = SH.y[0]; lastMode = -1; navDest = navShip = null; viewScale = 0; missionSeen.set(sim.mission.state); closeNotice(); closeLost(); startRecording();
     closeShell(); assistMode = SETTINGS.assist; setNav(!!SETTINGS.nav);
@@ -896,7 +921,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const N = KB.name, strip = [[['thrust', 'reverse'], 'throttle'], [['retro'], 'stop'], [['burn'], 'burn'], [['mode'], 'mode'], [['land'], 'land'], [['jump'], 'jump'],
       [['autopilot'], 'autopilot'], [['targetNext'], 'ships'], [['placeNext'], 'places'], [['cold'], 'cold'], [['ping'], 'ping'], [['galaxy'], 'maps'], [['nav'], 'nav']];
     document.querySelector('.strip .keys').textContent = strip.map(([ids, what]) => `${ids.map(N).join(' ')} ${what}`).join(' · ');
-    for (const [id, act] of [['svc-trade', 'trade'], ['svc-board', 'missions'], ['svc-bar', 'bar'], ['svc-wait', 'wait'], ['svc-map', 'portMap'], ['svc-launch', 'land'], ['svc-about', 'about']]) $(id).querySelector('span').textContent = N(act);
+    for (const [id, act] of [['svc-trade', 'trade'], ['svc-board', 'missions'], ['svc-bar', 'bar'], ['svc-wait', 'wait'], ['svc-map', 'portMap'], ['svc-launch', 'land'], ['svc-about', 'about'], ['svc-outfit', 'outfit']]) $(id).querySelector('span').textContent = N(act);
     $('p-resume').querySelector('span').textContent = `${N('pause')} or Esc`; $('p-save').querySelector('span').textContent = N('save'); $('p-load').querySelector('span').textContent = N('load');
     refreshPort();
   }
@@ -1035,6 +1060,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       $('svc-board').disabled = !(P0.services || []).includes('missions');
       $('svc-bar').disabled = !(P0.services || []).includes('bar') || !L;
       $('svc-refuel').hidden = !(P0.services || []).includes('refuel'); $('svc-repair').hidden = !(P0.services || []).includes('repair');
+      $('svc-outfit').disabled = !(P0.services || []).includes('outfitter');
       fillLore(B, L);
       showVista(B.id);
       port.hidden = false;
@@ -1110,6 +1136,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // a traffic route's end: a port, or jump zone z (coded -1 - z)
   const endName = c => c < 0 ? `the ${(gatesOf(sysRec)[-1 - c] || {}).name || TRAFFIC.zones[(-1 - c) % 4]} jump zone` : portName(c);
   const cargoText = (tons, g) => `${tons} t ${(GOODS[g] || { name: '?' }).name.toLowerCase()}`;
+  // food and medicine, and no climate hold to put them in (core/src/fit.rs)
+  const needsClimate = g => (GOODS[g] || {}).hold === 'climate' && sim.game.fitted[0] && !(sim.fit.t[FIT.climate] > 0);
   // each active mission for the galaxy map: the system it is bound to (its atlas slot's star id), the port, the cargo,
   // the pay and the days left
   galaxyMissions = () => activeMissions().map(k => ({ star: sim.atlasId(MS.sys[k]), port: portName(MS.dest[k], MS.sys[k]), tons: MS.tons[k], good: (GOODS[MS.good[k]] || {}).id, pay: MS.pay[k], left: MS.due[k] - sim.day() }));
@@ -1126,14 +1154,16 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     $('svc-repair-k').textContent = `${hullCost ? `${fmtCr(hullCost)} cr` : 'sound'} · ${KB.name('repair')}`;
     $('port-day').textContent += ` · hull ${Math.round(100 * SH.hull[0] / sim.type.hull[k])}% · fuel ${sim.game.fuel[0].toFixed(1)}/${sim.type.fuel[k].toFixed(1)} t`;
     if (panelOpen() === 'board') refreshBoard();
+    if (panelOpen() === 'outfit') refreshOutfit();
     if (panelOpen() !== 'trade') return;
-    const at = sim.game.at[0], room = holdCap() - sim.holdUsed(), cr = sim.credits();
+    const at = sim.game.at[0], cr = sim.credits();
     $('trade-rows').innerHTML = GOODS.map((c, g) => {
-      const price = sim.price(at, g), aboard = sim.hold.tons[g];
+      const price = sim.price(at, g), aboard = sim.hold.tons[g], room = sim.roomFor(g); // room by hold class (core/src/fit.rs)
       if (!price && !aboard) return '';
       const cls = !price ? 'none' : price < c.base ? 'low' : price > c.base ? 'high' : '';
-      return `<tr><td>${c.name}</td><td class="num ${cls}">${price ? fmtCr(price) : '—'}</td><td class="num">${aboard || ''}</td>`
-        + `<td class="act"><button type="button" data-g="${g}" data-act="buy"${price && room > 0 && cr >= price ? '' : ' disabled'}>Buy</button>`
+      const why = room > 0 ? '' : needsClimate(g) ? ' title="Food and medicine need a climate hold (outfitter)"' : ' title="No room in the hold for it"';
+      return `<tr><td>${c.name}${c.hold === 'climate' ? ' <small>climate</small>' : ''}</td><td class="num ${cls}">${price ? fmtCr(price) : '—'}</td><td class="num">${aboard || ''}</td>`
+        + `<td class="act"><button type="button" data-g="${g}" data-act="buy"${price && room > 0 && cr >= price ? '' : ' disabled'}${why}>Buy</button>`
         + `<button type="button" data-g="${g}" data-act="sell"${price && aboard ? '' : ' disabled'}>Sell</button></td></tr>`;
     }).join('');
     const owe = sim.debt();
@@ -1143,16 +1173,16 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   }
   // the board: offers at this port, then the player's missions
   function refreshBoard() {
-    const at = sim.game.at[0], room = holdCap() - sim.holdUsed(), full = activeMissions().length >= NM;
+    const at = sim.game.at[0], full = activeMissions().length >= NM;
     $('board-sum').textContent = `${activeMissions().length}/${NM} taken`;
     let rows = '';
     for (let k = 0; k < NO; k++) {
       const o = at * NO + k;
       if (!OF.live[o]) continue;
-      const fits = OF.tons[o] <= room;
+      const fits = OF.tons[o] <= sim.roomFor(OF.good[o]), why = full ? 'Carrying the most missions you can' : fits ? '' : needsClimate(OF.good[o]) ? 'Food and medicine need a climate hold' : 'Not enough room in the hold';
       rows += `<tr><td>${portName(OF.dest[o])}${portName(OF.dest[o]) !== BODIES[OF.dest[o]].name ? `<br><small>${BODIES[OF.dest[o]].name}</small>` : ''}</td><td>${cargoText(OF.tons[o], OF.good[o])}</td>`
         + `<td class="num">${fmtCr(OF.pay[o])}</td><td class="num">${daysText(OF.days[o])}</td>`
-        + `<td class="act"><button type="button" data-k="${k}" data-act="accept"${fits && !full ? '' : ' disabled'} title="${full ? 'Carrying the most missions you can' : fits ? '' : 'Not enough room in the hold'}">Accept</button></td></tr>`;
+        + `<td class="act"><button type="button" data-k="${k}" data-act="accept"${fits && !full ? '' : ' disabled'} title="${why}">Accept</button></td></tr>`;
     }
     $('board-rows').innerHTML = rows || '<tr><td class="empty" colspan="5">No offers today</td></tr>';
     $('mission-rows').innerHTML = activeMissions().map(k => `<tr><td>${missionDest(k)}</td><td>${cargoText(MS.tons[k], MS.good[k])}</td>`
@@ -1161,10 +1191,12 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       || '<tr><td class="empty">None</td></tr>';
   }
   showPanel = name => {
+    if (name === 'outfit' && panelOpen() !== 'outfit' && !$('svc-outfit').disabled) command(CMD.draftFrom, 0); // a fresh draft, from the ship's fit
     for (const p of PANELS) {
       $(p).hidden = name !== p || $('svc-' + p).disabled;
       $('svc-' + p).setAttribute('aria-pressed', String(!$(p).hidden));
     }
+    $('port').classList.toggle('wide', panelOpen() === 'outfit');
     refreshPort();
   };
   // the course set on the galaxy map, for the HUD: where to, the next jump, how many and how long (the route made again
@@ -1220,7 +1252,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // buy or sell n tons (n omitted: all that fits or is aboard); returns the core's result
   function trade(act, g, n) {
     const price = sim.price(sim.game.at[0], g), c = GOODS[g];
-    if (n === undefined) n = act === 'buy' ? Math.min(holdCap() - sim.holdUsed(), Math.floor(sim.credits() / Math.max(1, price))) : sim.hold.tons[g];
+    if (n === undefined) n = act === 'buy' ? Math.min(sim.roomFor(g), Math.floor(sim.credits() / Math.max(1, price))) : sim.hold.tons[g];
     const r = command(act === 'buy' ? CMD.buy : CMD.sell, g, n);
     if (r === 0) toast(`${act === 'buy' ? 'Bought' : 'Sold'} ${n} t ${c.name.toLowerCase()} for ${fmtCr(n * price)} cr`);
     else toast(`Can't ${act} ${c.name.toLowerCase()}: ${CORE.RESULT[r] || r}`);
@@ -1286,6 +1318,165 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   closeNotice = () => { if (!notice) return; notice = false; $('notice').hidden = true; canvas.focus(); };
   $('notice-ok').onclick = () => closeNotice();
 
+  // ---------- the outfitter (core/src/fit.rs; docs/outfitting.md) ----------
+  // The ship's fit as rows by group, the draft's tonnes against the ship's, with steppers; the bay's two sides as bars,
+  // a block a module as wide as its tonnes; the hull with its plumes and corners where they are on it; and the budget the
+  // draft makes (the core's numbers, viewFit), with what changes from the ship's fit. Every change is a core command on
+  // the draft (logged, so replays follow it); Refit puts it on the ship.
+  const STAT = Object.fromEntries(sim.fitStats.map((n, k) => [n, k]));
+  const fitStats = which => { sim.viewFit(which); const v = sim.fitView, o = {}; for (const n in STAT) o[n] = v[STAT[n]]; return o; };
+  const fmt1 = x => (Math.round(x * 10) / 10).toLocaleString('en-US');
+  const prm = n => sim.param(n);
+  // a row: its slot (or the four corners together), its side of the bulkhead (P, U, or outside the bay), its step and
+  // what a step gives, and its price a step
+  const OUTFIT_GROUPS = [
+    ['Drive', [
+      { id: 'jets', name: 'Jet clusters', side: 'corners', step: 1, give: () => 'turning, a cluster per corner', price: () => prm('price_jet') }]],
+    ['Power', [
+      { id: 'furnace', name: 'Furnace reactor', side: 'P', step: 5, give: () => `${fmt1(prm('furnace_mw') * 5)} MW`, price: () => prm('price_furnace') * 5 },
+      { id: 'battery', name: 'Accumulator', side: 'P', step: 1, give: () => `${fmt1(prm('battery_mj'))} MJ`, price: () => prm('price_battery') }]],
+    ['Shields and heat', [
+      { id: 'deflector', name: 'Deflector', side: 'U', step: 2, give: () => `${fmt1(prm('defl_regen') * 2)} pts/s regen`, price: () => prm('price_deflector') * 2 },
+      { id: 'banks', name: 'Shield bank', side: 'P', step: 1, give: () => `${fmt1(prm('bank_pts'))} pts`, price: () => prm('price_bank') },
+      { id: 'fins', name: 'Fin radiator', side: 'U', step: 1, give: () => `sheds ${fmt1(prm('fin_mw'))} MW`, price: () => prm('price_fin') },
+      { id: 'sinks', name: 'Heat sink', side: 'U', step: 1, give: () => `${fmt1(prm('sink_mj'))} MJ of heat`, price: () => prm('price_sink') },
+      { id: 'armour', name: 'Armour', side: 'hull', step: 1, give: () => `${fmt1(prm('armour_pts'))} hull`, price: () => prm('price_armour') }]],
+    ['Crew and navigation', [
+      { id: 'bunks', name: 'Bunk', side: 'P', step: 1, unit: '', give: () => `one crew, ${fmt1(prm('bunk_t'))} t`, price: () => prm('price_bunk') },
+      { id: 'sensors', name: 'Sensors', side: 'P', step: 1, give: () => 'range', price: () => prm('price_sensor') },
+      { id: 'jump', name: 'Jump drive', side: 'P', step: 1, give: () => `jumps ${fmt1(prm('jump_t'))} t`, price: () => prm('price_jump') }]],
+    ['Cargo and fuel', [
+      { id: 'hopper', name: 'Hopper', side: 'U', step: 1, give: () => 'bulk: ore, water, metals, fuel', price: () => prm('price_hopper') },
+      { id: 'rack', name: 'Container rack', side: 'U', step: 1, give: () => 'bulk and general cargo', price: () => prm('price_rack') },
+      { id: 'climate', name: 'Climate hold', side: 'P', step: 1, give: () => 'anything; food, medicine', price: () => prm('price_climate') },
+      { id: 'tank', name: 'Fuel tank', side: 'U', step: 1, give: () => `${fmt1(prm('tank_fuel'))} t of fuel`, price: () => prm('price_tank') }]],
+    ['Structure', [
+      { id: 'bulkhead', name: 'Bulkhead', side: '±', step: 1, give: () => 'moves bay into pressure', price: () => prm('price_bulkhead'), signed: true }]]
+  ];
+  // the bay's blocks, by side, and their colours
+  const BAY = { P: [['bunks', '#8fd3ff'], ['sensors', '#7fd0c4'], ['furnace', '#e8a05a'], ['jump', '#c9b3f0'], ['battery', '#e2b866'], ['banks', '#6fa8ff'], ['climate', '#7fd08a']],
+    U: [['hopper', '#a08a6a'], ['rack', '#c8a27a'], ['tank', '#d07a5a'], ['deflector', '#6fa8ff'], ['fins', '#9fb4c8'], ['sinks', '#7a8aa0']] };
+  const BAY_NAME = { bunks: 'bunks', sensors: 'sensors', furnace: 'reactor', jump: 'jump drive', battery: 'battery', banks: 'shield banks', climate: 'climate hold',
+    hopper: 'hoppers', rack: 'racks', tank: 'fuel tank', deflector: 'deflector', fins: 'fins', sinks: 'heat sinks' };
+  const draftT = n => sim.draft.t[FIT[n]], fitT = n => sim.fit.t[FIT[n]];
+  const changed = () => sim.fitSlots.some((n, k) => n && sim.draft.t[k] !== sim.fit.t[k]);
+  // set slot n of the draft to v tonnes (all four corners for the jets)
+  function setDraft(n, v) {
+    const slots = n === 'jets' ? [0, 1, 2, 3].map(c => FIT['corner' + c]) : [FIT[n]];
+    for (const k of slots) { const r = command(CMD.draft, k, Math.round(v * 2)); if (r) { toast(`Can't: ${CORE.RESULT[r] || r}`); break; } }
+    refreshOutfit();
+  }
+  function stepRow(n, dir, step, signed) {
+    // torches and jets: nothing, half a tonne, then whole tonnes (the plumes' total is the hull's limit: the core says)
+    const cur = n === 'jets' ? draftT('corner0') : draftT(n);
+    if (n === 'jets' || n.startsWith('plume')) { setDraft(n, dir > 0 ? (cur < 0.5 ? 0.5 : cur < 1 ? 1 : cur + 1) : (cur > 1 ? cur - 1 : cur > 0.5 ? 0.5 : 0)); return; }
+    const v = cur + dir * step;
+    if (!signed && v < 0) return;
+    setDraft(n, v);
+  }
+  // the hull, its plumes and corners where they are on it (the bake's silhouette and nozzles; the jet anchors)
+  function drawOutfitShip(T) {
+    const cv = $('outfit-ship'), c = cv.getContext('2d'), W = cv.width, H = cv.height;
+    c.clearRect(0, 0, W, H);
+    if (!T || !typeReady(T)) { c.fillStyle = '#8a95a4'; c.font = '12px "IBM Plex Mono", monospace'; c.fillText('Baking the hull…', 12, H / 2); return; }
+    // the silhouette (the bake's aux map: inside where its distance outside the hull is ~0), zoomed to the hull's own
+    // extent with room round it for the plumes' marks
+    const m = T.s.maps, res = m.res, aux = T.s.aux;
+    const img = c.createImageData(res, res);
+    let x0 = res, x1 = 0, y0 = res, y1 = 0;
+    for (let o = 0; o < res * res; o++) if (aux[o * 4] < 2) {
+      img.data[o * 4] = 60; img.data[o * 4 + 1] = 72; img.data[o * 4 + 2] = 88; img.data[o * 4 + 3] = 255;
+      const ix = o % res, iy = (o / res) | 0; x0 = Math.min(x0, ix); x1 = Math.max(x1, ix); y0 = Math.min(y0, iy); y1 = Math.max(y1, iy);
+    }
+    const k = 0.8 * Math.min(W / Math.max(1, x1 - x0 + 1), H / Math.max(1, y1 - y0 + 1)), ox = W / 2 - (x0 + x1 + 1) / 2 * k, oy = H / 2 - (y0 + y1 + 1) / 2 * k;
+    const tmp = document.createElement('canvas'); tmp.width = tmp.height = res; tmp.getContext('2d').putImageData(img, 0, 0);
+    c.imageSmoothingEnabled = true; c.drawImage(tmp, ox, oy, res * k, res * k);
+    // texel (u, v) and hull metres (x right, y forward) on the canvas
+    const at = (u, v) => [ox + u * res * k, oy + v * res * k], px = (lx, ly) => at(0.5 + lx / m.extent, 0.5 - ly / m.extent);
+    c.font = '600 11px "IBM Plex Mono", monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    (m.engines || []).slice(0, 8).forEach((e, q) => {
+      const [x, y] = at(e.u, e.v), t = draftT('plume' + q);
+      c.fillStyle = t > 0 ? '#ff8a2e' : '#4d5663'; c.beginPath(); c.arc(x, y + 6, 7, 0, 7); c.fill();
+      c.fillStyle = '#07090c'; c.fillText(t ? fmt1(t) : '–', x, y + 6);
+    });
+    if (T.rcs) ['fl', 'fr', 'rl', 'rr'].forEach((n, q) => {
+      const [x, y] = px(T.rcs[n][0], T.rcs[n][1]), t = draftT('corner' + q);
+      c.fillStyle = '#8fd3ff'; c.fillRect(x - 6, y - 6, 12, 12); c.fillStyle = '#07090c'; c.fillText(fmt1(t), x, y);
+    });
+  }
+  function refreshOutfit() {
+    if (!sim.game.fitted[0]) return;
+    const base = sim.game.base[0], T = types[base], cur = fitStats(0), d = fitStats(1);
+    $('outfit-sum').textContent = `${T.name} · fit worth ${fmtCr(Math.round(d.value))} cr`;
+    // the bars: pressurised and unpressurised, a block a module
+    const bar = (side, used, space) => {
+      const blocks = BAY[side].map(([n, col]) => { const t = n === 'bunks' ? draftT(n) * prm('bunk_t') : draftT(n); return t > 0 ? `<i style="width:${100 * t / Math.max(space, used, 1)}%;background:${col}" title="${BAY_NAME[n]} ${fmt1(t)} t"></i>` : ''; }).join('');
+      return `<div class="bay"><span>${side === 'P' ? 'Pressurised' : 'Unpressurised'}</span><b class="${used > space + 1e-9 ? 'over' : ''}">${fmt1(used)} / ${fmt1(space)} t</b><div class="bay-bar">${blocks}</div></div>`;
+    };
+    $('outfit-bars').innerHTML = bar('P', d.pUsed, d.pSpace) + bar('U', d.uUsed, d.uSpace);
+    // the rows: the plumes first (one a nozzle), then each group
+    const cell = (n, name, side, give, price, step, unit, signed) => {
+      const a = n === 'jets' ? draftT('corner0') : draftT(n), b = n === 'jets' ? fitT('corner0') : fitT(n);
+      const u = unit === undefined ? ' t' : unit;
+      return `<tr><td>${name}<br><small>${side} · ${give}${price ? ` · ${fmtCr(Math.round(price))} cr` : ''}</small></td>`
+        + `<td class="num${a !== b ? ' high' : ''}">${signed && a > 0 ? '+' : ''}${fmt1(a)}${u}${a !== b ? `<br><small>was ${fmt1(b)}</small>` : ''}</td>`
+        + `<td class="act"><button type="button" data-n="${n}" data-d="-1" data-s="${step}"${signed ? ' data-signed="1"' : ''}>−</button><button type="button" data-n="${n}" data-d="1" data-s="${step}"${signed ? ' data-signed="1"' : ''}>+</button></td></tr>`;
+    };
+    const torches = Array.from({ length: d.plumes }, (_, q) => draftT('plume' + q)).reduce((a, b) => a + b, 0);
+    let rows = `<tr class="grp"><td colspan="3">Torches · a plume each · ${fmt1(torches)} of ${fmt1(d.torchCap)} t</td></tr>`;
+    for (let q = 0; q < d.plumes; q++) { const t = draftT('plume' + q); rows += cell('plume' + q, `Plume ${q + 1}`, 'torch', `${fmt1(t * prm('torch_mn'))} MN`, prm('price_torch') * t * t * t, 1); }
+    for (const [g, list] of OUTFIT_GROUPS) {
+      rows += `<tr class="grp"><td colspan="3">${g}</td></tr>`;
+      for (const R of list) rows += cell(R.id, R.name, R.side === 'P' ? 'pressurised' : R.side === 'U' ? 'unpressurised' : R.side, R.give(), R.price(), R.step, R.unit, R.signed);
+    }
+    $('outfit-rows').innerHTML = rows;
+    // the budget: what the draft makes, and the change from the ship's fit
+    const delta = (a, b, f = fmt1, good = 1) => Math.abs(a - b) < 1e-6 ? '' : ` <small class="${(a - b) * good > 0 ? 'up' : 'down'}">${a > b ? '+' : '−'}${f(Math.abs(a - b))}</small>`;
+    const kms2 = a => Math.round(a * KM).toLocaleString('en-US'), deg = r => Math.round(r * 180 / Math.PI), int = x => Math.round(x).toLocaleString('en-US'); // (the screen's km: KM to the metre)
+    const drive = d.mwLife + d.mwDrive, short = d.mwLife + d.mwDrive + d.mwRegen + d.mwBurn - d.mw;
+    const perLy = sim.laneFuel(PK, 1) || 1, range = d.fuel / perLy;
+    const line = (k, v) => `<p><span>${k}</span><b>${v}</b></p>`;
+    $('outfit-budget').innerHTML = [
+      line('Mass', `${int(d.massEmpty)} t${delta(d.massEmpty, cur.massEmpty, fmt1, -1)} · full ${int(d.massFull)} t`),
+      line('Acceleration', `${kms2(d.accel)} km/s²${delta(d.accel, cur.accel, kms2)} · full ${kms2(d.accelFull)}`),
+      line('Turn', `${deg(d.turn)}°/s${delta(d.turn, cur.turn, deg)}`),
+      line('Power', `${fmt1(d.mw)} MW${delta(d.mw, cur.mw)} · cruise ${fmt1(drive)} · shields +${fmt1(d.mwRegen)} · burner +${fmt1(d.mwBurn)}`),
+      line('Battery', `${fmt1(d.battery)} MJ${delta(d.battery, cur.battery)}${short > 0 ? ` · ${Math.round(d.battery / short)} s of burner short` : ''}`),
+      line('Heat', d.burnSecs < 0 ? 'the burner never locks' : `burner locks after ${Math.round(d.burnSecs)} s${delta(d.burnSecs, cur.burnSecs, x => Math.round(x) + ' s')}`),
+      line('Shield', `${fmt1(d.shield)} pts${delta(d.shield, cur.shield)} · ${fmt1(d.regen)}/s${d.regen > 0 ? ` · full in ${Math.round(d.shield / d.regen)} s` : ''}`),
+      line('Hull', `${int(d.hull)} pts${delta(d.hull, cur.hull, int)}`),
+      line('Holds', `bulk ${fmt1(d.hopper)} · racks ${fmt1(d.rack)} · climate ${fmt1(d.climate)} t`),
+      line('Fuel', `${fmt1(d.fuel)} t${delta(d.fuel, cur.fuel)} · ${fmt1(range)} ly`),
+      line('Jump drive', `jumps ${int(d.jump)} t · laden ${int(d.massFull)} t`),
+      line('Crew', `${d.crew} bunks · needs ${d.crewMin}`)
+    ].join('');
+    const warn = [];
+    if (d.problem) warn.push(`Can't fit: ${CORE.RESULT[d.problem] || d.problem}`);
+    if (d.mw <= 0) warn.push('No reactor: the battery runs the ship until it is flat');
+    else if (drive > d.mw) warn.push('Not enough power for full thrust: the drive browns out');
+    else if (drive + d.mwRegen > d.mw) warn.push('Shields recharge slowly at full thrust');
+    if (d.jump < d.massFull) warn.push(d.jump < d.massEmpty ? 'The jump drive can’t move the ship' : 'The jump drive can’t move a full hold');
+    if (d.crew < d.crewMin) warn.push('Too few bunks for the crew it needs: it can’t launch');
+    if (!(d.climate > 0)) warn.push('No climate hold: no food or medicine');
+    $('outfit-warn').innerHTML = warn.map(w => `<li>${esc(w)}</li>`).join('');
+    const ch = changed(), cost = d.cost;
+    $('outfit-cost').textContent = !ch ? 'No changes' : cost >= 0 ? `Refit: ${fmtCr(cost)} cr${cost > sim.credits() ? ` (you have ${fmtCr(sim.credits())})` : ''}` : `Refit: ${fmtCr(-cost)} cr back`;
+    $('outfit-refit').disabled = !ch || !!d.problem || cost > sim.credits();
+    $('outfit-reset').disabled = !ch;
+    drawOutfitShip(T);
+  }
+  function refit() {
+    const before = sim.credits(), r = command(CMD.refit);
+    if (r === 0) { const paid = before - sim.credits(); toast(paid >= 0 ? `Refitted for ${fmtCr(paid)} cr` : `Refitted: ${fmtCr(-paid)} cr back`); }
+    else toast(`Can't refit: ${CORE.RESULT[r] || r}`);
+    refreshPort();
+    return r;
+  }
+  $('outfit-rows').addEventListener('click', e => { const b = e.target.closest('button[data-n]'); if (b) stepRow(b.dataset.n, +b.dataset.d, +b.dataset.s, !!b.dataset.signed); });
+  $('outfit-refit').onclick = () => refit();
+  $('outfit-reset').onclick = () => { command(CMD.draftFrom, 0); refreshOutfit(); };
+  $('outfit-stock').onclick = () => { command(CMD.draftFrom, 1); refreshOutfit(); };
+
   // ---------- render ----------
   const MAXS = CFG.maxShips;
   // the most stations a system can have: its bodies (the schema's cap) and its environmental stations
@@ -1319,7 +1510,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // lens ghosts per flare: [distance along the flare-to-centre line (1 is the far side), size in px at 900 px tall, tint]
   const GHOSTS = [[-0.35, 9, 0.8], [0.4, 22, 0.2], [0.75, 12, 0.9], [1.25, 38, 0.35]], ghostInst = new Float32Array(2 * 4 * 8);
   // draw order: largest classes first, so small ships sit on top
-  const order = types.map((_, k) => k).sort((a, b) => types[b].zi - types[a].zi);
+  const order = Object.keys(types).map(Number).sort((a, b) => types[b].zi - types[a].zi);
   let scale = 1;
   const sheaths = []; // [slot, sequence look] to draw this frame (reused)
   const LAUNCH_S = sim.launchS, DESCENT_S = sim.descentS;
@@ -1759,8 +1950,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
 
   // ---------- HUD ----------
   // The Book's flight HUD: day, credits and status top-left; radar top-right with the location list under it;
-  // the nav target bottom-right; the message log bottom-left; prompts bottom centre. Ship status is hull and fuel (and
-  // radiation, in a hazard zone); shields, energy and heat, and radar contacts at their sensor error radius, wait for M2.
+  // the nav target bottom-right; the message log bottom-left; prompts bottom centre. Ship status is speed, fuel, shield,
+  // hull, heat and charge (and radiation, in a hazard zone).
   let hudBoxH = 0; // the status box's height (top left): the edge markers keep below it
   const keysEl = document.querySelector('.strip .keys');
   function drawHUD() {
@@ -1796,7 +1987,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const heat = sim.game.heat[0], hot = sim.game.hot[0]; // the burner's heat; at full it locks until half cooled (core/src/service.rs)
     // The status panel (top left, styled as the target panel): the ship's name; day, credits and hold; amount bars, as
     // percentages, two to a row: speed (of the top speed here, the throttle's mark on it) and fuel (the next jump's cost
-    // marked on it), shield and hull, heat and charge (shield and charge are M2's: placeholders); the flight mode
+    // marked on it), shield and hull, heat and charge (the fit's: core/src/fit.rs); the flight mode
     // and where the ship is, in a well (its strength) or in deep space (how far the open-space top speed has risen);
     // then the jump zone, the course, the autopilot and the missions.
     const thr = sim.game.throttle[0], vmax0 = sim.type.vmax[SH.kind[0]], top0 = sim.topSpeed(SH.kind[0], SH.x[0], SH.y[0]);
@@ -1840,15 +2031,23 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     val(`${Math.round(spK * 100)}%`, x0 + LW + half + 6, y, rel ? '#8fd3ff' : undefined);
     tag('FUEL', col2, y); amount(col2 + 30, y, half, fuelK, short ? '#f08a72' : fuelK < 0.2 ? '#e2b866' : '#c8a27a', nj ? jCost / fuelCap : null, short ? '#f08a72' : '#dbe0e7');
     val(`${Math.round(fuelK * 100)}%`, col2 + 30 + half + 6, y, short ? '#f08a72' : undefined);
-    // shield (M2) and hull
+    // shield and hull; a shield restarting (collapsed, or dropped to run cold) shows the restart's progress
     y += RH;
-    tag('SHIELD', x0, y); none(x0 + LW, y, half); val('—', x0 + LW + half + 6, y, '#8a95a4');
+    const shCap = sim.fit.t[FIT.banks] * sim.param('bank_pts'), shK = shCap > 0 ? sim.game.shield[0] / shCap : 0, shT = sim.game.shield_t[0];
+    tag('SHIELD', x0, y);
+    if (!sim.game.fitted[0] || shCap <= 0) { none(x0 + LW, y, half); val('—', x0 + LW + half + 6, y, '#8a95a4'); }
+    else if (shT > 0) { amount(x0 + LW, y, half, 1 - shT / sim.param('shield_restart'), 'rgba(143,211,255,.3)'); val(sim.game.cold[0] ? 'COLD' : 'DOWN', x0 + LW + half + 6, y, '#f08a72'); }
+    else { amount(x0 + LW, y, half, shK, shK < 0.3 ? '#f08a72' : '#8fd3ff'); val(`${Math.round(shK * 100)}%`, x0 + LW + half + 6, y, rad > 0 ? '#8fd3ff' : undefined); }
     tag('HULL', col2, y); amount(col2 + 30, y, half, hullK, hullK < 0.3 ? '#f08a72' : hullK < 0.7 ? '#e2b866' : '#7fd08a'); val(`${Math.ceil(hullK * 100)}%`, col2 + 30 + half + 6, y, rad > 0 || hullK < 0.3 ? '#f08a72' : undefined);
     // heat and charge (M2)
     y += RH;
     tag('HEAT', x0, y); amount(x0 + LW, y, half, heat, hot ? '#f08a72' : heat > 0.7 ? '#e8a05a' : '#e2b866');
     val(hot ? 'LOCK' : burn ? 'BURN' : `${Math.round(heat * 100)}%`, x0 + LW + half + 6, y, hot ? '#f08a72' : burn ? '#e2b866' : undefined);
-    tag('CHG', col2, y); none(col2 + 30, y, half); val('—', col2 + 30 + half + 6, y, '#8a95a4');
+    // charge: the battery; it reads LOW when the helm and drive are browning out (core/src/fit.rs)
+    const batCap = sim.fit.t[FIT.battery] * sim.param('battery_mj'), chK = batCap > 0 ? sim.game.energy[0] / batCap : 0, brown = sim.game.fitted[0] && sim.game.drive[0] < 0.999;
+    tag('CHG', col2, y);
+    if (!sim.game.fitted[0] || batCap <= 0) { none(col2 + 30, y, half); val(brown ? 'LOW' : '—', col2 + 30 + half + 6, y, brown ? '#f08a72' : '#8a95a4'); }
+    else { amount(col2 + 30, y, half, chK, brown || chK < 0.2 ? '#f08a72' : chK < 0.5 ? '#e2b866' : '#c9b3f0'); val(brown ? 'LOW' : `${Math.round(chK * 100)}%`, col2 + 30 + half + 6, y, brown ? '#f08a72' : undefined); }
     // the flight mode and where the ship is
     y += RH;
     val(modeLine, x0, y, rad > 0 ? '#f08a72' : assistMode ? '#c8a27a' : '#9fb4c8');
@@ -2645,6 +2844,10 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     seq: () => sim.mode() === MODE.descending || sim.mode() === MODE.launching ? playerSeq() : null,
     setNav, trade, repay, showPanel, accept, abandon, setTarget, flyTo, cycleTarget, toggleMap, pickLocation,
     service: what => portService(what), // 'refuel' or 'repair', where landed
+    // the outfitter (core/src/fit.rs): a fit's stats (0 the ship's, 1 the draft), a draft slot set (tonnes; 'jets' all four
+    // corners), the refit, and the fit's slots
+    fitStats: which => fitStats(which), setDraft: (n, v) => setDraft(n, v), refit: () => refit(), fitSlots: () => Object.fromEntries(Object.entries(FIT).map(([n, k]) => [n, sim.fit.t[k]])),
+    roomFor: id => sim.roomFor(GOODS.findIndex(c => c.id === id)),
     get SUNS() { return SUNS; }, starKit, starLook, // the current system's stars, the star kit and looks (src/stars.js)
     // the target set last (the destination or the ship), and both
     target: () => { const t = lastSet === 'ship' ? navShip : navDest; return t && (t.body !== undefined ? { body: t.body } : t.zone !== undefined ? { zone: t.zone } : { ship: sim.resolve(t.ship) }); },
@@ -2686,7 +2889,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     },
     probe: () => ({ barrier: !!barrier, notice, tick: sim.tick(), hash: sim.hash(), x: SH.x[0], y: SH.y[0], v: Math.hypot(SH.vx[0], SH.vy[0]), set: sim.playerSet(), assist: assistMode, mode: sim.mode(), day: sim.day(), at: sim.game.at[0], ready: typeReady(types[SH.kind[0]]), auto: sim.game.auto[0] - 1, map: mapOn, shell: shellOpen(), paused, seed: seedNow,
       credits: sim.credits(), debt: sim.debt(), hold: Object.fromEntries(GOODS.map((c, g) => [c.id, sim.hold.tons[g]]).filter(e => e[1])), holdCap: holdCap(),
-      hull: SH.hull[0], hullCap: sim.type.hull[SH.kind[0]], fuel: sim.game.fuel[0], fuelCap: sim.type.fuel[SH.kind[0]], lost }),
+      hull: SH.hull[0], hullCap: sim.type.hull[SH.kind[0]], fuel: sim.game.fuel[0], fuelCap: sim.type.fuel[SH.kind[0]], lost,
+      fitted: !!sim.game.fitted[0], shield: sim.game.shield[0], energy: sim.game.energy[0], drive: sim.game.drive[0], heat: sim.game.heat[0] }),
     // hold keys for sec seconds of sim time (recorded like live input)
     advance: (sec, held) => {
       const saved = new Set(keys); keys.clear(); (held || []).forEach(k => keys.add(k));

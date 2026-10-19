@@ -1,18 +1,18 @@
 {
-  "description": "M1's economy: fixed prices by port role (the Book: 'fixed prices that vary with the port's role'). A port trades the commodities its role lists, at the commodity's base price times its tier: low where the role makes it, high where the role needs it. Commodities are core rows in this order (at most 16). A new game starts in start.system (a system file's id: the Book's M1 system), with credits and a debt to a lender.",
+  "description": "M1's economy: fixed prices by port role (the Book: 'fixed prices that vary with the port's role'). A port trades the commodities its role lists, at the commodity's base price times its tier: low where the role makes it, high where the role needs it. Commodities are core rows in this order (at most 16); each names the hold that takes it (core/src/fit.rs): bulk goes in any hold, general cargo in container racks or a climate hold, and food and medicine only in a climate hold, so they pay more. A new game starts in start.system (a system file's id: the Book's M1 system), with credits and a debt to a lender.",
   "start": { "system": "brannock", "credits": 1500, "debt": 12000 },
   "tiers": { "low": 0.7, "medium": 1.0, "high": 1.4 },
   "commodities": [
-    { "id": "food", "name": "Food", "base": 25 },
-    { "id": "water", "name": "Water", "base": 12 },
-    { "id": "ore", "name": "Ore", "base": 35 },
-    { "id": "metals", "name": "Metals", "base": 80 },
-    { "id": "fuel", "name": "Fuel", "base": 45 },
-    { "id": "chemicals", "name": "Chemicals", "base": 65 },
-    { "id": "alloys", "name": "Alloys", "base": 130 },
-    { "id": "components", "name": "Components", "base": 170 },
-    { "id": "goods", "name": "Consumer goods", "base": 110 },
-    { "id": "medicine", "name": "Medicine", "base": 220 }
+    { "id": "food", "name": "Food", "base": 60, "hold": "climate" },
+    { "id": "water", "name": "Water", "base": 12, "hold": "bulk" },
+    { "id": "ore", "name": "Ore", "base": 35, "hold": "bulk" },
+    { "id": "metals", "name": "Metals", "base": 80, "hold": "bulk" },
+    { "id": "fuel", "name": "Fuel", "base": 45, "hold": "bulk" },
+    { "id": "chemicals", "name": "Chemicals", "base": 65, "hold": "bulk" },
+    { "id": "alloys", "name": "Alloys", "base": 130, "hold": "general" },
+    { "id": "components", "name": "Components", "base": 170, "hold": "general" },
+    { "id": "goods", "name": "Consumer goods", "base": 110, "hold": "general" },
+    { "id": "medicine", "name": "Medicine", "base": 300, "hold": "climate" }
   ],
   "roles": {
     "mining": { "ore": "low", "fuel": "medium", "food": "high", "water": "high", "components": "high", "goods": "high", "medicine": "high" },

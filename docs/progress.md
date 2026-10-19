@@ -8,7 +8,7 @@ Status, 2026-10-17: from an audit of every milestone-tagged line in [the Book](b
 | :-- | :-- | :-- |
 | **M0** Flight lab | **Done** | The three-level assist and full-off rotation, the last open items, are in the core and the game. No weapon recoil anywhere. |
 | **M1** Trade and delivery | **Exit test passes; a few items open** | Open: the full daily tick, mission templates, news and intel in port, the debug API's actions, ships grouped by type. Sensors, stellar radiation and flares moved into the core on 2026-10-17. See [m1-progress.md](m1-progress.md). |
-| **M2** Combat | **Not started in the core** | 0 of 48 in the game. 12 exist only in the lab's frozen prototype (`src/fly.js`): heat and overheat, shield regen and collapse, a bolt gun, hits on the silhouette, fleeing. The core ignores the fire key. Built early in M1: hull points, landed repair, fuel. |
+| **M2** Combat | **Outfitting, energy, heat and shields built; no weapons** | Built 2026-10-18 ([outfitting.md](outfitting.md), `core/src/fit.rs`): hull capacities (pressurised and unpressurised bay, plumes, corners), mass, energy (reactor, battery, draw, brownout by priority), heat by mass with radiators and sinks, shield capacity, regen and collapse (radiation and running cold drop it), the outfitter, cargo by hold class. Not started: weapons, damage channels, hardness, bleed-through, resistances, system damage, field repair, disable. The lab's frozen prototype (`src/fly.js`) still has a bolt gun and hits on the silhouette. Built early in M1: hull points, landed repair, fuel. |
 | **M3** Assets and set pieces | **Mostly not started** | 4 of 35 partial: the per-system ship mix, the heavy hulls (lab only), weapon counts by class, rock compositions (visual only). No boarding, mining, capital landers, derelicts, or Blackhull and Freeflag lines. |
 | **M4** Several systems | **Jumping built; the rest not started** | Scope met: the six March systems, joined by lanes. Built: the galaxy map, jump zones per lane with buoys, the torch jump with fuel and days per lane, the transit, chain jumping along a course ([jumping.md](jumping.md)). Not started: intel snapshots, interdiction, missions between systems, flight running the clock, misjump. |
 | **M5** Economy | **Not started** | Fixed prices. Built early: the LLM lore and story pipeline (seeded, cached, committed), each region's trade balance in the data. |
@@ -29,7 +29,7 @@ Status, 2026-10-17: from an audit of every milestone-tagged line in [the Book](b
 ## What stands in the way
 
 - **The M4 exit test needs combat.** It asks for cross-system cargo *and bounty* runs, and interdiction at jump zones: M2's weapons, shields and pirates (and M3's drag field, or M2's ion weapons) come before it can pass.
-- **Combat is a fresh design.** Everything combat-shaped is in the lab's frozen JavaScript, which the game does not use; M2 builds weapons, energy, heat, shields and damage as core columns.
+- **Combat is a fresh design.** The fit, energy, heat and shields are core columns now ([outfitting.md](outfitting.md)); weapons and damage are next, on top of them. The lab's frozen JavaScript has the old prototypes.
 - **Missions between systems** are the next M4 piece now jumping works (traffic already torches out and blinks in at the zones).
 - **Beyond the March needs generated systems** ([data.md](data.md), step 4): only six of 929 systems can be flown.
 

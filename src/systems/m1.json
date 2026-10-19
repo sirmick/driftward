@@ -201,7 +201,8 @@
           "missions",
           "bar",
           "refuel",
-          "repair"
+          "repair",
+          "outfitter"
         ],
         "description": "A cradle of girders where the Ironhulls build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."
       }

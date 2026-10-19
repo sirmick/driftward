@@ -86,7 +86,8 @@
           "missions",
           "bar",
           "refuel",
-          "repair"
+          "repair",
+          "outfitter"
         ],
         "description": "The navy's base for the March: berths for the picket squadron, customs halls where every Ironhull cargo going inward is opened, and the levy office the Compact pays into. Clean, loud, and shorter-staffed every month."
       }

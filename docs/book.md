@@ -595,6 +595,8 @@ How hulls are made and what sets them apart. Every hull is generated; none is dr
 
 ## **Outfitting**
 
+Frames, components by the tonne, power and shields, as designed: [outfitting.md](outfitting.md).
+
 * \[M2\] Hull capacities: outfit space, weapon space, engine space, gun ports and turret mounts. Counts and mount positions come from the generated hull's parts.  
 * \[M2\] Mass: outfits add mass, which lowers acceleration and turn rate.  
 * \[M2\] Energy and heat: generators, batteries and coolers, on Endless Sky's model (see Energy and heat). Most build tradeoffs live here.  

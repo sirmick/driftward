@@ -67,7 +67,7 @@ button { font: inherit; color: inherit; }
 .port-day { margin: 18px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
 .port-money { margin: 6px 0 0; color: var(--fg); font: 500 12px var(--f-mono); }
 .port-services button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
-#trade, #board { background: rgba(12,16,21,.92); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+#trade, #board, #outfit { background: rgba(12,16,21,.92); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
 .trade-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
 .trade-head h3 { margin: 0; font: 700 20px/1 var(--f-display); letter-spacing: .05em; text-transform: uppercase; }
 .trade-head span { color: var(--muted); font: 500 12px var(--f-mono); }
@@ -79,10 +79,32 @@ button { font: inherit; color: inherit; }
 #port td.act { text-align: right; white-space: nowrap; }
 #port td small { color: var(--muted); font-size: 11px; }
 .board-sub { margin: 16px 0 6px; color: var(--muted); font: 600 12px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; }
-#trade button, #board button { background: #121821; border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; margin-left: 4px; cursor: pointer;
+#trade button, #board button, #outfit button { background: #121821; border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; margin-left: 4px; cursor: pointer;
   font: 600 11.5px var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: var(--fg); }
-#trade button:hover:not(:disabled), #board button:hover:not(:disabled) { border-color: var(--amber); }
-#trade button:disabled, #board button:disabled { cursor: default; color: #4d5663; }
+#trade button:hover:not(:disabled), #board button:hover:not(:disabled), #outfit button:hover:not(:disabled) { border-color: var(--amber); }
+#trade button:disabled, #board button:disabled, #outfit button:disabled { cursor: default; color: #4d5663; }
+/* the outfitter (src/play/play.js refreshOutfit): rows and steppers beside the hull and the budget; it widens the port
+   screen while it is open */
+#port.wide { grid-template-columns: minmax(0, 340px) minmax(0, 860px); }
+#outfit { max-height: calc(100vh - 120px); overflow-y: auto; }
+.outfit-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; }
+.outfit-grid > div:last-child { position: sticky; top: 0; align-self: start; } /* the hull and the budget stay in view as the rows scroll */
+#outfit .outfit-table td { padding: 3px 6px; }
+#outfit .outfit-table td small { font-size: 10.5px; }
+#outfit .outfit-table tr.grp td { color: var(--muted); font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; padding-top: 10px; border-bottom: 1px solid var(--line); }
+#outfit .outfit-table button { min-width: 26px; margin-left: 2px; padding: 2px 6px; }
+#outfit .trade-foot button.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+#outfit .trade-foot button.primary:disabled { background: #121821; border-color: var(--line); color: #4d5663; }
+.bay { margin: 0 0 8px; font: 500 11.5px var(--f-mono); color: var(--muted); }
+.bay span { display: inline-block; width: 110px; }
+.bay b { color: var(--fg); font-weight: 500; } .bay b.over { color: var(--bad); }
+.bay-bar { display: flex; height: 10px; margin-top: 3px; background: rgba(219,224,231,.08); border-radius: 2px; overflow: hidden; }
+.bay-bar i { display: block; height: 100%; border-right: 1px solid rgba(7,9,12,.8); }
+#outfit-ship { display: block; width: 220px; height: 220px; margin: 0 auto 8px; background: rgba(7,9,12,.5); border: 1px solid var(--line); border-radius: 6px; }
+#outfit-budget p { display: flex; justify-content: space-between; gap: 8px; margin: 0; padding: 3px 0; border-bottom: 1px solid rgba(30,38,48,.6); font: 500 11.5px var(--f-mono); }
+#outfit-budget span { color: var(--muted); } #outfit-budget b { font-weight: 500; text-align: right; }
+#outfit-budget small.up { color: #7fd08a; } #outfit-budget small.down { color: #f08a72; }
+#outfit-warn { margin: 8px 0 0; padding: 0 0 0 16px; color: var(--amber); font: 500 11.5px var(--f-mono); }
 .trade-foot { display: flex; align-items: center; gap: 4px; margin: 12px 0 0; color: var(--muted); font: 500 12px var(--f-mono); }
 .trade-foot span { flex: 1; }
 .trade-note { margin: 8px 0 0; color: var(--muted); font: 400 11.5px var(--f-mono); }
@@ -391,6 +413,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
       <button type="button" id="svc-bar" aria-pressed="false">Bar<span>B</span></button>
       <button type="button" id="svc-refuel">Refuel<span id="svc-refuel-k">F</span></button>
       <button type="button" id="svc-repair">Repair<span id="svc-repair-k">R</span></button>
+      <button type="button" id="svc-outfit" aria-pressed="false">Outfitter<span>O</span></button>
       <button type="button" id="svc-wait">Wait<span>W</span></button>
       <button type="button" id="svc-map">Map<span>G</span></button>
       <button type="button" id="svc-launch" class="primary">Launch<span>L</span></button>
@@ -418,6 +441,22 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
       <tbody id="mission-rows"></tbody>
     </table>
     <p class="trade-note">Late: no pay, and the cargo is taken back.</p>
+  </div>
+  <div id="outfit" hidden aria-label="Outfitter">
+    <div class="trade-head"><h3>Outfitter</h3><span id="outfit-sum"></span></div>
+    <div class="outfit-grid">
+      <div>
+        <div id="outfit-bars"></div>
+        <table class="outfit-table"><tbody id="outfit-rows"></tbody></table>
+      </div>
+      <div>
+        <canvas id="outfit-ship" width="220" height="220"></canvas>
+        <div id="outfit-budget"></div>
+        <ul id="outfit-warn"></ul>
+      </div>
+    </div>
+    <div class="trade-foot"><span id="outfit-cost"></span><button type="button" id="outfit-stock">Stock</button><button type="button" id="outfit-reset">Reset</button><button type="button" id="outfit-refit" class="primary">Refit</button></div>
+    <p class="trade-note">A draft until you refit. Parts taken out sell back at 60%; a torch changed is a new torch.</p>
   </div>
   <div id="bar" hidden aria-label="Bar">
     <div class="trade-head"><h3>Bar</h3><span id="bar-sum"></span></div>

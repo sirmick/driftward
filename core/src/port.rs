@@ -11,7 +11,8 @@
 //! a short descent; landed, the player is safe and flight is paused for them; each landing advances the clock by
 //! a day, and so does waiting in port, which costs a docking fee. Stations need a slower approach than planets
 //! (clamps, not a descent). Landing delivers the missions bound for the port. Trading commands are in market.rs,
-//! mission commands in mission.rs, refuelling and repair in service.rs.
+//! mission commands in mission.rs, refuelling and repair in service.rs, the outfitter's in fit.rs. A ship short of its
+//! minimum crew can't launch.
 //!
 //! A moving station (motion.rs) carries the ship docked at it, and its sequences, along with it; "slow" means slow
 //! relative to it, and a launch hands back control moving with it.
@@ -20,6 +21,7 @@ use crate::market::{CMD_BUY, CMD_REPAY, CMD_SELL, NO_CREDITS};
 use crate::mission::{CMD_ABANDON, CMD_ACCEPT};
 use crate::sensors::{CMD_COLD, CMD_FLARE, CMD_PING, CMD_TARGET};
 use crate::service::{CMD_REFUEL, CMD_REPAIR};
+use crate::fit::{CMD_DRAFT, CMD_DRAFT_FROM, CMD_REFIT, NO_CREW};
 use crate::jump::{CMD_HYPER, CMD_ZONE, J_NONE};
 use crate::math::{atan2, hypot};
 use crate::world::{World, DT, P};
@@ -116,6 +118,7 @@ impl World {
             }
             CMD_LAUNCH => {
                 if mode != MODE_LANDED { return WRONG_MODE; }
+                if !self.crew_ok() { return NO_CREW; }
                 self.game.mode[0] = MODE_LAUNCHING;
                 self.game.timer[0] = LAUNCH_S;
                 let (tx, ty, v) = self.launch_velocity();
@@ -138,6 +141,7 @@ impl World {
             CMD_BUY | CMD_SELL | CMD_REPAY => self.trade(code, a, b),
             CMD_ACCEPT | CMD_ABANDON => self.mission_command(code, a),
             CMD_REFUEL | CMD_REPAIR => self.service(code),
+            CMD_DRAFT | CMD_DRAFT_FROM | CMD_REFIT => self.fit_command(code, a, b),
             CMD_COLD | CMD_PING | CMD_TARGET | CMD_FLARE => self.sensor_command(code, a, b),
             CMD_AUTOPILOT => {
                 // a: body a; -1 off; -2 - g: jump zone g (its lane's gate; player.rs zone_pilot)
@@ -222,6 +226,7 @@ impl World {
                 if self.game.timer[0] <= DONE {
                     self.game.timer[0] = 0.0;
                     self.game.mode[0] = MODE_LANDED;
+                    self.charge_up(); // on the port's power (fit.rs)
                     self.next_day();
                     self.deliver(self.game.at[0] as usize);
                 }

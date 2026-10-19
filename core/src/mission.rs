@@ -6,9 +6,10 @@
 //!
 //! Offers bind live state: the origin port's market picks the cargo, the route picks the deadline (route length in
 //! days times a slack) and the pay (a base plus tons times kilometres, times an urgency that rises as slack falls).
-//! The Book's risk and faction-wealth factors are 1 in M1.
+//! The Book's risk and faction-wealth factors are 1 in M1. Climate cargo (food, medicine) pays `climate_pay` times
+//! over: it needs a climate hold (fit.rs).
 
-use crate::market::{MAX_GOODS, NO_ROOM};
+use crate::market::MAX_GOODS;
 use crate::math::hypot;
 use crate::port::{MODE_LANDED, OK, WRONG_MODE};
 use crate::world::{World, P};
@@ -78,7 +79,9 @@ impl World {
         let slack = self.rng.range(lo, hi);
         let days = 1 + (km * 1000.0 / self.p(P::route_day) * slack).floor() as u32;
         let urgency = 1.0 + 0.5 * (hi - slack) / (hi - lo).max(1e-9);
-        let pay = ((self.p(P::mission_base) + tons as f64 * km * self.p(P::mission_rate)) * urgency / 10.0).round() * 10.0;
+        // climate cargo (food, medicine: fit.rs) needs a climate hold, and pays for it
+        let climate = if self.goods.class[good] == crate::fit::CLASS_CLIMATE { self.p(P::climate_pay) } else { 1.0 };
+        let pay = ((self.p(P::mission_base) + tons as f64 * km * self.p(P::mission_rate)) * urgency * climate / 10.0).round() * 10.0;
         let f = &mut self.offers;
         f.live[o] = 1;
         f.dest[o] = dest as i16;
@@ -126,7 +129,8 @@ impl World {
         let Some(o) = usize::try_from(a).ok().filter(|&k| k < MAX_OFFERS).map(|k| at * MAX_OFFERS + k).filter(|&o| self.offers.live[o] != 0)
         else { return NO_OFFER };
         let Some(k) = (0..MAX_MISSIONS).find(|&k| self.missions.state[k] != M_ACTIVE) else { return TOO_MANY_MISSIONS };
-        if self.hold_used() + self.offers.tons[o] > self.hold_cap() { return NO_ROOM; }
+        let fits = self.cargo_fits(self.offers.good[o] as usize, self.offers.tons[o]); // by hold class (fit.rs)
+        if fits != OK { return fits; }
         let (f, m) = (&mut self.offers, &mut self.missions);
         f.live[o] = 0;
         m.state[k] = M_ACTIVE;
@@ -144,7 +148,7 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::market::CMD_BUY;
+    use crate::market::{CMD_BUY, NO_ROOM};
     use crate::port::{BODY_PLANET, CMD_LAND, CMD_LAUNCH, CMD_SKIP, CMD_WAIT, DESCENT_S, MODE_FLYING};
     use crate::world::{Config, DT};
 

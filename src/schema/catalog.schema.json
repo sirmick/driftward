@@ -1218,6 +1218,50 @@
               "cargo",
               "fuel"
             ]
+          },
+          "frame": {
+            "type": "object",
+            "description": "The class's frame (docs/outfitting.md; core/src/fit.rs): what no refit changes.",
+            "properties": {
+              "mass": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 100000,
+                "description": "The bare frame, tonnes."
+              },
+              "bayP": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10000,
+                "description": "Pressurised bay, tonnes: bunks, sensors, reactor, jump drive, battery, shield banks, climate hold."
+              },
+              "bayU": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10000,
+                "description": "Unpressurised bay, tonnes: hoppers, racks, fuel tank, deflector, fins, heat sinks."
+              },
+              "crew": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 200,
+                "description": "Minimum crew: fewer bunks and it can't launch."
+              },
+              "sensors": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "The stock fit's sensors, tonnes."
+              }
+            },
+            "required": [
+              "mass",
+              "bayP",
+              "bayU",
+              "crew",
+              "sensors"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -1225,7 +1269,8 @@
           "name",
           "length",
           "res",
-          "flight"
+          "flight",
+          "frame"
         ],
         "description": "A size class (I to V): its length, bake resolution and flight numbers."
       }
@@ -1797,6 +1842,23 @@
                     }
                   },
                   "description": "Core templates that differ from the faction's, per class."
+                },
+                "frame": {
+                  "type": "object",
+                  "description": "A line's frame against its class's (docs/outfitting.md): multipliers of the class frame's bay, for a line that carries more than it holds.",
+                  "properties": {
+                    "bayP": {
+                      "type": "number",
+                      "minimum": 0.5,
+                      "maximum": 3
+                    },
+                    "bayU": {
+                      "type": "number",
+                      "minimum": 0.5,
+                      "maximum": 3
+                    }
+                  },
+                  "additionalProperties": false
                 }
               },
               "required": [

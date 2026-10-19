@@ -95,12 +95,21 @@
             "minimum": 1,
             "maximum": 100000,
             "description": "Base price, credits a ton."
+          },
+          "hold": {
+            "enum": [
+              "bulk",
+              "general",
+              "climate"
+            ],
+            "description": "Which holds take it (core/src/fit.rs): bulk any; general a container rack or a climate hold; climate (food, medicine) only a climate hold."
           }
         },
         "required": [
           "id",
           "name",
-          "base"
+          "base",
+          "hold"
         ]
       }
     },

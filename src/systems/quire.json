@@ -44,7 +44,8 @@
           "missions",
           "bar",
           "refuel",
-          "repair"
+          "repair",
+          "outfitter"
         ],
         "description": "Foundries over the whole day side of a hot, barren world, and worker cities in domes on the night side. They make navigation cores here, the most valuable cargo in the March, and since the sister plant went silent, every core leaves under escort."
       },
