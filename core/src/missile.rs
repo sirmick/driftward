@@ -433,6 +433,7 @@ mod tests {
     #[test]
     fn point_defence_shoots_missiles_first() {
         let mut w = world();
+        w.params[P::ms_hp as usize] = 2.0; // what the guns aim at, not how tough a missile is
         let a = ship(&mut w, 0, 0.0, -3000.0, 1);
         let b = ship(&mut w, 1, 0.0, 0.0, 2);
         let c = ship(&mut w, 0, 400.0, 200.0, 1); // an enemy fighter beside b, in its guns' reach
