@@ -12,7 +12,7 @@ Status, 2026-10-16: **steps 1 to 3 of the plan below are built; 4 and 5 are next
 | Map: systems, lanes, factions, regions, the Drift | `src/galaxy/galaxy.json` | via the index | `tools/galaxy.py` | a source for the index; the faction keys are now the system schema's |
 | Worlds | `src/galaxy/worlds.json` | via the index | `tools/worlds.py` | a source for the index; records the galaxy hash it was made from |
 | Stories | `src/galaxy/stories.json` | via the index | `tools/stories.py` | a source for the index; each region records the galaxy hash it was told from |
-| **Universe index** | `src/galaxy/universe.json` (447 KB) | **✓** `src/schema/universe.schema.json` | `tools/universe.py`, on every build | factions, regions, every system once by star id, lanes; what the game, the map and the debug screen read |
+| **Universe index** | `src/galaxy/universe.json` (447 KB) | **✓** `src/schema/universe.schema.json` | `tools/universe.py`, on every build | factions, regions, every system once by star id, lanes (the page's copy also carries `art.logos`, the factions' logos in `art/factions/`, which `tools/build.py` adds); what the game, the map and the debug screen read |
 | **System** (the flyable layout) | `src/systems/*.json` | **✓** `system.schema.json` | by hand | 6 systems (the Calder March); each must agree with its index entry |
 | **System lore** | `src/lore/<id>.json` | **✓** `lore.schema.json` | `tools/gen-content.js` | the same 6 |
 | Ships, stations, factions' looks | `src/catalog.json` | **✓** `catalog.schema.json` | by hand | plus cross-checks: core and dropped part ids, `hullFrom`, classes, series |

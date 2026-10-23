@@ -5,7 +5,8 @@
 // (tools/build.py): self-contained, each file rides inline in its own <script type="application/json" data-file=...>,
 // parsed the first time it is asked for, so the page still opens from disk; hosted (build --hosted), each is fetched
 // from data/ beside the page, so only what is used is downloaded.
-//   universe.json          the index: factions, regions, every system, lanes
+//   universe.json          the index: factions, regions, every system, lanes; and art.logos, each faction's logo
+//                          found in art/factions/ ({ badge, flat } paths; tools/build.py adds it to the page's copy)
 //   systems/<id>.json      { system: the system file, lore: src/lore/<id>.json or null, art: { vistas, portraits } }
 //   logs/<id>.json         { lore, art }: how a system's content was made (the debug screen's Content tab)
 //   stars.json             the real stars round Sol (tools/hyg.py), for the map

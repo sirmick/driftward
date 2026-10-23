@@ -1054,6 +1054,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       const B = BODIES[sim.game.at[0]], P0 = B.port;
       $('port-kicker').textContent = [B.name, P0.role.replace('-', ' ')].join(' · ');
       $('port-name').textContent = P0.name;
+      // whose port it is: a station's builder (its brand), else the system's owner; their logo on the card
+      const own = (B.station && B.station.brand) || SYS.owner, logo = $('port-logo'), src = factionLogo(UNIVERSE, own);
+      logo.hidden = !src; if (src) { logo.src = src; logo.title = FACTION_NAME[own] || own; }
       const L = LORE.ports.get(B.id);
       $('port-desc').textContent = brief(L ? L.description[0] : P0.description || ''); // the whole of it is on the about page
       $('svc-trade').disabled = !(P0.services || []).includes('market');

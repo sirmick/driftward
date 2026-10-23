@@ -103,6 +103,8 @@ function makeGalaxyMap(ctx) {
   function routeTo(i) { const r = galaxyRoute(U, ctx.here(), M.sys[i].id, by); return r && Object.assign(r, { idx: r.ids.map(id => idx.get(id)) }); }
   function plot() { const r = sel >= 0 ? routeTo(sel) : null; M.st.route = r && r.jumps ? r.idx : null; }
   const meter = (name, v, tip) => `<div class="gx-meter ${name}" title="${e(tip)}"><span>${e(name)}</span><b style="--v:${v}%"></b><i>${v}</i></div>`;
+  // who holds a system, beside its name: the owner's logo, or a dot in its colour if it has none
+  const emblem = (k, col) => factionLogo(U, k) ? `<img class="gx-logo" src="${factionLogo(U, k)}" alt="">` : `<span class="gx-dot" style="background:${hex(col)}"></span>`;
   const chip = (t, tip, cls) => `<span class="gx-chip${cls ? ' ' + cls : ''}"${tip ? ` title="${e(tip)}"` : ''}>${e(t)}</span>`;
   // the systems the player holds a mission for, marked on the map
   const missions = () => (ctx.missions ? ctx.missions() : []).filter(m => idx.has(m.star));
@@ -111,9 +113,9 @@ function makeGalaxyMap(ctx) {
     const c = M.sys[sel]; if (!c) { card.innerHTML = ''; return; }
     mark();
     const F = U.factions[c.owner], here = sel === hereI(), R = U.regions[c.region] || {}, w = c.world, course = ctx.course();
-    const owner = F ? `<span class="gx-dot" style="background:${hex(F.colour)}"></span>${e(F.name)}` : e(STATUS[c.status] || c.status);
+    const owner = F ? `${emblem(c.owner, F.colour)}${e(F.name)}` : e(STATUS[c.status] || c.status), badge = F && factionLogo(U, c.owner, 'badge');
     const sub = [c.catalog, R.name, c.ring && `${c.ring} ring`, `${(STAR_CLASSES[c.class] || {}).label || c.class}`].filter(Boolean).map(e).join(' · ');
-    let h = `<p class="gx-name">${e(c.name)}</p><p class="gx-sub">${sub}</p><p class="gx-owner">${owner}${c.status !== 'inhabited' && F ? ` <small>· ${e(STATUS[c.status] || c.status)}</small>` : ''}</p>`;
+    let h = `${badge ? `<img class="gx-badge" src="${badge}" alt="">` : ''}<p class="gx-name">${e(c.name)}</p><p class="gx-sub">${sub}</p><p class="gx-owner">${owner}${c.status !== 'inhabited' && F ? ` <small>· ${e(STATUS[c.status] || c.status)}</small>` : ''}</p>`;
     // the course from here
     const r = here ? null : routeTo(sel), onCourse = course && course.dest === c.id;
     h += '<h3>Course</h3>';
@@ -134,7 +136,7 @@ function makeGalaxyMap(ctx) {
     // where its lanes go
     const out = M.lanesOf(sel).sort((a, b) => a.days - b.days);
     h += `<h3>Lanes out (${out.length})</h3><ul class="gx-lanes">${out.map(l => { const d = M.sys[l.to], DF = U.factions[d.owner];
-      return `<li><button type="button" data-pick="${l.to}"><span class="gx-dot" style="background:${DF ? hex(DF.colour) : '#55606e'}"></span>${e(d.name)}</button><span>${days(l.days)} · ${l.ly.toFixed(1)} ly</span></li>`; }).join('')}</ul>`;
+      return `<li><button type="button" data-pick="${l.to}">${DF ? emblem(d.owner, DF.colour) : '<span class="gx-dot" style="background:#55606e"></span>'}${e(d.name)}</button><span>${days(l.days)} · ${l.ly.toFixed(1)} ly</span></li>`; }).join('')}</ul>`;
     // its people
     h += '<h3>People</h3>';
     if (w) {

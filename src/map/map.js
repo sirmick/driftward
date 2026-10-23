@@ -24,6 +24,10 @@ const STAR_LOOKS = {
   'black-hole':  { col: [1, .55, .2], k: 1, size: 18, shape: 4 },
   quasar:        { col: [.8, .7, 1], k: 1.4, size: 22, shape: 4 },
 };
+// a faction's logo from the universe index's art manifest (tools/build.py): kind 'flat' (the clean transparent mark,
+// for small sizes and over the map) or 'badge' (the painted one); null if it has none. Shared with the map's panel,
+// the galaxy map's card and the port screen.
+function factionLogo(U, k, kind = 'flat') { const L = ((U && U.art) || {}).logos || {}; return (L[k] && L[k][kind]) || null; }
 function makeStarMap(G, canvas, labels, data) {
   const { gl } = G;
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -73,6 +77,10 @@ function makeStarMap(G, canvas, labels, data) {
   const regionOf = c => c && c.owner !== 'none' ? c.owner : null;
   const regionCol = k => FACTIONS[k] && FACTIONS[k].colour;
   const factionOf = c => c && FACTIONS[c.owner] && !FACTIONS[c.owner].alien ? c.owner : null;
+  // each owner's logo, loaded for drawing over the map (drawLabels: on its biggest territory); one not loaded yet, or
+  // missing, is skipped
+  const LOGOS = {};
+  for (const k of Object.keys(FACTIONS)) { const src = factionLogo(U, k); if (src) { const im = new Image(); im.src = src; LOGOS[k] = im; } }
   // occupied: lived in (a settled human system, a living Bloom world, one the Shadow holds, one gone glass)
   const occupied = c => c && c.status !== 'dead';
 
@@ -377,6 +385,21 @@ function makeStarMap(G, canvas, labels, data) {
       if (!fits(x - 2, y - 11, w + 4, 15) && !force) return;
       ctx.fillStyle = 'rgba(4,6,9,.55)'; ctx.fillText(text, x + 1, y + 1); ctx.fillStyle = color; ctx.fillText(text, x, y);
     };
+    // each owner's logo over its biggest territory piece, the bigger the piece the bigger the logo, above where the
+    // piece's name goes; first, so the names always shown draw over them rather than pushing them off
+    if (st.game && (st.regions || st.areas)) {
+      const done = new Set();
+      for (const pc of pieces) {
+        const im = LOGOS[pc.region];
+        if (done.has(pc.region) || !im || !im.complete || !im.naturalWidth || pc.members.every(i => flags[i * 4 + 2])) continue;
+        done.add(pc.region);
+        const q = project(pc.mid), s = pc.size >= 20 ? 44 : pc.size >= 8 ? 36 : 28;
+        if (!q || q[0] < -s || q[1] < -s || q[0] > view.w + s || q[1] > view.h + s) continue;
+        const x = q[0] - s / 2, y = q[1] - s - 16;
+        if (!fits(x, y, s, s)) continue;
+        ctx.globalAlpha = .9; ctx.drawImage(im, x, y, s, s); ctx.globalAlpha = 1;
+      }
+    }
     // the names always shown, each once, the first reason winning: the selection, here, the marked systems, the route's
     // stops, the systems one jump from the selection, the hovered star
     const named = new Set(), always = (i, font, color, dx, dy) => { if (i < 0 || named.has(i)) return; named.add(i); put(nameOf(i), stars[i].pos, font, color, dx, dy, true); };

@@ -52,6 +52,7 @@ button { font: inherit; color: inherit; }
   gap: 32px; align-items: center; padding: 24px 24px 72px;
   background: linear-gradient(90deg, rgba(7,9,12,.88) 0%, rgba(7,9,12,.62) 42%, rgba(7,9,12,.08) 75%); }
 .port-card { max-width: 460px; }
+.port-logo { float: right; width: 64px; height: 64px; margin: -4px 0 6px 14px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
 .port-kicker { margin: 0 0 6px; color: var(--amber); font: 600 12px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; }
 .port-card h2 { margin: 0 0 12px; font: 700 40px/1 var(--f-display); letter-spacing: .03em; }
 .port-desc { margin: 0 0 22px; color: #c4ccd6; font-size: 15px; line-height: 1.55; }
@@ -304,6 +305,9 @@ body.gx-open #toast { z-index: 11; top: 62px; }
 .gx-name { margin: 0; font: 600 24px/1.1 var(--f-display); color: #ffe2a6; }
 .gx-sub { margin: 3px 0 8px; color: var(--muted); font: 11.5px/1.4 var(--f-mono); }
 .gx-owner { margin: 0; font: 600 14px var(--f-display); letter-spacing: .03em; }
+.gx-logo { width: 20px; height: 20px; margin-right: 7px; vertical-align: -5px; }
+.gx-lanes .gx-logo { width: 16px; height: 16px; vertical-align: -3px; }
+.gx-badge { float: right; width: 72px; height: 72px; margin: 0 0 6px 10px; border-radius: 6px; }
 .gx-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; box-shadow: 0 0 6px currentColor; vertical-align: 0; }
 .gx-here { margin: 0; color: #eef0f6; }
 .gx-mis-h { color: #8fd3ff !important; } .gx-mis { margin: 0; padding-left: 16px; font-size: 12.5px; } .gx-mis li { margin: 0 0 4px; } .gx-mis li::marker { content: '◆ '; color: #8fd3ff; } .gx-hot { color: var(--amber); }
@@ -403,6 +407,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 <img id="vista" alt="">
 <section id="port" hidden aria-label="Port">
   <div class="port-card">
+    <img class="port-logo" id="port-logo" alt="" hidden>
     <p class="port-kicker" id="port-kicker"></p>
     <h2 id="port-name"></h2>
     <p class="port-desc" id="port-desc"></p>

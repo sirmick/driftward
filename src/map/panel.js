@@ -48,8 +48,11 @@ const STAR_MAP_PANEL_CSS = `
 .sm-row output { flex: none; width: 46px; text-align: right; font: 12px var(--f-mono); }
 .sm-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
 .sm-checks input { accent-color: var(--amber); }
-.sm-legend { display: grid; grid-template-columns: 14px 1fr auto; gap: 3px 8px; align-items: center; font-size: 12.5px; }
-.sm-legend i { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 6px currentColor; background: currentColor; }
+.sm-legend { display: grid; grid-template-columns: 18px 1fr auto; gap: 3px 8px; align-items: center; font-size: 12.5px; }
+.sm-legend i { width: 9px; height: 9px; margin: 0 auto; border-radius: 50%; box-shadow: 0 0 6px currentColor; background: currentColor; }
+.sm-legend img { width: 18px; height: 18px; }
+.sm-logo { width: 22px; height: 22px; margin-right: 7px; vertical-align: -4px; }
+.sm-badge { float: right; width: 84px; height: 84px; margin: 0 26px 6px 12px; border-radius: 6px; }
 .sm-legend span:last-child { color: var(--muted); font: 11.5px var(--f-mono); }
 .sm-legend label { display: contents; cursor: pointer; }
 .sm-legend small { color: var(--muted); }
@@ -128,11 +131,13 @@ function mountStarMapPanel(root, M, surface) {
     if (c) M.lanesOf(i).sort((a, b) => a.ly - b.ly).forEach((l, n) => rows.push([n ? '' : 'Lanes', `${M.nameOf(l.to)}: ${fmt(l.ly)} ly, ${l.days} d`]));
     return rows;
   }
+  // the logo of who holds a system (a faction, or the Bloom, the Shadow or the Glass), for beside its name
+  const logoTag = c => c && FACTIONS[c.owner] && factionLogo(U, c.owner) ? `<img class="sm-logo" src="${factionLogo(U, c.owner)}" alt="" title="${esc(FACTIONS[c.owner].name)}">` : '';
   const dl = rows => rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
   const desig = i => [...new Set([stars[i].name, ...(stars[i].desig || [])])].filter(d => d !== M.nameOf(i)).join(' · ');
   function showSel() {
     if (!stars[M.st.sel]) return;
-    q('sel-name').textContent = M.nameOf(M.st.sel);
+    q('sel-name').innerHTML = logoTag(M.sys[M.st.sel]) + esc(M.nameOf(M.st.sel));
     q('sel-desig').textContent = desig(M.st.sel);
     q('sel-stats').innerHTML = dl(rowsOf(M.st.sel, false))
       + (M.sys[M.st.sel] ? `<dt></dt><dd class="sm-more">double-click the star for its detail</dd>` : '');
@@ -146,7 +151,8 @@ function mountStarMapPanel(root, M, surface) {
     const c = M.sys[i]; if (!c) return;
     const story = c.story;
     modal.innerHTML = `<div class="sm-modal-box" role="dialog" aria-label="${esc(M.nameOf(i))}"><button type="button" class="sm-modal-x" aria-label="Close">×</button>`
-      + `<p class="sm-sel-name">${esc(M.nameOf(i))}</p><p class="sm-sel-desig">${esc(desig(i))}</p>`
+      + (factionLogo(U, c.owner, 'badge') ? `<img class="sm-badge" src="${factionLogo(U, c.owner, 'badge')}" alt="${esc(FACTIONS[c.owner].name)}">` : '')
+      + `<p class="sm-sel-name">${logoTag(c)}${esc(M.nameOf(i))}</p><p class="sm-sel-desig">${esc(desig(i))}</p>`
       + `<div class="sm-modal-cols"><dl class="sm-stats">${dl(rowsOf(i, true))}</dl>`
       + `<div><h2>Story</h2>${story ? `<ul class="sm-story">${story.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : '<p class="sm-more">No story yet (tools/stories.py).</p>'}</div></div></div>`;
     modal.hidden = false;
@@ -167,14 +173,14 @@ function mountStarMapPanel(root, M, surface) {
   const sysList = M.sys.filter(Boolean);
   const kinds = [...Object.entries(FACTIONS).filter(([, f]) => !f.alien).map(([k, f]) => [f.name, c => c.owner === k && c.status === 'inhabited', hex(f.colour), k]),
     ['Human, inhabited', c => c.group === 'human' && c.status === 'inhabited' && !M.factionOf(c), '#7fa6ff'], ['Human, dead', c => c.group === 'human' && c.status === 'dead', '#4a5a78'],
-    ['The Drift (dead)', c => c.group === 'drift', '#8a93a6'], ['Bloom', c => c.group === 'bloom', '#5af080'], ['Shadow', c => c.group === 'shadow', '#ff5a46'], ['Glass', c => c.group === 'glass', '#bff0ff']]
+    ['The Drift (dead)', c => c.group === 'drift', '#8a93a6'], ['Bloom', c => c.group === 'bloom', '#5af080', 'bloom'], ['Shadow', c => c.group === 'shadow', '#ff5a46', 'shadow'], ['Glass', c => c.group === 'glass', '#bff0ff', 'glass']]
     .filter(([, f]) => sysList.some(f));
   // pieces, for the factions that hold together (the galaxy marks their outlying pieces as exclaves); the scattered
   // ones (the Blackhull havens, the Independents) are scattered by nature
   const whole = new Set(sysList.filter(c => c.exclave).map(c => c.owner));
   const piecesOf = k => k && whole.has(k) ? M.pieces.filter(p => p.region === k && p.size).length : 0;
   q('groups').innerHTML = kinds.map(([label, f, col, k]) => { const n = piecesOf(k);
-    return `<label><i style="color:${col}"></i><span>${esc(label)}${n > 1 ? ` <small>(${n} pieces)</small>` : ''}</span><span>${sysList.filter(f).length}</span></label>`; }).join('')
+    return `<label>${factionLogo(U, k) ? `<img src="${factionLogo(U, k)}" alt="">` : `<i style="color:${col}"></i>`}<span>${esc(label)}${n > 1 ? ` <small>(${n} pieces)</small>` : ''}</span><span>${sysList.filter(f).length}</span></label>`; }).join('')
     + `<label><i style="color:#2a3a58"></i><span>Lanes</span><span>${M.lanes.length}</span></label>`
     + `<label><i style="color:#ffe0b0"></i><span>Choke points (border lanes)</span><span>${M.lanes.filter(l => l.border).length}</span></label>`;
   const hidden = new Set(), counts = {};

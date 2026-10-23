@@ -83,6 +83,11 @@ def read_json(f):
 DATA = {}
 # the universe index (tools/universe.py), remade from src/galaxy/ and the region notes every build
 DATA['universe.json'] = universe.write()
+# and, as the page's copy only, the factions' logos found in art/factions/ (tools/gen-logos.js; the picks promoted
+# to <faction>.webp, the painted badge, and <faction>-flat.png, the clean transparent mark): a page loads them beside
+# it, so the manifest lists only files that exist, and a faction without one shows its colour as before
+DATA['universe.json']['art'] = {'logos': {k: {kind: f'art/factions/{name}' for kind, name in (('badge', f'{k}.webp'), ('flat', f'{k}-flat.png'))
+    if (root / 'art' / 'factions' / name).exists()} for k in DATA['universe.json']['factions'] if (root / 'art' / 'factions' / f'{k}-flat.png').exists()}}
 # each system: its file, its lore (tools/gen-content.js writes it; null if there is none yet) and the art found in
 # art/<id>/ (the page loads the images beside it, so the manifest lists only files that exist; a page without them
 # shows the procedural backdrop and no portraits); and, apart, how its content was made, for the debug screen: the
