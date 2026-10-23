@@ -42,7 +42,7 @@ use crate::traffic::End;
 use crate::world::{World, DT, P};
 
 /// Turret sites per type, and outline vertices per type.
-pub const MAX_MOUNTS: usize = 12;
+pub const MAX_MOUNTS: usize = 16;
 pub const MAX_OUTLINE: usize = 12;
 /// Shells in flight at once (a new one past this is not fired), and bursts remembered for the page to draw.
 pub const MAX_SHELLS: usize = 8192;
@@ -66,6 +66,8 @@ pub const B_HULL: u8 = 3;
 pub const B_LOST: u8 = 4;
 pub const B_SHRUG: u8 = 5;
 pub const B_SPLASH: u8 = 6;
+/// A missile shot down (missile.rs).
+pub const B_SHOT: u8 = 7;
 
 /// Debug: the player joins side a (0 neutral, 1..MAX_SIDES), and every side forgives it.
 pub const CMD_SIDE: u32 = 104;
@@ -74,6 +76,8 @@ pub const CMD_SIDE: u32 = 104;
 pub const G_LIGHT: u8 = 1;
 pub const G_MEDIUM: u8 = 2;
 pub const G_HEAVY: u8 = 3;
+/// A forward missile bay's site (missile.rs): fixed, no gun.
+pub const G_BAY: u8 = 4;
 /// Tonnes of magazine a stock fit carries for each gun, by size (about 40 s of fire each).
 pub const STOCK_MAG: [f64; 3] = [1.0, 2.0, 4.0];
 
@@ -98,8 +102,11 @@ soa! {
 soa! {
     /// Per ship slot: its side (0 none, else side + 1); its shield's points and the seconds before it regenerates
     /// again; the ship it fights (a handle plus one, 0 none) and when it next looks again; the magazine, tonnes; guns
-    /// fitted; seconds since it was last hit (the page's shield flash).
-    pub struct Arms { side: u8, shield: f64, shield_t: f64, target: u32, think: f64, ammo: f64, guns: u8, hit: f32, orbit: u8 }
+    /// fitted; seconds since it was last hit (the page's shield flash). Missiles (missile.rs): how many are aboard, the
+    /// seconds before its bays are loaded again, and a wave's volley to come: its target (a handle plus one, 0 none)
+    /// and the seconds until it goes.
+    pub struct Arms { side: u8, shield: f64, shield_t: f64, target: u32, think: f64, ammo: f64, guns: u8, hit: f32, orbit: u8,
+        missiles: u16, reload: f64, wave_tgt: u32, wave_t: f64 }
 }
 
 soa! {
@@ -128,8 +135,9 @@ soa! {
 
 soa! {
     /// The lab's sides (content: the system file's `combat`): the jump zone each arrives at, the ships it keeps in
-    /// flight, the body every side fights over, and when its next ship may arrive (game seconds).
-    pub struct Sides { zone: u8, count: u8, contested: i16, next: f64 }
+    /// flight, the body every side fights over, when its next ship may arrive and its next missile wave is due (game
+    /// seconds; a wave 0 not drawn yet).
+    pub struct Sides { zone: u8, count: u8, contested: i16, next: f64, wave: f64 }
 }
 
 soa! {
@@ -160,7 +168,7 @@ fn enter(poly: &[(f64, f64)], a: (f64, f64), b: (f64, f64)) -> Option<f64> {
 
 /// Where segment a->b first comes within `s` of a convex counter-clockwise polygon (its outline grown by s: the shield's
 /// surface), as a share of the way along; 0 if a is already that close; None if it never is.
-fn enter_round(poly: &[(f64, f64)], s: f64, a: (f64, f64), b: (f64, f64)) -> Option<f64> {
+pub(crate) fn enter_round(poly: &[(f64, f64)], s: f64, a: (f64, f64), b: (f64, f64)) -> Option<f64> {
     if s <= 0.0 { return enter(poly, a, b); }
     let n = poly.len();
     if n < 3 { return None; }
@@ -209,16 +217,21 @@ fn distance(poly: &[(f64, f64)], p: (f64, f64)) -> f64 {
 impl World {
     /// The lab's fighters and everyone's guns, once per tick after the sensors: sides keep their numbers, the AI picks
     /// targets and steers (for the next tick's control), turrets turn and fire, shells fly and burst, shields recover.
+    /// Missiles (missile.rs) fly before the guns turn, so point defence aims at where they are now.
     pub(crate) fn step_combat(&mut self) {
         self.side_arrivals();
+        self.side_waves();
+        self.build_grid();
+        self.fly_missiles();
+        self.build_missile_grid();
         for k in 0..self.count {
             if self.ships.alive[k] == 0 { continue; }
             self.arms.hit[k] += DT as f32;
             if self.traffic.role[k] == COMBAT && self.traffic.phase[k] >= A_LOITER { self.think(k); self.steer_fighter(k); }
             self.npc_shield(k);
+            self.bays_step(k);
             self.turrets(k);
         }
-        self.build_grid();
         self.fly_shells();
     }
 
@@ -231,7 +244,7 @@ impl World {
     }
 
     /// Ship i's outline in local metres (its type's; the player's fitted ship's is its hull's).
-    fn outline_of(&self, i: usize) -> ([(f64, f64); MAX_OUTLINE], usize) {
+    pub(crate) fn outline_of(&self, i: usize) -> ([(f64, f64); MAX_OUTLINE], usize) {
         let k = self.look_kind(i);
         let n = (self.types.outline[k] as usize).min(MAX_OUTLINE);
         let mut p = [(0.0, 0.0); MAX_OUTLINE];
@@ -239,13 +252,13 @@ impl World {
         (p, n)
     }
     /// The type whose hull ship i has: the player's fitted ship looks like its catalog type.
-    fn look_kind(&self, i: usize) -> usize {
+    pub(crate) fn look_kind(&self, i: usize) -> usize {
         let k = self.ships.kind[i] as usize;
         if self.fitted() && k == self.player_kind() { self.game.base[0] as usize } else { k }
     }
-    fn is_player(&self, i: usize) -> bool { usize::try_from(self.game.player[0]).ok() == Some(i) }
+    pub(crate) fn is_player(&self, i: usize) -> bool { usize::try_from(self.game.player[0]).ok() == Some(i) }
     /// How far out ship i's shield stands from its hull while it holds, metres (0 when it is down).
-    fn standoff(&self, i: usize) -> f64 {
+    pub(crate) fn standoff(&self, i: usize) -> f64 {
         let up = if self.is_player(i) { self.game.shield[0] } else { self.arms.shield[i] } > 0.0;
         if up { self.types.standoff[self.look_kind(i)] } else { 0.0 }
     }
@@ -255,7 +268,7 @@ impl World {
         (self.ships.x[i] + lx * c - ly * s, self.ships.y[i] + lx * s + ly * c)
     }
     /// A world point in ship i's frame.
-    fn to_local(&self, i: usize, x: f64, y: f64) -> (f64, f64) {
+    pub(crate) fn to_local(&self, i: usize, x: f64, y: f64) -> (f64, f64) {
         let (s, c) = sin_cos(self.ships.ang[i]);
         let (dx, dy) = (x - self.ships.x[i], y - self.ships.y[i]);
         (dx * c + dy * s, -dx * s + dy * c)
@@ -299,20 +312,23 @@ impl World {
         Some(on)
     }
 
-    /// Arm a slot that has just become a ship: a gun of its size on every site of its type and the stock magazine
-    /// for them, its shield full, turrets facing forward; side `side` (0 none).
+    /// Arm a slot that has just become a ship: a gun of its size on every turret site of its type and the stock
+    /// magazine for them, its missiles if it has bays, its shield full, turrets facing forward; side `side` (0 none).
     pub(crate) fn arm(&mut self, k: usize, side: u8) {
         let t = self.ships.kind[k] as usize;
         let n = (self.types.guns[t] as usize).min(MAX_MOUNTS);
-        let mut mag = 0.0;
+        let (mut mag, mut guns) = (0.0, 0);
         for m in 0..MAX_MOUNTS {
-            let g = if m < n { self.mounts.size[t * MAX_MOUNTS + m].min(G_HEAVY) } else { 0 };
-            if g > 0 { mag += STOCK_MAG[(g - 1) as usize]; }
+            let z = if m < n { self.mounts.size[t * MAX_MOUNTS + m] } else { 0 };
+            let g = if (G_LIGHT..=G_HEAVY).contains(&z) { z } else { 0 };
+            if g > 0 { mag += STOCK_MAG[(g - 1) as usize]; guns += 1; }
             let o = k * MAX_MOUNTS + m;
             (self.turrets.gun[o], self.turrets.ang[o], self.turrets.cd[o]) = (g, self.ships.ang[k], 0.0);
         }
+        let missiles = if self.bays(k) > 0 { self.types.missiles[t] } else { 0 };
         let a = &mut self.arms;
-        (a.side[k], a.shield[k], a.shield_t[k], a.target[k], a.ammo[k], a.guns[k], a.hit[k]) = (side, self.types.shield[t], 0.0, 0, mag, n as u8, 99.0);
+        (a.side[k], a.shield[k], a.shield_t[k], a.target[k], a.ammo[k], a.guns[k], a.hit[k]) = (side, self.types.shield[t], 0.0, 0, mag, guns, 99.0);
+        (a.missiles[k], a.reload[k], a.wave_tgt[k], a.wave_t[k]) = (missiles, 0.0, 0, 0.0);
         a.think[k] = self.rng.range(0.0, self.params[P::ai_think as usize]);
         a.orbit[k] = (self.rng.next_f64() < 0.5) as u8;
     }
@@ -326,9 +342,12 @@ impl World {
         } else { [0; MAX_MOUNTS] };
         for (m, &g) in on.iter().enumerate() { self.turrets.gun[i * MAX_MOUNTS + m] = g; }
         let mag = if self.fitted() { self.fit.t[F_MAG] } else { 0.0 };
+        // the bays' missiles, the hull's stock load (restocked free on landing for now, as the magazine is)
+        let missiles = if self.fitted() && self.bays(i) > 0 { self.types.missiles[self.game.base[0] as usize] } else { 0 };
         let side = self.battle.player_side[0];
         let a = &mut self.arms;
         (a.side[i], a.guns[i], a.ammo[i], a.target[i], a.hit[i]) = (side, on.iter().filter(|&&g| g > 0).count() as u8, mag, 0, 99.0);
+        (a.missiles[i], a.reload[i], a.wave_tgt[i], a.wave_t[i]) = (missiles, 0.0, 0, 0.0);
     }
 
     // ---------- the lab's sides ----------
@@ -470,12 +489,16 @@ impl World {
     // ---------- guns ----------
 
     /// Ship k's turrets: turn toward the lead on its target and fire when on it (the player's: while Fire is held).
+    /// Light guns defend first (missile.rs): the nearest missile threatening the ship within their reach is their
+    /// target, fired on unbidden, the player's too.
     fn turrets(&mut self, k: usize) {
         if self.arms.guns[k] == 0 || self.ships.rail[k] != 0 { return; }
         let player = self.is_player(k);
         if player && self.mode() != MODE_FLYING { return; }
         let target = if player { self.target_ship() } else { self.arms.target[k].checked_sub(1).and_then(|h| self.resolve(h)) };
         let firing = if player { self.game.input[0] & IN_FIRE != 0 } else { target.is_some() && self.traffic.phase[k] == A_ENGAGE };
+        let light = (0..MAX_MOUNTS).any(|m| self.turrets.gun[k * MAX_MOUNTS + m] == G_LIGHT);
+        let pd = if light { self.pd_target(k, self.ships.x[k], self.ships.y[k], self.gun(G_LIGHT).reach()) } else { None };
         let look = self.look_kind(k);
         let hot = self.game.hot[0] != 0;
         for m in 0..MAX_MOUNTS {
@@ -486,10 +509,17 @@ impl World {
             let (speed, range, trav, mj) = (g.speed, g.reach(), g.traverse * DT, g.mj);
             let mi = look * MAX_MOUNTS + m;
             let (mx, my) = self.to_world(k, self.mounts.x[mi], self.mounts.y[mi]);
-            // the lead: where the target will be when a shell (with the ship's velocity) reaches it
-            let aim = target.map(|j| {
-                let (dx, dy) = (self.ships.x[j] - mx, self.ships.y[j] - my);
-                let (ux, uy) = (self.ships.vx[j] - self.ships.vx[k], self.ships.vy[j] - self.ships.vy[k]);
+            // what it shoots at: a light gun the threatening missile, else the target (position, velocity)
+            let defend = if size == G_LIGHT { pd } else { None };
+            let mark = match defend {
+                Some(n) => Some((self.missiles.x[n], self.missiles.y[n], self.missiles.vx[n], self.missiles.vy[n])),
+                None => target.map(|j| (self.ships.x[j], self.ships.y[j], self.ships.vx[j], self.ships.vy[j])),
+            };
+            let firing = firing || defend.is_some();
+            // the lead: where the mark will be when a shell (with the ship's velocity) reaches it
+            let aim = mark.map(|(jx, jy, jvx, jvy)| {
+                let (dx, dy) = (jx - mx, jy - my);
+                let (ux, uy) = (jvx - self.ships.vx[k], jvy - self.ships.vy[k]);
                 let a = ux * ux + uy * uy - speed * speed;
                 let b = 2.0 * (dx * ux + dy * uy);
                 let c = dx * dx + dy * dy;
@@ -507,10 +537,11 @@ impl World {
             self.turrets.cd[o] = (self.turrets.cd[o] - DT).max(-DT);
             let round = 1.0 / g.rounds.max(1e-6);
             if !firing || self.turrets.cd[o] > 0.0 || self.arms.ammo[k] < round - 1e-9 { continue; }
-            if !player {
+            if !player || defend.is_some() {
                 let Some((_, _, d)) = aim else { continue };
                 if d > range * 1.05 || err.abs() > 0.06 { continue; }
-            } else if hot || (self.fitted() && self.game.energy[0] < mj) { continue; }
+            }
+            if player && (hot || (self.fitted() && self.game.energy[0] < mj)) { continue; }
             // the fuse: burst at the target's range (flak), else at full reach
             let fuse = aim.map_or(g.fuse, |a| (a.1 + 0.03).clamp(0.05, g.fuse));
             if self.fire(k, mx, my, self.turrets.ang[o], fuse, size) {
@@ -564,22 +595,65 @@ impl World {
                 if let Some(t) = enter_round(&poly[..nv], s, self.to_local(j, x0, y0), self.to_local(j, x1, y1))
                     && hit.is_none_or(|h| t < h.1 || (t == h.1 && j < h.0)) { hit = Some((j, t)); }
             });
-            if let Some((j, t)) = hit {
+            // and the missiles near it (missile.rs), each a circle of ms_rad moving along its own last step: the
+            // first met, if before the ship
+            let rad = self.p(P::ms_rad);
+            let mut mhit: Option<(usize, f64)> = None;
+            self.mgrid.near(x0, y0, x1, y1, 0.0, |q| {
+                if self.missiles.live[q] == 0 || self.missiles.owner[q] == self.shells.owner[n] || (side != 0 && self.missiles.side[q] == side) { return; }
+                let (mx0, my0) = (self.missiles.prev_x[q], self.missiles.prev_y[q]);
+                // relative motion over the tick: the shell from the missile's frame
+                let (px, py) = (x0 - mx0, y0 - my0);
+                let (dx, dy) = ((x1 - x0) - (self.missiles.x[q] - mx0), (y1 - y0) - (self.missiles.y[q] - my0));
+                let (a, b, c) = (dx * dx + dy * dy, 2.0 * (px * dx + py * dy), px * px + py * py - rad * rad);
+                let t = if c <= 0.0 { 0.0 } else {
+                    let disc = b * b - 4.0 * a * c;
+                    if a < 1e-12 || disc < 0.0 { return; }
+                    (-b - disc.sqrt()) / (2.0 * a)
+                };
+                if (0.0..=1.0).contains(&t) && mhit.is_none_or(|h| t < h.1 || (t == h.1 && q < h.0)) { mhit = Some((q, t)); }
+            });
+            if let Some((q, t)) = mhit && hit.is_none_or(|h| t < h.1) {
                 self.shells.live[n] = 0;
-                self.burst(n, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, Some(j));
+                self.burst(n, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, None, Some(q));
+            } else if let Some((j, t)) = hit {
+                self.shells.live[n] = 0;
+                self.burst(n, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, Some(j), None);
             } else if self.shells.t[n] <= 0.0 {
                 self.shells.live[n] = 0;
-                self.burst(n, x1, y1, None);
+                self.burst(n, x1, y1, None, None);
             }
         }
     }
 
-    /// Shell n bursts at (x, y), on ship `struck` if it hit one: every ship within the blast takes its share, measured
-    /// to its shield's surface while that holds. A burst in the open that reaches a shield notes a splash on it.
-    fn burst(&mut self, n: usize, x: f64, y: f64, struck: Option<usize>) {
+    /// Shell n bursts at (x, y), on ship `struck` or missile `on` if it hit one: the blast (`blast`), and every
+    /// missile not its side's within it takes its share too, the one it struck all of it.
+    fn burst(&mut self, n: usize, x: f64, y: f64, struck: Option<usize>, on: Option<usize>) {
         let g = self.gun(self.shells.gun[n]);
-        let (blast, core, dmg) = (g.blast, g.core, g.dmg);
         let (owner, side) = (self.resolve(self.shells.owner[n]), self.shells.side[n]);
+        let kind = self.blast(x, y, struck, g.blast, g.core, g.dmg, owner, side);
+        let mut near = std::mem::take(&mut self.grid.buf);
+        near.clear();
+        self.mgrid.near(x, y, x, y, g.blast, |q| near.push(q));
+        near.sort_unstable();
+        let rad = self.p(P::ms_rad);
+        for &q in &near {
+            if self.missiles.live[q] == 0 || self.missiles.owner[q] == self.shells.owner[n] || (side != 0 && self.missiles.side[q] == side) { continue; }
+            let d = if Some(q) == on { 0.0 } else { (hypot(self.missiles.x[q] - x, self.missiles.y[q] - y) - rad).max(0.0) };
+            if d >= g.blast { continue; }
+            let share = if d <= g.core { 1.0 } else { 1.0 - (d - g.core) / (g.blast - g.core).max(1e-6) };
+            self.hurt_missile(q, g.dmg * share);
+        }
+        self.grid.buf = near;
+        self.note_burst(kind, x, y, g.blast, struck);
+    }
+
+    /// A blast at (x, y) of `blast` metres, full inside `core`, `dmg` at full: every ship within it takes its share,
+    /// measured to its shield's surface while that holds, ship `struck` all of it, but not side `side`'s or the
+    /// gunner. A blast that reaches a shield it didn't strike notes a splash on it. Returns what `struck` took (B_*;
+    /// B_AIR if none).
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn blast(&mut self, x: f64, y: f64, struck: Option<usize>, blast: f64, core: f64, dmg: f64, owner: Option<usize>, side: u8) -> u8 {
         let mut kind = B_AIR;
         // the ships near enough (grid.rs), in slot order; gathered first, as damage changes the world
         let mut near = std::mem::take(&mut self.grid.buf);
@@ -600,10 +674,10 @@ impl World {
             if Some(j) == struck { kind = k; } else if k == B_SHIELD || k == B_SHRUG { self.note_burst(B_SPLASH, x, y, blast, Some(j)); }
         }
         self.grid.buf = near;
-        self.note_burst(kind, x, y, blast, struck);
+        kind
     }
 
-    fn note_burst(&mut self, kind: u8, x: f64, y: f64, size: f64, ship: Option<usize>) {
+    pub(crate) fn note_burst(&mut self, kind: u8, x: f64, y: f64, size: f64, ship: Option<usize>) {
         let b = (self.battle.burst[0] as usize) % MAX_BURSTS;
         let now = self.tick as f64 * DT;
         (self.bursts.kind[b], self.bursts.x[b], self.bursts.y[b], self.bursts.size[b], self.bursts.at[b]) = (kind, x, y, size, now);
@@ -660,12 +734,13 @@ impl World {
     pub(crate) fn atlas_load_sides(&mut self, k: usize) {
         for s in 0..MAX_SIDES {
             let o = k * MAX_SIDES + s;
-            (self.sides.zone[s], self.sides.count[s], self.sides.contested[s], self.sides.next[s]) = (self.atlas_sides.zone[o], self.atlas_sides.count[o], self.atlas_sides.contested[o], 0.0);
+            (self.sides.zone[s], self.sides.count[s], self.sides.contested[s], self.sides.next[s], self.sides.wave[s]) = (self.atlas_sides.zone[o], self.atlas_sides.count[o], self.atlas_sides.contested[o], 0.0, 0.0);
         }
     }
     /// Shells and bursts go when the system changes (a jump, a new game).
     pub(crate) fn clear_fire(&mut self) {
         self.shells.clear();
+        self.clear_missiles();
         self.bursts.clear();
         self.battle.burst[0] = 0;
     }

@@ -1,7 +1,7 @@
 //! A self-contained scripted world, run identically by the native build and the WASM build, so
 //! their state hashes can be compared: the determinism check behind save, replay and server validation.
 
-use crate::combat::{A_LOITER, COMBAT, MAX_MOUNTS, MAX_OUTLINE};
+use crate::combat::{A_LOITER, COMBAT, G_BAY, MAX_MOUNTS, MAX_OUTLINE};
 use crate::math::{cos, sin, TAU};
 use crate::world::{Config, World};
 
@@ -19,6 +19,9 @@ pub fn build(seed: u64) -> Box<World> {
         for (v, (x, y)) in [(-hw, -hl), (hw, -hl), (hw, hl), (-hw, hl)].into_iter().enumerate() { (w.outline.x[k * MAX_OUTLINE + v], w.outline.y[k * MAX_OUTLINE + v]) = (x, y); }
         for (m, x) in [-hw * 0.5, hw * 0.5].into_iter().enumerate() { (w.mounts.x[k * MAX_MOUNTS + m], w.mounts.y[k * MAX_MOUNTS + m], w.mounts.size[k * MAX_MOUNTS + m]) = (x, 0.0, 1); }
     }
+    // the biggest type has two forward bays and sixteen missiles (missile.rs): waves, guidance, point defence
+    for (m, x) in [(2, -5.0), (3, 5.0)] { (w.mounts.x[2 * MAX_MOUNTS + m], w.mounts.y[2 * MAX_MOUNTS + m], w.mounts.size[2 * MAX_MOUNTS + m]) = (x, 30.0, G_BAY); }
+    (w.types.guns[2], w.types.missiles[2]) = (4, 16);
     for (j, (x, y, r)) in [(-3200.0, 2600.0, 1300.0), (6800.0, -4400.0, 2700.0)].into_iter().enumerate() {
         w.bodies.x[j] = x;
         w.bodies.y[j] = y;
@@ -62,6 +65,8 @@ pub fn build(seed: u64) -> Box<World> {
         } else { w.arm(i, 0); }
     }
     w.sides.contested.fill(0);
+    // both sides in the fight (already at strength, so no arrivals), so their waves come
+    (w.sides.count[0], w.sides.count[1]) = (1, 1);
     w
 }
 
@@ -110,5 +115,13 @@ mod tests {
         for t in 0..1800 { if t % 30 == 0 { super::decide(&mut w); } w.step(); }
         let fired = (0..w.count).filter(|&i| w.arms.guns[i] > 0 && w.arms.ammo[i] < 2.0).count();
         assert!(fired >= 4, "fighters fired: {fired}");
+    }
+
+    #[test]
+    fn the_missiles_fly() {
+        let mut w = super::build(7);
+        let mut seen = 0;
+        for t in 0..3600 { if t % 30 == 0 { super::decide(&mut w); } w.step(); seen = seen.max((0..crate::missile::MAX_MISSILES).filter(|&n| w.missiles.live[n] != 0).count()); }
+        assert!(seen > 0, "a wave flew");
     }
 }

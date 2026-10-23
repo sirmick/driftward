@@ -11,7 +11,7 @@ use crate::world::{Config, World};
 
 pub const MAGIC: [u8; 4] = *b"DWSV";
 /// Bump when the layout changes (a new column, a reordered header).
-pub const VERSION: u32 = 26; // 2: ships.rot; 3, 4: Newtonian wells; 5: game wells; 6: bodies.kind/port, game, landing params;
+pub const VERSION: u32 = 27; // 2: ships.rot; 3, 4: Newtonian wells; 5: game wells; 6: bodies.kind/port, game, landing params;
 // 7: types.cargo, game credits and debt, hold, market, economy params; 8: offers, missions, mission params;
 // 9: ships.rail, bodies.pop, traffic, roles, lanes, traffic params; 10: game.auto, aim_x, aim_y;
 // 11: game.curl, launch_frac, longer sequences; 12: traffic by mix and stream, routes, jump lanes, loiter;
@@ -33,6 +33,7 @@ pub const VERSION: u32 = 26; // 2: ships.rot; 3, 4: Newtonian wells; 5: game wel
 //     slots mc and magazine; weapon, shield and AI params)
 // 25: types.standoff (shells burst on a shield's surface)
 // 26: MAX_SHELLS 8192, MAX_BURSTS 1024 (big fights)
+// 27: missiles (types.missiles, arms.missiles, reload, wave_tgt, wave_t, side.wave, the missile pool), MAX_MOUNTS 16
 pub const HEADER_LEN: usize = 64;
 
 #[derive(Debug, PartialEq, Eq)]

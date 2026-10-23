@@ -4,6 +4,7 @@ use crate::atlas::{AtlasBodies, AtlasGates, AtlasHead, AtlasMarket, AtlasMix, At
 use crate::jump::{Gates, MAX_GATES};
 use crate::cols::{params, soa, ColumnDesc};
 use crate::combat::{Arms, AtlasSides, Battle, Bursts, Mounts, Outline, Shells, Sides, Turrets, ATLAS_SIDES, MAX_BURSTS, MAX_MOUNTS, MAX_OUTLINE, MAX_SHELLS, MAX_SIDES};
+use crate::missile::{Missiles, MAX_MISSILES};
 use crate::fit::{MAX_FIT, N_STATS, SLOT_NAMES, STAT_NAMES};
 use crate::flight;
 use crate::market::MAX_GOODS;
@@ -76,11 +77,12 @@ soa! {
     /// fit (fit.rs `player_kind`).
     /// Its geometry (combat.rs), content too: its light turret sites (`guns`; the sites in `mounts`), its outline's
     /// vertex count (the vertices in `outline`), the radius that holds it, and how far out its shield stands from the
-    /// hull, metres (the shield shader's edge, src/gen.js shieldStandoff).
+    /// hull, metres (the shield shader's edge, src/gen.js shieldStandoff). The missiles its bays carry (missile.rs; the
+    /// loadout's `missiles`), stock.
     pub struct Types {
         accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32, hull: f64, fuel: f64, len: f64,
         frame: f64, bay_p: f64, bay_u: f64, plumes: u8, structure: f64, crew: u8, sensors: f64, shield: f64,
-        guns: u8, outline: u8, rad: f64, standoff: f64,
+        guns: u8, outline: u8, rad: f64, standoff: f64, missiles: u16,
     }
 }
 
@@ -427,6 +429,26 @@ params! {
     ai_leash = 4000.0;    "fighters take on only enemies within this many metres of the contested body's surface (the player anywhere it shoots them)"
     side_gap = 0.5;       "seconds between a lab side's arrivals"
     side_drop = 3500.0;   "a lab side's ships come out of their jump this many metres short of the contested body, along their route (0: at their zone)"
+    // missiles (missile.rs; docs/weapons.md)
+    ms_accel = 150.0;     "missile: the motor's thrust, m/s^2"
+    ms_burn = 12.0;       "missile: seconds the motor burns"
+    ms_life = 20.0;       "missile: seconds from launch until it destroys itself"
+    ms_turn = 3.0;        "missile: turn rate, rad/s"
+    ms_nav = 3.5;         "missile: proportional navigation's constant (acceleration across the line of sight per unit of closing speed times its turn rate)"
+    ms_eject = 0.4;       "missile: seconds out of the bay before the motor lights"
+    ms_eject_v = 30.0;    "missile: speed it leaves the bay at, m/s, on top of its ship's velocity"
+    ms_seek = 1.0;        "missile: its seeker's gain, times the sensors' (sens_k): it holds the target while it makes a contact"
+    ms_well = 0.35;       "missile: how strongly gravity wells pull it (a ship type's `well`)"
+    ms_dmg = 25.0;        "missile: the warhead's damage"
+    ms_blast = 30.0;      "missile: the warhead's reach, metres"
+    ms_core = 8.0;        "missile: full damage inside this many metres"
+    ms_prox = 6.0;        "missile: the proximity fuse bursts it within this many metres of a hostile ship's shield"
+    ms_hp = 2.0;          "missile: damage that destroys it (two light shells)"
+    ms_rad = 3.0;         "missile: its size to shells, a circle this many metres round"
+    ms_range = 8000.0;    "missile: a wave's ships launch at a target within this many metres"
+    ms_reload = 25.0;     "missile: seconds a ship's bays take to load again after a volley"
+    ms_wave = 30.0;       "missile: seconds between a lab side's waves"
+    ms_wave_jit = 0.2;    "missile: a wave's gap varies by up to this share, either way"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -458,6 +480,8 @@ pub struct World {
     pub arms: Arms,
     pub turrets: Turrets,
     pub shells: Shells,
+    /// missiles in flight (missile.rs)
+    pub missiles: Missiles,
     pub bursts: Bursts,
     pub battle: Battle,
     pub sides: Sides,
@@ -500,6 +524,8 @@ pub struct World {
     pub orbit: Orbit,
     /// the ships by where they are, for shells' hits: scratch, rebuilt each tick, outside the snapshot (grid.rs)
     pub(crate) grid: crate::grid::Grid,
+    /// the missiles by where they are, for shells and point defence: scratch, as `grid`
+    pub(crate) mgrid: crate::grid::Grid,
     manifest: String,
 }
 
@@ -520,6 +546,7 @@ impl World {
             arms: Arms::with_capacity(cfg.max_ships),
             turrets: Turrets::with_capacity(cfg.max_ships * MAX_MOUNTS),
             shells: Shells::with_capacity(MAX_SHELLS),
+            missiles: Missiles::with_capacity(MAX_MISSILES),
             bursts: Bursts::with_capacity(MAX_BURSTS),
             battle: Battle::with_capacity(1),
             sides: Sides::with_capacity(MAX_SIDES),
@@ -553,6 +580,7 @@ impl World {
             atlas_row: Vec::new(),
             orbit: Orbit::new(),
             grid: crate::grid::Grid::new(cfg.max_ships),
+            mgrid: crate::grid::Grid::new(MAX_MISSILES),
             manifest: String::new(),
         });
         w.cols = w.columns();
@@ -583,6 +611,7 @@ impl World {
         self.arms.describe("arms", &mut c);
         self.turrets.describe("turret", &mut c);
         self.shells.describe("shell", &mut c);
+        self.missiles.describe("missile", &mut c);
         self.bursts.describe("burst", &mut c);
         self.battle.describe("battle", &mut c);
         self.sides.describe("side", &mut c);
@@ -619,8 +648,8 @@ impl World {
         )).collect();
         let quote = |l: &[&str]| l.iter().map(|n| format!("\"{n}\"")).collect::<Vec<_>>().join(",");
         format!(
-            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"maxMix":{},"maxMounts":{},"maxOutline":{},"maxShells":{},"maxBursts":{},"maxSides":{},"launchS":{},"descentS":{},"envN":{},"envW":{},"playerKind":{},"fitSlots":[{}],"fitStats":[{}],"params":[{}],"columns":[{}]}}"#,
-            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, MAX_OFFERS, MAX_MISSIONS, MAX_MIX, MAX_MOUNTS, MAX_OUTLINE, MAX_SHELLS, MAX_BURSTS, MAX_SIDES, LAUNCH_S, DESCENT_S, self.cfg.env_n, self.cfg.env_w,
+            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"maxMix":{},"maxMounts":{},"maxOutline":{},"maxShells":{},"maxMissiles":{},"maxBursts":{},"maxSides":{},"launchS":{},"descentS":{},"envN":{},"envW":{},"playerKind":{},"fitSlots":[{}],"fitStats":[{}],"params":[{}],"columns":[{}]}}"#,
+            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, MAX_OFFERS, MAX_MISSIONS, MAX_MIX, MAX_MOUNTS, MAX_OUTLINE, MAX_SHELLS, MAX_MISSILES, MAX_BURSTS, MAX_SIDES, LAUNCH_S, DESCENT_S, self.cfg.env_n, self.cfg.env_w,
             self.player_kind(), quote(&SLOT_NAMES), quote(&STAT_NAMES), quote(PARAM_NAMES), cols.join(",")
         )
     }
@@ -641,6 +670,7 @@ impl World {
         self.battle.clear();
         self.clear_fire();
         self.sides.next.fill(0.0);
+        self.sides.wave.fill(0.0);
         self.offers.clear();
         self.missions.clear();
         self.traffic.clear();
@@ -733,6 +763,13 @@ impl World {
             sh.rx[n] = (sh.prev_x[n] + (sh.x[n] - sh.prev_x[n]) * a) as f32;
             sh.ry[n] = (sh.prev_y[n] + (sh.y[n] - sh.prev_y[n]) * a) as f32;
         }
+        let ms = &mut self.missiles;
+        for n in 0..MAX_MISSILES {
+            if ms.live[n] == 0 { continue; }
+            ms.rx[n] = (ms.prev_x[n] + (ms.x[n] - ms.prev_x[n]) * a) as f32;
+            ms.ry[n] = (ms.prev_y[n] + (ms.y[n] - ms.prev_y[n]) * a) as f32;
+            ms.ra[n] = ms.ang[n] as f32;
+        }
         let b = &mut self.bodies;
         for j in 0..self.n_bodies {
             b.rx[j] = b.prev_x[j] + (b.x[j] - b.prev_x[j]) * a;
@@ -809,11 +846,17 @@ impl World {
         let sh = &self.shells;
         for n in 0..MAX_SHELLS { if sh.live[n] != 0 { eat(n as u64 | (sh.side[n] as u64) << 16 | (sh.owner[n] as u64) << 32); for v in [sh.x[n], sh.y[n], sh.t[n]] { eat(v.to_bits()); } } }
         eat(self.battle.player_side[0] as u64 | (self.battle.angry[0] as u64) << 8 | (self.battle.burst[0] as u64) << 16);
-        for s in 0..MAX_SIDES { eat(self.sides.next[s].to_bits()); }
+        for s in 0..MAX_SIDES { eat(self.sides.next[s].to_bits()); eat(self.sides.wave[s].to_bits()); }
+        let ms = &self.missiles;
+        for n in 0..MAX_MISSILES { if ms.live[n] != 0 { eat(n as u64 | (ms.side[n] as u64) << 16 | (ms.owner[n] as u64) << 32); eat(ms.target[n] as u64); for v in [ms.x[n], ms.y[n], ms.vx[n], ms.vy[n], ms.ang[n], ms.burn[n], ms.t[n], ms.hp[n]] { eat(v.to_bits()); } } }
         let s = &self.ships;
         for i in 0..self.count {
             let a = &self.arms;
-            if s.alive[i] != 0 { eat(a.side[i] as u64 | (a.guns[i] as u64) << 8 | (a.target[i] as u64) << 32); for v in [a.shield[i], a.shield_t[i], a.ammo[i], a.think[i]] { eat(v.to_bits()); } }
+            if s.alive[i] != 0 {
+                eat(a.side[i] as u64 | (a.guns[i] as u64) << 8 | (a.missiles[i] as u64) << 16 | (a.target[i] as u64) << 32);
+                eat(a.wave_tgt[i] as u64);
+                for v in [a.shield[i], a.shield_t[i], a.ammo[i], a.think[i], a.reload[i], a.wave_t[i]] { eat(v.to_bits()); }
+            }
             eat(s.alive[i] as u64 | (s.ctl[i] as u64) << 8 | (s.burn[i] as u64) << 16 | (s.kind[i] as u64) << 24 | (s.generation[i] as u64) << 32);
             let t = &self.traffic;
             eat(s.rail[i] as u64 | (t.role[i] as u64) << 8 | (t.phase[i] as u64) << 16 | (t.leg[i] as u64) << 24 | (t.to[i] as u16 as u64) << 32);

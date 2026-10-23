@@ -39,6 +39,8 @@ pub const IN_RETRO: u32 = 1 << 8;
 pub const IN_ASSIST: u32 = 1 << 9;
 /// Full off: torque rotation (only read when IN_ASSIST is clear).
 pub const IN_TORQUE: u32 = 1 << 10;
+/// Launch missiles (missile.rs): a volley at the target whenever the bays are loaded, while held.
+pub const IN_MISSILE: u32 = 1 << 11;
 
 /// Turn this tick's input into actuator commands (or assist targets) for the player's ship.
 pub fn control(w: &mut World) {

@@ -113,7 +113,7 @@ function finOutline(span, root, tip, sweep, curve, rootIn) {
 // by the line's hull key, the outfit (pods, weapons) from one seeded by the line itself. Lines that share hulls
 // (catalog: hullFrom) share the hull key and the hull loadout, so the same seed gives the same vessel in each,
 // outfitted differently. Outfit parts are numbered apart from hull parts, so hull detail noise matches too.
-const OUTFIT_ROLES = new Set(['pod', 'weapon', 'weaponM', 'weaponL', 'barrel', 'cargo']); // (and the loadout's keys for the turret sites by size)
+const OUTFIT_ROLES = new Set(['pod', 'weapon', 'weaponM', 'weaponL', 'barrel', 'cargo', 'bay', 'missiles']); // (and the loadout's keys for the turret sites by size, the bays and their missiles)
 function assemble(brand, size, seed, sizeIdx) {
   const hullKey = brand.hullKey || brand.id;
   const rh = rng32(hashStr(hullKey + '|' + size.id + '|' + seed)), ro = rng32(hashStr(brand.id + '|outfit|' + size.id + '|' + seed));
@@ -379,6 +379,19 @@ function assemble(brand, size, seed, sizeIdx) {
     const at = [0.4, -0.34, 0.2, -0.18];
     [...Array(nL).fill(3), ...Array(nM).fill(2)].slice(0, at.length).forEach((size, k) => parts.push(...weapon(0, at[k] * core.len, size)));
   }
+  // forward missile bays (core/src/missile.rs): hatches in pairs either side of the bow's centreline, launching along
+  // the hull's axis; a site of size 4
+  const nB = count(load.bay, r);
+  if (nB > 0) {
+    const bw = 0.011 * L, bl = 0.034 * L, z = coreH * 0.55, H = coreH * 0.12;
+    for (let k = 0; k < Math.ceil(nB / 2); k++) {
+      const y = (0.3 - k * 0.09) * core.len;
+      const bay = x => mk({ id: 'bay', role: 'bay', prof: 'round' }, 'rbox', { hw: bw, hl: bl / 2, rad: bw * 0.5 }, x, y, 0, z, H, { paint: -1, site: 4 });
+      const x = core.hwAt(y) * 0.38;
+      parts.push(bay(x));
+      if (2 * k + 1 < nB) parts.push(bay(-x));
+    }
+  }
 
   // --- bridge / cockpit ---
   stream(false);
@@ -467,7 +480,7 @@ function footprint(ship, maxV) {
     }
     hull.splice(best, 1);
   }
-  const mounts = parts.filter(p => p.role === 'weapon' && p.prim === 'circle').map(p => [p.x - cx, p.y - cy, p.site || 1]);
+  const mounts = parts.filter(p => (p.role === 'weapon' && p.prim === 'circle') || p.role === 'bay').map(p => [p.x - cx, p.y - cy, p.site || 1]);
   return { outline: hull, mounts };
 }
 

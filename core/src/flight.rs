@@ -68,27 +68,29 @@ pub fn control(w: &mut World) {
 
 /// Gather the gas density at every ship (bilinear; zero off the grid).
 pub fn fields(w: &mut World) {
+    for i in 0..w.count {
+        if w.ships.alive[i] == 0 || w.ships.rail[i] != 0 { continue; }
+        let (h, d, ion) = gas_at(w, w.ships.x[i], w.ships.y[i]);
+        let s = &mut w.ships;
+        (s.gas_h[i], s.gas_d[i], s.gas_i[i]) = (h, d, ion);
+    }
+}
+
+/// The gas at (x, y), bilinear on the grid: hydrogen, dust, ionized (none off the grid). Missiles use it too.
+pub(crate) fn gas_at(w: &World, x: f64, y: f64) -> (f64, f64, f64) {
     let n = w.cfg.env_n;
     let half = w.cfg.env_w / 2.0;
     let cell = w.cfg.env_w / n as f64;
-    let (s, e) = (&mut w.ships, &w.env);
-    for i in 0..w.count {
-        if s.alive[i] == 0 || s.rail[i] != 0 { continue; }
-        let fx = (s.x[i] + half) / cell - 0.5;
-        let fy = (s.y[i] + half) / cell - 0.5;
-        let (i0, j0) = (fx.floor(), fy.floor());
-        if i0 < 0.0 || j0 < 0.0 || i0 >= (n - 1) as f64 || j0 >= (n - 1) as f64 {
-            s.gas_h[i] = 0.0; s.gas_d[i] = 0.0; s.gas_i[i] = 0.0;
-            continue;
-        }
-        let (tx, ty) = (fx - i0, fy - j0);
-        let k = j0 as usize * n + i0 as usize;
-        let (w00, w10, w01, w11) = ((1.0 - tx) * (1.0 - ty), tx * (1.0 - ty), (1.0 - tx) * ty, tx * ty);
-        let sample = |g: &[f32]| g[k] as f64 * w00 + g[k + 1] as f64 * w10 + g[k + n] as f64 * w01 + g[k + n + 1] as f64 * w11;
-        s.gas_h[i] = sample(&e.h);
-        s.gas_d[i] = sample(&e.d);
-        s.gas_i[i] = sample(&e.i);
-    }
+    let e = &w.env;
+    let fx = (x + half) / cell - 0.5;
+    let fy = (y + half) / cell - 0.5;
+    let (i0, j0) = (fx.floor(), fy.floor());
+    if i0 < 0.0 || j0 < 0.0 || i0 >= (n - 1) as f64 || j0 >= (n - 1) as f64 { return (0.0, 0.0, 0.0); }
+    let (tx, ty) = (fx - i0, fy - j0);
+    let k = j0 as usize * n + i0 as usize;
+    let (w00, w10, w01, w11) = ((1.0 - tx) * (1.0 - ty), tx * (1.0 - ty), (1.0 - tx) * ty, tx * ty);
+    let sample = |g: &[f32]| g[k] as f64 * w00 + g[k + 1] as f64 * w10 + g[k + n] as f64 * w01 + g[k + n + 1] as f64 * w11;
+    (sample(&e.h), sample(&e.d), sample(&e.i))
 }
 
 /// Angular motion. Rate-controlled (the default): the turn command sets a target turn rate, approached at a

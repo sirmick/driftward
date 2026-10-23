@@ -45,6 +45,36 @@ Its params are `mc_*`.
 
 Params `mm_*` and `ml_*`. Every calibre shares the one magazine, in tonnes. A stock fit carries about 40 s of fire for each gun: 1 t a light gun, 2 t a medium, 4 t a heavy. The heavy gun's slow shells and slow traverse miss small, quick ships, but a hit through a fighter's shield is most of its hull. Its 35-point punch is far over any shield's hardness.
 
+## Missiles
+
+Mid-sized and large military ships carry forward missile bays. A missile alone isn't much: its warhead is between a medium and a heavy shell, and light guns shoot it down. Missiles matter in **waves**: a side picks one high-value enemy and every ship that can reach it fires at once, timed to arrive together, to swamp the target's point defence.
+
+| | |
+| :-- | :-- |
+| Bays | class III: 2, 16 missiles; class IV and V: 4, 64 missiles (military and raider lines; civilians none). The loadout's `bay` and `missiles` |
+| Site | a forward bay (site size 4): fixed, launching along the hull's axis, a hatch either side of the bow |
+| Volley | a missile from each bay, then `ms_reload` (25 s) before the bays are loaded again |
+| Motor | 150 m/s² for 12 s (about 1.8 km/s and 10 km under power), lit 0.4 s out of the bay; then it coasts, and destroys itself 20 s after launch |
+| Physics | the ships' own: thrust along its heading, turning at 3 rad/s, gravity wells pulling it as a fighter (`ms_well` 0.35), the gas's drag. No drive taper and no dampers |
+| Guidance | proportional navigation (constant bearing, decreasing range): across the line of sight, `ms_nav` (3.5) × closing speed × its turn rate, the motor's remainder along it. It heads a crossing target off instead of chasing it |
+| Seeker | holds the target while the target's signature, seen from the missile, makes a contact (the sensors' model × `ms_seek`); lost, it flies on straight. Running cold works on missiles too |
+| Warhead | proximity fuse 6 m off a hostile shield (or hull); 25 points, full inside 8 m, nothing past 30 m, by the shells' rules: it passes any shield's hardness below class V |
+| Toughness | a 3 m circle to shells; 2 points (two light shells, or a burst's blast nearby) destroy it |
+
+### Waves
+
+Every `ms_wave` seconds (30, give or take 20%) each lab side picks the most valuable enemy its ships are fighting: the longest hull, the most hurt of those. Every ship of the side with missiles, its bays loaded and the target within `ms_range` (8 km) launches a volley at it. The farthest launches at once and the nearer wait out the difference in flight time, so the wave arrives within a second or two.
+
+### Point defence
+
+Light multicannons shoot first at enemy missiles: the nearest missile within their reach that is another side's, or homing on their ship, is their target, fired on unbidden (the player's too, at the usual energy and heat). Only with no missile in reach do they turn back to ships. The flak fuse bursts each shell at the missile's range, so a stream of light shells makes a screen. Medium and heavy guns don't defend.
+
+### The player
+
+Missile (Z) launches a volley at the target whenever the bays are loaded, while held. The HUD shows the missiles aboard and the bays' reload. A fitted ship carries its hull's stock load, restocked free on landing for now (as the magazine is); there is no outfitter row for missiles yet.
+
+Params `ms_*`.
+
 ## Weapon sites
 
 Every ship is armed; the lightest carry a single light multicannon. The counts by class and line:
@@ -58,7 +88,7 @@ Every ship is armed; the lightest carry a single light multicannon. The counts b
 | V (320 m) | 4 S + 2 M | 6 S + 2 L + 2 M |
 
 - **Turrets** (S, M, L, XL) traverse. A site takes a gun of its size or smaller. S turrets go in flank pairs and at the ends, for the widest point-defence cover; M and L on the centreline, where the hull is deep.
-- **Ventral mounts** are fixed (no gimbal): missile racks, mass drivers, spinal rails. They fire along the hull's axis. Not built yet; the site type exists so hulls can carry them.
+- **Ventral mounts** are fixed (no gimbal): missile bays, mass drivers, spinal rails. They fire along the hull's axis. The forward missile bay is built (Missiles, above); the others are not yet.
 - **Fire groups:** the light guns are one group, with modes defence, offence and hold (defence acts as offence until there are missiles); the M and L guns are the main battery, on the selected target.
 - `gen.js` draws three turret sizes per faction, scaled from its weapon part, so a ship's guns show on it. The civilian loadouts go from no weapons to the counts above (seeded hulls change a little).
 - Stock fits fill every S site with a light multicannon and a tonne of magazine per gun; M and L sites stay empty until those guns exist. The catalog's old `flight.dmg` and `flight.rate` (the lab's prototype) go.
@@ -114,7 +144,8 @@ Two systems that are not in the Calder March: dead stars from the galaxy, each a
 - **A grid for hits (2026-10-23; core/src/grid.rs).** Each tick the ships that can be hit go into a spatial hash of 250 m cells (a counting sort into flat arrays, no allocation); a shell tests only the ships whose cells its path, grown by the farthest any shield reaches, touches, and a burst only those within its blast. Same hits in the same order as testing every ship (the check's hashes didn't move), at a handful of ships a shell instead of all of them. Scratch only: outside the snapshot.
 - **Big fights (2026-10-23).** The page's world holds 512 ships (was 128), the core 8,192 shells in flight and 1,024 bursts remembered (were 1,024 and 128; snapshot version 26). A lab's fighters don't count toward ambient traffic's `traffic_cap` (90), and a side keeps up to 200 (was 24). The combat lab keeps 60 a side, one arriving every `side_gap` (0.5 s) a side.
 - **A battle over a planet (2026-10-23).** The combat lab's prize is a gas giant now, Prize (2.8 km, a port in its cloud tops), not a station. `ai_leash` counts from the contested body's surface, and loitering fighters circle at `ai_orbit` radii but no more than half a leash above it, so over a planet they swing round just off its limb instead of 8 km out.
-- **Not yet:** the XL guns; ventral mounts; point defence (no missiles); turrets that turn on screen; hull blocking turret arcs; munitions bought; ion, arc and heat damage, resistances, system damage, field repair, disable; distress calls and patrols; traffic fighting back; bounty missions.
+- **Missiles (2026-10-23; core/src/missile.rs).** Forward bays (site size 4, `gen.js` draws a hatch each side of the bow and `footprint()` hands them to the core with the turret sites; `MAX_MOUNTS` 16), `types.missiles` from the loadout, a 512-missile pool, flight by proportional navigation under the ships' physics, a proximity fuse, waves per lab side (`side.wave`; the volleys timed by distance), and point defence in `turrets` (a missile grid, `mgrid`, like the ships'; shells test missiles as moving circles, and a burst's blast reaches them). A missile shot down is `B_SHOT`: a white flash and fragments; missiles draw as short white bolts with a flame and a smoke trail. The determinism scenario's biggest hull has two bays and both sides fire waves; the hashes agree. Snapshot version 27. In the 60-a-side combat lab, over 150 s: 418 launched, 362 shot down, 14 struck ships, 34 burst in the open. Point defence is strong where every fighter covers every missile in reach: the first knobs are `ms_hp`, `ms_rad` and the wave size.
+- **Not yet:** the XL guns; spinal and other ventral mounts; missiles in the outfitter and bought as munitions; point defence covering allies' missiles beyond its own reach; countermeasures; turrets that turn on screen; hull blocking turret arcs; munitions bought; ion, arc and heat damage, resistances, system damage, field repair, disable; distress calls and patrols; traffic fighting back; bounty missions.
 
 ## Build order
 

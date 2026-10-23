@@ -18,6 +18,7 @@ const KEY_ACTIONS = [
   { id: 'burn', group: 'Flight controls', ctx: 'held', label: 'Burner', keys: ['ShiftLeft', 'ShiftRight'] },
   { id: 'retro', group: 'Flight controls', ctx: 'held', label: 'All stop (assist) / face backward', keys: ['KeyX'] },
   { id: 'fire', group: 'Flight controls', ctx: 'held', label: 'Fire', keys: ['Space'] },
+  { id: 'missile', group: 'Flight controls', ctx: 'held', label: 'Launch missiles at the target', keys: ['KeyZ'] },
   // flight
   { id: 'mode', group: 'Flight', ctx: 'space', label: 'Next flight mode', keys: ['KeyF'] },
   { id: 'screenNext', group: 'Targets', ctx: 'flight', label: 'Next ship on screen', keys: ['Tab'] },

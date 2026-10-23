@@ -339,7 +339,7 @@ function setZoom(z) { zoom = Math.max(0.25, Math.min(4, z)); }
 function inputBits(IN) {
   const k = id => KB.held(id, keys);
   return (k('thrust') ? IN.thrust : 0) | (k('reverse') ? IN.reverse : 0) | (k('left') ? IN.left : 0) | (k('right') ? IN.right : 0)
-    | (k('strafeL') ? IN.strafeL : 0) | (k('strafeR') ? IN.strafeR : 0) | (k('burn') ? IN.burn : 0) | (k('fire') ? IN.fire : 0) | (k('retro') ? IN.retro : 0)
+    | (k('strafeL') ? IN.strafeL : 0) | (k('strafeR') ? IN.strafeR : 0) | (k('burn') ? IN.burn : 0) | (k('fire') ? IN.fire : 0) | (k('missile') ? IN.missile : 0) | (k('retro') ? IN.retro : 0)
     | (assistMode === 0 ? IN.assist : 0) | (assistMode === 2 ? IN.torque : 0);
 }
 
@@ -426,6 +426,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     T.mounts.forEach(([x, y, z], m) => { sim.mount.x[k * MM + m] = x; sim.mount.y[k * MM + m] = y; sim.mount.size[k * MM + m] = z; });
     t.outline[k] = fp.outline.length; t.guns[k] = T.mounts.length; t.rad[k] = Math.max(...fp.outline.map(([x, y]) => Math.hypot(x, y)));
     t.standoff[k] = ShipGen.shieldStandoff(ship, B);
+    // the missiles its bays carry (core/src/missile.rs; the loadout's `missiles`), if it has bays
+    t.missiles[k] = T.mounts.some(m => m[2] === 4) ? ((B.loadout[Z.id] || {}).missiles || 0) : 0;
   });
   // the player's ship flies as the core's last type row, built from its fit; it looks like the type it is built on
   const fittedLooks = () => { if (sim.game.fitted[0]) types[PK] = types[sim.game.base[0]]; };
@@ -1549,8 +1551,10 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   const MAXSH = sim.maxShells, MAXP = 8192, HIT_LIFE = 2.6;
   const TRACER_LEN = [10, 18, 30]; // a tracer's length (m), by calibre: light, medium, heavy
   const TRACER_COL = [[0.85, 0.72, 0.16], [1.0, 0.45, 0.08], [1.3, 0.16, 0.05]]; // and its colour, brightness in it: yellow, orange, red
-  VS.shield = instVAO([4, 4, 4], MAXS); VS.bolt = instVAO([4, 4], MAXSH); VS.part = instVAO([4, 4], MAXP);
-  const shieldInst = new Float32Array(MAXS * 12), boltInst = new Float32Array(MAXSH * 8), partInst = new Float32Array(MAXP * 8);
+  // missiles (core/src/missile.rs) draw as short white bolts, their motors leaving a trail of fire and smoke
+  const MAXMS = sim.maxMissiles, MISSILE_LEN = 7, MISSILE_COL = [1.6, 1.6, 1.5];
+  VS.shield = instVAO([4, 4, 4], MAXS); VS.bolt = instVAO([4, 4], MAXSH + MAXMS); VS.part = instVAO([4, 4], MAXP);
+  const shieldInst = new Float32Array(MAXS * 12), boltInst = new Float32Array((MAXSH + MAXMS) * 8), partInst = new Float32Array(MAXP * 8);
   const shieldCount = new Int32Array(types.length), shieldStart = new Int32Array(types.length), shieldFill = new Int32Array(types.length);
   // particles: a fixed pool of MAXP slots, live while life > 0. A new one takes the next slot round (when the pool is
   // full, the oldest written goes); nothing moves when one dies. `top`: slots used so far, so loops skip the rest
@@ -1603,7 +1607,13 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       if (ok && HITS.gen[j] !== SH.generation[j]) { HITS.gen[j] = SH.generation[j]; HITS.at[j] = HITS.bt[j] = -99; HITS.glow[j] = 0; }
       if (kind === BURST.air) {
         addFx(x, y, 0, 0, 0.2, size * 0.3, 1.6, 1.0, 0.62, 0.3);
-        sparks(x, y, 0, 0, 2, FIRE, 60, 1.0, 0.25);
+        sparks(x, y, 0, 0, size > 20 ? 10 : 2, FIRE, size > 20 ? 120 : 60, 1.0, 0.25);
+      } else if (kind === BURST.shot) {
+        // a missile shot down: a white flash, its fuel going up, fragments
+        addFx(x, y, 0, 0, 0.15, size * 1.2, 1.4, 4, 3.6, 3);
+        addFx(x, y, 0, 0, 0.5, size * 0.8, 1.2, 1.6, 0.7, 0.25);
+        sparks(x, y, 0, 0, 10, HOT, 150, 0.9, 0.4);
+        FLASH.push([x, y, 60, 0.18, 0, 4, 3.2, 2.2]);
       } else if ((kind === BURST.shield || kind === BURST.shrug || kind === BURST.splash) && T) {
         // a shield takes it: no fire, its own colour. A ripple from where it met the shield (a splash: from the burst,
         // off the shield), and a full hit's sparks skate off along the surface; a shrugged-off hit only flickers
@@ -1643,7 +1653,18 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       }
     }
   }
+  // a missile's motor, each frame it burns: a flame at its tail and smoke left behind
+  function missileTrails(dt) {
+    const MS = sim.missile;
+    for (let n = 0; n < MAXMS; n++) {
+      if (!MS.live[n] || !MS.thr[n]) continue;
+      const hx = -Math.sin(MS.ra[n]), hy = Math.cos(MS.ra[n]), tx = MS.rx[n] - hx * MISSILE_LEN * 0.6, ty = MS.ry[n] - hy * MISSILE_LEN * 0.6;
+      addFx(tx, ty, MS.vx[n] - hx * 220, MS.vy[n] - hy * 220, 0.08, 3.2, 0.5, 3.2, 1.9, 0.8);
+      if (Math.random() < Math.min(1, dt * 40)) addFx(tx, ty, MS.vx[n] * 0.02, MS.vy[n] * 0.02, 1.4 + Math.random() * 0.8, 2.2, 1.1, 0.32, 0.31, 0.3);
+    }
+  }
   function stepFx(dt) {
+    missileTrails(dt);
     for (let k = 0; k < FX.top; k++) {
       if (FX.life[k] <= 0) continue;
       FX.life[k] -= dt;
@@ -1891,6 +1912,13 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       const z = Math.max(0, Math.min(2, S.gun[n] - 1)), o = nb++ * 8, vx = S.vx[n], vy = S.vy[n], v = Math.hypot(vx, vy) || 1, len = TRACER_LEN[z], c = TRACER_COL[z];
       boltInst[o] = S.rx[n] - vx / v * len * 0.5; boltInst[o + 1] = S.ry[n] - vy / v * len * 0.5; boltInst[o + 2] = vx; boltInst[o + 3] = vy;
       boltInst[o + 4] = c[0]; boltInst[o + 5] = c[1]; boltInst[o + 6] = c[2]; boltInst[o + 7] = len;
+    }
+    const MS = sim.missile;
+    for (let n = 0; n < MAXMS; n++) {
+      if (!MS.live[n] || Math.abs(MS.rx[n] - cx) > halfW + 60 || Math.abs(MS.ry[n] - cy) > halfH + 60) continue;
+      const o = nb++ * 8, hx = -Math.sin(MS.ra[n]), hy = Math.cos(MS.ra[n]);
+      boltInst[o] = MS.rx[n] - hx * MISSILE_LEN * 0.5; boltInst[o + 1] = MS.ry[n] - hy * MISSILE_LEN * 0.5; boltInst[o + 2] = hx; boltInst[o + 3] = hy;
+      boltInst[o + 4] = MISSILE_COL[0]; boltInst[o + 5] = MISSILE_COL[1]; boltInst[o + 6] = MISSILE_COL[2]; boltInst[o + 7] = MISSILE_LEN;
     }
     if (nb) { setView(FP.bolt, TW, TH, cx, cy); gl.bindVertexArray(VS.bolt.vao); upload(VS.bolt, boltInst, nb); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nb); gl.bindVertexArray(null); }
     let np = 0;
@@ -2227,7 +2255,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const cl = courseLine(); if (cl) ms.unshift([cl, '#a8f0c4']);
     const jl = jumpLine(); if (jl) ms.unshift(jl.slice(0, 2));
     const guns = sim.arms.guns[0], gunLine = guns ? `  ·  GUNS ${guns} · MAG ${fmt1(sim.arms.ammo[0])} t` : ''; // the multicannons and the magazine's tonnes left
-    const modeLine = `${ASSIST[assistMode].hud}${sim.game.cold[0] ? '  ·  COLD' : ''}  ·  ${SH.well[0] > 0.01 ? `WELL ${Math.round(SH.well[0] * 100)}%` : `DEEP SPACE ${Math.round(deep * 100)}%`}${gunLine}`
+    // the missiles aboard, and the bays loading (core/src/missile.rs)
+    const msl = sim.arms.missiles[0], rl = sim.arms.reload[0], mslLine = msl || rl ? `  ·  MSL ${msl}${rl > 0 ? ` (${Math.ceil(rl)} s)` : ''}` : '';
+    const modeLine = `${ASSIST[assistMode].hud}${sim.game.cold[0] ? '  ·  COLD' : ''}  ·  ${SH.well[0] > 0.01 ? `WELL ${Math.round(SH.well[0] * 100)}%` : `DEEP SPACE ${Math.round(deep * 100)}%`}${gunLine}${mslLine}`
       + (rad > 0 ? `  ·  RAD −${(rad * 100).toFixed(1)}%/s` : '') + (SETTINGS.debug ? `  ·  ${sim.tick()}  ${fps.toFixed(0)} fps${renderScale < 1 ? ` ${Math.round(renderScale * 100)}%` : ''}` : '');
     const MONO = '500 11.5px "IBM Plex Mono", ui-monospace, monospace', SMALL = '500 10px "IBM Plex Mono", ui-monospace, monospace';
     hx.font = MONO; hx.textBaseline = 'middle'; hx.textAlign = 'left';
@@ -3123,7 +3153,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     // combat (core/src/combat.rs): the lab's fighters (side, AI phase, hull, shield, rounds), shells in flight, the side the
     // player is on, and joining one
     combat: () => { const A = sim.arms, out = []; for (let i = 0; i < sim.count(); i++) if (SH.alive[i] && sim.traffic.role[i] === TRAFFIC.combat) out.push({ i, side: A.side[i], phase: sim.traffic.phase[i], hull: SH.hull[i], shield: A.shield[i], ammo: A.ammo[i], target: A.target[i] ? A.target[i] - 1 & 0xffff : -1 });
-      let shells = 0; for (let n = 0; n < sim.maxShells; n++) shells += sim.shell.live[n]; return { fighters: out, shells, side: sim.battle.player_side[0], angry: sim.battle.angry[0], guns: sim.arms.guns[0], ammo: sim.arms.ammo[0] }; },
+      let shells = 0, missiles = 0; for (let n = 0; n < sim.maxShells; n++) shells += sim.shell.live[n]; for (let n = 0; n < sim.maxMissiles; n++) missiles += sim.missile.live[n];
+      return { fighters: out, shells, missiles, side: sim.battle.player_side[0], angry: sim.battle.angry[0], guns: sim.arms.guns[0], ammo: sim.arms.ammo[0], aboard: sim.arms.missiles[0] }; },
     side: s => command(CMD.side, s),
     // dev: put the (flying) player at rest over body j; a logged command, so replays still match
     teleport: j => command(CMD.teleport, j),

@@ -21,6 +21,7 @@ pub mod jump;
 pub mod market;
 pub mod math;
 pub mod mission;
+pub mod missile;
 pub mod motion;
 pub mod orbit;
 pub mod player;

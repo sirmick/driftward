@@ -831,6 +831,18 @@
             }
           ],
           "description": "Heavy turret sites, on the centreline."
+        },
+        "bay": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Forward missile bays (docs/weapons.md), in pairs either side of the bow, launching along the hull's axis."
+        },
+        "missiles": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256,
+          "description": "Missiles the bays carry, stock."
         }
       },
       "description": "How many of each role a hull of this class gets (a mirrored pair counts once; cargo: columns a side)."
