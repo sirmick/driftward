@@ -69,7 +69,7 @@
           "refuel",
           "repair"
         ],
-        "description": "White towers in managed gardens, every surface clean and every street quiet. Prism's offices for the March are here, and its clinics, and the people who hold the debts of half the Ironhull crews in the March. Visitors are welcomed, measured, and remembered."
+        "description": "White towers in managed gardens, every surface clean and every street quiet. Prism's offices for the March are here, and its clinics, and the people who hold the debts of half the Union crews in the March. Visitors are welcomed, measured, and remembered."
       },
       "environs": [
         {
@@ -205,7 +205,7 @@
         }
       },
       {
-        "line": "ironhulls.civilian",
+        "line": "union.civilian",
         "share": 0.2,
         "classes": {
           "c2": 2,

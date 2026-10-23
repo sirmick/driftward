@@ -7,7 +7,7 @@
 //! torches in all, however they are split), and the rest by the tonne in steps (the reactor 5 t, the deflector 2 t,
 //! most 1 t; bunks by the bunk; the bulkhead, signed, moves pressurised space into the unpressurised bay or back, by
 //! up to `bulkhead_max` of it). Every component has the same rating per tonne on every frame
-//! (params, Ironhull gear). Pressurised: bunks, sensors, reactor, jump drive, battery, shield banks, the climate hold.
+//! (params, Union gear). Pressurised: bunks, sensors, reactor, jump drive, battery, shield banks, the climate hold.
 //! Unpressurised: hoppers, container racks, the fuel tank, deflector, fins, heat sinks. Torches, jets and armour sit
 //! outside the bay.
 //!
@@ -536,7 +536,7 @@ mod tests {
     const ORE: usize = 2;
     const GOODS: usize = 8;
 
-    /// The Ironhull Copperhaul as the catalog makes it (class II x the Ironhulls' style x their civilian line), on
+    /// The Union Copperhaul as the catalog makes it (class II x the Union's style x their civilian line), on
     /// the class II frame, as type 0 (type 1, the last, is the player's fitted ship); a port at the origin with an
     /// outfitter, trading food, ore and consumer goods; the player landed there in it, stock-fitted.
     fn copperhaul() -> Box<World> {

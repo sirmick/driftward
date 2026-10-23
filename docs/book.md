@@ -1027,9 +1027,9 @@ Sim sources and the offers they spawn:
 
 ### **The M1 system**
 
-* \[M1\] An Ironhull-owned mid-ring industrial system with six bodies: the star, three planets, one moon and one station. Four are ports, giving 12 directed routes.  
+* \[M1\] A Union-owned mid-ring industrial system with six bodies: the star, three planets, one moon and one station. Four are ports, giving 12 directed routes.  
 * \[M1\] Two ways to earn: buying and selling commodities on each port's market, at fixed prices that vary with the port's role; and delivery missions from the mission board, carrying cargo to a named port in the system.  
-* \[M1\] Traffic: flows between ports from a gravity model (population × population ÷ distance, weighted by how well the ports' roles complement each other), plus through traffic arriving at and leaving by placeholder jump zones (north, east, south, west) and ships loitering round their ports, spawned as described in Traffic. Who flies is a per-system mix of faction lines and size classes: mostly Ironhull, with Federation and Prism civilian visitors. M5 replaces the static flows with ones derived from the economy.
+* \[M1\] Traffic: flows between ports from a gravity model (population × population ÷ distance, weighted by how well the ports' roles complement each other), plus through traffic arriving at and leaving by placeholder jump zones (north, east, south, west) and ships loitering round their ports, spawned as described in Traffic. Who flies is a per-system mix of faction lines and size classes: mostly Union, with Federation and Prism civilian visitors. M5 replaces the static flows with ones derived from the economy.
 
 # **Part V: Building it**
 
@@ -1121,13 +1121,13 @@ Each milestone adds to the one before and ends with an exit test:
 * Decided: balanced loop between trade and combat; death reloads the last landing save, and insurance covers escorts and holdings; single-player first, built so a shared galaxy can come later; time advances 1 day per landing, in proportion to lane length on jumps, and in real time in flight.  
 * Build staging: see the Build staging chapter.  
 * Decided (former opens): whole-system traffic with distance-based fidelity; field repair is free; onboard refining as a lossy outfit; a light spine of about five gated beats; NPC hails and the LLM budget and offline fallback as described in Traffic and Content pipeline.  
-* Decided: the first full map is about 100 playable systems, the Federation's, the Ironhulls' and Prism's (about 45, 35 and 20); the rest of humanity's 150 or so (Freeflag, Blackhull havens and 20 to 30 marginal systems), the Bloom's 30-odd charted systems, the Shadow's 20-odd and the Glass's four are background first, made playable later. The counts are canon in `src/lore/setting.md`.  
+* Decided: the first full map is about 100 playable systems, the Federation's, the Union's and Prism's (about 45, 35 and 20); the rest of humanity's 150 or so (Freeflag, Blackhull havens and 20 to 30 marginal systems), the Bloom's 30-odd charted systems, the Shadow's 20-odd and the Glass's four are background first, made playable later. The counts are canon in `src/lore/setting.md`.  
 * Tone, names and lore (outside this book; the setting is `src/lore/setting.md`).
 
 ## **Appendix: setting facts mechanisms depend on**
 
 * About 500 years in the future.  
-* Eight factions: the Federation (navy), Prism (AI corpo), the Ironhulls (miners), the Blackhulls (pirates, aligned with the Ironhulls), Freeflag (rebels, sympathetic), the Bloom (organic alien hive), the Glass (AI zone) and the Shadow (xenophobic alien exterminators modeled on MorningLightMountain in Pandora's Star). Mechanism chapters refer to them by role.  
+* Eight factions: the Federation (navy), Prism (AI corpo), the Union (miners' councils that broke away in a revolution), the Blackhulls (pirates, aligned with the Union), Freeflag (rebels, sympathetic), the Bloom (organic alien hive), the Glass (AI zone) and the Shadow (xenophobic alien exterminators modeled on MorningLightMountain in Pandora's Star). Mechanism chapters refer to them by role.  
 * Three rings: inner (prosperous), middle (industrial, hard), outer (poor and lawless).  
 * Ship and port styles follow each faction's design language, and its ships come in the lines below (see Ships). Shadow, Glass and Blackhull kitbash styles are still to be designed.
 
@@ -1137,8 +1137,8 @@ Faction names:
 | :---- | :---- | :---- | :---- | :---- | :---- |
 | Navy | The Federation | a fed / feds | Federal | the feds | Disciplined, symmetrical, armored; grey and white with heraldic markings; monumental architecture |
 | AI corpo | Prism | Prism associates | Prism | glassfaces | Sleek and seamless; white, glass and light; clean luxury, unsettling calm |
-| Miners | Ironhulls | an ironhull / ironhulls | ironhull | rusters, rockheads | Welded, modular, rusted and patched; sodium-lamp orange; hab rings bolted to rock |
-| Pirates | Blackhulls | a blackhull / blackhulls | blackhull | hulls, darkrunners | Kitbashed Ironhull and captured hulls, run dark; trophies, mismatched paint |
+| Miners | The Union | a Union hand / Union hands | Union | rusters, rockheads, reds | Welded, modular, rusted and patched; sodium-lamp orange; hab rings bolted to rock |
+| Pirates | Blackhulls | a blackhull / blackhulls | blackhull | hulls, darkrunners | Kitbashed Union and captured hulls, run dark; trophies, mismatched paint |
 | Rebels | Freeflag | a freeflagger / freeflaggers | Freeflag | flaggers, rags | Converted civilian craft, improvised; flags and slogans |
 | Hive | The Bloom | a bloomling / bloomlings | Bloom-grown | weeds, the rot | Grown and chitinous, bioluminescent, membranes |
 | AI zone | The Glass | none; converted systems are glassed | Glass | the mirror | Geometric, fractal, alien precision; no human scale |
@@ -1150,8 +1150,8 @@ Ship lines:
 | :---- | :---- | :---- | :---- |
 | Federation | Grey and white, heraldic markings, symmetrical, armored | Civil-service haulers and liners: the same grey and white, plainer, unarmored | Separate hulls |
 | Prism | Gloss black, seamless | White and glass, very sleek: long tapers, smooth skins, almost nothing sticking out | Separate hulls; one style |
-| Ironhulls | The cargo and ore haulers refitted for war: weapons and armor welded on | Cargo and ore haulers | Shared hulls; always rusted, welded and patched, sodium-lamp orange |
-| Blackhulls | None of their own | None of their own | Captured and kitbashed hulls, Ironhull first, run dark; trophies, mismatched paint |
+| Union | The cargo and ore haulers refitted for war: weapons and armor welded on | Cargo and ore haulers | Shared hulls; always rusted, welded and patched, sodium-lamp orange |
+| Blackhulls | None of their own | None of their own | Captured and kitbashed hulls, Union first, run dark; trophies, mismatched paint |
 | Freeflag | None of their own | None of their own | Other factions' civilian hulls, converted; flags and slogans |
 | The Bloom | Grown warforms | A worker line (seeders, harvesters), to be designed | Grown, chitinous, bioluminescent |
 | The Glass | To be designed | Probably none | |

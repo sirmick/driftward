@@ -1,10 +1,10 @@
 {
   "id": "brannock",
   "name": "Brannock",
-  "owner": "ironhulls",
+  "owner": "union",
   "ring": "middle",
   "region": "calder-march",
-  "description": "An Ironhull system of the middle ring: an orange star, a scorched mining world, a cloudy habitat world where most of its people live, a gas giant whose moon refines what the mines dig up, and a shipyard station where the Ironhulls weld their hulls.",
+  "description": "A Union system of the middle ring: an orange star, a scorched mining world, a cloudy habitat world where most of its people live, a gas giant whose moon refines what the mines dig up, and a shipyard station where Union crews weld their hulls.",
   "star": {
     "name": "Brannock",
     "class": "orange",
@@ -50,7 +50,7 @@
       "environs": [
         {
           "archetype": "forge",
-          "brand": "ironhulls",
+          "brand": "union",
           "count": 2
         }
       ]
@@ -101,7 +101,7 @@
         },
         {
           "archetype": "port",
-          "brand": "ironhulls",
+          "brand": "union",
           "count": 1
         }
       ]
@@ -131,7 +131,7 @@
       "environs": [
         {
           "archetype": "refinery",
-          "brand": "ironhulls",
+          "brand": "union",
           "count": 2
         },
         {
@@ -189,7 +189,7 @@
       "gravity": 4,
       "station": {
         "archetype": "shipyard",
-        "brand": "ironhulls",
+        "brand": "union",
         "seed": "kettle-yard"
       },
       "port": {
@@ -204,7 +204,7 @@
           "repair",
           "outfitter"
         ],
-        "description": "A cradle of girders where the Ironhulls build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."
+        "description": "A cradle of girders where Union crews build and patch their hulls, welded together from whatever the last three yards left behind. Metal from Tallow comes in; ships go out."
       }
     }
   ],
@@ -252,7 +252,7 @@
     "throughShare": 0.5,
     "local": [
       {
-        "line": "ironhulls.civilian",
+        "line": "union.civilian",
         "share": 0.8,
         "classes": {
           "c1": 4,
@@ -263,7 +263,7 @@
         }
       },
       {
-        "line": "ironhulls.military",
+        "line": "union.military",
         "share": 0.1,
         "classes": {
           "c1": 2,
@@ -272,7 +272,7 @@
         }
       },
       {
-        "line": "ironhulls.container-hauler",
+        "line": "union.container-hauler",
         "share": 0.1,
         "classes": {
           "c5": 1
@@ -281,7 +281,7 @@
     ],
     "through": [
       {
-        "line": "ironhulls.civilian",
+        "line": "union.civilian",
         "share": 0.4,
         "classes": {
           "c2": 2,
@@ -291,7 +291,7 @@
         }
       },
       {
-        "line": "ironhulls.military",
+        "line": "union.military",
         "share": 0.15,
         "classes": {
           "c1": 2,
@@ -338,7 +338,7 @@
     "loiter": [
       {
         "port": "kettle",
-        "line": "ironhulls.military",
+        "line": "union.military",
         "count": 2,
         "classes": {
           "c2": 2,
@@ -348,7 +348,7 @@
       },
       {
         "port": "halde",
-        "line": "ironhulls.military",
+        "line": "union.military",
         "count": 1,
         "classes": {
           "c2": 1,
@@ -357,7 +357,7 @@
       },
       {
         "port": "cinder",
-        "line": "ironhulls.military",
+        "line": "union.military",
         "count": 1,
         "classes": {
           "c1": 1,

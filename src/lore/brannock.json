@@ -2,10 +2,10 @@
   "system": "brannock",
   "history": [
     "Brannock was settled early in the Rush by belt crews who followed the ore sunk in Cinder, the scorched first world, and then found that Halde, the cold wet third world, would hold more people than any rock could. The crews built the way they always had: a hull welded to a hull, a ring bolted to whatever was solid. Tallow was cut into a grey moon of Vast to refine the ore, and Kettle Yard went up as a cradle of girders to turn the metal into ships. Nobody drew a plan. The system grew where the next weld would hold, and it shows.",
-    "When the Federation turned from opening the frontier to taxing it, Brannock sold its ore at inner-ring prices and watched the money go elsewhere. Its crews were among those who shut the lanes in the Charter Strikes, and when the Ironhull Compact came out of that, the Compact put its local office on Halde. Brannock has been the March's Ironhull hub ever since. The navy inspects every ore hauler that leaves, and Brannock has never forgiven it. Blackhulls drink in the docks, and nobody asks them to leave.",
-    "The last years have been heavy. Since 2524 the families out of Varrow have come through Ostry and settled on Halde, in emptied towers and borrowed habs, and they have told nobody much about what they saw. The navy wants Kettle Yard's refitted haulers for the Shadow front, and the yard is slow to deliver. The wider Compact is angry at the silence over Varrow and Hesk. Brannock shows it the way it shows everything, by getting on with the work and saying what it thinks about it."
+    "When the Federation turned from opening the frontier to taxing it, Brannock sold its ore at inner-ring prices and watched the money go elsewhere. Its crews were among those who shut the lanes in the Charter Strikes and took the mines in the Rising, and its council has sat on Halde since 2394. Brannock has been the March's Union hub ever since. The navy inspects every ore hauler that leaves, and Brannock has never forgiven it. Blackhulls drink in the docks, and nobody asks them to leave.",
+    "The last years have been heavy. Since 2524 the families out of Varrow have come through Ostry and settled on Halde, in emptied towers and borrowed habs, and they have told nobody much about what they saw. The navy wants Kettle Yard's refitted haulers for the Shadow front, and the yard is slow to deliver. The wider Union is angry at the silence over Varrow and Hesk. Brannock shows it the way it shows everything, by getting on with the work and saying what it thinks about it."
   ],
-  "culture": "Brannock talks flat and fast, and trusts hands over words. Ask anyone here whether they have ever fixed a hull, a lift or a filter, because the answer sorts you. They call themselves Ironhulls, or rusters among friends, and take rockhead as an insult only from a stranger. The Federation is the navy, the tin, the inspectors, and is dealt with politely and not forgiven. Prism is the lender, spoken of quietly because half the crews owe it. Halde people are a little soft in Cinder's eyes, and Cinder people are a little mad in Halde's. Outsiders get a fair price and a hard look. Varrow is not a subject anyone raises at table, but every table has a place laid for it.",
+  "culture": "Brannock talks flat and fast, and trusts hands over words. Ask anyone here whether they have ever fixed a hull, a lift or a filter, because the answer sorts you. They call themselves Union hands, or rusters among friends, and take rockhead as an insult only from a stranger. The Federation is the navy, the tin, the inspectors, and is dealt with politely and not forgiven. Prism is the lender, spoken of quietly because half the crews owe it. Halde people are a little soft in Cinder's eyes, and Cinder people are a little mad in Halde's. Outsiders get a fair price and a hard look. Varrow is not a subject anyone raises at table, but every table has a place laid for it.",
   "artBible": {
     "palette": [
       "#c4631f",
@@ -19,7 +19,7 @@
     "architecture": "Modular and welded. Arcologies stacked up cold valleys, tunnel towns cut into rock, refinery towers and dome roofs, and a yard of open girders. Hab rings are bolted straight onto stone, and nothing is ever finished, only extended.",
     "materials": "Rusted plate, weld seams, scorched steel, patch panels in mismatched paint, ceramic lining, cable bundles, soot and slag, sodium glass, hand-stencilled numbers.",
     "mood": "Hard, tired and stubborn. Working people who are proud of what they build and tired of being taxed for it. Dry humour, grime and a thread of grief for Varrow.",
-    "design": "Ironhull design: welded, modular, rusted and patched, sodium-lamp orange, hab rings bolted to rock. Everything is repaired rather than replaced. Tools and clothes carry visible mends, and ownership is marked with stencil, tag or weld."
+    "design": "Union design: welded, modular, rusted and patched, sodium-lamp orange, hab rings bolted to rock. Everything is repaired rather than replaced. Tools and clothes carry visible mends, and ownership is marked with stencil, tag or weld."
   },
   "ports": [
     {
@@ -74,7 +74,7 @@
       ],
       "rumors": [
         "Tug crews swear a seam in the Tailings gives off a hum at the edge of hearing. Old hands put it down to rock settling, and new hands stop talking about it.",
-        "A shift boss on the far side says her crew found a sealed cut that no survey ever recorded, with weld marks that were not Ironhull. She had it filled in, and the filling was not neat.",
+        "A shift boss on the far side says her crew found a sealed cut that no survey ever recorded, with weld marks that were not Union. She had it filled in, and the filling was not neat.",
         "Families out of Varrow arrive on Halde with bundles of Cinder-made tools. They say their old shafts are still lit, though nobody is down there."
       ],
       "vista": "Cinder at dawn, on the terminator where the night side ends, from the landing field: a flat plain of dark brown dust and rust-brown rock, tan ridges at the edge, and the mouth of a shaft lit sodium orange with a lift tower and sagging cables. A thin burnt orange haze lies over everything. Above, a glittering haze of orbital debris crosses the black sky like a scatter of embers, and low on the horizon the orange star is just rising over the crater rim."
@@ -83,7 +83,7 @@
       "body": "halde",
       "description": [
         "Halde is Brannock's world and nearly everyone's home: navy-blue seas, olive lowlands and cream highlands snowed on the peaks, all under drifting white cloud. Along the cold coast and up every river valley, arcologies stand stacked and ledged, joined by walkways and cables, with the cloud sitting low over the towers and the lights never out. The sky is a pale, cool blue, and at dusk the windows warm up one by one. Storms roll in off the sea with lightning in them.",
-        "Halde Landing is the field above the coast, and it is a city of its own: ground crews, customs houses, tea stalls and tool vendors, lodging for crews between runs. Most of the system's money changes hands in the market halls beside it, loud with factors and hauliers. Consumer goods come cheap here, and food is dear. Federation-flagged rings and an Ironhull container port turn above, and the Compact's local office sits in a grey block near the gate.",
+        "Halde Landing is the field above the coast, and it is a city of its own: ground crews, customs houses, tea stalls and tool vendors, lodging for crews between runs. Most of the system's money changes hands in the market halls beside it, loud with factors and hauliers. Consumer goods come cheap here, and food is dear. Federation-flagged rings and a Union container port turn above, and the Council House sits in a grey block near the gate.",
         "Halde has taken in the people from Varrow, millions of them, in emptied towers and borrowed habs. The new families queue at the clinics and the halls, and nobody is rude to them. Nobody asks them questions either."
       ],
       "places": [
@@ -92,8 +92,8 @@
           "text": "A row of long iron-roofed halls beside the field, loud from first lamp to last. Factors shout, tablets pass hands, and a lot of the system's business is done with a nod."
         },
         {
-          "name": "Compact Office",
-          "text": "The Ironhull Compact's local offices, a plain grey block with a flag nobody has repainted in years. The queue outside is long and mostly patient."
+          "name": "Council House",
+          "text": "Where Brannock's council sits, a plain grey block with a flag nobody has repainted in years. The queue outside is long and mostly patient."
         },
         {
           "name": "Borrowed Tower",
@@ -101,7 +101,7 @@
         },
         {
           "name": "The Long Quay",
-          "text": "Landing-field dockside where haulers wait for inspection. The Federation holds the far end, and the Ironhulls the near, and the two sides do not mix."
+          "text": "Landing-field dockside where haulers wait for inspection. The Federation holds the far end, and the Union the near, and the two sides do not mix."
         }
       ],
       "people": [
@@ -117,7 +117,7 @@
           "id": "tobiah-rune",
           "name": "Tobiah Rune",
           "role": "dock inspector",
-          "text": "Tobiah works for the Compact, not the navy, and is careful to say so. He inspects hulls and papers on the Ironhull side of the quay and tries to keep the Federation's inspectors from finding more than they should. He is tired and scrupulously fair.",
+          "text": "Tobiah works for the council, not the navy, and is careful to say so. He inspects hulls and papers on the Union side of the quay and tries to keep the Federation's inspectors from finding more than they should. He is tired and scrupulously fair.",
           "line": "Your papers will be read twice, once by me and once by them. I'd rather you were boring for both of us. It's quicker.",
           "look": "A man in his late fifties, thin and stooped, with a grey moustache and a weathered, careful face. He wears a council-issue coat in faded rust with a clipboard strapped to the forearm."
         },
@@ -133,7 +133,7 @@
       "rumors": [
         "Navy inspectors are being sent outward faster than they can be replaced. The ones left on the quay are young, and in a hurry to be somewhere else.",
         "Somebody on the Varrow side keeps getting messages on their old home terminal. They all say the same thing: that everything is fine.",
-        "Wren's old crew is meant to have a friend in the Compact office. Nobody will say which desk."
+        "Wren's old crew is meant to have a friend in the Council House. Nobody will say which desk."
       ],
       "vista": "Halde Landing seen from the field at dusk: a broad apron of wet grey plating with haulers on cradles and sodium lamps coming on. Beyond the market halls the city runs to the horizon: arcologies by the thousand climb the cold coast and every valley behind it, ledge on ledge, windows lit warm, cloud low across their tops, traffic streaming between them. To the left the navy-blue sea meets olive lowland, and above everything the pale sky blue deepens toward evening, with a spark of lightning far out over the water."
     },
@@ -190,8 +190,8 @@
     {
       "body": "kettle",
       "description": [
-        "Kettle Yard is a cradle of girders in orbit, where the Ironhulls build and patch their ships. It was welded together from whatever earlier yards left behind, and it is extended whenever someone has a spare plate and a free afternoon. Metal comes in from Tallow, and hulls go out. Cranes swing slowly across the open frame, and sparks fall away into the dark in all directions.",
-        "The yard is dear on metals, alloys and components, and has nothing cheap to offer except a place to work. Crews live in bolted modules along the spine: bunks, a canteen, a clinic, a chapel the size of a cupboard. Shipwrights have a saying that a hull is never done, only late. Right now there are navy requisition orders on the purser's desk for refitted haulers, and the yard is slow in filling them.",
+        "Kettle Yard is a cradle of girders in orbit, where Union crews build and patch their ships. It was welded together from whatever earlier yards left behind, and it is extended whenever someone has a spare plate and a free afternoon. Metal comes in from Tallow, and hulls go out. Cranes swing slowly across the open frame, and sparks fall away into the dark in all directions.",
+        "The yard is dear on metals, alloys and components, and has nothing cheap to offer except a place to work. Crews live in bolted modules along the spine: bunks, a canteen, a clinic, a chapel the size of a cupboard. Shipwrights have a saying that a hull is never done, only late. Right now the Plenum's orders to refit haulers for the navy are on the purser's desk, and the yard is slow in filling them.",
         "Blackhulls drink here as they do in all Brannock's docks, and nobody asks them to leave. A man with a clean coat and a black band on his sleeve sits near the bar most evenings, and the welders do not look at him, which is a kind of manners."
       ],
       "places": [
@@ -240,7 +240,7 @@
       ],
       "rumors": [
         "Some of the refits at the yard are going out with more guns than the navy's orders asked for. Nobody has seen a manifest.",
-        "A cradle crew found a section of old girder with a Blackhull stencil under three coats of Ironhull paint. They painted over it again and said nothing.",
+        "A cradle crew found a section of old girder with a Blackhull stencil under three coats of Union paint. They painted over it again and said nothing.",
         "Yard hands say the navy will take every hauler Brannock can build and give none of them back. Somebody has started a pool on how long that takes."
       ],
       "vista": "The Kettle Yard dock, seen from a berth on the spine: a crowded frame of rusted girders and welded modules, lit with sodium lamps and crossed by cranes and cables. Half-built hulls hang in the cradle with weld sparks falling away from them. Beyond the open frame, the orange star burns low and large, and Cinder hangs small and far off in the black sky, a scorched brown disc with a faint glitter of debris round it."

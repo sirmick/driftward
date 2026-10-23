@@ -5,7 +5,7 @@ until someone charts it. Every invented name is marked provisional: the lore pas
 tracks the ones that have been settled.
 
 Each faction names the way it lives (src/lore/setting.md): the Federation after the places and ideals of the inner
-ring, the Ironhulls in hard, short, workaday words (Brannock, Ostry, Cinder, Halde), Prism softly and abstractly
+ring, the Union in hard, short, workaday words (Brannock, Ostry, Cinder, Halde), Prism softly and abstractly
 (Serein, Quire), Freeflag after what it is fighting for, the Blackhull havens with a gallows humour, the
 Independents after whoever filed the claim; the Bloom's worlds by the names human surveyors gave them.
 """
@@ -16,7 +16,7 @@ POOLS = {
             'New Kerala', 'Providence', 'Vesta Major', 'Solace', 'Harrowgate', 'Bellamy', 'Castellan', 'New Ankara',
             'Prospero', 'Ardmore', 'Wardenclyffe', 'Lighthouse', 'Ostend', 'Fairhaven', 'Corvina', 'Pellucid',
             'Marchmont', 'Steadfast', 'New Quito', 'Admiralty', 'Sabine', 'Hollis', 'Garrison', 'Treaty', 'Valparaiso'],
-    'ironhulls': ['Gant', 'Holt', 'Brack', 'Tarn', 'Slagend', 'Anvil', 'Coker', 'Rake', 'Grist', 'Harl', 'Stour', 'Wrack',
+    'union': ['Gant', 'Holt', 'Brack', 'Tarn', 'Slagend', 'Anvil', 'Coker', 'Rake', 'Grist', 'Harl', 'Stour', 'Wrack',
              'Clinker', 'Dross', 'Kell', 'Burr', 'Fettle', 'Quarle', 'Hob', 'Skerry', 'Cadge', 'Gorse', 'Mattock',
              'Rivet', 'Trammel', 'Ingot', 'Barrow', 'Scarth', 'Dunnage', 'Swarf', 'Pelt', 'Callow', 'Tholl', 'Graff'],
     'prism': ['Lucent', 'Aubade', 'Calme', 'Vesper', 'Lumen', 'Clarine', 'Ondine', 'Sereine', 'Tessel', 'Aster',

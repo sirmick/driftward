@@ -28,7 +28,7 @@
       "enum": [
         "federation",
         "prism",
-        "ironhulls",
+        "union",
         "blackhulls",
         "freeflag",
         "independent",
@@ -737,10 +737,10 @@
                 "enum": [
                   "federation",
                   "prism",
-                  "ironhulls",
+                  "union",
                   "bloom"
                 ],
-                "default": "ironhulls"
+                "default": "union"
               },
               "seed": {
                 "type": "string",
@@ -777,10 +777,10 @@
                   "enum": [
                     "federation",
                     "prism",
-                    "ironhulls",
+                    "union",
                     "bloom"
                   ],
-                  "default": "ironhulls",
+                  "default": "union",
                   "description": "The faction that built and runs it: its look, and the lines its traffic flies where traffic.json says own.<line>."
                 },
                 "count": {

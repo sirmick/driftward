@@ -102,9 +102,18 @@ DATA['stars.json'] = json.loads((src / 'galaxy' / 'stars.json').read_text())
 # setting, sent with every prompt, cut out of them: it is shown once), for the debug screen's Regions tab
 setting_md = (src / 'lore' / 'setting.md').read_text()
 slog = read_json(src / 'galaxy' / 'stories.log.json') or []
+earlier = []  # the settings older stories were told from, if the setting has changed since: each shown once too
 for rec in slog:
-    for msg in rec.get('messages', []): msg['content'] = msg['content'].replace(setting_md, '[the setting: shown once, on the Regions tab]')
-DATA['galaxy-log.json'] = {'setting': setting_md, 'stories': slog}
+    for msg in rec.get('messages', []):
+        c = msg['content']; i = c.find('# The setting\n'); j = c.find('\n\n\nThe region:', i) if i >= 0 else -1
+        if j < 0: continue
+        told = c[i:j].strip()
+        if told == setting_md.strip(): cut = '[the setting: shown once, on the Regions tab]'
+        else:
+            if told not in earlier: earlier.append(told)
+            cut = f'[an earlier setting ({earlier.index(told) + 1}): shown once, on the Regions tab]'
+        msg['content'] = c[:i] + cut + c[j:]
+DATA['galaxy-log.json'] = {'setting': setting_md, 'earlier': earlier, 'stories': slog}
 DATA = {k: json.dumps(v, ensure_ascii=False, separators=(',', ':')) for k, v in DATA.items()}
 for k, v in DATA.items(): assert '</script' not in v, k
 

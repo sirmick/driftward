@@ -8,7 +8,7 @@ function makeShipyard(o) {
   const STORE = 'driftward.shipSeeds', BASE_SEED = 'play-1';
   const picks = (() => { try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { return {}; } })();
   const history = new Map(); // hull|size -> earlier seeds, newest last
-  // picks belong to the hull: lines that share hulls (the Ironhulls' refits) share their picks, so a pair stays one vessel
+  // picks belong to the hull: lines that share hulls (the Union's refits) share their picks, so a pair stays one vessel
   const hullOf = b => { const B = catalog.brands.find(x => x.id === b); return (B && B.hullKey) || b; };
   const k = (b, z) => hullOf(b) + '|' + z;
   const zi = z => catalog.sizes.findIndex(s => s.id === z);

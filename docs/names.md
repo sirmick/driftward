@@ -19,14 +19,14 @@ Named regions on the galaxy map (tools/galaxy.py REGIONS; docs/galaxy.md says wh
 | Region | What | Status |
 | :-- | :-- | :-- |
 | The Inner Sphere (IS) | Sol and its immediate neighbours, within 12.5 ly | Agreed |
-| The Calder March (the Seam) | The six-system crossing where the Federation, Prism and the Ironhulls meet | Agreed |
+| The Calder March (the Seam) | The six-system crossing where the Federation, Prism and the Union meet | Agreed |
 | Mirrorspace | The Glass's four systems | Agreed |
 | Prism Incorporate | Prism's main body | Agreed |
 | Prism Research | Prism's company worlds apart from it | Agreed |
 | The Reach | Freeflag's main body | Agreed |
 | Blackspace | The Blackhull havens | Agreed |
 | Blightspace | The Shadow | Agreed |
-| The Concord Worlds, the Long Watch, the Anvil, the Ironhull Outposts, the Cells, the Margins, the Garden, the Hedge, Corran Gate | The Federation's heartland and its front, the Ironhulls' body and outposts, Freeflag's other cells, the Independents, the Bloom and its closed part, the way into the Shadow | Provisional |
+| The Concord Worlds, the Long Watch, the Anvil, the Union Outposts, the Cells, the Margins, the Garden, the Hedge, Corran Gate | The Federation's heartland and its front, the Union's body and outposts, Freeflag's other cells, the Independents, the Bloom and its closed part, the way into the Shadow | Provisional |
 | Lighthouse Run, the Furnace Deeps, Beacon Cells, the Sink, the Maw | Round the hazard stars (the Lighthouse, the Furnace, the Beacon, the Sink, the Maw; the Metronome at Corran Gate) | Provisional |
 | The Shoals, the Black Shelf, the Long Dark, the Far Lanterns, the Outer Dark, the Farthest Reach | The open Drift, by sector | Provisional |
 
@@ -34,6 +34,9 @@ Named regions on the galaxy map (tools/galaxy.py REGIONS; docs/galaxy.md says wh
 
 | Name | What | Used in |
 | :-- | :-- | :-- |
-| Brannock | The M1 system (Ironhull, middle ring) | src/systems/m1.json, the lore |
+| The Union | The faction of the miners' councils that broke away in the Rising (key `union`; was the Ironhulls) | src/lore/setting.md, everywhere |
+| The Red Ring | Everyone's name for the middle ring, most of it the Union's | src/lore/setting.md |
+| The Rising, the Calder Treaty (2397), the Plenum, the Plan | The Union's revolution, the peace that ended it, its assembly of delegates and what that assembly sets | src/lore/setting.md |
+| Brannock | The M1 system (Union, middle ring) | src/systems/m1.json, the lore |
 | Cinder, Halde, Vast, Tallow, Kettle Yard | Brannock's bodies | src/systems/m1.json |
 | Cinder Deep, Halde Landing, Tallow Works, Kettle Yard | Brannock's ports | src/systems/m1.json |

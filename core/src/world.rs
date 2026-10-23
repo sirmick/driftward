@@ -312,7 +312,7 @@ params! {
     rad_hull = 0.0018;    "share of a sound hull lost a second per unit of stellar radiation above rad_safe: a full flare in the open costs about a tenth of a hull"
     repair_cost = 2.0;    "credits a hull point costs to repair"
     match_reach = 4.0;    "full assist and the autopilot match a moving port's velocity within this many of its radii (fading in from there to half as near)"
-    // outfitting (fit.rs; docs/outfitting.md): Ironhull gear's ratings per tonne, then prices
+    // outfitting (fit.rs; docs/outfitting.md): Union gear's ratings per tonne, then prices
     torch_mn = 1.0;       "torch thrust, MN per tonne (MN over tonnes of ship is thousands of m/s^2)"
     torch_room = 1.4;     "a hull's plumes take this many times its stock fit's torch tonnes, in all"
     torch_mw = 0.1;       "torch draw at full thrust, MW per MN"

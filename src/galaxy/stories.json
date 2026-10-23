@@ -9,11 +9,11 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "calder-march": {
    "summary": [
-    "The Calder March, which Ironhull crews call the Seam, is six old, crowded systems on the inner edge of the middle ring, where Compact, Federation and Prism space meet.",
+    "The Calder March, which Union crews call the Seam, is six old, crowded systems on the inner edge of the middle ring, where Union, Federation and Prism space meet.",
     "Ore and metals go inward through Calder's inspections, food goes out from Merrow, water and fuel from Ostry, and medicine and credit from Serein. The debts flow back.",
     "Navigation cores from Quire go inward under escort, so the March's own yards run short while the most valuable cargo around passes through them.",
     "Lanes lead to the Anvil, to Prism's inner systems, and to Varrow and Facet, both under quarantine as glass. Nobody in the March likes to look that way for long.",
@@ -21,7 +21,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "reach": {
    "summary": [
@@ -29,35 +29,35 @@
     "Its ice and gas ports ship water, fuel and chemicals outward, and it lives on imported food, components, medicine and whatever else the smugglers can get past the navy.",
     "Most of it was settled between 2328 and 2406 by ice crews and debtors, then taken over by Freeflag, whose havens turned old ice towns into refit yards.",
     "Four systems, Strike, Last Light, Hope and Remembrance, open towards the Drift, and eighteen dead systems around them make every lane a choke point someone can watch.",
-    "Federation patrols are thin, Prism's debts are still owed, and Ironhull crews from the Anvil trade here with more sympathy than the Compact admits."
+    "Federation patrols are thin, Prism's debts are still owed, and Union crews from the Anvil trade here with more sympathy than the Plenum admits."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "anvil": {
    "summary": [
-    "The Anvil is the Ironhull Compact's heartland: thirty worlds and towns of miners, refiners and forge crews, about four billion people, strung across the middle and outer rings among a lot of dead red dwarfs.",
+    "The Anvil is the Union's heartland: thirty worlds and towns of miners, refiners and forge crews, about four billion people, strung across the middle and outer rings among a lot of dead red dwarfs.",
     "It ships ore, metals, chemicals, alloys and components inward, and lives on imported food, water, fuel, medicine and anything that comes in a box, so every hauler's schedule is a political matter.",
-    "The Compact levies are paid to the Federation, but the strikes are remembered here, and Freeflag sympathy runs high along the Reach and Shoals borders, where lanes dip into Freeflag space.",
+    "The Union pays the Federation's levy on every cargo that crosses inward, but the Rising is remembered here, and Freeflag sympathy runs high along the Reach and Shoals borders, where lanes dip into Freeflag space.",
     "Since 2524 the Anvil has had a hole in its flank: the quarantined Glass systems sit beside Chi Draconis, and the families of Varrow and Hesk still have no answers.",
     "The outer Anvil, from Tarn and Mattock to GJ 3920, opens onto the Drift, which means smugglers, salvagers and Shadow rumours arrive together."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "beacon-cells": {
    "summary": [
     "Beacon Cells is a thin pocket of the outer ring: one living system, Dawnward, and four dead ones strung around a blue giant that makes the whole place easy to hide in.",
     "Nearly all of it is Freeflag's, and it trades in what a rebellion needs: quiet berths, patched hulls, fuel, and silence about who was here.",
-    "The only way in from the Anvil is the lane out of Onkaria, held by the Ironhull Compact, so the region's one real border runs through a choke point.",
-    "Freeflag crews and Ironhull haulers share it more easily than their governments admit, since many Ironhulls remember the strikes and Tarrow.",
+    "The only way in from the Anvil is the lane out of Onkaria, held by the Union, so the region's one real border runs through a choke point.",
+    "Freeflag crews and Union haulers share it more easily than their governments admit, since many Union crews remember the Rising and Tarrow.",
     "What it lacks is anything worth a navy's attention, which is why Freeflag chose it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "black-shelf": {
    "summary": [
@@ -68,7 +68,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "blackspace": {
    "summary": [
@@ -80,7 +80,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "blightspace": {
    "summary": [
@@ -91,7 +91,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "cells": {
    "summary": [
@@ -102,19 +102,19 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "concord": {
    "summary": [
     "The Concord Worlds are the Federation's larder: thirty settled systems and about fifty-seven billion people, most of them in the inner ring and fed from their own fields.",
-    "They sell food and manufactured goods and import almost everything else: water, metals, fuel, chemicals, alloys, components and medicine, hauled in largely from Ironhull mines and Prism's houses.",
+    "They sell food and manufactured goods and import almost everything else: water, metals, fuel, chemicals, alloys, components and medicine, hauled in largely from Union mines and Prism's houses.",
     "Sixty dead systems lie among the farms: white dwarfs, cold rocks and a red giant that serve as lane junctions, picket stations and, along the borders, hiding places.",
     "Federation law and the navy bind the region, but its edges pull away: Blackhull havens at Low Tide, the Margins, Prism's border at Gl 445, and Freeflag's raids reaching towards Providence.",
     "The Glass and the Shadow have not reached these worlds, but the navy's requisitioned freighters and Prism's core recall are already thinning the shipping that feeds them."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "corran-gate": {
    "summary": [
@@ -125,7 +125,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "drift": {
    "summary": [
@@ -136,7 +136,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "far-lanterns": {
    "summary": [
@@ -147,18 +147,18 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "furnace-deeps": {
    "summary": [
     "The Furnace Deeps is a short, hot chain of three systems: Chara, the one place anyone lives, then a Wolf-Rayet star, then a brown dwarf with nothing on it.",
     "Its only trade is ore and refined metal, which Chara's refineries take from the mining systems of the neighbouring Anvil and ship back out along the same lanes.",
-    "The Deeps is Ironhull Compact space throughout, and it runs on Compact habits: levy paid on time, no questions asked of a hull that looks the part.",
+    "The Deeps is Union space throughout, and it runs on Union habits: levy paid on time, no questions asked of a hull that looks the part.",
     "What divides it is distance: Chara is a crowded town of working people, while the two systems beyond it are empty, dangerous or both, and nobody goes there without a reason."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "garden": {
    "summary": [
@@ -170,7 +170,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "hedge": {
    "summary": [
@@ -181,18 +181,18 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "iron-outposts": {
    "summary": [
-    "The Ironhull Outposts are two mining systems, Grist and 85 Pegasi, joined by a two-day lane and cut off from the rest of the Compact.",
-    "They trade ore, refined metal and forged plate, and most of it goes the long way round to Compact yards, because the short ways run through dead space.",
+    "The Union Outposts are two mining systems, Grist and 85 Pegasi, joined by a two-day lane and cut off from the rest of the Union.",
+    "They trade ore, refined metal and forged plate, and most of it goes the long way round to Union yards, because the short ways run through dead space.",
     "Both lie against The Cells, a run of empty systems, so everything the Outposts own hangs on the two lanes that lead out through Gl 12.",
-    "Charter Strike memories and anger over Varrow and Hesk bind the Outposts to the Compact, though distance leaves them feeling forgotten by it."
+    "Charter Strike memories and anger over Varrow and Hesk bind the Outposts to the Union, though distance leaves them feeling forgotten by it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "lighthouse-run": {
    "summary": [
@@ -203,7 +203,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "long-dark": {
    "summary": [
@@ -215,7 +215,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "long-watch": {
    "summary": [
@@ -227,7 +227,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "margins": {
    "summary": [
@@ -239,18 +239,18 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "mirrorspace": {
    "summary": [
     "Mirrorspace is the spacers' name for the four middle-ring systems that went glass in 2524: Lucerne, Facet, Varrow and Hesk, strung along the borders of the Anvil, the Calder March and the Reach.",
     "It trades nothing, because the Federation shut the lanes in under a jump-resonance hazard quarantine, and no ship sent in has come back.",
-    "Two of the four were Prism systems and two were Ironhull mines, so each side has dead of its own and a story it would sooner not tell.",
-    "What binds the neighbouring systems is the silence: the Compact's anger at the cover-up, the Federation's closed lanes and Prism's polite recall of certain navigation cores all end at the same four dead lanes."
+    "Two of the four were Prism systems and two were Union mines, so each side has dead of its own and a story it would sooner not tell.",
+    "What binds the neighbouring systems is the silence: the Union's anger at the cover-up, the Federation's closed lanes and Prism's polite recall of certain navigation cores all end at the same four dead lanes."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "outer-dark": {
    "summary": [
@@ -261,19 +261,19 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "prism-inc": {
    "summary": [
     "Prism Incorporate is thirteen company worlds packed around the inner ring's edge, home to about seventeen billion people who work for, rent from and owe the same polite landlord.",
     "It ships alloys, components, finished goods and medicine outward, and lives on imported food, water, metals, fuel and chemicals, so every hungry hold in the region is a good one.",
-    "Its borders are mostly paperwork: the Inner Sphere to the Sol side, the Concord Worlds and the Ironhull Anvil at choke-point lanes, and the Calder March beyond Gl 625.",
+    "Its borders are mostly paperwork: the Inner Sphere to the Sol side, the Concord Worlds and the Anvil at choke-point lanes, and the Calder March beyond Gl 625.",
     "The one border nobody has paperwork for is Mirrorspace, where Lucerne went glass in 2524; Prism calls its cores recall precautionary, and everyone nearby counts the lanes anyway.",
     "Wages are good, unrest is low and security is heavy, which holds right up to the day a navigation core is recalled and nobody will say what was wrong with it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "prism-research": {
    "summary": [
@@ -284,18 +284,18 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "shoals": {
    "summary": [
     "The Shoals is sixty-odd dead systems with no settlement in any of them: stars with nothing worth the mortgage, strung on lanes that people use only to get somewhere else.",
-    "It trades in nothing. What moves through it is Ironhull ore haulers cutting corners, Freeflag runners keeping off navy charts, Blackhull crews going home, and the odd salvager hoping for a wreck.",
-    "Its edges are held by people who disagree about everything else: Ironhull mines in the Anvil, Freeflag worlds in the Reach and the Cells, Blackhull havens in Blackspace, and the Drift beyond.",
+    "It trades in nothing. What moves through it is Union ore haulers cutting corners, Freeflag runners keeping off navy charts, Blackhull crews going home, and the odd salvager hoping for a wreck.",
+    "Its edges are held by people who disagree about everything else: Union mines in the Anvil, Freeflag worlds in the Reach and the Cells, Blackhull havens in Blackspace, and the Drift beyond.",
     "With the navy stretched between Freeflag and the Shadow, nobody patrols the Shoals, so everyone passing through is quietly hoping they are the only ones who thought of it."
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "the-maw": {
    "summary": [
@@ -306,7 +306,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   },
   "the-sink": {
    "summary": [
@@ -317,7 +317,7 @@
    ],
    "model": "anthropic/claude-sonnet-5.5",
    "date": "2026-10-16",
-   "galaxy": "e244578e151daa81"
+   "galaxy": "46912e88560f2f2d"
   }
  },
  "systems": {
@@ -326,7 +326,7 @@
     "Every jump lane in human space is measured from here, and the torch that scattered people across the Solar System in 2076 is still taught in schools as the day it all began.",
     "One planet has been built over into a single city of about 13 billion, and the habitats, container-port, relay and shipyard keep six lanes busy.",
     "Unrest is low and security is the highest anywhere, but the quarantine of the Glass systems is only ever described here as a hazard notice, and clerks have learned to stop asking.",
-    "The shipyard is now receiving navy requisition orders for Ironhull refits, and a captain who knows which hull numbers are on the list could sell that to someone."
+    "The shipyard is refitting Union haulers lent to the navy, and a captain who knows which hull numbers are on the list could sell that to someone."
    ],
    "region": "inner-sphere"
   },
@@ -371,7 +371,7 @@
     "Epsilon Eridani was settled in 2186, and a whole planet has since been built over into a city of 13 billion beneath an orange sun.",
     "Its shipyard and military port make it one of the navy's biggest bases, with a lane to Keid in the Concord Worlds for fleet supply.",
     "Yard workers have been told to refit and ready every hull they can for the Shadow front, and the overtime is making them as resentful as it makes them rich.",
-    "Some of the ships coming into the yard are Ironhull haulers taken on requisition, and their crews are drinking in the lower docks with plenty to say."
+    "Some of the ships coming into the yard are Union haulers lent to the navy, and their crews are drinking in the lower docks with plenty to say."
    ],
    "region": "inner-sphere"
   },
@@ -440,7 +440,7 @@
    "bullets": [
     "Ice crews of the belt tradition settled Ostry in 2282, cutting towns into an ice moon because a red dwarf gave them nothing warmer.",
     "Ostry sells water and fuel to the whole March and buys everything else. Most of its 150 million people live under the ice and know each other's families.",
-    "Its people are closer to the Blackhulls than the Compact admits, and a Blackhull hull in the tug yards draws a shrug rather than a report.",
+    "Its people are closer to the Blackhulls than the Plenum admits, and a Blackhull hull in the tug yards draws a shrug rather than a report.",
     "Most of the people who got out of Varrow came through here, and the quarantine picket at the jump zone is watched like a dog that has bitten someone.",
     "Plenty of Varrow's crews left debts, kin and unanswered questions behind, and a captain who carries a message across the picket would find buyers under the ice."
    ],
@@ -451,7 +451,7 @@
     "Halcyon Dynamics terraformed Serein from 2301 as a company world, and it is still Prism's seat in the March: white towers, managed gardens, orbital clinics.",
     "Its 2.8 billion people are associates, their families and the staff who serve them. Everything is clean, quiet and expensive, and the politeness has an edge.",
     "Prism's statement on the 2524 quarantine was issued here, and every associate repeats it word for word, down to the pauses.",
-    "Serein holds the debts of half the Ironhull crews in the March, and since Varrow fell some of those debtors cannot be found, though the ledgers stay open.",
+    "Serein holds the debts of half the Union crews in the March, and since Varrow fell some of those debtors cannot be found, though the ledgers stay open.",
     "The research ports are busy while the recall of navigation cores goes on. A captain who is asked to carry a sealed case to Serein should ask what is in it, and expect no answer."
    ],
    "region": "calder-march"
@@ -468,7 +468,7 @@
   "119126": {
    "bullets": [
     "Farmers and a Federation charter settled Merrow in 2294 to feed the mining systems, and it is still the only world in the March where food grows in the open.",
-    "About 7.5 billion people live here, nearly half the March, in farm towns, processing cities and container ports that ship food to everyone, Ironhull and Prism alike.",
+    "About 7.5 billion people live here, nearly half the March, in farm towns, processing cities and container ports that ship food to everyone, Union and Prism alike.",
     "Merrow is comfortable and a little smug, but the war levy has gone up twice and evacuees from the Shadow front are filling its towns faster than it can house them.",
     "The lane to Facet, a system gone glass, is only 1.7 days away. Merrow's navy base is cut off from the Federation core, and farmers who watch the lane are not reassured.",
     "Evacuees and locals are competing for harvest work and housing, and a captain hauling relief cargo might find who gets it a bigger fight than the hauling."
@@ -478,7 +478,7 @@
   "81753": {
    "bullets": [
     "The navy settled Calder in 2292 as a base to watch the Seam, and the cities on its thin-aired, dry world grew up round the station like moss round a post.",
-    "Calder Station holds the picket squadron, customs and the Compact's levy office, and every Ironhull cargo going inward passes through its inspections.",
+    "Calder Station holds the picket squadron, customs and the levy office for Union cargo, and every Union cargo going inward passes through its inspections.",
     "The navy is being pulled to the Shadow front, and the junior officers left behind are overworked, touchy and inclined to find something wrong with any hold.",
     "Calder's lane to Varrow is closed as glass, and the picket crews who supply the Ostry quarantine talk freely in the station's bars about what they have been told not to say."
    ],
@@ -487,10 +487,10 @@
   "119090": {
    "bullets": [
     "Mining crews settled Brannock in 2293 under company charters, working the scorched world Cinder and gas giant Vast, and Halde's arcologies later took in the March's biggest crowd.",
-    "It is the Ironhulls' hub in the March: ore from Cinder, metals from Tallow's refinery, hulls from Kettle Yard, all sent inward under the Federation's inspectors, whom Brannock resents.",
+    "It is the Union's hub in the March: ore from Cinder, metals from Tallow's refinery, hulls from Kettle Yard, all sent inward under the Federation's inspectors, whom Brannock resents.",
     "Blackhulls drink in its docks and the dock police look elsewhere, in the way a family treats a cousin who is in trouble.",
     "Some two million Varrow crew and kin now live on Halde in emptied towers and borrowed habs, angry about the cover-up and unsure whom to blame for it.",
-    "Kettle Yard has navy orders to refit haulers for the front and is slow to fill them. Yard hands will quietly fit guns for the right captain and the wrong flag."
+    "Kettle Yard has the Plenum's orders to refit haulers for the navy's front and is slow to fill them. Yard hands will quietly fit guns for the right captain and the wrong flag."
    ],
    "region": "calder-march"
   },
@@ -589,8 +589,8 @@
    "bullets": [
     "Strike was settled in 2372 and renamed after the Charter Strikes, when ice crews from the middle ring came through with nowhere to go and stayed.",
     "About 31 thousand people live here, running ice and a haven, and it is the Reach's main door into the open Drift.",
-    "Security is the lowest in the Reach, because the lane to Tarn leads straight to the Ironhull Compact and the Compact's crews are welcome.",
-    "Compact crews from Tarn bring news of Varrow and Hesk and the families who were told nothing, and Strike is where that anger gets turned into Freeflag recruits."
+    "Security is the lowest in the Reach, because the lane to Tarn leads straight to the Union and the Union's crews are welcome.",
+    "Union crews from Tarn bring news of Varrow and Hesk and the families who were told nothing, and Strike is where that anger gets turned into Freeflag recruits."
    ],
    "region": "reach"
   },
@@ -630,7 +630,7 @@
   },
   "70252": {
    "bullets": [
-    "Footwall is a yellow star with no settlement, yet Freeflag holds it, and it sits on the lane between Shoulder and the Ironhull system Arcturus.",
+    "Footwall is a yellow star with no settlement, yet Freeflag holds it, and it sits on the lane between Shoulder and the Union system Arcturus.",
     "Nobody lives there, but Shoulder's ships go in empty and come out sealed, so it is plainly being used for something."
    ],
    "region": "reach"
@@ -665,10 +665,10 @@
   },
   "89660": {
    "bullets": [
-    "Chi Draconis was settled in 2257 by ore-prospectors from Sol who found the belts rich and the sun dependable, and it has been a Compact town since the Charter Strikes.",
+    "Chi Draconis was settled in 2257 by ore-prospectors from Sol who found the belts rich and the sun dependable, and it has been a Union town since the Rising.",
     "Its nineteen million people work a mine and a refinery, and ore from the outer Anvil often passes through here on its way inward.",
     "Lucerne, one lane away at under two days, went glass in 2524, and the quarantine buoys now sit in sight of Chi Draconis traffic.",
-    "Unrest is above the Anvil's average: dock crews talk openly about the cover-up, and the navy inspectors have stopped enjoying their visits.",
+    "Unrest is above the Anvil's average: dock crews talk openly about the cover-up, and the Federation's Treaty inspectors have stopped enjoying their visits.",
     "A captain willing to carry unofficial letters from relatives of Lucerne's lost crews could find a lot of grateful, angry people at the refinery bars."
    ],
    "region": "anvil"
@@ -676,7 +676,7 @@
   "64720": {
    "bullets": [
     "Swarf was settled in 2279 around 61 Virginis, and grew into a forge world of some two hundred million on the back of cheap ore and stubborn labour.",
-    "It mines, refines and forges, and its sheet and structural alloys are shipped to half the Compact.",
+    "It mines, refines and forges, and its sheet and structural alloys are shipped to half the Union.",
     "Two of its three lanes lead to dead red dwarfs, so everything comes and goes by a single busy route through GJ 3707.",
     "Swarf is calmer than most of the Anvil, but its yards are full of haulers being fitted with guns, and the foremen are quietly arguing about who they are really for."
    ],
@@ -687,7 +687,7 @@
     "Stour, around Beta Comae Berenices, was settled in 2286 by a mining co-operative that never quite stopped being one.",
     "Twenty-one million people mine and refine here, and the town is steady, orderly and proud of its low unrest.",
     "Its lane to Chara links the Anvil to the Furnace Deeps, so Stour's docks see a lot of Deeps metal on the way somewhere else.",
-    "A refinery shift that has lost its foreman to a navy requisition is said to be looking for a replacement who is not too fond of paperwork."
+    "A refinery shift that has lost its foreman to a Plenum requisition is said to be looking for a replacement who is not too fond of paperwork."
    ],
    "region": "anvil"
   },
@@ -696,14 +696,14 @@
     "61 Ursae Majoris was settled in 2277 and stayed a quiet mining town, a few strikes and one memorable flood of coolant its only notable history.",
     "Seventeen million people work its mine and refinery, and the town sends refined stock to Alula Australis and Chara by short lanes.",
     "It is a secure, well-run place by Anvil standards, and its harbour authority is known for fining everyone equally.",
-    "Crews complain that the navy's requisition lists have taken three tugs without paying, and a captain with a spare hull might find work."
+    "Crews complain that the Plenum's requisition lists have taken three tugs for the front without paying, and a captain with a spare hull might find work."
    ],
    "region": "anvil"
   },
   "81054": {
    "bullets": [
     "Quarle was settled in 2254 around an orange sun, among the earliest of the Anvil's worlds, and now holds some 137 million people.",
-    "It mines, refines and forges, and it is the Compact's front door to Prism's Gl 643, whose customs sit across a choke point.",
+    "It mines, refines and forges, and it is the Union's front door to Prism's Gl 643, whose customs sit across a choke point.",
     "Prism pays well and asks politely, which makes Quarle's forge masters suspicious, and the recall of navigation cores has not helped.",
     "Gl 654, the dead system on the other lane, is a favourite stop for ships who would rather not be logged at Quarle's docks."
    ],
@@ -740,7 +740,7 @@
    "bullets": [
     "Callow was settled in 2307 and, with ice as well as ore, grew into the Anvil's biggest world, home to about one and a half billion people.",
     "It mines, supplies ice and refines, which makes it a water exporter in a region that mostly begs for it.",
-    "With its size comes unrest: the crowded lower decks have been angry since the Glass, and the Compact's police have been stretched thin.",
+    "With its size comes unrest: the crowded lower decks have been angry since the Glass, and the Union's police have been stretched thin.",
     "Gl 67, the dead system near Callow and Titawin, is a handy place for hauliers to meet without anyone asking."
    ],
    "region": "anvil"
@@ -749,7 +749,7 @@
    "bullets": [
     "Zavijava was settled in 2268, and its three ports mine ore, cut ice and run forges for a population of some four hundred million.",
     "It is a well-fed, prosperous and well-defended Anvil world, and it sends water and alloys to Denebola and Porrima by short lanes.",
-    "Security is comparatively high, and the Compact has quietly made Zavijava its main depot for requisitioned hull repairs.",
+    "Security is comparatively high, and the Union has quietly made Zavijava its main depot for requisitioned hull repairs.",
     "The forge guilds have begun asking who is being protected, and a captain who knows the answer might trade it."
    ],
    "region": "anvil"
@@ -776,7 +776,7 @@
    "bullets": [
     "Arcturus was settled in 2264 around a red giant, and its forge crews live under a huge, dim, cold-looking sun.",
     "Five million people mine and forge here, a small town with a long memory and a strong sense of its own worth.",
-    "One lane runs to Footwall, a Freeflag system, and Freeflag runners sometimes use it, a fact the Compact pretends not to see.",
+    "One lane runs to Footwall, a Freeflag system, and Freeflag runners sometimes use it, a fact the Union pretends not to see.",
     "Drift Mouth next door is dead and a good place to meet, and a captain with Freeflag cargo might find a fence in Arcturus."
    ],
    "region": "anvil"
@@ -784,9 +784,9 @@
   "46945": {
    "bullets": [
     "Cadge, around 11 Leonis Minoris, was settled in 2296, and its mining and forge ports are known for good steel and bad tempers.",
-    "Twenty-six million people live in a town that is secure by Anvil standards, with a navy post and an Ironhull yard side by side.",
-    "It trades by lane with Copernicus, Wrack and Gant, and its forge masters are among the loudest voices in the Compact's meetings.",
-    "Unrest is middling, and a captain hauling guns for the Compact's refit programme could get plenty of work here and plenty of questions."
+    "Twenty-six million people live in a town that is secure by Anvil standards, with a militia post and a Union yard side by side.",
+    "It trades by lane with Copernicus, Wrack and Gant, and its forge masters are among the loudest voices in the Plenum.",
+    "Unrest is middling, and a captain hauling guns for the Union's refit programme could get plenty of work here and plenty of questions."
    ],
    "region": "anvil"
   },
@@ -813,16 +813,16 @@
     "Copernicus was settled in 2302, and its thirty million people mine and refine ore in a town known for its sensible dockside.",
     "Lanes run to GJ 2069A, Cadge and Gl 353, which makes it a useful relay for ore moving between the western towns.",
     "Security is middling and unrest low, and the town has been careful to stay out of the quarrels of its bigger neighbours.",
-    "A workers' council there is said to be collecting names of crews lost to navy requisition, and wants a courier to carry the list to the Compact."
+    "A workers' council there is said to be collecting names of crews lost at the Shadow front on the navy's charters, and wants a courier to carry the list to the Plenum."
    ],
    "region": "anvil"
   },
   "73467": {
    "bullets": [
     "Hob, around 44 Boötis, was settled in 2297 and became a world of nearly two hundred million, with mines, refineries and a good forge.",
-    "Its yards build hauler hulls for the Compact, and the gun mounts now bolted to them are the town's current pride and worry.",
+    "Its yards build hauler hulls for the Union, and the gun mounts now bolted to them are the town's current pride and worry.",
     "Hob is stable and well fed, but its trade lanes lead outward to Skerry, GJ 3873 and Tholl, which are all closer to the Drift than anyone likes.",
-    "The yard unions say the navy's requisition lists name Hob ships first, and a captain can hear the grumbling in any bar."
+    "The yard councils say the Plenum's requisition lists name Hob ships first, and a captain can hear the grumbling in any bar."
    ],
    "region": "anvil"
   },
@@ -837,7 +837,7 @@
   },
   "46720": {
    "bullets": [
-    "Gant was settled in 2299 around Theta Ursae Majoris, and now holds some three hundred million people on a world the Compact calls outer ring.",
+    "Gant was settled in 2299 around Theta Ursae Majoris, and now holds some three hundred million people on a world the Union calls outer ring.",
     "Its mines, refineries and forge supply a third of the ore the western Anvil sells, and it knows it.",
     "Security is low and unrest high, and Freeflag pamphlets are found in the dock lockers more often than the harbour police admit.",
     "A captain willing to carry a message between the forge stewards and a Freeflag contact could earn a great deal of trust or a great deal of trouble."
@@ -846,9 +846,9 @@
   },
   "7499": {
    "bullets": [
-    "Titawin was settled in 2312 and is a mining, refining and forge world of about 138 million, on the edge of the Compact.",
+    "Titawin was settled in 2312 and is a mining, refining and forge world of about 138 million, on the edge of the Union.",
     "It faces dead systems on two of its three lanes, Gl 67 and Gl 14, so its only living neighbour is Callow.",
-    "Security is low, with the navy thin on the ground, and Titawin's people have learned to keep their own watch.",
+    "Security is low, with the militia thin on the ground, and Titawin's people have learned to keep their own watch.",
     "Gl 67 is barely over a day away, and people say salvagers and smugglers meet there beyond the reach of anyone's customs."
    ],
    "region": "anvil"
@@ -857,7 +857,7 @@
    "bullets": [
     "Chalawan was settled in 2298 and has become a world of nearly two hundred million, with mines, refineries and forge yards beyond the middle ring.",
     "Its short lane to Vug connects it to Alula Australis, and most of its trade goes that way.",
-    "Security is poor, unrest is high, and the Compact has sent little help because it has little to send.",
+    "Security is poor, unrest is high, and the Union has sent little help because it has little to send.",
     "Rumour says a Blackhull crew has been drinking at a dockside bar there, and the harbourmaster has been told not to look."
    ],
    "region": "anvil"
@@ -866,7 +866,7 @@
    "bullets": [
     "Holt, around 26 Draconis, was settled in 2305 and holds seventy-five million people who mine and refine in the shadow of the Anvil itself.",
     "It is linked by short lanes to Anvil, Gl 675 and Gl 630.1A, a tight cluster that trades mostly with itself.",
-    "Security is thin and unrest close to boiling, with wages fixed at what the Compact can afford and prices fixed at what Prism can charge.",
+    "Security is thin and unrest close to boiling, with wages fixed by the Plan and prices fixed at what Prism can charge.",
     "A wildcat strike committee is said to meet in the old ore sheds, and a captain who moves cargo might be asked to carry more than cargo."
    ],
    "region": "anvil"
@@ -893,8 +893,8 @@
    "bullets": [
     "Wrack, around 20 Leonis Minoris, was settled in 2318 on the Anvil's border with the Garden, and its fifty-nine million people mine and refine ore.",
     "Its lane to Pollen, a living Bloom world, makes it the Anvil's closest neighbour to something human beings do not understand.",
-    "Security is poor and unrest is among the highest on the Anvil, as the Bloom's closed sectors have unsettled traders and navy alike.",
-    "The Accord forbids weapons near Pollen, and a captain hauling guns for the Compact's refits had better know which side of that line the cargo sits."
+    "Security is poor and unrest is among the highest on the Anvil, as the Bloom's closed sectors have unsettled traders and militia alike.",
+    "The Accord forbids weapons near Pollen, and a captain hauling guns for the Union's refits had better know which side of that line the cargo sits."
    ],
    "region": "anvil"
   },
@@ -912,15 +912,15 @@
     "Tholl, around Chi Herculis, was settled in 2320, and its mines, ice shipping and forges now support about 122 million people.",
     "It exports water, which in the outer Anvil makes it a kind of banker, and it is hated and courted accordingly.",
     "Security is thin, and the road to the Drift via GJ 3920 and Tarn is only lightly watched.",
-    "A captain who can move water quietly past the navy to Freeflag buyers would find Tholl's ice-brokers more than willing to deal."
+    "A captain who can move water quietly past the militia to Freeflag buyers would find Tholl's ice-brokers more than willing to deal."
    ],
    "region": "anvil"
   },
   "78223": {
    "bullets": [
-    "Tarn, around Rho Coronae Borealis, was settled in 2331 as a late mining and forge town on the very edge of the Compact.",
+    "Tarn, around Rho Coronae Borealis, was settled in 2331 as a late mining and forge town on the very edge of the Union.",
     "Fifty-nine million people live there, and it is a gateway into the open Drift, with a lane to Strike, a Freeflag system, two days away.",
-    "Security is poor and unrest high, with Freeflag sympathy open and navy visits met with closed shutters.",
+    "Security is poor and unrest high, with Freeflag sympathy open and Treaty inspectors met with closed shutters.",
     "A captain who knows the Drift could be hired here to guide shipments through the unmarked reaches, and to keep quiet about what is carried."
    ],
    "region": "anvil"
@@ -929,28 +929,28 @@
    "bullets": [
     "Mattock, around 10 Canum Venaticorum, was settled in 2349, the youngest world in the Anvil, and now has some 104 million people.",
     "It mines, refines and forges, and is a gateway into the open Drift, with a dead Shoals star three days away.",
-    "Security is poor and unrest high, as the Compact's levy sits heavy on a world that has had little time to grow.",
+    "Security is poor and unrest high, as the Plan's quotas sit heavy on a world that has had little time to grow.",
     "Salvagers come in from the Drift with strange cargo, and Mattock's yards have a sideline in not asking where it came from."
    ],
    "region": "anvil"
   },
   "119184": {
    "bullets": [
-    "GJ 1221 is a dead red dwarf on the Compact's books, a faint inner-ring star that nobody has settled, though a Compact beacon marks the lane.",
+    "GJ 1221 is a dead red dwarf on the Union's books, a faint inner-ring star that nobody has settled, though a Union beacon marks the lane.",
     "It sits between Chi Draconis and Prism's Gl 445, and its main use is as a place for ships to wait out inspections."
    ],
    "region": "anvil"
   },
   "118902": {
    "bullets": [
-    "Gl 518 is a dead red dwarf with nothing to mine and no one to claim it, and the Compact has never bothered to fortify it.",
+    "Gl 518 is a dead red dwarf with nothing to mine and no one to claim it, and the Union has never bothered to fortify it.",
     "Its lanes run to Gar and Gl 536, both dead, and to Swarf, so the only traffic is the occasional Swarf prospector checking old claims."
    ],
    "region": "anvil"
   },
   "118955": {
    "bullets": [
-    "GJ 3839 is a dead red dwarf held by the Compact, kept as a lane relay, with no population and no reason to have one.",
+    "GJ 3839 is a dead red dwarf held by the Union, kept as a lane relay, with no population and no reason to have one.",
     "It lies on the lane between Stour and Arcturus and also touches the Federation's Xi Boötis, which makes it a quiet border crossing for the careful."
    ],
    "region": "anvil"
@@ -958,7 +958,7 @@
   "118756": {
    "bullets": [
     "GJ 3667 is a dead red dwarf with no settlement, flaring now and then, and uneasy rumour says the lanes near it have been behaving oddly.",
-    "It joins Denebola and Alula Australis to the Concord Worlds and the Garden, and the Compact has no wish to explain why traffic has thinned."
+    "It joins Denebola and Alula Australis to the Concord Worlds and the Garden, and the Union has no wish to explain why traffic has thinned."
    ],
    "region": "anvil"
   },
@@ -971,7 +971,7 @@
   },
   "118800": {
    "bullets": [
-    "GJ 3707 is a dead orange star held by the Compact, a lane junction with a beacon but no settlement.",
+    "GJ 3707 is a dead orange star held by the Union, a lane junction with a beacon but no settlement.",
     "All of Swarf's ore leaves through it, so it is better watched than most dead systems, and the harbour office there keeps a log of its traffic."
    ],
    "region": "anvil"
@@ -992,14 +992,14 @@
   },
   "83342": {
    "bullets": [
-    "Gl 654 is a dead red dwarf with a nearly useless set of rocks, and the Compact only keeps a beacon at its Quarle lane.",
+    "Gl 654 is a dead red dwarf with a nearly useless set of rocks, and the Union only keeps a beacon at its Quarle lane.",
     "Its far lane runs three days to Standfast, a Freeflag system, so it is quietly used by those who know the way."
    ],
    "region": "anvil"
   },
   "118819": {
    "bullets": [
-    "GJ 3728B is a dead red giant held by the Compact, too bright and too hot for anyone to settle near.",
+    "GJ 3728B is a dead red giant held by the Union, too bright and too hot for anyone to settle near.",
     "It is a useful junction, with lanes to Porrima, Zavijava, GJ 3707 and Stope, and its radiation keeps ships from loitering."
    ],
    "region": "anvil"
@@ -1020,7 +1020,7 @@
   },
   "118277": {
    "bullets": [
-    "Gl 164 is a dead white dwarf held by the Compact, a cold, faint remnant with nothing to mine and a beacon to mark the lane.",
+    "Gl 164 is a dead white dwarf held by the Union, a cold, faint remnant with nothing to mine and a beacon to mark the lane.",
     "It links Burr to Capella in the Margins, so the little traffic that passes through is usually independent and discreet."
    ],
    "region": "anvil"
@@ -1076,8 +1076,8 @@
   },
   "77278": {
    "bullets": [
-    "GJ 3920 is a dead red dwarf held by the Compact, a gateway into the open Drift, with a beacon and no inhabitants.",
-    "Lanes run to Winze Reach, Tholl, the twin dead stars and a dead Shoals system, so it sees smugglers, prospectors and the odd navy picket."
+    "GJ 3920 is a dead red dwarf held by the Union, a gateway into the open Drift, with a beacon and no inhabitants.",
+    "Lanes run to Winze Reach, Tholl, the twin dead stars and a dead Shoals system, so it sees smugglers, prospectors and the odd militia picket."
    ],
    "region": "anvil"
   },
@@ -1087,14 +1087,14 @@
     "The money dried up in the 2370s and the post stayed, so its two thousand people are the children of watchkeepers, now keeping watch for Freeflag.",
     "Its one port is a haven, and it asks few questions: converted freighters under painted flags lay up here, patch their hulls and leave before the tide of rumour turns.",
     "Unrest runs high and security low, since no Federation ship has been welcome here since Tarrow, and every captain knows how that ended for the habitat and its two hundred dead.",
-    "A captain can find work here carrying parts or messages across the Onkaria choke point, where Ironhull pickets are inclined to look away but the navy's inspectors are not."
+    "A captain can find work here carrying parts or messages across the Onkaria choke point, where Union pickets are inclined to look away but the navy's inspectors are not."
    ],
    "region": "beacon-cells"
   },
   "119137": {
    "bullets": [
     "Onkaria is a red dwarf with nothing worth settling, no ice worth hauling and no one living there, and the charts keep it only because of where its lanes go.",
-    "The Ironhull Compact holds it for the choke point alone: one lane into Freeflag's Beacon Cells, watched by a picket that tallies traffic and, for a modest consideration, mislays some of it."
+    "The Union holds it for the choke point alone: one lane into Freeflag's Beacon Cells, watched by a picket that tallies traffic and, for a modest consideration, mislays some of it."
    ],
    "region": "beacon-cells"
   },
@@ -1167,7 +1167,7 @@
     "After the Charter Strikes, crews who had lost everything drifted in, and the town turned haven; it is now the biggest place in Blackspace, with about six million people.",
     "It is known for ice, and for docks where nobody checks a manifest too closely, with lanes running to Barnacle and across the border to Gl 908 and Van Maanen's Star.",
     "Those two Federation lanes are choke points, and the navy watches them with ships it can ill spare, so inspections and requisition notices are the talk of every bar.",
-    "Security is poor and unrest runs high, with Freeflag recruiters working the docks and Ironhull cousins angry about the Glass cover-up, so the town is one bad inspection from a riot.",
+    "Security is poor and unrest runs high, with Freeflag recruiters working the docks and Union cousins angry about the Glass cover-up, so the town is one bad inspection from a riot.",
     "A hauler captain at the ice docks says the navy is counting hulls at Gl 908 for requisition, and wants a quiet passage out through Barnacle first."
    ],
    "region": "blackspace"
@@ -1178,7 +1178,7 @@
     "Every lane out leads to a dead system, so nobody arrives here by accident and ships that do arrive have usually chosen it.",
     "About a million people live here, selling ice and a safe berth, and buying in all the food and medicine they can pay for.",
     "Security is thin and unrest is high, because supplies come the long way round and the Federation's levy collectors have started asking why Blackhulls keep turning up here.",
-    "Ironhull relatives have come asking Blackhull crews what they have seen on the quarantined lanes, and a captain who can carry letters and keep quiet will find work."
+    "Union relatives have come asking Blackhull crews what they have seen on the quarantined lanes, and a captain who can carry letters and keep quiet will find work."
    ],
    "region": "blackspace"
   },
@@ -1453,7 +1453,7 @@
   "118014": {
    "bullets": [
     "GJ 3052 is a brown dwarf, too cold and dim to warm anything, and nobody ever filed a plan to settle it.",
-    "It sits on the lane between Tarrow and the Ironhull Outposts, which makes it a place where Freeflag crews and quiet Ironhull cousins can meet without a port's paperwork."
+    "It sits on the lane between Tarrow and the Union Outposts, which makes it a place where Freeflag crews and quiet Union cousins can meet without a port's paperwork."
    ],
    "region": "cells"
   },
@@ -1675,9 +1675,9 @@
   "72432": {
    "bullets": [
     "Xi Boötis was settled in 2230 and sits at the edge of the Concord region, with a lane across the border to GJ 3839 in the Anvil.",
-    "Its military port inspects Ironhull ore ships coming in, and its farms feed the miners going back.",
-    "The navy's inspections are the grievance: Ironhull crews arrive angry about Varrow and Hesk, and the inspectors' patience is thin.",
-    "An Ironhull captain wants passage for the families of Varrow's lost crew, and has been told no by every office in the system."
+    "Its military port inspects Union ore ships coming in, and its farms feed the miners going back.",
+    "The navy's inspections are the grievance: Union crews arrive angry about Varrow and Hesk, and the inspectors' patience is thin.",
+    "A Union captain wants passage for the families of Varrow's lost crew, and has been told no by every office in the system."
    ],
    "region": "concord"
   },
@@ -2002,11 +2002,11 @@
   },
   "61124": {
    "bullets": [
-    "Belt crews, the grandparents of the Ironhulls, settled Chara in 2280 around a yellow star and a good seam of ore, and built the first refinery before they built a proper street.",
+    "Belt crews, the grandparents of the Union's founders, settled Chara in 2280 around a yellow star and a good seam of ore, and built the first refinery before they built a proper street.",
     "Mining and refining are all Chara is known for: ore comes in from the Anvil systems on the two nearest lanes, and ingots and slag go out, and the whole town smells of both.",
-    "About 54 million people now live there, and it has stayed comfortably off for a middle-ring town, with a navy picket that actually turns up when called.",
-    "Unrest simmers all the same: Chara's crews have heard what the quarantine hides about Varrow and Hesk, and the Federation's habit of requisitioning refitted haulers has not helped their mood.",
-    "A captain could pull on the refinery manifests, where a few ingot loads each month leave under a Compact seal and never reach a stated buyer."
+    "About 54 million people now live there, and it has stayed comfortably off for a middle-ring town, with a militia picket that actually turns up when called.",
+    "Unrest simmers all the same: Chara's crews have heard what the quarantine hides about Varrow and Hesk, and the Plenum's habit of lending refitted haulers to the Federation has not helped their mood.",
+    "A captain could pull on the refinery manifests, where a few ingot loads each month leave under a Union seal and never reach a stated buyer."
    ],
    "region": "furnace-deeps"
   },
@@ -2020,7 +2020,7 @@
   "66415": {
    "bullets": [
     "Adit is a brown dwarf, Gl 521, too dim to warm anything and too far out to be worth a claim, and surveyors found no world there worth the fuel.",
-    "It stays on the Compact's books as a waypoint between The Furnace and Skerry, where the odd salvager comes through and the odd smuggler, too, preferring a lane that nobody watches."
+    "It stays on the Union's books as a waypoint between The Furnace and Skerry, where the odd salvager comes through and the odd smuggler, too, preferring a lane that nobody watches."
    ],
    "region": "furnace-deeps"
   },
@@ -2116,10 +2116,10 @@
   },
   "118681": {
    "bullets": [
-    "Pollen was charted in 2388, and it is the Garden's door to the Anvil: the lane to Wrack, an Ironhull system, is two days and change.",
+    "Pollen was charted in 2388, and it is the Garden's door to the Anvil: the lane to Wrack, a Union system, is two days and change.",
     "Under the white sun the world sheds fine clouds of pollen into its own upper air, glittering and visible from orbit like a second atmosphere.",
-    "The Accord applies as strictly to Ironhull crews as to anyone, and a few have learned that a hauler's gun is no reason to relax it.",
-    "Ironhull haulers now pass through with Federation inspectors asking questions; a captain with discreet cargo of news, not goods, could do well here."
+    "The Accord applies as strictly to Union crews as to anyone, and a few have learned that a hauler's gun is no reason to relax it.",
+    "Union haulers now pass through with Federation inspectors asking questions; a captain with discreet cargo of news, not goods, could do well here."
    ],
    "region": "garden"
   },
@@ -2306,18 +2306,18 @@
    "bullets": [
     "Mining crews settled Grist in 2314, during the Rush, bolting their first habitats to the rock under an orange sun and leaving the name of a grinding mill.",
     "It is a working town of about twelve million, known for its ore and its refineries, and for sending ingots on to 85 Pegasi's forges.",
-    "Grist is comfortable by Compact standards, but the families of Varrow and Hesk crews drink here, and they say the Federation's silence makes them angrier than the Glass.",
-    "Grist sits cut off from the main Compact, with two dead lanes behind it, and its patrol hulls are thin on the ground and mostly old.",
-    "A captain could pick up work hauling refinery output on the long way round, where crews who dislike the Compact's route pay to ask no questions."
+    "Grist is comfortable by Union standards, but the families of Varrow and Hesk crews drink here, and they say the Federation's silence makes them angrier than the Glass.",
+    "Grist sits cut off from the main body of the Union, with two dead lanes behind it, and its patrol hulls are thin on the ground and mostly old.",
+    "A captain could pick up work hauling refinery output on the long way round, where crews who dislike the Plan's route pay to ask no questions."
    ],
    "region": "iron-outposts"
   },
   "171": {
    "bullets": [
-    "The Ironhulls settled 85 Pegasi in 2341, twenty-seven years after Grist, and built the yellow-star world into a forge-city of about 530 million.",
+    "Middle-ring miners settled 85 Pegasi in 2341, twenty-seven years after Grist, and built the yellow-star world into a forge-city of about 530 million.",
     "Its mines feed its refineries, its refineries feed its forges, and its forges turn out hull plate, struts and, lately, gun mounts for refitted haulers.",
     "The Federation wants those refitted ships and their crews for the Shadow front, and 85 Pegasi has started to resent how politely it is being asked.",
-    "Unrest is lower here than elsewhere in the Compact, but Freeflag handbills turn up in the forge districts and the foremen have stopped tearing them down.",
+    "Unrest is lower here than elsewhere in the Union, but Freeflag handbills turn up in the forge districts and the foremen have stopped tearing them down.",
     "A captain could find out who is quietly paying for the gun mounts that leave the forges without a Federation inspection stamp."
    ],
    "region": "iron-outposts"
@@ -2551,7 +2551,7 @@
    "bullets": [
     "Capella was founded in 2346 under a dim red dwarf by a small crew of ice cutters, and it has never grown past a few thousand people.",
     "Its single ice port is the whole economy, and with almost no security the outpost depends on whoever happens to be docked.",
-    "Unrest is high, and the lane to Gl 164 in the Ironhull Anvil means Compact crews and quieter visitors put in here and are not asked questions.",
+    "Unrest is high, and the lane to Gl 164 in the Anvil means Union crews and quieter visitors put in here and are not asked questions.",
     "A captain could carry ice, news or a passenger across that choke point, if they can stomach not knowing which of the three it will turn out to be."
    ],
    "region": "margins"
@@ -2642,7 +2642,7 @@
     "Pell's Folly was settled in 2412 by a speculator named Pell who sold shares in the system's gas and ice, and went unlamented when the shares failed.",
     "About 43 thousand people stayed on and now work the ice and gas ports, supplying ships heading to or from the Anvil.",
     "Security is thin and unrest is high, and the colony's debts, mostly held outside, have people nervous after what happened at Tarrow.",
-    "A lane to GJ 1092 leads on to Pollux in the Ironhull Anvil, and a captain with Compact friends can find work running that way."
+    "A lane to GJ 1092 leads on to Pollux in the Anvil, and a captain with Union friends can find work running that way."
    ],
    "region": "margins"
   },
@@ -2726,7 +2726,7 @@
   "118444": {
    "bullets": [
     "GJ 1092 is a brown dwarf, too dim to warm anything, with a few frozen worlds and no reason for anyone to stay.",
-    "It matters only as a lane between Pell's Folly and Pollux in the Ironhull Anvil, and the haulers who use it do so without stopping."
+    "It matters only as a lane between Pell's Folly and Pollux in the Anvil, and the haulers who use it do so without stopping."
    ],
    "region": "margins"
   },
@@ -2739,7 +2739,7 @@
   },
   "86705": {
    "bullets": [
-    "Varrow was an Ironhull mining system, settled in 2311 and nine jumps from Sol, and it went glass in 2524 with its crews still aboard.",
+    "Varrow was a Union mining system, settled in 2311 and nine jumps from Sol, and it went glass in 2524 with its crews still aboard.",
     "Its only lane runs to Calder, so the Federation pickets there are the only ones who see anything, and the families of Varrow's crews have been told nothing."
    ],
    "region": "mirrorspace"
@@ -2753,8 +2753,8 @@
   },
   "88694": {
    "bullets": [
-    "Hesk was an Ironhull mining system, settled in 2339 and eleven jumps from Sol, and it went glass in 2524 along with Varrow.",
-    "Its only lane leads to GJ 4062, a Freeflag system, where recruiters use Hesk's lost crews to argue that neither the Federation nor Prism will tell the Ironhulls the truth."
+    "Hesk was a Union mining system, settled in 2339 and eleven jumps from Sol, and it went glass in 2524 along with Varrow.",
+    "Its only lane leads to GJ 4062, a Freeflag system, where recruiters use Hesk's lost crews to argue that neither the Federation nor Prism will tell the Union the truth."
    ],
    "region": "mirrorspace"
   },
@@ -2839,9 +2839,9 @@
   "57371": {
    "bullets": [
     "Gl 445 was settled in 2227, early for a red dwarf, because its position three jumps from Sol made it the natural gate to everything beyond.",
-    "Today about 1.2 billion people live here, with forges, a relay and research port, and lanes to the Ironhull Anvil and the Federation's Concord Worlds.",
-    "Customs queues here are long and polite, and Ironhull crews pass through angry about Varrow and Hesk, which Prism's inspectors have learned not to mention.",
-    "A captain could carry a message between the Ironhull families asking after lost crews and the relay operators who may know more than they say."
+    "Today about 1.2 billion people live here, with forges, a relay and research port, and lanes to the Anvil and the Federation's Concord Worlds.",
+    "Customs queues here are long and polite, and Union crews pass through angry about Varrow and Hesk, which Prism's inspectors have learned not to mention.",
+    "A captain could carry a message between the Union families asking after lost crews and the relay operators who may know more than they say."
    ],
    "region": "prism-inc"
   },
@@ -2892,7 +2892,7 @@
   },
   "82557": {
    "bullets": [
-    "Gl 643 was settled in 2229 around a yellow sun, and has since become Prism's container hub on the border with the Federation and the Ironhulls.",
+    "Gl 643 was settled in 2229 around a yellow sun, and has since become Prism's container hub on the border with the Federation and the Union.",
     "About 458 million people work its forges, research port and sealed cargo yards, with lanes to Wolf 1061 and Quarle across two choke points.",
     "Everything here is inspected twice, once by Prism and once by whoever is on the other side, and disputes over seals have closed berths for days.",
     "A captain who knows how to read a manifest can make a living here, or lose one, depending on whose seal they trust."
@@ -2902,9 +2902,9 @@
   "5325": {
    "bullets": [
     "Allure, catalogued as Mu Cassiopeiae, was settled in 2252 by Halcyon as a middle-ring forge and habitat world around a yellow sun.",
-    "About 2.6 billion people live here, and its lane to dead GJ 3126 is a choke point on the Ironhull border with Burr beyond.",
+    "About 2.6 billion people live here, and its lane to dead GJ 3126 is a choke point on the Union border with Burr beyond.",
     "Security is the weakest in the region, since Prism spreads its patrols thinly here, and locals have noticed which ships turn up and which do not.",
-    "A captain could take a quiet run to the GJ 3126 lane, where smugglers and Ironhull scouts are said to trade without much paperwork."
+    "A captain could take a quiet run to the GJ 3126 lane, where smugglers and Union scouts are said to trade without much paperwork."
    ],
    "region": "prism-inc"
   },
@@ -2920,7 +2920,7 @@
   "118101": {
    "bullets": [
     "GJ 3126 is a dead red dwarf, and nobody lives there; the charts agree on that and on little else.",
-    "Its lanes run to Allure and the Ironhull world of Burr, so it is a choke point both sides watch and neither admits to using."
+    "Its lanes run to Allure and the Union world of Burr, so it is a choke point both sides watch and neither admits to using."
    ],
    "region": "prism-inc"
   },
@@ -2946,7 +2946,7 @@
    "bullets": [
     "Halcyon settled Candor in 2380, four years after Contact, and it has become the region's largest world at about 454 million, a place of forges, habitat rings and research campuses.",
     "Its name is a polite cousin of CANTOR's, and the staff are tired of the joke; the research ports run mostly on work they are not allowed to describe.",
-    "Unrest is the highest in the region. The Glass has not touched Candor, but the silence about Varrow and Hesk has, and crews with Ironhull cousins are asking what the recalls were for.",
+    "Unrest is the highest in the region. The Glass has not touched Candor, but the silence about Varrow and Hesk has, and crews with Union cousins are asking what the recalls were for.",
     "A dock foreman on the habitat ring says the Prism associates are now doing their own cargo inspections, and one captain could find out why they stopped trusting the manifests."
    ],
    "region": "prism-research"
@@ -2981,7 +2981,7 @@
   "118870": {
    "bullets": [
     "GJ 3766 is a brown dwarf, too dim and cold to warm anything, and nobody ever filed a claim worth keeping. The charts list it as a waypoint and nothing more.",
-    "It sits one jump into the Drift, between Mattock's Ironhull miners and the uncharted dark, so crews dodging a navy inspection use it as a quiet back door."
+    "It sits one jump into the Drift, between Mattock's Union miners and the uncharted dark, so crews dodging a navy inspection use it as a quiet back door."
    ],
    "region": "shoals"
   },
@@ -3016,7 +3016,7 @@
   "119052": {
    "bullets": [
     "GJ 3933 is a brown dwarf with no real worlds, only cold rock and dust, so there was never a case for building here. It stays on the charts as a junction.",
-    "Two Ironhull systems, GJ 3920 and Tarn, lie a lane away, and their haulers cut through here when the navy's fees seem high. Nobody there will admit it."
+    "Two Union systems, GJ 3920 and Tarn, lie a lane away, and their haulers cut through here when the navy's fees seem high. Nobody there will admit it."
    ],
    "region": "shoals"
   },

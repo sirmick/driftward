@@ -10,8 +10,8 @@ Status: **agreed**, or **open** with the options on the table.
 | Federation | Civilian | "-Max": the biggest hull a core-world port's docks take, smallest dock first | BarnardMax | WolfMax | EridaniMax | TCetiMax | AlphaCMax | Agreed series; port names open (see names.md) |
 | Prism | Military (black) | Nightfall | Dusk | Evening | Night | Midnight | Eclipse | Agreed |
 | Prism | Civilian (white) | Daybreak, mirroring the military | Dawn | Morning | Daylight | Noon | Zenith | Agreed |
-| Ironhulls | Civilian (cargo and ore) | "-haul": metals by hardness, ending in steel | Tinhaul | Copperhaul | Brasshaul | Ironhaul | Steelhaul | Agreed |
-| Ironhulls | Military (the same hulls refitted) | "-clad": the hauler's metal (an Ironhaul refitted is an Ironclad) | Tinclad | Copperclad | Brassclad | Ironclad | Steelclad | Agreed |
+| Union | Civilian (cargo and ore) | "-haul": metals by hardness, ending in steel | Tinhaul | Copperhaul | Brasshaul | Ironhaul | Steelhaul | Agreed |
+| Union | Military (the same hulls refitted) | "-clad": the hauler's metal (an Ironhaul refitted is an Ironclad) | Tinclad | Copperclad | Brassclad | Ironclad | Steelclad | Agreed |
 | Bloom | Military (warforms) | Weather | Gust | Squall | Gale | Tempest | Maelstrom | Agreed |
 | Bloom | Civilian (workers) | Water | Rain | Stream | River | Lake | Ocean | Agreed |
 | Blackhulls | Kitbashes (no line of their own) | Ballistic weapons, heaviest last | Pistol | Shotgun | Rifle | Cannon | Howitzer | Agreed |
@@ -27,7 +27,7 @@ Single special hulls a faction builds (catalog lines marked unique); unnamed so 
 | :-- | :-- | :-- |
 | Federation | IV | Container carrier: rows of shipping containers down a long spine, every one a different colour |
 | Prism | IV | Container liner: a white hull with neat, flush rows of containers in Prism's light colours |
-| Ironhulls | V | Container hauler: a truss stacked two high with containers, gaps where some fell off |
+| Union | V | Container hauler: a truss stacked two high with containers, gaps where some fell off |
 
 ## Heavies
 
@@ -35,7 +35,7 @@ Each specialist hull will have a name of its own; not named yet.
 
 | Hull | Belongs to | Class |
 | :-- | :-- | :-- |
-| Mining tug | Ironhulls, civilian | IV |
+| Mining tug | Union, civilian | IV |
 | Bulk freighter | Federation, civilian | V |
 | Agri ship | Federation, civilian | IV |
 | Colony ship | Federation, civilian | V |

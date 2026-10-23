@@ -49,7 +49,7 @@ Status, 2026-10-16: **steps 1 to 3 of the plan below are built; 4 and 5 are next
 
 ## What changed in the vocabulary
 
-* **Faction keys:** one set everywhere, the system schema's: `federation`, `ironhulls`, `prism`, `freeflag`, `blackhulls`. Plus `independent`, which the system schema gained. The galaxy tools and `galaxy.json` were renamed to them (a rename in place, no rerun).
+* **Faction keys:** one set everywhere, the system schema's: `federation`, `union`, `prism`, `freeflag`, `blackhulls`. Plus `independent`, which the system schema gained. The galaxy tools and `galaxy.json` were renamed to them (a rename in place, no rerun).
 * **Owner:** the index's `owner` is a system's faction, else the alien power whose space it is (`bloom`, `glass`, `shadow`), else `none`. That is the system schema's owner vocabulary, so a system file's owner must equal its entry's.
 * **Population tiers:** a port's `population` gained `outwatch`, and a port gained `builtworld`. The traffic weights, city lights, orbiting traffic and the vista prompts' crowd text all know both.
 * **Not done:** the index keeps the galaxy's field names as they were (`settled`, `charted`, `gateway`, `exclave` and the rest, flat on each system) rather than the grouped `years` and `tags` first sketched. Regions have no `kind` (heartland, march, frontier...): nothing in the data says it yet.

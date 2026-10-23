@@ -369,7 +369,8 @@ function makeDebug(ctx) {
         + ` <small>${e(ownerName(c))}${c.status === 'dead' && c.owner !== 'none' ? ', dead' : ''}</small></li>`).join('')}</ul>`;
       return { id: 'rg-' + k, title: R.name, body: facts + summary + authored + written + links };
     });
-    if (GL.setting) list.unshift({ id: 'rg-setting', title: 'The setting', body: `<p class="dbg-note">src/lore/setting.md: canon for every system's lore and every region's stories.</p>` + fold('The setting', md(GL.setting), false) });
+    if (GL.setting) list.unshift({ id: 'rg-setting', title: 'The setting', body: `<p class="dbg-note">src/lore/setting.md: canon for every system's lore and every region's stories.</p>` + fold('The setting', md(GL.setting), false)
+      + (GL.earlier || []).map((s, i) => fold(`An earlier setting (${i + 1}), that some stories were told from`, md(s), true)).join('') });
     const total = Object.values(U.regions).reduce((n, r) => n + ((r.trade || {}).population || 0), 0);
     const top = `<div class="dbg-head-line"><span><b>Regions</b></span><span>${order.length} regions · ${U.systems.length} systems · ${people(total)} people in the regions with trade</span>`
       + `<span>stories for ${U.systems.filter(c => c.story).length} systems in ${Object.values(U.regions).filter(r => r.summary).length} regions</span><span>tools/galaxy.py, worlds.py, stories.py, universe.py; docs/galaxy.md, docs/data.md</span></div>`;

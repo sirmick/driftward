@@ -229,7 +229,7 @@
             "enum": [
               "federation",
               "prism",
-              "ironhulls",
+              "union",
               "blackhulls",
               "freeflag",
               "independent",

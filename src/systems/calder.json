@@ -4,7 +4,7 @@
   "owner": "federation",
   "ring": "middle",
   "region": "calder-march",
-  "description": "The Federation's naval station for the March, under a white star: Calder, a dry, cold world with thin air whose cities grew up round the navy; Calder Station in orbit with its picket squadron, customs and the Compact levy office; and a gas giant with a depot moon.",
+  "description": "The Federation's naval station for the March, under a white star: Calder, a dry, cold world with thin air whose cities grew up round the navy; Calder Station in orbit with its picket squadron, customs and the levy office for Union cargo; and a gas giant with a depot moon.",
   "star": {
     "name": "Calder",
     "class": "white",
@@ -89,7 +89,7 @@
           "repair",
           "outfitter"
         ],
-        "description": "The navy's base for the March: berths for the picket squadron, customs halls where every Ironhull cargo going inward is opened, and the levy office the Compact pays into. Clean, loud, and shorter-staffed every month."
+        "description": "The navy's base for the March: berths for the picket squadron, customs halls where every Union cargo going inward is opened, and the levy office the Union pays into. Clean, loud, and shorter-staffed every month."
       }
     },
     {
@@ -193,7 +193,7 @@
     ],
     "through": [
       {
-        "line": "ironhulls.civilian",
+        "line": "union.civilian",
         "share": 0.35,
         "classes": {
           "c2": 2,
@@ -222,7 +222,7 @@
         }
       },
       {
-        "line": "ironhulls.military",
+        "line": "union.military",
         "share": 0.1,
         "classes": {
           "c2": 2,

@@ -208,7 +208,7 @@ function stationReady(S) {
   S.s = s; S.half = s.maps.extent / 2; return true;
 }
 function playerTypeIndex(ship) {
-  const q = ship || new URLSearchParams(location.search).get('ship') || 'ironhulls.civilian:c2'; // a used Copperhaul
+  const q = ship || new URLSearchParams(location.search).get('ship') || 'union.civilian:c2'; // a used Copperhaul
   const [b, z] = q.split(':');
   const bi = Math.max(0, catalog.brands.findIndex(x => x.id === b)), zi = Math.max(0, catalog.sizes.findIndex(x => x.id === z));
   return bi * nSizes + zi;
@@ -620,7 +620,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // the system's stations, the hulls its traffic flies and the player's own are baked. The bakes themselves still run
   // on the worker pool as they always did; this only waits for them. A bake that fails counts as done, so it can't hang.
   let barrier = null; // { keys, total } while up
-  const FACTION_NAME = { federation: 'The Federation', prism: 'Prism', ironhulls: 'The Ironhull Compact', blackhulls: 'The Blackhulls', freeflag: 'Freeflag', independent: 'Independent', bloom: 'The Bloom', glass: 'The Glass', shadow: 'The Shadow', none: 'Unclaimed' };
+  const FACTION_NAME = { federation: 'The Federation', prism: 'Prism', union: 'The Union', blackhulls: 'The Blackhulls', freeflag: 'Freeflag', independent: 'Independent', bloom: 'The Bloom', glass: 'The Glass', shadow: 'The Shadow', none: 'Unclaimed' };
   function raiseBarrier() {
     const st = [...new Set(STATIONS.map(T => T.key))], hulls = [...new Set([...bakeKinds, SH.kind[0]].map(k => types[k] && types[k].key).filter(Boolean))];
     hulls.forEach((key, n) => { const T = types.find(t => t.key === key); if (T) typeReady(T); }); // queue any not yet asked for
@@ -2337,7 +2337,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   const autoName = () => { const a = sim.game.auto[0]; return a > 0 ? BODIES[a - 1].name : a < 0 ? `${(gatesOf(sysRec)[-1 - a] || { name: '?' }).name} jump zone` : ''; };
   const targetZone = () => navDest && navDest.zone !== undefined && gatesOf(sysRec)[navDest.zone] ? navDest.zone : -1;
   const targetShip = () => navShip && !navShip.lost && sim.game.target[0] === navShip.ship + 1 ? sim.resolve(navShip.ship) : -1;
-  // a traffic ship by its hull: the faction and the line's name for its class (Ironhulls Brasshaul)
+  // a traffic ship by its hull: the faction and the line's name for its class (Union Brasshaul)
   function targetName(t) {
     if (t.body !== undefined) return BODIES[t.body].name;
     if (t.zone !== undefined) return `${(gatesOf(sysRec)[t.zone] || { name: '?' }).name} jump zone`;

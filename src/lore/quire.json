@@ -5,7 +5,7 @@
     "For most of its life Quire was a quiet, productive, unloved place. It made the most valuable cargo in the March, and the March resented how little of it stayed. The system filled slowly with forges, habitat rings and a relay station on the lane inward, and with the debris that foundries shed: spoiled castings, cut-away frames and the odd lost tool. That debris is the glitter round the planet. The hands call it the haze and say it is the only part of Quire that anyone has ever called pretty.",
     "In 2524 the sister plant went silent, and Quire has been nervous ever since. Prism announced a precautionary recall of certain cores and sent its sympathy. Staff are rotated out faster than they can be replaced, output has fallen, and every core now leaves under escort, so the March's own yards go short. Nobody on Quire says what the sister plant was, or what it made that this plant makes too. The associates say 'precautionary' the way other people say 'amen'."
   ],
-  "culture": "Quire runs on fixed contracts, and people here think in terms of the term: how much is left, who has been rotated out, whether the next renewal will be offered. Associates speak softly and in full sentences, and they do not say 'sister plant' if 'the other site' will do. Everyone has a polite word for something frightening. A death is a 'completion', a closed lane is a 'hazard', and a rotation nobody will explain is a 'refresh'. Foundry hands are proud of the work and dry about the employer, and they give outsiders the same flat welcome. Ironhull haulers are tolerated because they bring metal and food, both dear here. Navy visitors are watched, and Freeflag sympathisers keep their opinions to the night domes.",
+  "culture": "Quire runs on fixed contracts, and people here think in terms of the term: how much is left, who has been rotated out, whether the next renewal will be offered. Associates speak softly and in full sentences, and they do not say 'sister plant' if 'the other site' will do. Everyone has a polite word for something frightening. A death is a 'completion', a closed lane is a 'hazard', and a rotation nobody will explain is a 'refresh'. Foundry hands are proud of the work and dry about the employer, and they give outsiders the same flat welcome. Union haulers are tolerated because they bring metal and food, both dear here. Navy visitors are watched, and Freeflag sympathisers keep their opinions to the night domes.",
   "artBible": {
     "palette": [
       "#b5532f",
@@ -59,8 +59,8 @@
         {
           "id": "corwin-dace",
           "name": "Corwin Dace",
-          "role": "furnace tender, ex-Ironhull",
-          "text": "Born on Brannock and signed to Quire for the pay, he tends the day-side furnaces and has stayed longer than he meant. He is warm with Ironhull crews and careful with everyone else.",
+          "role": "furnace tender, ex-Union",
+          "text": "Born on Brannock and signed to Quire for the pay, he tends the day-side furnaces and has stayed longer than he meant. He is warm with Union crews and careful with everyone else.",
           "line": "Bring metal and food and they'll love you. Bring questions and they'll still be polite, which is worse. Sit, sit, the stew's all right.",
           "look": "Heavy man in his fifties, sunburned neck, broad scarred hands, grey-white overalls with the sleeves cut off at the elbow. He wears a battered Brannock miner's lamp on a cord round his neck, switched off."
         },

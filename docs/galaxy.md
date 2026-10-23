@@ -35,7 +35,7 @@ Solving everything in one model doesn't work. Choosing stars and lanes together 
 4. **The deep Drift:** grown outward from the edge rather than optimised.
 5. **Names and years.**
 
-The order of stages 2 and 3 matters. With lanes first and territories second, the lanes came out radial (spokes from Sol). A faction living in a ring then had nothing to hold its territory together, and the Ironhull Compact ended up in six pieces on opposite sides of Sol. Deciding territories first and then building lanes inside them fixed it.
+The order of stages 2 and 3 matters. With lanes first and territories second, the lanes came out radial (spokes from Sol). A faction living in a ring then had nothing to hold its territory together, and the Union ended up in six pieces on opposite sides of Sol. Deciding territories first and then building lanes inside them fixed it.
 
 ## Stage 1: systems
 
@@ -82,20 +82,20 @@ This stage solves to optimal in 15–160 seconds, depending on the run.
   | Faction | Inhabited systems | Where they sit |
   | :-- | --: | :-- |
   | Federation | 45 | at least 28 in the inner ring |
-  | Ironhull Compact | 35 | middle and outer rings, at least 24 in the middle |
+  | Union | 35 | middle and outer rings, at least 24 in the middle |
   | Prism | 20 | at least 12 in the inner ring |
   | Freeflag | 20 | outer ring only |
   | Blackhull havens | 5 | middle and outer rings |
   | Independent | 25 | middle and outer rings |
 
 * **Fixed owners:** the March's systems belong to the owners in its region file, and the Federation holds Sol and the "-Max" ports.
-* **The March joins the Compact:** a flow from Brannock, through Ironhull systems, must reach at least 24 of the Compact's inhabited systems. The region file says the March is the Ironhulls' way in to the rest of the Compact.
+* **The March joins the Union:** a flow from Brannock, through Union systems, must reach at least 24 of the Union's inhabited systems. The region file says the March is the Union's way in to the rest of its space.
 * **Held together:** for the four factions that hold land, a flow runs from a root in each piece of territory through that faction's own systems only. Every extra piece costs a penalty. Hard limits on pieces made the model infeasible twice on this sparse map, so this is a cost, not a rule. The pieces outside the main body are tagged as exclaves: navy base, outpost, company world or rebel cell.
 * **Equal access to the Drift:** the Drift is cut into eight sectors round the galactic pole. A sector is blocked where the Bloom or the Shadow holds more of its edge than the Drift does. At least one open sector is required (five were open in the final run). Each of the four major factions must be able to reach the open Drift equally; the lane stage then makes the actual gateway counts equal.
 
 **What it prefers:**
 * **Compact territories:** splitting two near neighbours between factions costs, more the closer they are.
-* **Directions (bearings):** the Ironhulls, Freeflag and Prism lean towards the March's side of Sol. Each of their systems costs its angle away from that direction.
+* **Directions (bearings):** the Union, Freeflag and Prism lean towards the March's side of Sol. Each of their systems costs its angle away from that direction.
 * **The Shadow front:** the Federation gets a bonus for holding systems that face the Shadow (the navy holds the front).
 
 This stage is the hardest. With a 20-minute limit it stops about 17% from proven optimal. The territories are cached in `~/.cache/driftward/territories.json`.
@@ -156,7 +156,7 @@ The map's Year slider plays this back.
 | Hazard | Class | Rule | Region |
 | :-- | :-- | :-- | :-- |
 | The Lighthouse | pulsar | a dead system with lanes to both Federation and Prism systems, nearest Sol | Lighthouse Run |
-| The Furnace | Wolf-Rayet | a dead system in the Ironhulls' main body, nearest its middle | The Furnace Deeps |
+| The Furnace | Wolf-Rayet | a dead system in the Union's main body, nearest its middle | The Furnace Deeps |
 | The Beacon | blue supergiant | a dead system in or beside Freeflag's main body | Beacon Cells |
 | The Metronome | pulsar | a dead system with a lane to the Shadow front, nearest Corran | Corran Gate |
 | The Sink | black hole | an unclaimed dead system beside the Independents | The Sink |
@@ -170,7 +170,7 @@ The map's Year slider plays this back.
    * human space within 12.5 ly of Sol, whoever holds it → **the Inner Sphere (IS)**
    * the Federation's main body → **the Long Watch** if within 55° of the Shadow's direction (past 20 ly), otherwise **the Concord Worlds**
    * Prism → **Prism Incorporate** (main body) or **Prism Research** (the company worlds apart)
-   * the Ironhulls → **the Anvil** (main body) or **the Ironhull Outposts**
+   * the Union → **the Anvil** (main body) or **the Union Outposts**
    * Freeflag → **the Reach** (main body) or **the Cells**
    * the Independents → **the Margins**; the Blackhull havens → **Blackspace**
    * the Bloom → **the Garden**, except its third farthest from human space, **the Hedge**
@@ -189,7 +189,7 @@ The names are in `REGIONS` in `tools/galaxy.py`. The map names each region on it
 * **Economy:** each system gets ports by its size, and a MIP chooses their roles from `src/economy.json`:
   * across the galaxy, every commodity's supply covers at least 90% of what people and industry need;
   * every region of three or more settled systems has a commodity it exports and one it must import, so trade runs between regions;
-  * roles follow their owner's character (the Ironhulls mine, refine and forge; Prism does research; the Federation farms and runs the military);
+  * roles follow their owner's character (the Union mines, refines and forges; Prism does research; the Federation farms and runs the military);
   * rare roles stay rare: 8–12 shipyards, 20 military ports, in big systems;
   * the March keeps its system files' roles.
 * **Wealth, security and unrest** (0–100) come from the ring, the owner, the front and the choke points.
@@ -200,7 +200,7 @@ The names are in `REGIONS` in `tools/galaxy.py`. The map names each region on it
 * **Cost:** about $0.07 a region with Sonnet 5.5. The Inner Sphere, the Calder March and the Reach are written; the rest are not yet.
 * **A rerun of the galaxy can rename systems the stories mention:** once stories exist, keep the map, or rewrite the stories.
 
-**The universe index** (`tools/universe.py` → `src/galaxy/universe.json`, remade by every build): the galaxy, worlds, stories and region notes merged into the one file the game loads, each system once by star id, with its owner in the system files' vocabulary (`federation`, `ironhulls`, `prism`, `freeflag`, `blackhulls`, `independent`, an alien power, or `none`; the galaxy uses the same faction keys). Schema: `src/schema/universe.schema.json`. Worlds and stories record the hash of the galaxy they were made from (`galaxy_hash`: every system's star, name, region, owner, ring and status, and the lanes' ends), so after a galaxy rerun `npm run check` fails until `tools/worlds.py` and `tools/stories.py` have been run on the new map. It also checks every system file against its index entry. See `docs/data.md`.
+**The universe index** (`tools/universe.py` → `src/galaxy/universe.json`, remade by every build): the galaxy, worlds, stories and region notes merged into the one file the game loads, each system once by star id, with its owner in the system files' vocabulary (`federation`, `union`, `prism`, `freeflag`, `blackhulls`, `independent`, an alien power, or `none`; the galaxy uses the same faction keys). Schema: `src/schema/universe.schema.json`. Worlds and stories record the hash of the galaxy they were made from (`galaxy_hash`: every system's star, name, region, owner, ring and status, and the lanes' ends), so after a galaxy rerun `npm run check` fails until `tools/worlds.py` and `tools/stories.py` have been run on the new map. It also checks every system file against its index entry. See `docs/data.md`.
 
 The game's debug screen shows all of it: the **Regions** tab (each region's facts, trade, summary and hand-written notes) and the **Planets** tab (every system's people, ports, wealth, security, unrest and story). On the map, double-click a star for its detail.
 
@@ -231,7 +231,7 @@ The output: 596 charted systems plus 320 generated Drift systems, and 1,126 lane
 | Faction | Pieces | Gateways into the open Drift |
 | :-- | --: | --: |
 | Federation | 2 | 5 |
-| Ironhull Compact | 3 | 5 |
+| Union | 3 | 5 |
 | Prism | 2 | 5 |
 | Freeflag | 3 | 5 |
 
@@ -247,11 +247,11 @@ Each of these was found with `diagnose()`:
 * **The Glass and the March:** fixed systems closer together than the spacing allowed. Both are now placed with spacing kept.
 * **Only 8 nearest neighbours as possible lanes** split the map into pieces. It's now 24.
 * **Equal gateways with only three open sectors** forced each faction to own systems far from its main body. Narrowing what counts as a blocked sector, and letting the lane stage pick the gateways itself, fixed it.
-* **Lanes before territories** gave the six-piece Ironhull Compact, fixed by the stage order above.
+* **Lanes before territories** gave the six-piece Union, fixed by the stage order above.
 
 ## Known gaps
 
-* **Brannock joined the Anvil** (fixed): the territory model now requires a flow from Brannock, through Ironhull systems, to reach at least 24 of the Compact's inhabited systems. The region file says the March is the Ironhulls' way in to the rest of the Compact.
+* **Brannock joined the Anvil** (fixed): the territory model now requires a flow from Brannock, through Union systems, to reach at least 24 of the Union's inhabited systems. The region file says the March is the Union's way in to the rest of its space.
 * **The Shadow front is a single system.** "The navy holds the line" wants a wider front: say, at least 4–6 lanes between the Shadow and human space.
 * **The territory solve stops at its time limit.** More time, or a tighter formulation, would make territories more compact still.
 * **Invented names are provisional,** and the lore for most systems doesn't exist yet.

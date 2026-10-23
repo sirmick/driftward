@@ -13,7 +13,7 @@
       "jump": 0.6,
       "mix": [
         {
-          "line": "ironhulls.container-hauler",
+          "line": "union.container-hauler",
           "share": 0.35,
           "classes": {
             "c5": 1
@@ -48,7 +48,7 @@
       "jump": 0.15,
       "mix": [
         {
-          "line": "ironhulls.civilian",
+          "line": "union.civilian",
           "share": 0.75,
           "classes": {
             "c2": 1,
@@ -71,7 +71,7 @@
       "jump": 0.3,
       "mix": [
         {
-          "line": "ironhulls.civilian",
+          "line": "union.civilian",
           "share": 0.5,
           "classes": {
             "c3": 2,

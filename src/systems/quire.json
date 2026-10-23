@@ -180,7 +180,7 @@
         }
       },
       {
-        "line": "ironhulls.civilian",
+        "line": "union.civilian",
         "share": 0.2,
         "classes": {
           "c2": 2,

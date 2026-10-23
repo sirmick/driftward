@@ -23,7 +23,7 @@ OUT = GALAXY / 'universe.json'
 ALIEN = ('bloom', 'glass', 'shadow')
 # the factions, with the names the setting gives them and their map colours (linear RGB; src/map/map.js draws with
 # them): the six that hold human space (galaxy.json), then the three alien powers
-COLOURS = {'federation': [.3, .5, 1], 'ironhulls': [1, .45, .15], 'prism': [.7, .4, 1], 'freeflag': [1, .8, .2],
+COLOURS = {'federation': [.3, .5, 1], 'union': [1, .45, .15], 'prism': [.7, .4, 1], 'freeflag': [1, .8, .2],
            'blackhulls': [.6, .38, .28], 'independent': [.55, .62, .7], 'bloom': [.2, 1, .35], 'shadow': [1, .15, .1], 'glass': [.6, .9, 1]}
 ALIEN_NAMES = {'bloom': 'The Bloom', 'glass': 'The Glass', 'shadow': 'The Shadow'}
 # galaxy.json's per-system fields the index keeps as they are (faction becomes owner, star becomes id, system file)

@@ -1,12 +1,12 @@
 # Outfitting: frames, components, power and shields
 
-Status, 2026-10-18: the basics and the freight modules built (the Book's Outfitting, Energy and heat, and Shields chapters, M2; code in `core/src/fit.rs`, the page's outfitter in `src/play/play.js`); weapons not yet. What is built and what waits is at the end. Every rating and price is a core param, live-tunable with `__play.sim.param(name, value)`. Endless Sky's model of energy and heat, but fitted the way MechWarrior is: every component is bought by the tonne (or by the plume, the corner, the bunk), against a frame's space, so a ship is much more configurable than in Endless Sky and the fitting rules are forgiving. A freighter refitted hard enough makes a nasty warship, though never quite a match for a dedicated military hull of its class. Ironhull numbers first; other makers differ in their per-tonne ratings.
+Status, 2026-10-18: the basics and the freight modules built (the Book's Outfitting, Energy and heat, and Shields chapters, M2; code in `core/src/fit.rs`, the page's outfitter in `src/play/play.js`); weapons not yet. What is built and what waits is at the end. Every rating and price is a core param, live-tunable with `__play.sim.param(name, value)`. Endless Sky's model of energy and heat, but fitted the way MechWarrior is: every component is bought by the tonne (or by the plume, the corner, the bunk), against a frame's space, so a ship is much more configurable than in Endless Sky and the fitting rules are forgiving. A freighter refitted hard enough makes a nasty warship, though never quite a match for a dedicated military hull of its class. Union numbers first; other makers differ in their per-tonne ratings.
 
 ## Principles
 
 - **The class sets the frame; the components are rated per tonne.** A size class decides a frame's mass, space and mounts. Every component has the same rating per tonne on every frame (for one maker), so a Copperhaul's 7 t torch and a Steelhaul's 7 t torch are the same part.
 - **Stock fits reproduce today's catalog.** Each line's stock fit is a component list on its frame, chosen so the ship's acceleration, turn, top speed, hull, shield, hold and fuel come out at the catalog's numbers (class × style × line, as `play.js` builds them now). Flight feels the same until somebody refits. The line multipliers become explainable: the Clads' extra hull is welded armour, their extra shield more banks, their small hold hoppers pulled out for guns.
-- **The Clads are refits.** The Ironhull military line builds on the civilian line's hulls (`hullFrom: "civilian"`), so a Copperclad is a Copperhaul with the hoppers cut out and guns welded on, and a player who refits a Copperhaul all the way ends up with about a Copperclad. The gap to a dedicated warship is against a navy's own frames (below).
+- **The Clads are refits.** The Union military line builds on the civilian line's hulls (`hullFrom: "civilian"`), so a Copperclad is a Copperhaul with the hoppers cut out and guns welded on, and a player who refits a Copperhaul all the way ends up with about a Copperclad. The gap to a dedicated warship is against a navy's own frames (below).
 - **Mass matters.** Acceleration is thrust over the ship's mass as it is, cargo and fuel included; turning likewise from the jets. Heat capacity follows mass. (Jump fuel stays the hull's for now: see Decided.)
 - **Units are real.** Mass in tonnes, thrust in MN (so MN over tonnes is the world's m/s², the units `play.js` displays at 4 km to the metre), power in MW, energy and heat in MJ, shields and hull in points.
 
@@ -16,7 +16,7 @@ What a hull gives that no refit changes: its mass, its bay (split into a pressur
 
 Frame mass goes with length squared (a hull is a shell), so hull points per tonne stay about even across the classes.
 
-| Class | Ironhull hulls | Frame | Bay (pressurised / unpressurised) | Plumes (default hull) | Torch cap, all plumes | Armour cap |
+| Class | Union hulls | Frame | Bay (pressurised / unpressurised) | Plumes (default hull) | Torch cap, all plumes | Armour cap |
 | :-- | :-- | --: | :-- | --: | --: | --: |
 | I, 18 m | Tinhaul, Tinclad | 45 t | 43 t (23 / 20) | 2 | 12 t (Haul) | 76 t |
 | II, 34 m | Copperhaul, Copperclad | 170 t | 91 t (39 / 52) | 4 | 20 t (Haul) | 214 t |
@@ -43,7 +43,7 @@ Up to 8 turrets and 6 forward-firing bays on the largest hulls, each heavy, medi
 
 **A navy's frames beat a refit** with more and heavier sites, wider turret arcs, about 30% more structure, built-in cooling, and military-grade gear that is about 30% denser and needs standing to buy (the Book's Sworn).
 
-## Components (Ironhull ratings)
+## Components (Union ratings)
 
 | Component | Where | Bought by | Rating | Draw and heat |
 | :-- | :-- | :-- | :-- | :-- |

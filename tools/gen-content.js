@@ -74,8 +74,8 @@ const seedOf = key => hashStr(`${SYS.id}:${key}:${SEED}`) % 2147483647;
 const FACTIONS = {
   federation: ['the Federation', 'the navy', 'disciplined, symmetrical, armored; grey and white with heraldic markings; monumental architecture'],
   prism: ['Prism', 'an AI corporation', 'sleek and seamless; white, glass and light; clean luxury, unsettling calm'],
-  ironhulls: ['the Ironhulls', 'miners (an ironhull, ironhulls; nicknamed rusters or rockheads)', 'welded, modular, rusted and patched; sodium-lamp orange; hab rings bolted to rock'],
-  blackhulls: ['the Blackhulls', 'pirates, aligned with the Ironhulls', 'kitbashed Ironhull and captured hulls, run dark; trophies, mismatched paint'],
+  union: ['the Union', 'the miners' councils of the middle ring, the Red Ring, broken away from the Federation in the Rising (Union crews; nicknamed rusters or rockheads)', 'welded, modular, rusted and patched; sodium-lamp orange; hab rings bolted to rock'],
+  blackhulls: ['the Blackhulls', 'pirates, aligned with the Union', 'kitbashed Union and captured hulls, run dark; trophies, mismatched paint'],
   freeflag: ['Freeflag', 'rebels', 'converted civilian craft, improvised; flags and slogans'],
   bloom: ['the Bloom', 'an organic alien hive', 'grown and chitinous, bioluminescent, membranes'],
   glass: ['the Glass', 'an AI zone', 'geometric, fractal, alien precision; no human scale'],
@@ -323,7 +323,7 @@ const VISTA_STYLE = 'A painted vista for the landing screen of a space trading g
 // Each faction's art direction, in vistas and portraits alike: its systems look like its own (the art bible, from the
 // lore, gives one system's palette, light and materials within it)
 const FACTION_ART = {
-  ironhulls: 'Ironhull art direction: gritty industrial realism. Welded, rusted and patched metal, sodium-lamp orange against deep shadow, grime, steam and soot, everything built for work and mended rather than replaced.',
+  union: 'Union art direction: gritty industrial realism. Welded, rusted and patched metal, sodium-lamp orange against deep shadow, grime, steam and soot, everything built for work and mended rather than replaced.',
   federation: 'Federation art direction: brutalism. Monumental raw-concrete masses, heavy slabs and deep-set windows, stark repeated geometry and hard shadows, grey and white with heraldic banners and crests; architecture built to dwarf the people in it, ordered, imposing and austere.',
   prism: 'Prism art direction: slightly retro corporate futurism, like a 1970s or 1980s corporate brochure or airbrushed space art: smooth white curves, chrome trim and tinted glass, soft gradient skies, gentle pastel accent lights, a polished optimistic sheen that feels a little dated and a little too perfect.'
 };

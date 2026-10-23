@@ -1361,8 +1361,8 @@
    ]
   },
   {
-   "id": "ironhulls",
-   "name": "Ironhulls",
+   "id": "union",
+   "name": "Union",
    "role": "Miners",
    "design": "Welded, modular, rusted and patched; sodium-lamp orange; hab rings bolted to rock",
    "style": {

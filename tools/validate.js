@@ -256,7 +256,7 @@ for (const f of fs.existsSync(loreDir) ? fs.readdirSync(loreDir).filter(f => f.e
 // a missing required field is fatal
 const notes = [];
 const out = clampToSchema(schema, {
-  id: 'test', name: 'Test', owner: 'ironhulls', ring: 'sideways', star: { name: 'Sol', class: 'purple', radius: 99999 },
+  id: 'test', name: 'Test', owner: 'union', ring: 'sideways', star: { name: 'Sol', class: 'purple', radius: 99999 },
   bodies: [{ id: 'a', name: 'A', kind: 'planet', orbit: { radius: 100, angle: 45 }, radius: 500, colour: 'red', look: { palette: ['#123456'] } }]
 }, '$', notes);
 const expect = [

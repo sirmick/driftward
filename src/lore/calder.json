@@ -2,10 +2,10 @@
   "system": "calder",
   "history": [
     "Calder was settled early in the Rush, and nobody settled it for love. It is dry, cold rock with thin air, but it sits where several lanes meet, and the Federation wanted a station there to keep them open. The navy built Calder Station in orbit and the contractors followed it down to the surface. Their towers and barracks blocks grew into cities, laid out in the navy's straight lines. Weir, the gas giant, had a small grey moon called Larch, and the navy made that the bonded store for anything that needed holding.",
-    "The Charter Strikes of the 2390s turned the station from a lane-keeper into a toll-gate. When the Ironhull Compact was agreed, the levy office was set up here, and every ore hauler going inward has been opened in the customs halls since. Ironhull crews call the whole region the Seam and Calder the place where it gets picked at. The navy calls it the Calder March and the work routine. Neither side has changed its mind in a hundred years, and the cities have grown fat on both.",
+    "The Rising of the 2390s turned the station from a lane-keeper into a border post and a toll-gate. When the Treaty was signed here in 2397, the levy office was set up on the station, and every ore hauler going inward has been opened in the customs halls since. Union crews call the whole region the Seam and Calder the place where it gets picked at. The navy calls it the Calder March and the work routine. Neither side has changed its mind in a hundred years, and the cities have grown fat on both.",
     "Since 2519 the navy has been going outward and not coming back. Ships and crews are pulled to the Shadow front, and the officers left are junior, overworked and touchy. The picket still supplies the quarantine at Ostry, and its crews talk. The Federation's official position on Varrow and Hesk is that nothing happened, and everyone on Calder repeats it the way people repeat a curfew."
   ],
-  "culture": "Calder runs on navy time, with bells and shift signals, and a habit of saying things in the fewest words that will pass inspection. Downsiders, as the surface people call themselves, are contractors' children and grandchildren, proud of their forms and sick of them. Stationers are navy or near enough, and look down on Downsiders. Both look down on through-traffic. Ironhull crews are 'rusters' to the clerks, and the clerks are 'stampers' to the crews, all with a straight face. People are courteous, tired and careful what they put in writing. Dry jokes are about paperwork, because jokes about the war are bad luck. Outsiders who stay polite and keep their papers in order get on well. Outsiders who argue find that the line behind them grows long, and so does the argument.",
+  "culture": "Calder runs on navy time, with bells and shift signals, and a habit of saying things in the fewest words that will pass inspection. Downsiders, as the surface people call themselves, are contractors' children and grandchildren, proud of their forms and sick of them. Stationers are navy or near enough, and look down on Downsiders. Both look down on through-traffic. Union crews are 'rusters' to the clerks, and the clerks are 'stampers' to the crews, all with a straight face. People are courteous, tired and careful what they put in writing. Dry jokes are about paperwork, because jokes about the war are bad luck. Outsiders who stay polite and keep their papers in order get on well. Outsiders who argue find that the line behind them grows long, and so does the argument.",
   "artBible": {
     "palette": [
       "#8a8d90",
@@ -68,7 +68,7 @@
           "id": "lucan-treharne",
           "name": "Lucan Treharne",
           "role": "Retired customs clerk, appeals writer",
-          "text": "Spent thirty years stamping Ironhull manifests and now writes their appeals for a small fee. He knows every regulation and which of them nobody enforces.",
+          "text": "Spent thirty years stamping Union manifests and now writes their appeals for a small fee. He knows every regulation and which of them nobody enforces.",
           "line": "I used to say no for a living. Now I write the letters that ask again. Funny how the same form reads differently from the other side of the desk.",
           "look": "A stooped man in his seventies with thin white hair, a neat grey suit worn shiny at the cuffs, and round wire glasses. A faded navy lapel pin sits in the buttonhole, with the enamel chipped."
         }
@@ -76,14 +76,14 @@
       "rumors": [
         "Cadets are leaving the academy terraces a term early now, and the instructors who stayed won't say what they were told.",
         "Old hands say the glitter in the sky gets brighter after each fleet departs, as though every ship shed something on the way out. The yard hands call it ballast and laugh.",
-        "Nobody can remember a levy week this quiet. Ironhull masters pay without a word, and the clerks don't like it."
+        "Nobody can remember a levy week this quiet. Union masters pay without a word, and the clerks don't like it."
       ],
       "vista": "A wide landing field of packed tan dust, bordered with numbered gantries and low white-painted hangars with crests on their doors. Beyond it, rows of grey barracks blocks and contractor towers stand in strict lines that crooked streets break up further back. Dark ashen plains stretch to peach-coloured ridges. The sky is a thin pale blue haze, with a small white sun and a glitter of orbital debris like frost on glass. A pair of navy cutters sit on the apron under tarps."
     },
     {
       "body": "station",
       "description": [
-        "Calder Station is the navy's base for the March, and it looks the part. It is a squared-off block of grey armour with matching gantries either side, and the heraldic crest is painted large on the flank. The picket squadron's berths line the main spine. The customs halls open off a long concourse, where every Ironhull cargo going inward is cracked, counted and stamped. The levy office the Compact pays into is on the deck above, behind two sets of doors.",
+        "Calder Station is the navy's base for the March, and it looks the part. It is a squared-off block of grey armour with matching gantries either side, and the heraldic crest is painted large on the flank. The picket squadron's berths line the main spine. The customs halls open off a long concourse, where every Union cargo going inward is cracked, counted and stamped. The levy office the Union pays into is on the deck above, behind two sets of doors.",
         "The station is clean and loud, with bells and tannoys at all hours, and it is shorter-staffed every month. Berths that held a full squadron a few years ago now hold a handful of ships. The officers on the decks are junior, brisk and touchy, and the quartermaster's office is the busiest place aboard. Food and medicine are dear here, because both come in from elsewhere and the navy is not the only one buying. Fuel, alloys and components are traded openly at the dock. Ore, metals, water, chemicals and consumer goods are not handled here at all.",
         "The station hangs over the tan curve of Calder, the dusty world filling the viewports below. Beyond it the white star burns without warmth. Everyone aboard knows the picket here supplies the quarantine at Ostry, and no one will say what the crews bring back."
       ],
@@ -94,7 +94,7 @@
         },
         {
           "name": "The Levy Office",
-          "text": "Behind a pair of armoured doors, a bright, quiet room where Compact clerks and navy accountants reconcile the March's dues. It has the only carpet aboard."
+          "text": "Behind a pair of armoured doors, a bright, quiet room where Union clerks and navy accountants reconcile the March's dues. It has the only carpet aboard."
         },
         {
           "name": "The Quarterdeck",
@@ -118,9 +118,9 @@
           "id": "aldous-crane",
           "name": "Aldous Crane",
           "role": "Levy clerk",
-          "text": "A Compact clerk, on loan to the levy office. He balances the books that the Ironhulls pay into and the navy takes out of. He is polite to both sides and trusted by neither.",
+          "text": "A Union clerk, on loan to the levy office. He balances the books that the Union pays into and the navy takes out of. He is polite to both sides and trusted by neither.",
           "line": "The levy goes up, the ships go out, and the books have to balance somehow. I don't ask which of them gives. I only add.",
-          "look": "A heavyset man in his fifties with a soft face and thinning sandy hair. He wears a rumpled brown Compact coat over a grey navy-issue shirt, with ink stains on the cuff. He keeps a tiny brass abacus in his top pocket and fiddles with it when he talks."
+          "look": "A heavyset man in his fifties with a soft face and thinning sandy hair. He wears a rumpled brown Union coat over a grey navy-issue shirt, with ink stains on the cuff. He keeps a tiny brass abacus in his top pocket and fiddles with it when he talks."
         },
         {
           "id": "silas-pryor",
@@ -179,10 +179,10 @@
         {
           "id": "yusuf-amsel",
           "name": "Yusuf Amsel",
-          "role": "Ironhull master, waiting on release",
+          "role": "Union master, waiting on release",
           "text": "A hauler master whose cargo was impounded on a technicality. He has been on Larch long enough to know every clerk by name, and he has stopped being angry.",
           "line": "They'll let it go when they let it go. Meanwhile I sit, and I drink their soup, and I learn how much a man can say with a stamp.",
-          "look": "A weathered man of fifty with a heavy grey beard, close-cropped, and deep creases at the eyes. He wears a patched Ironhull work jacket in faded orange-brown over a grey depot shirt, with a cracked welder's visor pushed up on his forehead."
+          "look": "A weathered man of fifty with a heavy grey beard, close-cropped, and deep creases at the eyes. He wears a patched Union work jacket in faded orange-brown over a grey depot shirt, with a cracked welder's visor pushed up on his forehead."
         }
       ],
       "rumors": [

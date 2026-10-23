@@ -239,7 +239,7 @@ const FLY_READY = CORE_READY.then(CORE => { FLY = (function () {
   }
   function ping() { if (pl.pingCd > 0 || !sAlive[0]) return; pl.ping = 1; pl.pingCd = 6; pl.pingR = 0; }
   function flareNow() { if (flare.t < 0 && flare.warn <= 0) flare.warn = 5; }
-  function applyPirates() { const ri = catalog.brands.findIndex(b => b.id === 'ironhulls.military'); if (ri >= 0 && state.pirates) hostile[ri] = 1; }
+  function applyPirates() { const ri = catalog.brands.findIndex(b => b.id === 'union.military'); if (ri >= 0 && state.pirates) hostile[ri] = 1; }
   function respawnNPC(i) {
     const a = rnd() * 6.283, r = 4000 + rnd() * 5000;
     spawn(i, randomType(), sx[0] + Math.cos(a) * r, sy[0] + Math.sin(a) * r, rnd() < 0.55 ? 0 : 1);

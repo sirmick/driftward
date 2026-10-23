@@ -17,7 +17,7 @@ The territory model (stage factions), on the lanes there could be (chosen system
     faction may hold, enough in its home ring; dead systems may be claimed as territory; the March's owners as its
     region file says; the factions that hold land hold it together (a flow from a root in each piece through their
     own systems), each piece beyond the first costed, the pieces apart from the main body exclaves (EXCLAVE); the
-    Ironhulls, Freeflag and Prism lean toward the March's side (BEARINGS); compact, splitting near neighbours costs.
+    the Union, Freeflag and Prism lean toward the March's side (BEARINGS); compact, splitting near neighbours costs.
   * the Drift is cut into eight sectors round the galactic pole; at least MIN_OPEN of them, whose edge the Bloom and
     the Shadow do not hold, are open frontier, and each growing faction (FRONTIER) must be able to hold the same number
     of gateways into them (the lane model makes them so). So every faction has equal room to grow.
@@ -114,17 +114,17 @@ SETTLED = [(0, 2176), (12, 2200), (40, 2250), (100, 2320), (140, 2375), (160, 24
 CONTACT, BLOOM_CHARTED, SHADOW_SEEN, GLASS_LOST = 2376, 2410, 2519, 2524
 # the Calder March (src/lore/regions/calder-march.md): its systems, their stars' classes (src/systems/*.json; a white
 # star may be any F type, since A stars are too rare to find two close together) and their owners
-MARCH = [('brannock', 'Brannock', 'orange', 'ironhulls'), ('calder', 'Calder', 'white', 'federation'), ('merrow', 'Merrow', 'yellow', 'federation'),
-         ('serein', 'Serein', 'yellow', 'prism'), ('quire', 'Quire', 'white', 'prism'), ('ostry', 'Ostry', 'red-dwarf', 'ironhulls')]
+MARCH = [('brannock', 'Brannock', 'orange', 'union'), ('calder', 'Calder', 'white', 'federation'), ('merrow', 'Merrow', 'yellow', 'federation'),
+         ('serein', 'Serein', 'yellow', 'prism'), ('quire', 'Quire', 'white', 'prism'), ('ostry', 'Ostry', 'red-dwarf', 'union')]
 MARCH_LY = (18, 34)
-MARCH_REACH = 24  # Ironhull inhabited systems Brannock must join, through the Compact's own, beyond itself
-GLASS = ['Varrow', 'Hesk', 'Lucerne', 'Facet']  # the two Ironhull systems, then Prism's research world and its foundry
+MARCH_REACH = 24  # Union inhabited systems Brannock must join, through the Union's own, beyond itself
+GLASS = ['Varrow', 'Hesk', 'Lucerne', 'Facet']  # the two Union systems, then Prism's research world and its foundry
 # factions: the setting's count of inhabited systems, the rings they may lie in, at least how many in the home ring,
 # and whether their territory holds together (each piece of it beyond the first costs PIECE_COST; the Blackhull havens
 # and the Independents are scattered by nature)
 FACTIONS = {
     'federation':   dict(name='Federation', n=45, rings=('inner', 'middle', 'outer'), home=('inner', 28), whole=True),
-    'ironhulls':  dict(name='Ironhull Compact', n=35, rings=('middle', 'outer'), home=('middle', 24), whole=True),
+    'union':  dict(name='Union', n=35, rings=('middle', 'outer'), home=('middle', 24), whole=True),
     'prism': dict(name='Prism', n=20, rings=('inner', 'middle', 'outer'), home=('inner', 12), whole=True),
     'freeflag':  dict(name='Freeflag', n=20, rings=('outer',), home=('outer', 20), whole=True),
     'blackhulls': dict(name='Blackhull havens', n=5, rings=('middle', 'outer'), home=('outer', 2), whole=False),
@@ -135,18 +135,18 @@ PIECE_COST = 6
 # fixed cost): so territories are laced with lanes and borders cross at a few choke points
 INSIDE_COST, BORDER_COST = .7, (1.6, 4)
 FED_HOLDS = ['Sol', 'Alpha Centauri', "Barnard's Star", 'Wolf 359', 'Epsilon Eridani', 'Tau Ceti']
-FRONTIER = ['federation', 'ironhulls', 'prism', 'freeflag']  # the factions given equal access to the open Drift
+FRONTIER = ['federation', 'union', 'prism', 'freeflag']  # the factions given equal access to the open Drift
 MIN_OPEN, MIN_GATEWAYS = 1, 2
 SECTORS = 8
 # where a faction's territory leans: toward a March system's bearing from Sol, each of its systems costing its angle
-# off that bearing (radians) times the weight; the Ironhulls hold the March's side of the middle ring, Freeflag the
+# off that bearing (radians) times the weight; the Union holds the March's side of the middle ring, Freeflag the
 # outer ring beyond them (the strikes made them cousins), Prism's company worlds lean the same way, toward Serein
-BEARINGS = {'ironhulls': ('brannock', 2.0), 'freeflag': ('brannock', 1.5), 'prism': ('serein', .6)}
+BEARINGS = {'union': ('brannock', 2.0), 'freeflag': ('brannock', 1.5), 'prism': ('serein', .6)}
 # the regions: every system belongs to one, named here; built after the lanes (see the region stage below)
 REGIONS = {
     'inner-sphere': 'The Inner Sphere', 'concord': 'The Concord Worlds', 'long-watch': 'The Long Watch',
     'calder-march': 'The Calder March', 'mirrorspace': 'Mirrorspace', 'prism-inc': 'Prism Incorporate',
-    'prism-research': 'Prism Research', 'anvil': 'The Anvil', 'iron-outposts': 'The Ironhull Outposts', 'reach': 'The Reach',
+    'prism-research': 'Prism Research', 'anvil': 'The Anvil', 'iron-outposts': 'The Union Outposts', 'reach': 'The Reach',
     'cells': 'The Cells', 'margins': 'The Margins', 'blackspace': 'Blackspace', 'garden': 'The Garden', 'hedge': 'The Hedge',
     'blightspace': 'Blightspace', 'corran-gate': 'Corran Gate', 'lighthouse-run': 'Lighthouse Run',
     'furnace-deeps': 'The Furnace Deeps', 'the-maw': 'The Maw', 'beacon-cells': 'Beacon Cells', 'the-sink': 'The Sink',
@@ -163,7 +163,7 @@ HAZARDS = [('The Lighthouse', 'pulsar', 'lighthouse', 'lighthouse-run'), ('The F
            ('The Beacon', 'blue-giant', 'beacon', 'beacon-cells'), ('The Metronome', 'pulsar', 'metronome', 'corran-gate'),
            ('The Sink', 'black-hole', 'sink', 'the-sink'), ('The Maw', 'black-hole', 'maw', 'the-maw')]
 # what a piece of a faction's territory apart from its main body is
-EXCLAVE = {'federation': 'navy base', 'ironhulls': 'outpost', 'prism': 'company world', 'freeflag': 'rebel cell'}
+EXCLAVE = {'federation': 'navy base', 'union': 'outpost', 'prism': 'company world', 'freeflag': 'rebel cell'}
 # the deep Drift: depth by jumps from human space; at each depth how many systems a system spawns (on average), how
 # far its children lie (ly), and the chance it links to a neighbour too (a loop)
 DRIFT_DEPTH = 8
@@ -386,24 +386,24 @@ elif STAGE == 'factions':
                 if (j, i) in g: expr[g[j, i]] = expr.get(g[j, i], 0) + 1
                 if (i, j) in g: expr[g[i, j]] = expr.get(g[i, j], 0) - 1
             f.add(expr, lo=0, tag=f'{k} held together')
-    # the March is the Ironhulls' way in to the rest of the Compact (its region file): Brannock reaches, through
-    # Ironhull systems, at least MARCH_REACH of the Compact's inhabited systems; a flow from Brannock, each system it
+    # the March is the Union's way in to the rest of its space (its region file): Brannock reaches, through
+    # Union systems, at least MARCH_REACH of the Union's inhabited systems; a flow from Brannock, each system it
     # reaches taking a unit
     bran = march[[m_[0] for m_ in MARCH].index('brannock')]
     gb, zb = {}, {i: f.var(f'zb{i}', 0, 1) for i in human if i != bran}
-    for i, v in zb.items(): f.add({v: 1, own[i, 'ironhulls']: -1}, hi=0)
+    for i, v in zb.items(): f.add({v: 1, own[i, 'union']: -1}, hi=0)
     for a, b in E:
         if a in hset and b in hset:
             for s_, t_ in ((a, b), (b, a)):
                 gb[s_, t_] = f.var(f'gb{s_},{t_}', 0, M)
-                f.add({gb[s_, t_]: 1, own[s_, 'ironhulls']: -M}, hi=0); f.add({gb[s_, t_]: 1, own[t_, 'ironhulls']: -M}, hi=0)
+                f.add({gb[s_, t_]: 1, own[s_, 'union']: -M}, hi=0); f.add({gb[s_, t_]: 1, own[t_, 'union']: -M}, hi=0)
     for i in zb:  # inflow - outflow = what i takes
         expr = {zb[i]: -1}
         for j in near[i]:
             if (j, i) in gb: expr[gb[j, i]] = expr.get(gb[j, i], 0) + 1
             if (i, j) in gb: expr[gb[i, j]] = expr.get(gb[i, j], 0) - 1
-        f.eq(expr, 0, tag='the March joins the Compact')
-    f.add({zb[i]: 1 for i in inh if i in zb}, lo=MARCH_REACH, tag='the March joins the Compact')
+        f.eq(expr, 0, tag='the March joins the Union')
+    f.add({zb[i]: 1 for i in inh if i in zb}, lo=MARCH_REACH, tag='the March joins the Union')
     # the open Drift: sectors whose edge the Bloom and the Shadow do not hold, at least MIN_OPEN open; each frontier
     # faction designates the same number of gateways, systems of its own that could have a lane into an open sector's
     # Drift (the lane model gives each one, and no other system, such a lane)
@@ -679,7 +679,7 @@ corran = emptied[0] if emptied else None
 where = {
     'lighthouse': lambda: pick([i for i in dead_cat if any(owner.get(j) == 'federation' for j in lane_nb[i]) and any(owner.get(j) == 'prism' for j in lane_nb[i])]
                                or [i for i in dead_cat if any(owner.get(j) == 'prism' for j in lane_nb[i])], np.zeros(3)),
-    'furnace': lambda: pick([i for i in dead_cat if main(i, 'ironhulls')], centre([i for i in role if main(i, 'ironhulls')])),
+    'furnace': lambda: pick([i for i in dead_cat if main(i, 'union')], centre([i for i in role if main(i, 'union')])),
     'beacon': lambda: pick([i for i in dead_cat if main(i, 'freeflag') or any(main(j, 'freeflag') for j in lane_nb[i])], centre([i for i in role if main(i, 'freeflag')])),
     'metronome': lambda: pick([i for i in dead_cat if any(j in front or role[j] == 'shadow' for j in lane_nb[i])], P[corran] if corran is not None else np.zeros(3)),
     'sink': lambda: pick([i for i in dead_cat if i not in owner and any(owner.get(j) == 'independent' for j in lane_nb[i])], centre([i for i in role if owner.get(i) == 'independent'])),
@@ -724,7 +724,7 @@ for i, r_ in role.items():
         ang = np.degrees(np.arccos(np.clip(P[i] @ shadow_u / max(LY[i], 1e-9), -1, 1)))
         region[i] = 'long-watch' if ang < LONG_WATCH and LY[i] > 20 else 'concord'
     elif o == 'prism': region[i] = 'prism-inc' if main(i, 'prism') else 'prism-research'
-    elif o == 'ironhulls': region[i] = 'anvil' if main(i, 'ironhulls') else 'iron-outposts'
+    elif o == 'union': region[i] = 'anvil' if main(i, 'union') else 'iron-outposts'
     elif o == 'freeflag': region[i] = 'reach' if main(i, 'freeflag') else 'cells'
     elif o == 'independent': region[i] = 'margins'
     elif o == 'blackhulls': region[i] = 'blackspace'
