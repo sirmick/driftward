@@ -295,6 +295,7 @@ impl World {
         let (owner, side) = (self.resolve(self.missiles.owner[n]), self.missiles.side[n]);
         let (blast, core, dmg) = (self.p(P::ms_blast), self.p(P::ms_core), self.p(P::ms_dmg));
         // the ship whose shield the fuse found takes it full, as a shell's struck ship does
+        self.tally_w = crate::combat::W_MISSILE;
         let kind = self.blast(x, y, near, blast, core, dmg, owner, side);
         self.note_burst(kind, x, y, blast, near);
     }

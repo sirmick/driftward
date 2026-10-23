@@ -69,6 +69,11 @@ pub const B_SPLASH: u8 = 6;
 /// A missile shot down (missile.rs).
 pub const B_SHOT: u8 = 7;
 
+/// The tally's weapons (`World::tally`): the light, medium and heavy multicannons, missiles; and its size.
+pub const W_LIGHT: u8 = 0;
+pub const W_MISSILE: u8 = 3;
+pub const N_TALLY: usize = 4 * 5 * 2;
+
 /// Debug: the player joins side a (0 neutral, 1..MAX_SIDES), and every side forgives it.
 pub const CMD_SIDE: u32 = 104;
 
@@ -632,6 +637,7 @@ impl World {
     fn burst(&mut self, n: usize, x: f64, y: f64, struck: Option<usize>, on: Option<usize>) {
         let g = self.gun(self.shells.gun[n]);
         let (owner, side) = (self.resolve(self.shells.owner[n]), self.shells.side[n]);
+        self.tally_w = W_LIGHT + self.shells.gun[n].clamp(G_LIGHT, G_HEAVY) - G_LIGHT;
         let kind = self.blast(x, y, struck, g.blast, g.core, g.dmg, owner, side);
         let mut near = std::mem::take(&mut self.grid.buf);
         near.clear();
@@ -699,6 +705,13 @@ impl World {
             else { let b = self.p(P::bleed_kin); shield -= dmg * (1.0 - b); hull = dmg * b; }
             if shield <= 0.0 { (shield, st) = (0.0, self.p(P::shield_restart)); } else { st = st.max(self.p(P::shield_pause)); }
         } else { hull = dmg; st = st.max(self.p(P::shield_pause)); }
+        // the tally: what it took off the shield and the hull, by weapon and the ship's class
+        let len = self.types.len[self.look_kind(j)];
+        let class = [20.0, 45.0, 100.0, 230.0].iter().filter(|&&l| len >= l).count();
+        let before = if player { self.game.shield[0] } else { self.arms.shield[j] };
+        let o = ((self.tally_w as usize).min(3) * 5 + class) * 2;
+        self.tally[o] += (before - shield).max(0.0);
+        self.tally[o + 1] += hull.min(self.ships.hull[j].max(0.0));
         if player { (self.game.shield[0], self.game.shield_t[0]) = (shield, st); } else { (self.arms.shield[j], self.arms.shield_t[j]) = (shield, st); }
         self.arms.hit[j] = 0.0;
         // the side hit remembers who did it: the player made an enemy, a fighter turns on its attacker

@@ -46,6 +46,8 @@ const CORE_READY = (async () => {
       // vertex), each ship's arms and turrets (slot * maxMounts + site), shells, bursts (a ring; battle.burst the next),
       // the fight's row and the lab's sides; missiles in flight (core/src/missile.rs; a bay is a site of size 4)
       mount: groups.mount, outline: groups.outline, arms: groups.arms, turret: groups.turret, shell: groups.shell, burst: groups.burst, battle: groups.battle, side: groups.side, missile: groups.missile,
+      // combat's tally, for tuning (not state): damage by weapon (light, medium, heavy, missile) and target class (I to V), shield then hull
+      tally: groups.battle.tally,
       maxMounts: M.maxMounts, maxOutline: M.maxOutline, maxShells: M.maxShells, maxMissiles: M.maxMissiles, maxBursts: M.maxBursts, maxSides: M.maxSides,
       startTraffic: () => X.dw_start_traffic(w), // plan the lanes and seed the steady state, for a new game
       // the atlas (core/src/atlas.rs), the systems this game has been to, a slot each by star id: store the live system
@@ -123,7 +125,7 @@ const CORE_READY = (async () => {
       ship: groups.ship, type: groups.type, body: groups.body, env: groups.env, game: groups.game, hold: groups.hold, market: groups.market,
       offer: groups.offer, mission: groups.mission, traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
       gate: groups.gate, orbitOut: groups.orbit.out, fit: groups.fit, draft: groups.draft, goods: groups.goods, fitView: groups.fit.view, stockFit: groups.fit.stock,
-      mount: groups.mount, outline: groups.outline, arms: groups.arms, turret: groups.turret, shell: groups.shell, burst: groups.burst, battle: groups.battle, side: groups.side, missile: groups.missile });
+      mount: groups.mount, outline: groups.outline, arms: groups.arms, turret: groups.turret, shell: groups.shell, burst: groups.burst, battle: groups.battle, side: groups.side, missile: groups.missile, tally: groups.battle.tally });
     views();
     o.rebind = () => { if (mem.buffer !== buffer) { bind(); views(); } };
     return o;

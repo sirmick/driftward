@@ -518,7 +518,7 @@
      "bridge": 1,
      "weaponM": 2,
      "bay": 2,
-     "missiles": 24
+     "missiles": 42
     },
     "c4": {
      "hull": 4,
@@ -532,7 +532,7 @@
      "bridge": 1,
      "weaponL": 2,
      "bay": 4,
-     "missiles": 80
+     "missiles": 140
     },
     "c5": {
      "hull": 6,
@@ -547,7 +547,7 @@
      "weaponL": 2,
      "weaponM": 2,
      "bay": 4,
-     "missiles": 80
+     "missiles": 140
     }
    },
    "lines": [
@@ -1125,7 +1125,7 @@
      "bridge": 1,
      "weaponM": 2,
      "bay": 2,
-     "missiles": 24
+     "missiles": 42
     },
     "c4": {
      "hull": [
@@ -1145,7 +1145,7 @@
      "bridge": 1,
      "weaponL": 2,
      "bay": 4,
-     "missiles": 80
+     "missiles": 140
     },
     "c5": {
      "hull": [
@@ -1175,7 +1175,7 @@
      "weaponL": 2,
      "weaponM": 2,
      "bay": 4,
-     "missiles": 80
+     "missiles": 140
     }
    },
    "lines": [
@@ -1807,7 +1807,7 @@
      "bridge": 1,
      "weaponM": 2,
      "bay": 2,
-     "missiles": 24
+     "missiles": 42
     },
     "c4": {
      "hull": [
@@ -1833,7 +1833,7 @@
      "bridge": 1,
      "weaponL": 2,
      "bay": 4,
-     "missiles": 80
+     "missiles": 140
     },
     "c5": {
      "hull": [
@@ -1857,7 +1857,7 @@
      "weaponL": 2,
      "weaponM": 2,
      "bay": 4,
-     "missiles": 80
+     "missiles": 140
     }
    },
    "lines": [
@@ -2635,7 +2635,7 @@
      "ring": 1,
      "bridge": 1,
      "bay": 2,
-     "missiles": 24
+     "missiles": 42
     },
     "c4": {
      "hull": 2,
@@ -2654,7 +2654,7 @@
      ],
      "bridge": 1,
      "bay": 4,
-     "missiles": 80
+     "missiles": 140
     },
     "c5": {
      "hull": [
@@ -2676,7 +2676,7 @@
      "ring": 2,
      "bridge": 1,
      "bay": 4,
-     "missiles": 80
+     "missiles": 140
     }
    },
    "lines": [

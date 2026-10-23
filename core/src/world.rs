@@ -447,10 +447,10 @@ params! {
     ms_rad = 3.0;         "missile: its size to shells, a circle this many metres round"
     ms_pd_near = 200.0;   "point defence: light guns fire on missiles homing on their ship, or another side's within this many metres of it"
     ms_range = 8000.0;    "missile: a wave's ships launch at a target within this many metres"
-    ms_reload = 7.0;      "missile: seconds a ship's bays take to load again after a volley"
+    ms_reload = 4.0;      "missile: seconds a ship's bays take to load again after a volley"
     ms_wave_min = 4.0;    "missile: ships of a side on the same target that make a wave"
     ms_wave_max = 24.0;   "missile: a wave takes ships until it has this many missiles; the rest go for the next target"
-    ms_wave_gap = 7.0;    "missile: seconds after a side's wave before its next (about a reload, so the next goes together)"
+    ms_wave_gap = 4.0;    "missile: seconds after a side's wave before its next (about a reload, so the next goes together)"
     ms_tot_slack = 1.0;   "missile: a wave is to arrive this many seconds after its farthest missile could (room for every missile to make it)"
     ms_worthy = 50.0;     "missile: the shortest hull worth missiles, metres (class III up)"
     ms_lone = 100.0;      "missile: a ship without a wave fires alone at a hull this long or more (class IV up)"
@@ -497,6 +497,11 @@ pub struct World {
     /// the outfitter's view of a fit (fit.rs `view_fit`, `view_stock`): its stats, and a stock fit, for the page; not state
     pub fitview: Vec<f64>,
     pub fitstock: Vec<f64>,
+    /// combat's tally (combat.rs `damage`), for tuning: damage done by weapon (W_*) to ships of each class (I to V),
+    /// shield then hull ((weapon * 5 + class) * 2 + 0 or 1); not state, outside the snapshot and the hash, zeroed by `clear`
+    pub tally: Vec<f64>,
+    /// the weapon whose blast is being dealt (W_*), for the tally: scratch
+    pub(crate) tally_w: u8,
     pub market: Market,
     pub offers: Offers,
     pub missions: Missions,
@@ -560,6 +565,8 @@ impl World {
             atlas_sides: AtlasSides::with_capacity(ATLAS_SIDES),
             goods: Goods::with_capacity(MAX_GOODS),
             fitview: vec![0.0; N_STATS],
+            tally: vec![0.0; crate::combat::N_TALLY],
+            tally_w: 0,
             fitstock: vec![0.0; MAX_FIT],
             market: Market::with_capacity(cfg.max_bodies * MAX_GOODS),
             offers: Offers::with_capacity(cfg.max_bodies * MAX_OFFERS),
@@ -648,7 +655,7 @@ impl World {
 
     fn build_manifest(&self) -> String {
         // the snapshot buffer and the orbiters' output are exposed too, but are not state
-        let mut extra = vec![ColumnDesc::of("world", "snapshot", &self.snap), ColumnDesc::of("fit", "view", &self.fitview), ColumnDesc::of("fit", "stock", &self.fitstock)];
+        let mut extra = vec![ColumnDesc::of("world", "snapshot", &self.snap), ColumnDesc::of("fit", "view", &self.fitview), ColumnDesc::of("fit", "stock", &self.fitstock), ColumnDesc::of("battle", "tally", &self.tally)];
         self.orbit.describe(&mut extra);
         let cols: Vec<String> = self.cols.iter().chain(extra.iter()).map(|c| format!(
             r#"{{"group":"{}","name":"{}","kind":"{}","ptr":{},"len":{}}}"#, c.group, c.name, c.kind, c.ptr, c.len
@@ -676,6 +683,7 @@ impl World {
         self.turrets.clear();
         self.battle.clear();
         self.clear_fire();
+        self.tally.fill(0.0);
         self.sides.next.fill(0.0);
         self.sides.wave.fill(0.0);
         self.sides.wave_ok.fill(0.0);
