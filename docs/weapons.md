@@ -21,7 +21,7 @@ Punch goes about with the calibre cubed and the rate falls steeply, so the big g
 | :-- | :-- |
 | Site | S turret (any turret site takes it) |
 | Traverse | 360°, 4 rad/s; leads its target |
-| Rate | 10 shells a second, a spread of 1.5° |
+| Rate | 10 shells a second, a spread of 2.6°; each shell's speed and fuse 6% off either way |
 | Shell | 1,200 m/s plus the ship's velocity; fuse 0.75 s (900 m); a burst of 12 m radius |
 | Damage | 1 point a shell, full inside 4 m, falling to nothing at the burst's edge |
 | Energy and heat | 0.02 MJ and 0.05 MJ a shell (0.2 MW and 0.5 MW firing) |

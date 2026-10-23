@@ -1546,7 +1546,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       const ok = j >= 0 && j < MAXS, T = ok ? types[SH.kind[j]] : null, vx = ok ? SH.vx[j] : 0, vy = ok ? SH.vy[j] : 0;
       if (ok && HITS.gen[j] !== SH.generation[j]) { HITS.gen[j] = SH.generation[j]; HITS.at[j] = HITS.bt[j] = -99; HITS.glow[j] = 0; }
       if (kind === BURST.air) {
-        addFx(x, y, 0, 0, 0.2, size * 0.35, 1.6, 1.6, 1.0, 0.5);
+        addFx(x, y, 0, 0, 0.2, size * 0.3, 1.6, 1.0, 0.62, 0.3);
         sparks(x, y, 0, 0, 2, FIRE, 60, 1.0, 0.25);
       } else if (kind === BURST.shield && T) {
         const c = Math.cos(SH.ra[j]), s = Math.sin(SH.ra[j]), dx = x - SH.rx[j], dy = y - SH.ry[j], h = (T.extent || T.L * 1.2) / 2;
@@ -1819,7 +1819,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       if (!S.live[n] || Math.abs(S.rx[n] - cx) > halfW + 60 || Math.abs(S.ry[n] - cy) > halfH + 60) continue;
       const o = nb++ * 8, vx = S.vx[n], vy = S.vy[n], v = Math.hypot(vx, vy) || 1, len = 10;
       boltInst[o] = S.rx[n] - vx / v * len * 0.5; boltInst[o + 1] = S.ry[n] - vy / v * len * 0.5; boltInst[o + 2] = vx; boltInst[o + 3] = vy;
-      boltInst[o + 4] = 1.4; boltInst[o + 5] = 0.85; boltInst[o + 6] = 0.35; boltInst[o + 7] = len;
+      boltInst[o + 4] = 0.75; boltInst[o + 5] = 0.45; boltInst[o + 6] = 0.18; boltInst[o + 7] = len;
     }
     if (nb) { setView(FP.bolt, TW, TH, cx, cy); gl.bindVertexArray(VS.bolt.vao); upload(VS.bolt, boltInst, nb); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nb); gl.bindVertexArray(null); }
     let np = 0;

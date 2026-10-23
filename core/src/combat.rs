@@ -394,13 +394,15 @@ impl World {
         }
     }
 
-    /// A shell from (x, y) along angle `ang`, give or take the spread, with ship k's velocity; false if every shell
-    /// slot is in use.
+    /// A shell from (x, y) along angle `ang`, give or take the spread, with ship k's velocity; its speed and fuse a
+    /// little off (`mc_jitter`), so a stream scatters; false if every shell slot is in use.
     fn fire(&mut self, k: usize, x: f64, y: f64, ang: f64, fuse: f64) -> bool {
         let Some(n) = (0..MAX_SHELLS).find(|&n| self.shells.live[n] == 0) else { return false };
         let spread = self.p(P::mc_spread) * (self.rng.next_f64() + self.rng.next_f64() - 1.0);
         let (s, c) = sin_cos(ang + spread);
-        let v = self.p(P::mc_speed);
+        let j = self.p(P::mc_jitter);
+        let v = self.p(P::mc_speed) * (1.0 + j * (self.rng.next_f64() * 2.0 - 1.0));
+        let fuse = fuse * (1.0 + j * (self.rng.next_f64() * 2.0 - 1.0));
         let (owner, side) = (self.handle(k), self.arms.side[k]);
         let (vx, vy) = (self.ships.vx[k], self.ships.vy[k]);
         let sh = &mut self.shells;
