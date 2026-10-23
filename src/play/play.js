@@ -2761,6 +2761,28 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   const pingRadius = () => { const p = sim.game.ping[0], r = p > 0 ? (1 - p) / sim.param('ping_decay') * 9000 : 0; return r < 30000 ? r : 0; };
   const STN_PX = 4.5; // the smallest a station draws on the radar (px from centre to corner): to scale it would be a dot
   function stationMark(x, y, r) { hx.beginPath(); hx.moveTo(x, y - r); hx.lineTo(x + r, y); hx.lineTo(x, y + r); hx.lineTo(x - r, y); hx.closePath(); }
+  // gunfire (core/src/combat.rs): each slot's shells in flight, so a ship firing (in the last second or so) glows
+  // orange on the radar and the system map, the more the brighter
+  const fireCount = new Float32Array(MAXS);
+  function firing() {
+    fireCount.fill(0);
+    const S = sim.shell;
+    for (let n = 0; n < sim.maxShells; n++) {
+      if (!S.live[n]) continue;
+      const h = S.owner[n], i = h & 0xffff;
+      if (i < MAXS && SH.generation[i] === h >>> 16) fireCount[i]++;
+    }
+    return fireCount;
+  }
+  const FIRE_RGB = '255,138,46';
+  // a firing ship's glow at (x, y) on canvas c, from its shells in flight (n), flickering
+  function fireGlow(c, x, y, n, scale) {
+    if (!n) return;
+    const r = scale * (5 + Math.min(9, Math.sqrt(n) * 2)), a = Math.min(0.85, 0.35 + n * 0.03) * (0.75 + 0.25 * Math.random());
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${FIRE_RGB},${a})`); g.addColorStop(0.4, `rgba(${FIRE_RGB},${a * 0.45})`); g.addColorStop(1, `rgba(${FIRE_RGB},0)`);
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill();
+  }
   const radarBox = () => { const R = Math.max(60, Math.min(96, Math.min(W, H) * 0.14)); return { R, x: W - 2 * R - 14, y: 14, h: 2 * R + 14 }; };
   function drawRadar(navs) {
     const { R } = radarBox(), cx = W - R - 14, cy = R + 24, k = R / MAP_RANGE;
@@ -2817,12 +2839,15 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       hx.fillStyle = j === tb ? NAV_HOT : 'rgba(159,180,200,.65)'; hx.fill();
     }
     // ships, at the level the sensors hold them (core/src/sensors.rs): a contact as its error circle, an identified
-    // ship as a dot, a scanned one brighter; nothing for one they don't hold
+    // ship as a dot, a scanned one brighter; nothing for one they don't hold; an orange glow under any that is firing
+    const fc = firing();
+    fireGlow(hx, cx, cy, fc[0], 1);
     for (let i = 1; i < sim.count(); i++) { // slot 0 is the player
       const lv = SH.alive[i] ? sensed(i) : 0;
       if (!lv) continue;
       let mx = (SH.rx[i] - px) * k, my = -(SH.ry[i] - py) * k;
       if (mx * mx + my * my > R * R) continue;
+      fireGlow(hx, cx + mx, cy + my, fc[i], 1);
       if (lv === 1) { // a contact: a soft blob, wandering round where it is
         const f = contactFix(i), r = Math.max(4, Math.min(12, f.err * k * 0.8));
         mx += f.dx * k; my -= f.dy * k;
@@ -2939,6 +2964,12 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       c.fillText(B.name.toUpperCase(), x, y - r - 12);
       if (B.port && B.port.name !== B.name) { c.font = '500 10.5px "IBM Plex Mono", ui-monospace, monospace'; c.fillStyle = '#8a95a4'; c.fillText(B.port.name, x, y + r + 12); }
     });
+    const fc = firing();
+    for (let i = 0; i < sim.count(); i++) {
+      if (!SH.alive[i] || !(i === 0 || sensed(i)) || !fc[i]) continue; // gunfire first, under the dots
+      const [x, y] = mapPos(SH.rx[i], SH.ry[i], v);
+      fireGlow(c, x, y, fc[i], 1.4);
+    }
     for (let i = 1; i < sim.count(); i++) {
       if (!SH.alive[i] || !sensed(i)) continue; // only what the sensors hold
       const [x, y] = mapPos(SH.rx[i], SH.ry[i], v);
