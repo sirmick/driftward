@@ -10599,9 +10599,13 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     bx: new Float32Array(MAXS), by: new Float32Array(MAXS), bt: new Float64Array(MAXS).fill(-99), bs: new Float32Array(MAXS), glow: new Float32Array(MAXS), gen: new Uint32Array(MAXS) };
   const FLASH = []; // [x, y, radius, life, age, r, g, b]: brief lights on the hulls round a burst
   let burstAt = -1; // the newest burst read
+  // explosions play slower than life (BURST_SLOW times as long, as far): while a burst is drawn, a particle's life is
+  // stretched, its growth and its speed away from the burst's own motion (FXS.vx, vy) slowed to match
+  const BURST_SLOW = 1.5, FXS = { k: 1, vx: 0, vy: 0 };
   function addFx(x, y, vx, vy, life, size, grow, r, g, b, shard) {
-    const k = FX.next;
+    const k = FX.next, q = FXS.k;
     FX.next = (k + 1) % MAXP; FX.top = Math.max(FX.top, k + 1);
+    life *= q; grow /= q; vx = FXS.vx + (vx - FXS.vx) / q; vy = FXS.vy + (vy - FXS.vy) / q;
     FX.x[k] = x; FX.y[k] = y; FX.vx[k] = vx; FX.vy[k] = vy; FX.life[k] = life; FX.max[k] = life; FX.size[k] = size; FX.grow[k] = grow; FX.r[k] = r; FX.g[k] = g; FX.b[k] = b; FX.shard[k] = shard ? 1 : 0;
   }
   function sparks(x, y, vx, vy, n, col, speed, size, life) {
@@ -10632,12 +10636,14 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const fresh = [];
     for (let n = 0; n < sim.maxBursts; n++) if (B.kind[n] && B.at[n] > burstAt) fresh.push(n);
     fresh.sort((a, b) => B.at[a] - B.at[b]);
+    const flashes = FLASH.length;
     for (const n of fresh) {
       const x = B.x[n], y = B.y[n], kind = B.kind[n], j = B.ship[n] - 1, size = B.size[n];
       burstAt = Math.max(burstAt, B.at[n]);
       if (now - B.at[n] > 0.5) continue; // too old to show (the page was elsewhere)
       const ok = j >= 0 && j < MAXS, T = ok ? types[SH.kind[j]] : null, vx = ok ? SH.vx[j] : 0, vy = ok ? SH.vy[j] : 0;
       if (ok && HITS.gen[j] !== SH.generation[j]) { HITS.gen[j] = SH.generation[j]; HITS.at[j] = HITS.bt[j] = -99; HITS.glow[j] = 0; }
+      Object.assign(FXS, { k: BURST_SLOW, vx: kind === BURST.lost ? vx * 0.5 : vx, vy: kind === BURST.lost ? vy * 0.5 : vy });
       if (kind === BURST.air) {
         addFx(x, y, 0, 0, 0.2, size * 0.3, 1.6, 1.0, 0.62, 0.3);
         sparks(x, y, 0, 0, size > 20 ? 10 : 2, FIRE, size > 20 ? 120 : 60, 1.0, 0.25);
@@ -10685,15 +10691,22 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
         FLASH.push([x, y, L * 7, 1.1, 0, 9, 6.3, 3.6]);
       }
     }
+    Object.assign(FXS, { k: 1, vx: 0, vy: 0 });
+    for (let k = flashes; k < FLASH.length; k++) FLASH[k][3] *= BURST_SLOW;
   }
-  // a missile's motor, each frame it burns: a flame at its tail and smoke left behind
+  // a missile's motor, each frame it burns: in vacuum no smoke, only its exhaust. A white-hot flame at the nozzle and
+  // a thin glowing wake of exhaust streaming back off it at a few hundred m/s, cooling from yellow to a dull red and
+  // spreading as it goes, gone within a quarter second
   function missileTrails(dt) {
     const MS = sim.missile;
     for (let n = 0; n < MAXMS; n++) {
       if (!MS.live[n] || !MS.thr[n]) continue;
       const hx = -Math.sin(MS.ra[n]), hy = Math.cos(MS.ra[n]), tx = MS.rx[n] - hx * MISSILE_LEN * 0.6, ty = MS.ry[n] - hy * MISSILE_LEN * 0.6;
-      addFx(tx, ty, MS.vx[n] - hx * 220, MS.vy[n] - hy * 220, 0.08, 3.2, 0.5, 3.2, 1.9, 0.8);
-      if (Math.random() < Math.min(1, dt * 40)) addFx(tx, ty, MS.vx[n] * 0.02, MS.vy[n] * 0.02, 1.4 + Math.random() * 0.8, 2.2, 1.1, 0.32, 0.31, 0.3);
+      addFx(tx, ty, MS.vx[n] - hx * 120, MS.vy[n] - hy * 120, 0.05, 2.6, 0.2, 4.2, 3.6, 2.6);
+      for (let e = 0; e < 2; e++) {
+        const sp = 260 + Math.random() * 160, side = (Math.random() - 0.5) * 40, back = Math.random() * MISSILE_LEN;
+        addFx(tx - hx * back, ty - hy * back, MS.vx[n] - hx * sp - hy * side, MS.vy[n] - hy * sp + hx * side, 0.12 + Math.random() * 0.14, 1.1, 2.5, 1.5, 0.55, 0.16);
+      }
     }
   }
   function stepFx(dt) {
