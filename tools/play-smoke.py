@@ -49,7 +49,7 @@ def native_replay(save_bytes, log_text, ticks):
         shutil.rmtree(d)
 
 with sync_playwright() as p:
-    b = p.chromium.launch(args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+    b = p.chromium.launch(executable_path=os.environ.get('PW_CHROMIUM') or None, args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
     pg = b.new_page(viewport={'width': 1280, 'height': 800})
     errs = []
     pg.on('console', lambda m: m.type == 'error' and errs.append(m.text))

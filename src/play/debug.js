@@ -17,7 +17,8 @@
 //            bullets; a system's name opens it on the Map tab.
 //   Map      the galaxy in 3D (src/map/map.js, as map.html shows it): the real stars round Sol, the game's systems,
 //            lanes and faction territories, drawn behind the tab with the map's panel (src/map/panel.js).
-// The header's jump box takes the player to any planet, moon, station, belt or field in any system: place@system.
+// The header's jump box takes the player to any planet, moon, station, belt or field in any system: place@system. The
+// Labs row beside it jumps to the test worlds (docs/weapons.md) and back to the start system.
 // tools/gen-content.js records how content was made. The universe index is there from the start; what only this
 // screen reads (how a system's content was made, the real stars, the setting and the stories' log) is read through
 // src/data.js when a tab first needs it. Everything here is read-only.
@@ -533,12 +534,19 @@ function makeDebug(ctx) {
       jsel = 0; jumpRender();
     }
   });
+  // the Labs row: one click to a test world (docs/weapons.md), or back to the start system, over its start port
+  el.querySelector('.dbg-labs').addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-lab]');
+    if (!b || !jump) return;
+    const id = b.dataset.lab === 'start' ? jump.start() : b.dataset.lab;
+    jump.prepare().then(() => { const p = jump.systems().find(s => s.sysId === id); if (p) jumpGo(p); });
+  });
   jlist.addEventListener('mousedown', ev => { const b = ev.target.closest('button[data-i]'); if (b) { ev.preventDefault(); jumpGo(jmatches[+b.dataset.i]); } });
   return {
     isOpen: () => !el.hidden,
     open() { show(tab); el.hidden = false; jin.focus(); },
     close,
-    setJump(j) { jump = j; }, // { places(), systems(), current(), go(system id, j), prepare() }, bound once the core has loaded
+    setJump(j) { jump = j; }, // { places(), systems(), current(), start(), go(system id, j), prepare() }, bound once the core has loaded
     setLive(fn) { live = fn; }, // the Player tab's source, bound once the core has loaded
     setYard(y) { yard = y; },
     yardView,

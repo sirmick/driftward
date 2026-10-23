@@ -1,0 +1,21 @@
+{
+  "id": "flarelab",
+  "name": "GJ 3822",
+  "owner": "none",
+  "ring": "outer",
+  "region": "drift",
+  "lab": true,
+  "description": "Test world: a white giant that flares every half minute or so, with a big planet and its moon to shelter behind.",
+  "star": { "name": "GJ 3822", "class": "white", "radius": 2000, "gravity": 55, "flares": 4 },
+  "start": "shelter",
+  "bodies": [
+    { "id": "shelter", "name": "Shelter", "kind": "planet", "orbit": { "radius": 12000, "angle": 30 }, "radius": 2200, "gravity": 40,
+      "look": { "surface": "rock", "palette": ["#4e4740", "#7d6f60", "#b8a68e"], "atmosphere": "#c0c8d0", "air": 0.2, "seed": 2.3 },
+      "port": { "name": "Shelter Base", "role": "habitat", "population": "outpost", "services": ["refuel", "repair"], "description": "A lab outpost." } },
+    { "id": "lee", "name": "Lee", "kind": "moon", "parent": "shelter", "orbit": { "radius": 5200, "angle": 200 }, "radius": 500, "gravity": 12,
+      "look": { "surface": "rock", "palette": ["#47474b", "#6c6c72", "#a2a2aa"], "atmosphere": "#a0a0b0", "air": 0, "seed": 7.7 } },
+    { "id": "far", "name": "Far", "kind": "planet", "orbit": { "radius": 28000, "angle": 250 }, "radius": 2600, "gravity": 44,
+      "look": { "surface": "giant", "palette": ["#a8b0c0", "#6a7280", "#dce2ea"], "atmosphere": "#d0d8e8", "air": 1.1, "seed": 4.4 } }
+  ],
+  "traffic": { "ships": 0, "local": [], "through": [], "loiter": [] }
+}

@@ -434,6 +434,10 @@
             "pattern": "^[a-z0-9-]+$",
             "maxLength": 40,
             "description": "Its system file's id (src/systems/): a flyable layout, loaded on demand (src/data.js). Without one, the system is on the map only."
+          },
+          "lab": {
+            "type": "boolean",
+            "description": "Its system file is a test world (docs/weapons.md; tools/universe.py's LABS)."
           }
         }
       }

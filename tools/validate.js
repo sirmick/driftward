@@ -50,7 +50,7 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
         if (!m.env && o.kind === 'station' && !o.env && o.id > m.id && Math.hypot(o.x - m.x, o.y - m.y) - o.r - m.r < 100) notes.push({ path: at, msg: `${o.id} is within ${Math.round(Math.hypot(o.x - m.x, o.y - m.y) - o.r - m.r)} m of it`, fatal: true });
       }
     }
-    if (system.region && !fs.existsSync(path.join(root, 'src', 'lore', 'regions', `${system.region}.md`))) notes.push({ path: '$.region', msg: `no src/lore/regions/${system.region}.md`, fatal: false });
+    if (system.region && !system.lab && !fs.existsSync(path.join(root, 'src', 'lore', 'regions', `${system.region}.md`))) notes.push({ path: '$.region', msg: `no src/lore/regions/${system.region}.md`, fatal: false });
     const rocky = b => b.kind === 'belt' || b.kind === 'field';
     for (const e of bodies.filter(b => b.env)) for (const o of bodies) {
       if (o === e || rocky(o)) continue;
@@ -162,6 +162,10 @@ for (const f of fs.readdirSync(path.join(root, 'src', 'systems')).filter(f => f.
   (T.local || []).forEach(e => check('local', e));
   (T.through || []).forEach(e => check('through', e));
   (T.loiter || []).forEach(e => { check('loiter', e); if (!bodies.some(b => b.id === e.port && b.port)) tBad.push(`${f} loiter: no port ${e.port}`); });
+  // a lab's standing fight (docs/weapons.md): its sides' lines as traffic's, the body they fight over
+  const C = (system && system.combat) || {};
+  (C.sides || []).forEach((e, k) => check(`combat side ${k}`, e));
+  if ((C.sides || []).length && !bodies.some(b => b.id === C.contested)) tBad.push(`${f} combat: no body ${C.contested} to contest`);
   // environmental stations: their archetype has traffic, and each of its lines (own.<line> as each owner's) is
   // flown by the classes it names; one group of rows per archetype and owner
   const envGroups = new Map();
@@ -241,6 +245,8 @@ for (const f of fs.existsSync(loreDir) ? fs.readdirSync(loreDir).filter(f => f.e
     for (const [k, mine, theirs] of [['name', system.name, e.name], ['owner', system.owner, e.owner], ['ring', system.ring, e.ring], ['region', system.region, e.region], ['star class', system.star.class, e.class]])
       if (mine !== theirs) uBad.push(`${at}: ${k} ${mine}, the index says ${theirs}`);
     const ports = bodies.filter(b => b.port).map(b => b.port), w = e.world;
+    if (!!system.lab !== !!e.lab) uBad.push(`${at}: ${system.lab ? 'a lab, and the index' : 'the index has it a lab, and the file'} doesn't say so`);
+    if (system.lab) continue; // a test world's ports need no people
     if (!w) { if (ports.length) uBad.push(`${at}: has ports, but the index gives ${e.name} no people`); continue; }
     const roles = [...new Set(ports.map(p => p.role))].sort(), want = [...new Set(w.roles)].sort();
     if (roles.join() !== want.join()) uBad.push(`${at}: port roles ${roles.join(', ')}, the index's world has ${want.join(', ')}`);

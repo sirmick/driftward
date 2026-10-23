@@ -36,6 +36,10 @@ def read(name):
     return json.loads(f.read_text()) if f.exists() else None
 
 
+# the test worlds (docs/weapons.md): dead stars given a hand-written system file each, by star id
+LABS = {68352: 'flarelab', 22574: 'combatlab'}
+
+
 def galaxy_hash(G):
     """What worlds and stories depend on: each system's identity and place, and the lanes. Sixteen hex digits."""
     rows = [[c['star'], c['name'], c['region'], c.get('faction') or '', c.get('ring') or '', c['status']] for c in G['systems']]
@@ -79,6 +83,7 @@ def build():
         if w: s['world'] = w
         if st: s['story'] = st['bullets']
         if c.get('system'): s['file'] = c['system']
+        if c['star'] in LABS: s['file'], s['lab'] = LABS[c['star']], True
         systems.append(s)
 
     lanes = [{k: l[k] for k in ('a', 'b', 'ly', 'days', 'border', 'drift') if k in l} for l in G['lanes']]

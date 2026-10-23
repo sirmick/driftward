@@ -53,6 +53,11 @@
       "maxLength": 40,
       "default": ""
     },
+    "lab": {
+      "description": "A test world (docs/weapons.md): a dead star of the galaxy given a layout for testing one mechanism. The lore and art checks skip it, its ports need no people in the index, and the debug screen's Labs row jumps to it.",
+      "type": "boolean",
+      "default": false
+    },
     "description": {
       "type": "string",
       "maxLength": 800,
@@ -105,6 +110,13 @@
           "type": "number",
           "minimum": 0,
           "maximum": 30000
+        },
+        "flares": {
+          "description": "How often the star flares, times its class's rate (src/stars.js): 1 the class's, 2 twice as often. Most stars never flare: 0, the default.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 0
         },
         "seed": {
           "description": "Varies the class's look a little (temperature, spots, tilts).",
@@ -319,6 +331,13 @@
               "type": "number",
               "minimum": 0,
               "maximum": 30000
+            },
+            "flares": {
+              "description": "How often the star flares, times its class's rate (src/stars.js): 1 the class's, 2 twice as often. Most stars never flare: 0, the default.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "default": 0
             },
             "seed": {
               "description": "Varies the class's look a little (temperature, spots, tilts).",
@@ -1247,6 +1266,60 @@
                     "maximum": 100,
                     "default": 0
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "combat": {
+      "description": "A lab's standing fight (docs/weapons.md): sides that hold their numbers by arriving at their own jump zones, hostile to every other side, and the station they fight over.",
+      "type": "object",
+      "default": {},
+      "properties": {
+        "contested": {
+          "description": "The body every side loiters round when it sees no enemy.",
+          "type": "string",
+          "default": ""
+        },
+        "sides": {
+          "type": "array",
+          "maxItems": 4,
+          "default": [],
+          "items": {
+            "type": "object",
+            "required": [
+              "line",
+              "count",
+              "classes"
+            ],
+            "properties": {
+              "line": {
+                "description": "A catalog faction line, faction.line.",
+                "type": "string",
+                "pattern": "^[a-z0-9-]+\\.[a-z0-9-]+$",
+                "maxLength": 60
+              },
+              "zone": {
+                "description": "The jump zone the side arrives at (0 up).",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 11,
+                "default": 0
+              },
+              "count": {
+                "description": "Ships the side keeps in flight.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 24
+              },
+              "classes": {
+                "description": "Weights by size class, as traffic's.",
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number",
+                  "minimum": 0
                 }
               }
             }

@@ -82,12 +82,13 @@ function starLook(entry) {
 }
 // A star's light: the colour it lights worlds and ships with, the ambient fill and the sky's nebula tint.
 const starLight = c => { const L = (STAR_CLASSES[c] || STAR_CLASSES.yellow).light; return typeof L === 'function' ? L() : L; };
-// A star's game numbers, the class's with the entry's own radius, gravity and hazard on top.
+// A star's game numbers, the class's with the entry's own radius, gravity and hazard on top. It flares only if the entry
+// says so: its `flares` times the class's rate (most stars never do).
 function starGame(entry) {
   const G = (STAR_CLASSES[entry.class] || STAR_CLASSES.yellow).game;
   const C = STAR_CLASSES[entry.class] || STAR_CLASSES.yellow;
   return { radius: entry.radius ?? G.radius, gravity: entry.gravity ?? G.gravity, reach: G.reach || 0, hazard: entry.hazard ?? (G.hazard || 0), rad: G.rad || 0,
-    out: (C.bright || 6) / 6, flares: C.flare || 0 };
+    out: (C.bright || 6) / 6, flares: (entry.flares || 0) * (C.flare || 0) };
 }
 // How a star of game radius r (m) is framed at ss pixels a metre: its corona's reach in radii (glowR; a compact star's
 // glow is far larger than its disc), and the quad's extent in radii (ext: a pulsar's beams reach its hazard zone's

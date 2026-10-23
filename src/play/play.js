@@ -2428,7 +2428,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // each system, arriving over its start port (the jump box's *@system)
   const jumpSystems = () => readFlyable().map(([S, n]) => { const B = S.loaded.bodies, j = Math.max(1, B.findIndex(b => b.id === S.loaded.system.start && b.port), B.findIndex(b => b.port));
     return { n, j, id: B[j].id, place: B[j].name, port: B[j].port ? B[j].port.name : '', kind: B[j].kind, system: S.loaded.system.name, sysId: S.id }; });
-  debug.setJump({ places: jumpPlaces, systems: jumpSystems, current: () => sysRec.id, prepare: () => needSystems(FLYABLE),
+  debug.setJump({ places: jumpPlaces, systems: jumpSystems, current: () => sysRec.id, start: () => START_ID, prepare: () => needSystems(FLYABLE),
     go: (id, j) => Promise.resolve(jumpTo(id, j)).then(r => { if (r === 0) debug.close(); return r; }) });
   escapeFlight = () => {
     if (mapOn) { toggleMap(false); return true; }

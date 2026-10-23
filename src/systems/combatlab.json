@@ -1,0 +1,24 @@
+{
+  "id": "combatlab",
+  "name": "Gl 179",
+  "owner": "none",
+  "ring": "middle",
+  "region": "margins",
+  "lab": true,
+  "description": "Test world: an empty system round a quiet yellow star, one station nobody holds, and the Union's Clads and the Freeflag fighting over it.",
+  "star": { "name": "Gl 179", "class": "yellow", "radius": 2200, "gravity": 55 },
+  "start": "prize",
+  "bodies": [
+    { "id": "prize", "name": "Prize Station", "kind": "station", "orbit": { "radius": 16000, "angle": 0 }, "radius": 450, "gravity": 4,
+      "station": { "archetype": "port", "brand": "union", "seed": "prize" },
+      "port": { "name": "Prize Station", "role": "haven", "population": "outpost", "services": ["refuel", "repair", "outfitter"], "description": "A lab station: whoever holds the space round it holds it." } }
+  ],
+  "traffic": { "ships": 0, "local": [], "through": [], "loiter": [] },
+  "combat": {
+    "contested": "prize",
+    "sides": [
+      { "line": "union.military", "zone": 0, "count": 5, "classes": { "c1": 3, "c2": 3, "c3": 1 } },
+      { "line": "union.raider", "zone": 2, "count": 6, "classes": { "c1": 4, "c2": 3 } }
+    ]
+  }
+}

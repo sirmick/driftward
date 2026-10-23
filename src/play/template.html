@@ -234,6 +234,9 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 .dbg-jump-list button small { color: var(--muted); }
 .dbg-jump-list button span { color: var(--amber); }
 .dbg-jump-list button .k { margin-left: auto; }
+.dbg-labs { display: flex; align-items: center; gap: 4px; font: 500 12px var(--f-mono); color: var(--muted); }
+.dbg-labs button { background: #0d1219; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; color: var(--fg); font: inherit; cursor: pointer; }
+.dbg-labs button:hover { border-color: var(--amber); }
 .dbg-pane { display: grid; grid-template-columns: 170px 1fr; min-height: 0; }
 .dbg-nav { display: grid; align-content: start; gap: 2px; padding: 14px 10px; border-right: 1px solid var(--line); }
 .dbg-nav a { padding: 5px 8px; border-radius: 5px; color: var(--fg); text-decoration: none; font: 500 12.5px var(--f-mono); }
@@ -540,6 +543,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 <section id="debug" hidden aria-label="Debug">
   <div class="dbg-head"><h2>Debug</h2><div class="dbg-tabs"></div>
     <div class="dbg-jump"><input id="dbg-jump" type="text" placeholder="Jump to place@system, or *@system" autocomplete="off" spellcheck="false" aria-label="Jump to place@system"><div class="dbg-jump-list" hidden></div></div>
+    <div class="dbg-labs" aria-label="Labs"><span>Labs</span><button type="button" data-lab="start">Start</button><button type="button" data-lab="flarelab">Flares</button><button type="button" data-lab="combatlab">Combat</button></div>
     <span class="hint">` or Esc closes · the clock is stopped</span></div>
   <div class="dbg-pane"></div>
 </section>

@@ -1960,6 +1960,84 @@
      }
     },
     {
+     "id": "raider",
+     "name": "Freeflag",
+     "blurb": "Union haulers taken or bought by the Freeflag and cut down for raiding: the hoppers torn out, guns on every hardpoint, the Union's paint under a coat of black and gold.",
+     "series": [
+      "Rattler",
+      "Cutter",
+      "Gouger",
+      "Breaker",
+      "Wrecker"
+     ],
+     "flight": {
+      "accel": 0.95,
+      "shield": 0.8,
+      "cargo": 0.5
+     },
+     "hullFrom": "civilian",
+     "parts": [
+      {
+       "id": "rl.wpn.autocannon",
+       "role": "weapon",
+       "r": [
+        0.02,
+        0.028
+       ],
+       "barrels": 1,
+       "blen": [
+        0.08,
+        0.11
+       ],
+       "bw": 0.008,
+       "z": 0.45,
+       "H": 0.55,
+       "w": 2
+      }
+     ],
+     "loadout": {
+      "c1": {
+       "weapon": 1,
+       "pod": 0
+      },
+      "c2": {
+       "weapon": 2,
+       "pod": 0
+      },
+      "c3": {
+       "weapon": 2,
+       "pod": 1
+      },
+      "c4": {
+       "weapon": 4,
+       "pod": 1
+      },
+      "c5": {
+       "weapon": 4,
+       "pod": 2
+      }
+     },
+     "style": {
+      "palette": {
+       "hull": [
+        "#1c1b19",
+        "#24221d",
+        "#2a2418",
+        "#1f2023"
+       ],
+       "trim": "#0f0e0d",
+       "accent": "#e0b020",
+       "rust": "#4a2a10"
+      },
+      "detail": {
+       "grime": 0.95,
+       "panelDark": 0.85,
+       "stripes": 0.9,
+       "patches": 0.7
+      }
+     }
+    },
+    {
      "id": "container-hauler",
      "name": "Unique",
      "unique": true,
