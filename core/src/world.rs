@@ -448,8 +448,14 @@ params! {
     ms_pd_near = 200.0;   "point defence: light guns fire on missiles homing on their ship, or another side's within this many metres of it"
     ms_range = 8000.0;    "missile: a wave's ships launch at a target within this many metres"
     ms_reload = 25.0;     "missile: seconds a ship's bays take to load again after a volley"
-    ms_wave = 30.0;       "missile: seconds between a lab side's waves"
-    ms_wave_jit = 0.2;    "missile: a wave's gap varies by up to this share, either way"
+    ms_wave_min = 4.0;    "missile: ships of a side on the same target that make a wave"
+    ms_wave_max = 24.0;   "missile: a wave takes ships until it has this many missiles; the rest go for the next target"
+    ms_wave_gap = 25.0;   "missile: seconds after a side's wave before its next (about a reload, so the next goes together)"
+    ms_tot_slack = 1.0;   "missile: a wave is to arrive this many seconds after its farthest missile could (room for every missile to make it)"
+    ms_worthy = 50.0;     "missile: the shortest hull worth missiles, metres (class III up)"
+    ms_lone = 100.0;      "missile: a ship without a wave fires alone at a hull this long or more (class IV up)"
+    ms_patience = 8.0;    "missile: seconds a ship holds its missiles waiting for a wave before it fires alone"
+    ms_retarget = 3000.0; "missile: one whose target is gone takes the nearest enemy its seeker holds within this many metres"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -672,6 +678,7 @@ impl World {
         self.clear_fire();
         self.sides.next.fill(0.0);
         self.sides.wave.fill(0.0);
+        self.sides.wave_ok.fill(0.0);
         self.offers.clear();
         self.missions.clear();
         self.traffic.clear();
@@ -847,16 +854,16 @@ impl World {
         let sh = &self.shells;
         for n in 0..MAX_SHELLS { if sh.live[n] != 0 { eat(n as u64 | (sh.side[n] as u64) << 16 | (sh.owner[n] as u64) << 32); for v in [sh.x[n], sh.y[n], sh.t[n]] { eat(v.to_bits()); } } }
         eat(self.battle.player_side[0] as u64 | (self.battle.angry[0] as u64) << 8 | (self.battle.burst[0] as u64) << 16);
-        for s in 0..MAX_SIDES { eat(self.sides.next[s].to_bits()); eat(self.sides.wave[s].to_bits()); }
+        for s in 0..MAX_SIDES { eat(self.sides.next[s].to_bits()); eat(self.sides.wave[s].to_bits()); eat(self.sides.wave_ok[s].to_bits()); }
         let ms = &self.missiles;
-        for n in 0..MAX_MISSILES { if ms.live[n] != 0 { eat(n as u64 | (ms.side[n] as u64) << 16 | (ms.owner[n] as u64) << 32); eat(ms.target[n] as u64); for v in [ms.x[n], ms.y[n], ms.vx[n], ms.vy[n], ms.ang[n], ms.burn[n], ms.t[n], ms.hp[n]] { eat(v.to_bits()); } } }
+        for n in 0..MAX_MISSILES { if ms.live[n] != 0 { eat(n as u64 | (ms.side[n] as u64) << 16 | (ms.owner[n] as u64) << 32); eat(ms.target[n] as u64); for v in [ms.x[n], ms.y[n], ms.vx[n], ms.vy[n], ms.ang[n], ms.burn[n], ms.t[n], ms.hp[n], ms.eta[n]] { eat(v.to_bits()); } } }
         let s = &self.ships;
         for i in 0..self.count {
             let a = &self.arms;
             if s.alive[i] != 0 {
                 eat(a.side[i] as u64 | (a.guns[i] as u64) << 8 | (a.missiles[i] as u64) << 16 | (a.target[i] as u64) << 32);
                 eat(a.wave_tgt[i] as u64);
-                for v in [a.shield[i], a.shield_t[i], a.ammo[i], a.think[i], a.reload[i], a.wave_t[i]] { eat(v.to_bits()); }
+                for v in [a.shield[i], a.shield_t[i], a.ammo[i], a.think[i], a.reload[i], a.wave_t[i], a.wait[i]] { eat(v.to_bits()); }
             }
             eat(s.alive[i] as u64 | (s.ctl[i] as u64) << 8 | (s.burn[i] as u64) << 16 | (s.kind[i] as u64) << 24 | (s.generation[i] as u64) << 32);
             let t = &self.traffic;

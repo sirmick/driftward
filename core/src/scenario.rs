@@ -65,8 +65,11 @@ pub fn build(seed: u64) -> Box<World> {
         } else { w.arm(i, 0); }
     }
     w.sides.contested.fill(0);
-    // both sides in the fight (already at strength, so no arrivals), so their waves come
+    // both sides in the fight (already at strength, so no arrivals), so their missiles fly: small waves, and lone fire
+    // at this world's biggest hull (72 m)
     (w.sides.count[0], w.sides.count[1]) = (1, 1);
+    w.params[crate::world::P::ms_wave_min as usize] = 2.0;
+    w.params[crate::world::P::ms_lone as usize] = 60.0;
     w
 }
 

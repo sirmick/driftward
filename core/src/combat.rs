@@ -103,10 +103,11 @@ soa! {
     /// Per ship slot: its side (0 none, else side + 1); its shield's points and the seconds before it regenerates
     /// again; the ship it fights (a handle plus one, 0 none) and when it next looks again; the magazine, tonnes; guns
     /// fitted; seconds since it was last hit (the page's shield flash). Missiles (missile.rs): how many are aboard, the
-    /// seconds before its bays are loaded again, and a wave's volley to come: its target (a handle plus one, 0 none)
-    /// and the seconds until it goes.
+    /// seconds before its bays are loaded again, and a volley to come: its target (a handle plus one, 0 none) and, a
+    /// wave's, the game time the wave is to arrive (0 a lone volley); the seconds it has held its missiles for want of a
+    /// wave.
     pub struct Arms { side: u8, shield: f64, shield_t: f64, target: u32, think: f64, ammo: f64, guns: u8, hit: f32, orbit: u8,
-        missiles: u16, reload: f64, wave_tgt: u32, wave_t: f64 }
+        missiles: u16, reload: f64, wave_tgt: u32, wave_t: f64, wait: f64 }
 }
 
 soa! {
@@ -135,9 +136,9 @@ soa! {
 
 soa! {
     /// The lab's sides (content: the system file's `combat`): the jump zone each arrives at, the ships it keeps in
-    /// flight, the body every side fights over, when its next ship may arrive and its next missile wave is due (game
-    /// seconds; a wave 0 not drawn yet).
-    pub struct Sides { zone: u8, count: u8, contested: i16, next: f64, wave: f64 }
+    /// flight, the body every side fights over, when its next ship may arrive, when it next looks over its missile fire,
+    /// and the earliest its next missile wave may go (game seconds).
+    pub struct Sides { zone: u8, count: u8, contested: i16, next: f64, wave: f64, wave_ok: f64 }
 }
 
 soa! {
@@ -328,7 +329,7 @@ impl World {
         let missiles = if self.bays(k) > 0 { self.types.missiles[t] } else { 0 };
         let a = &mut self.arms;
         (a.side[k], a.shield[k], a.shield_t[k], a.target[k], a.ammo[k], a.guns[k], a.hit[k]) = (side, self.types.shield[t], 0.0, 0, mag, guns, 99.0);
-        (a.missiles[k], a.reload[k], a.wave_tgt[k], a.wave_t[k]) = (missiles, 0.0, 0, 0.0);
+        (a.missiles[k], a.reload[k], a.wave_tgt[k], a.wave_t[k], a.wait[k]) = (missiles, 0.0, 0, 0.0, 0.0);
         a.think[k] = self.rng.range(0.0, self.params[P::ai_think as usize]);
         a.orbit[k] = (self.rng.next_f64() < 0.5) as u8;
     }
@@ -347,7 +348,7 @@ impl World {
         let side = self.battle.player_side[0];
         let a = &mut self.arms;
         (a.side[i], a.guns[i], a.ammo[i], a.target[i], a.hit[i]) = (side, on.iter().filter(|&&g| g > 0).count() as u8, mag, 0, 99.0);
-        (a.missiles[i], a.reload[i], a.wave_tgt[i], a.wave_t[i]) = (missiles, 0.0, 0, 0.0);
+        (a.missiles[i], a.reload[i], a.wave_tgt[i], a.wave_t[i], a.wait[i]) = (missiles, 0.0, 0, 0.0, 0.0);
     }
 
     // ---------- the lab's sides ----------
@@ -383,7 +384,7 @@ impl World {
     }
 
     /// Whether side `side` (1..) is at war with ship j.
-    fn hostile(&self, side: u8, j: usize) -> bool {
+    pub(crate) fn hostile(&self, side: u8, j: usize) -> bool {
         if side == 0 || self.ships.alive[j] == 0 || self.ships.rail[j] != 0 { return false; }
         if self.is_player(j) {
             if self.mode() != MODE_FLYING { return false; }
@@ -393,7 +394,7 @@ impl World {
         self.traffic.role[j] == COMBAT && self.arms.side[j] != 0 && self.arms.side[j] != side
     }
     /// Whether ship i's sensors hold ship j: the player through `seen` (sensors.rs), others by their signature now.
-    fn holds(&self, i: usize, j: usize) -> bool {
+    pub(crate) fn holds(&self, i: usize, j: usize) -> bool {
         if self.is_player(j) { return self.ships.seen[i] >= self.p(P::contact_snr); }
         let d = hypot(self.ships.x[j] - self.ships.x[i], self.ships.y[j] - self.ships.y[i]);
         self.p(P::sens_k) * self.ships.sig[j] / (d * d / 1e6 + 0.04) >= self.p(P::contact_snr)
@@ -734,7 +735,7 @@ impl World {
     pub(crate) fn atlas_load_sides(&mut self, k: usize) {
         for s in 0..MAX_SIDES {
             let o = k * MAX_SIDES + s;
-            (self.sides.zone[s], self.sides.count[s], self.sides.contested[s], self.sides.next[s], self.sides.wave[s]) = (self.atlas_sides.zone[o], self.atlas_sides.count[o], self.atlas_sides.contested[o], 0.0, 0.0);
+            (self.sides.zone[s], self.sides.count[s], self.sides.contested[s], self.sides.next[s], self.sides.wave[s], self.sides.wave_ok[s]) = (self.atlas_sides.zone[o], self.atlas_sides.count[o], self.atlas_sides.contested[o], 0.0, 0.0, 0.0);
         }
     }
     /// Shells and bursts go when the system changes (a jump, a new game).
