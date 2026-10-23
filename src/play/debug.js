@@ -534,8 +534,11 @@ function makeDebug(ctx) {
       jsel = 0; jumpRender();
     }
   });
-  // the Labs row: one click to a test world (docs/weapons.md), or back to the start system, over its start port
+  // the Labs row: one click to a test world (docs/weapons.md), or back to the start system, over its start port; and
+  // the side the player fights on in a lab's fight (none, the first or the second: core/src/combat.rs CMD_SIDE)
   el.querySelector('.dbg-labs').addEventListener('click', ev => {
+    const sb = ev.target.closest('button[data-side]');
+    if (sb && jump) { jump.side(+sb.dataset.side); return; }
     const b = ev.target.closest('button[data-lab]');
     if (!b || !jump) return;
     const id = b.dataset.lab === 'start' ? jump.start() : b.dataset.lab;
@@ -546,7 +549,7 @@ function makeDebug(ctx) {
     isOpen: () => !el.hidden,
     open() { show(tab); el.hidden = false; jin.focus(); },
     close,
-    setJump(j) { jump = j; }, // { places(), systems(), current(), start(), go(system id, j), prepare() }, bound once the core has loaded
+    setJump(j) { jump = j; }, // { places(), systems(), current(), start(), go(system id, j), prepare(), side(s) }, bound once the core has loaded
     setLive(fn) { live = fn; }, // the Player tab's source, bound once the core has loaded
     setYard(y) { yard = y; },
     yardView,

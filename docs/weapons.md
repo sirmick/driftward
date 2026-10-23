@@ -1,6 +1,6 @@
 # Weapons: the multicannon line, weapon sites and the test worlds
 
-Status, 2026-10-23: design agreed; building. The Book's Weapons, Shields and Damage chapters (M2). This milestone builds the fundamentals every weapon shares (sites, modules, shells, hits, damage, fire control), one weapon (the light multicannon), the combat AI's first pass, and two test worlds. The rest of the multicannon line, rails, beams, torpedoes, ion and arc come after, as rows in the same tables. Every number here is a core param, live-tunable with `__play.sim.param(name, value)`, and a first guess until the combat lab has been flown.
+Status, 2026-10-23: the fundamentals, the light multicannon, the combat AI's first pass and the test worlds built (As built, at the end). The Book's Weapons, Shields and Damage chapters (M2). This milestone builds the fundamentals every weapon shares (sites, modules, shells, hits, damage, fire control), one weapon (the light multicannon), the combat AI's first pass, and two test worlds. The rest of the multicannon line, rails, beams, torpedoes, ion and arc come after, as rows in the same tables. Every number here is a core param, live-tunable with `__play.sim.param(name, value)`, and a first guess until the combat lab has been flown.
 
 ## The multicannon line
 
@@ -74,12 +74,24 @@ A small state machine per armed NPC:
 
 ## The test worlds
 
-Two systems that are not in the Calder March: dead stars from the galaxy, each a hand-written system file marked `"lab": true`, so the lore and art checks skip them and they stay off the galaxy map and out of normal play. The debug screen gets a Labs row to jump to each, and back to the start.
+Two systems that are not in the Calder March: dead stars from the galaxy, each a hand-written system file marked `"lab": true` (and listed in `tools/universe.py`'s LABS), so the lore and art checks skip them and their ports need no people. They are on the galaxy map as the dead stars they are, but no lane from the March reaches them. The debug screen gets a Labs row to jump to each, and back to the start.
 
 - **Flares are opt-in.** A star flares only when its system file says so (`"flares"` on the star); nearly every star doesn't. Brannock, the start, is calm.
 - **The flare lab:** a white giant, flaring often, with planets to shelter behind.
 - **The combat lab:** one star, one neutral station, the Union's Clads against the Freeflag, each side kept at strength by arrivals at its own jump zone on opposite sides of the station. The player arrives neutral; the debug screen can join a side and arm the player's ship with its line's stock guns.
 - **The Freeflag line:** pirates' refits of Union civilian hulls (`hullFrom` the Union's civilians), their own paint, every site filled.
+
+## As built (2026-10-23)
+
+- **Test worlds.** `src/systems/flarelab.json` (GJ 3822, a white giant, `flares` 4: one about every 25 s; a planet and moon to hide behind) and `src/systems/combatlab.json` (Gl 179: Prize Station, set between its two lanes' jump zones; the Union's Clads arrive by one, the Freeflag's raiders by the other). The debug screen's header has a Labs row: Start, Flares, Combat, and the side the player is on (none, 1, 2).
+- **Sites.** `gen.js` lays out the light sites the table gives (scrap hulls keep both of a pair now), and `footprint()` hands the core each hull's convex outline (up to 12 vertices, in the baked sprite's frame) and its sites. Only light sites exist yet.
+- **The fit.** Two slots, `mc` (guns, one a light site) and `magazine` (tonnes); stock fits fill every site and carry a tonne of rounds a gun. The outfitter's Weapons group sells both; its budget shows guns, rounds, seconds of fire and reach. Landing restocks the magazine free for now (munitions come with the economy).
+- **The core** (`core/src/combat.rs`): per-ship arms (side, shield, target, rounds, guns) and turrets; a 1,024-shell pool; hits by segment against the outline; blast damage with hardness and bleed-through; the AI; the lab's sides (kept in the atlas per system). Everyone's shield but the player's is here (regenerating in `shield_refill`); the player's stays the fit's. Every ship is armed, but only lab fighters and the player fire.
+- **Fire control.** Fire (Space) shoots the player's guns at the target, or straight ahead without one; each shell costs energy and heat, and a heat lockout stops them. The fuse is set to the target's range.
+- **The AI.** Fighters see by the sensors' model (the player through `seen`, others by their signature), fight only enemies within `ai_leash` of the contested station (the player anywhere, once it has fired on them), circle their target at `ai_range` of the guns' reach, and flee under `morale`. From far off they come in at open-space speed.
+- **Looks.** Tracers for shells, the lab's shield-hit shader on shields struck (the newest two hits a ship), a hull glowing and sparks on hull hits, a fireball and debris for a ship lost, and brief lights on the hulls round a burst. Turret barrels are still the bake's (they don't turn yet).
+- **Determinism.** The scenario `npm run check` runs natively and in WASM now has fighters on two sides firing at each other; the hashes agree. The snapshot is version 24.
+- **Not yet:** the M, L and XL guns and their sites; ventral mounts; point defence (no missiles); turrets that turn on screen; hull blocking turret arcs; munitions bought; ion, arc and heat damage, resistances, system damage, field repair, disable; distress calls and patrols; traffic fighting back; bounty missions.
 
 ## Build order
 

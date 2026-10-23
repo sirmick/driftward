@@ -65,11 +65,14 @@ pub const F_PLUME: usize = 16;
 pub const MAX_PLUMES: usize = 8;
 pub const F_CORNER: usize = 24;
 pub const CORNERS: usize = 4;
+/// Weapons (combat.rs): light multicannons, a count (one a light turret site), and the magazine, tonnes.
+pub const F_MC: usize = 28;
+pub const F_MAG: usize = 29;
 pub const MAX_FIT: usize = 32;
 /// The slots' names, for the manifest (the page's outfitter keys its rows by them); "" unused.
 pub const SLOT_NAMES: [&str; MAX_FIT] = ["furnace", "battery", "deflector", "banks", "fins", "sinks", "armour", "jump", "sensors", "bunks", "tank",
     "hopper", "rack", "climate", "bulkhead", "", "plume0", "plume1", "plume2", "plume3", "plume4", "plume5", "plume6", "plume7",
-    "corner0", "corner1", "corner2", "corner3", "", "", "", ""];
+    "corner0", "corner1", "corner2", "corner3", "mc", "magazine", "", ""];
 
 /// Hold classes (`goods.class`).
 pub const CLASS_BULK: u8 = 0;
@@ -136,10 +139,13 @@ pub const S_VALUE: usize = 35; // what the fit's components cost new, credits
 pub const S_COST: usize = 36; // the refit to the draft, credits (negative: money back)
 pub const S_PROBLEM: usize = 37; // why the draft can't be fitted (a result code; 0 it can)
 pub const S_ROOM: usize = 38; // tonnes of cargo aboard now, all holds
-pub const N_STATS: usize = 39;
+pub const S_SITES: usize = 39; // light turret sites
+pub const S_ROUNDS: usize = 40; // rounds the magazine holds
+pub const S_RANGE: usize = 41; // the light guns' reach, metres
+pub const N_STATS: usize = 42;
 pub const STAT_NAMES: [&str; N_STATS] = ["mass", "massEmpty", "massFull", "thrust", "accel", "accelFull", "turn", "vmax", "pUsed", "pSpace", "uUsed", "uSpace",
     "bulkMax", "mw", "mwLife", "mwDrive", "mwRegen", "mwBurn", "battery", "shield", "regen", "hull", "armourCap", "fuel", "hopper", "rack", "climate",
-    "heatCap", "shed", "burnSecs", "jump", "crew", "crewMin", "plumes", "torchCap", "value", "cost", "problem", "cargo"];
+    "heatCap", "shed", "burnSecs", "jump", "crew", "crewMin", "plumes", "torchCap", "value", "cost", "problem", "cargo", "sites", "rounds", "range"];
 
 /// A fit's numbers, for a load of cargo and fuel (see `stats`).
 #[derive(Clone, Copy, Debug, Default)]
@@ -168,6 +174,7 @@ impl World {
             F_FINS => P::price_fin, F_SINKS => P::price_sink, F_ARMOUR => P::price_armour, F_JUMP => P::price_jump, F_SENSORS => P::price_sensor,
             F_BUNKS => P::price_bunk, F_TANK => P::price_tank, F_HOPPER => P::price_hopper, F_RACK => P::price_rack, F_CLIMATE => P::price_climate,
             F_BULKHEAD => P::price_bulkhead,
+            F_MC => P::price_mc, F_MAG => P::price_magazine,
             k if (F_CORNER..F_CORNER + CORNERS).contains(&k) => P::price_jet,
             _ => return 0.0,
         })
@@ -201,10 +208,11 @@ impl World {
         let jets: f64 = (F_CORNER..F_CORNER + CORNERS).map(|s| f[s]).sum();
         let bulk = f[F_BULKHEAD];
         let p_used = f[F_BUNKS] * p(P::bunk_t) + f[F_SENSORS] + f[F_FURNACE] + f[F_JUMP] + f[F_BATTERY] + f[F_BANKS] + f[F_CLIMATE];
-        let u_used = f[F_HOPPER] + f[F_RACK] + f[F_TANK] + f[F_DEFLECTOR] + f[F_FINS] + f[F_SINKS];
+        let guns = f[F_MC] * p(P::mc_t) + f[F_MAG];
+        let u_used = f[F_HOPPER] + f[F_RACK] + f[F_TANK] + f[F_DEFLECTOR] + f[F_FINS] + f[F_SINKS] + guns;
         let dry = t.frame[k] + torches + jets + f[F_FURNACE] + f[F_BATTERY] + f[F_DEFLECTOR] + f[F_BANKS] + f[F_FINS] + f[F_SINKS] + f[F_ARMOUR]
             + f[F_JUMP] + f[F_SENSORS] + f[F_BUNKS] * p(P::bunk_t) + f[F_TANK] * (1.0 - p(P::tank_fuel))
-            + f[F_HOPPER] * p(P::hopper_mass) + f[F_RACK] * p(P::rack_mass) + f[F_CLIMATE] * p(P::climate_mass) + bulk.max(0.0) * p(P::bulkhead_mass);
+            + f[F_HOPPER] * p(P::hopper_mass) + f[F_RACK] * p(P::rack_mass) + f[F_CLIMATE] * p(P::climate_mass) + bulk.max(0.0) * p(P::bulkhead_mass) + guns;
         let mass = (dry + cargo + fuel).max(1.0);
         Stats {
             mass, dry, thrust, jets,
@@ -244,6 +252,9 @@ impl World {
         f[F_TANK] = up(t.fuel[k] / p(P::tank_fuel), 1.0);
         f[F_BUNKS] = t.crew[k] as f64 + 1.0;
         f[F_SENSORS] = t.sensors[k];
+        // a light multicannon on every light site, and a tonne of rounds for each (combat.rs)
+        f[F_MC] = t.guns[k] as f64;
+        f[F_MAG] = t.guns[k] as f64;
         let n = (t.plumes[k] as usize).clamp(1, MAX_PLUMES);
         for _ in 0..16 {
             let s = self.stats(k, &f, 0.0, f[F_TANK] * p(P::tank_fuel));
@@ -345,6 +356,7 @@ impl World {
         if !self.fitted() { return; }
         let s = self.stats(self.base(), &self.fit.t, 0.0, 0.0);
         (self.game.energy[0], self.game.shield[0], self.game.shield_t[0], self.game.heat[0], self.game.hot[0], self.game.drive[0]) = (s.battery, s.shield, 0.0, 0.0, 0, 1.0);
+        self.arm_player(); // and the magazine full (rounds are free for now: munitions come with the economy)
     }
 
     /// Each tick, before the player flies: the fitted type from the fit, the load aboard and last tick's power (the
@@ -425,6 +437,7 @@ impl World {
         if (n..MAX_PLUMES).any(|q| f[F_PLUME + q] > 0.0) { return OVER_LIMIT; }
         if (F_PLUME..F_PLUME + n).map(|s| f[s]).sum::<f64>() > self.torch_cap(k) + 1e-9 { return OVER_LIMIT; }
         if f[F_ARMOUR] * self.p(P::armour_pts) > t.structure[k] + 1e-9 { return OVER_LIMIT; }
+        if f[F_MC] > t.guns[k] as f64 { return OVER_LIMIT; }
         if f[F_BULKHEAD].abs() > self.p(P::bulkhead_max) * (t.bay_p[k] + t.bay_u[k]) + 1e-9 { return OVER_LIMIT; }
         let s = self.stats(k, f, 0.0, 0.0);
         if s.p_used > s.p_space + 1e-9 || s.u_used > s.u_space + 1e-9 { return NO_BAY_ROOM; }
@@ -519,6 +532,7 @@ impl World {
         v[S_CREW] = f[F_BUNKS]; v[S_CREW_MIN] = t.crew[k] as f64; v[S_PLUMES] = t.plumes[k] as f64; v[S_TORCH_CAP] = self.torch_cap(k);
         v[S_VALUE] = self.fit_value(&f); v[S_COST] = self.refit_cost(&self.fit.t, &f);
         v[S_PROBLEM] = self.fit_problem(&f) as f64; v[S_ROOM] = aboard;
+        v[S_SITES] = t.guns[k] as f64; v[S_ROUNDS] = f[F_MAG] * p(P::mc_rounds); v[S_RANGE] = self.gun_range();
         self.fitview.copy_from_slice(&v);
     }
 }

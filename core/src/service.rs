@@ -100,7 +100,7 @@ impl World {
     }
 
     /// The player's ship is lost: out of the sim, and the game over until the page loads a save.
-    fn lose_ship(&mut self, i: usize) {
+    pub(crate) fn lose_ship(&mut self, i: usize) {
         let s = &mut self.ships;
         s.alive[i] = 0;
         s.main[i] = 0.0; s.lat[i] = 0.0; s.turn_in[i] = 0.0; s.burn[i] = 0;

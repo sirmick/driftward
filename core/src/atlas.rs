@@ -118,6 +118,7 @@ impl World {
             (x.dest[o], x.zone[o], x.ly[o], x.days[o]) = (l.dest[g], l.zone[g], l.ly[g], l.days[g]);
         }
         let (jr, ts, st) = (self.p(P::jump_radius), self.p(P::traffic_ships), self.p(P::share_through));
+        self.atlas_store_sides(k);
         let s = &mut self.atlas_sys;
         (s.id[k], s.bodies[k]) = (id, nb as u16);
         (s.jump_radius[k], s.traffic_ships[k], s.share_through[k]) = (jr, ts, st);
@@ -164,6 +165,8 @@ impl World {
         self.params[P::jump_radius as usize] = jr;
         self.params[P::traffic_ships as usize] = ts;
         self.params[P::share_through as usize] = st;
+        self.atlas_load_sides(k);
+        self.clear_fire(); // no shells or bursts follow the player between systems
         self.game.system[0] = k as u8;
         true
     }
@@ -174,7 +177,7 @@ impl World {
     /// The per-slot atlas columns (every one holds MAX_SYSTEMS slots' worth, a slot's part contiguous), from the cached
     /// column list: nothing here allocates, so WASM memory never grows under the page's views.
     fn atlas_row_cols(&self) -> impl Iterator<Item = &ColumnDesc> {
-        self.cols.iter().filter(|c| matches!(c.group, "atlas_sys" | "atlas_body" | "atlas_market" | "atlas_mix" | "atlas_gate"))
+        self.cols.iter().filter(|c| matches!(c.group, "atlas_sys" | "atlas_body" | "atlas_market" | "atlas_mix" | "atlas_gate" | "atlas_side"))
     }
 
     /// Slot `k`'s row as bytes, into `out` (atlas_row_len long): what the page logs for a replay when it stores a

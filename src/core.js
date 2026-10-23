@@ -40,6 +40,11 @@ const CORE_READY = (async () => {
       maxMix: M.maxMix, launchS: M.launchS, descentS: M.descentS,
       // ambient traffic (core/src/traffic.rs): per-ship state, the ship type per role, and the lanes
       traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
+      // combat (core/src/combat.rs): types' turret sites and outlines (type * maxMounts + site, type * maxOutline +
+      // vertex), each ship's arms and turrets (slot * maxMounts + site), shells, bursts (a ring; battle.burst the next),
+      // the fight's row and the lab's sides
+      mount: groups.mount, outline: groups.outline, arms: groups.arms, turret: groups.turret, shell: groups.shell, burst: groups.burst, battle: groups.battle, side: groups.side,
+      maxMounts: M.maxMounts, maxOutline: M.maxOutline, maxShells: M.maxShells, maxBursts: M.maxBursts, maxSides: M.maxSides,
       startTraffic: () => X.dw_start_traffic(w), // plan the lanes and seed the steady state, for a new game
       // the atlas (core/src/atlas.rs), the systems this game has been to, a slot each by star id: store the live system
       // as system id in slot k; load slot k as the live one; empty it; the slot holding id (-1: none) and the slot id
@@ -115,7 +120,8 @@ const CORE_READY = (async () => {
     const views = () => Object.assign(o, {
       ship: groups.ship, type: groups.type, body: groups.body, env: groups.env, game: groups.game, hold: groups.hold, market: groups.market,
       offer: groups.offer, mission: groups.mission, traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
-      gate: groups.gate, orbitOut: groups.orbit.out, fit: groups.fit, draft: groups.draft, goods: groups.goods, fitView: groups.fit.view });
+      gate: groups.gate, orbitOut: groups.orbit.out, fit: groups.fit, draft: groups.draft, goods: groups.goods, fitView: groups.fit.view,
+      mount: groups.mount, outline: groups.outline, arms: groups.arms, turret: groups.turret, shell: groups.shell, burst: groups.burst, battle: groups.battle, side: groups.side });
     views();
     o.rebind = () => { if (mem.buffer !== buffer) { bind(); views(); } };
     return o;
@@ -123,18 +129,21 @@ const CORE_READY = (async () => {
   // input bits, mirrored from core/src/player.rs
   // game commands, modes and results, mirrored from core/src/port.rs, market.rs, mission.rs, service.rs and fit.rs
   const CMD = { land: 1, launch: 2, wait: 3, skip: 4, buy: 5, sell: 6, repay: 7, accept: 8, abandon: 9, autopilot: 10, refuel: 11, repair: 12, hyper: 13, cold: 14, ping: 15, target: 16,
-    draft: 17, draftFrom: 18, refit: 19, teleport: 100, jump: 101, zone: 102, flare: 103 };
+    draft: 17, draftFrom: 18, refit: 19, teleport: 100, jump: 101, zone: 102, flare: 103, side: 104 };
   // a jump's phases (core/src/jump.rs, game.jump)
   const JUMP = { none: 0, torch: 1, transit: 2, arrive: 3 };
   const MISSION = { empty: 0, active: 1, delivered: 2, failed: 3 };
   // traffic.rs: phases; streams (traffic.role; environ: to or from an environmental station); mix row streams; the
   // jump zones, north, east, south, west
-  const TRAFFIC = { launch: 1, cruise: 2, land: 3, torch: 4, arriving: 5, streams: ['local', 'arrive', 'depart', 'loiter', 'environ'], mix: { local: 1, through: 2, loiter: 3, env: 4 }, zones: ['north', 'east', 'south', 'west'] };
+  // combat.rs: a lab fighter's role (6) and AI phases; its side's mix rows (5); bursts' kinds
+  const TRAFFIC = { launch: 1, cruise: 2, land: 3, torch: 4, arriving: 5, streams: ['local', 'arrive', 'depart', 'loiter', 'environ', 'combat'], mix: { local: 1, through: 2, loiter: 3, env: 4, side: 5 }, zones: ['north', 'east', 'south', 'west'],
+    combat: 6, ai: { loiter: 10, engage: 11, flee: 12 } };
+  const BURST = { air: 1, shield: 2, hull: 3, lost: 4 };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3, dead: 4 };
   const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body', 13: 'not offered here', 14: 'nothing to do',
     15: 'not in a jump zone', 16: 'not lined up with the zone', 17: 'too slow to jump', 18: 'not enough fuel', 19: 'no chart of that system', 20: 'missed',
     21: 'the ping is recharging', 22: 'not on your sensors', 23: "the jump drive can't move this much ship", 24: 'not enough crew', 25: 'not enough room in the bay',
     26: "past the hull's limits", 27: "the cargo aboard wouldn't fit", 28: 'food and medicine need a climate hold' };
   const IN = { thrust: 1, reverse: 2, left: 4, right: 8, strafeL: 16, strafeR: 32, burn: 64, fire: 128, retro: 256, assist: 512, torque: 1024 };
-  return { world, IN, CMD, JUMP, MODE, MISSION, TRAFFIC, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
+  return { world, IN, CMD, JUMP, MODE, MISSION, TRAFFIC, BURST, RESULT, scenario: (seed, ticks) => BigInt.asUintN(64, X.dw_scenario(seed, ticks)).toString(16).padStart(16, '0'), exports: X };
 })();

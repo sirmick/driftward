@@ -1,6 +1,7 @@
 //! A self-contained scripted world, run identically by the native build and the WASM build, so
 //! their state hashes can be compared: the determinism check behind save, replay and server validation.
 
+use crate::combat::{A_LOITER, COMBAT, MAX_MOUNTS, MAX_OUTLINE};
 use crate::math::{cos, sin, TAU};
 use crate::world::{Config, World};
 
@@ -12,6 +13,11 @@ pub fn build(seed: u64) -> Box<World> {
         w.types.turn[k] = turn;
         w.types.vmax[k] = vmax;
         w.types.well[k] = 0.35 + 0.2 * k as f64;
+        // armed (combat.rs): a box outline, two light turret sites, a shield
+        let (hw, hl) = (4.0 + 6.0 * k as f64, 8.0 + 14.0 * k as f64);
+        (w.types.len[k], w.types.hull[k], w.types.shield[k], w.types.guns[k], w.types.outline[k], w.types.rad[k]) = (2.0 * hl, 60.0 + 200.0 * k as f64, 40.0 + 100.0 * k as f64, 2, 4, (hw * hw + hl * hl).sqrt());
+        for (v, (x, y)) in [(-hw, -hl), (hw, -hl), (hw, hl), (-hw, hl)].into_iter().enumerate() { (w.outline.x[k * MAX_OUTLINE + v], w.outline.y[k * MAX_OUTLINE + v]) = (x, y); }
+        for (m, x) in [-hw * 0.5, hw * 0.5].into_iter().enumerate() { (w.mounts.x[k * MAX_MOUNTS + m], w.mounts.y[k * MAX_MOUNTS + m], w.mounts.size[k * MAX_MOUNTS + m]) = (x, 0.0, 1); }
     }
     for (j, (x, y, r)) in [(-3200.0, 2600.0, 1300.0), (6800.0, -4400.0, 2700.0)].into_iter().enumerate() {
         w.bodies.x[j] = x;
@@ -47,14 +53,22 @@ pub fn build(seed: u64) -> Box<World> {
         s.ctl[i] = 1;
         s.want_vx[i] = cos(a) * sp;
         s.want_vy[i] = sin(a) * sp;
+        s.hull[i] = w.types.hull[i % 3];
         w.slot_reset(i, true);
+        // every fourth ship a fighter, on one of two sides fighting over the first planet: shells, hits and the AI
+        if i % 4 == 0 {
+            w.arm(i, 1 + (i / 4 % 2) as u8);
+            (w.traffic.role[i], w.traffic.phase[i]) = (COMBAT, A_LOITER);
+        } else { w.arm(i, 0); }
     }
+    w.sides.contested.fill(0);
     w
 }
 
 /// Re-plan every half second: pick a control mode, a target velocity or raw commands, and the burner.
 fn decide(w: &mut World) {
     for i in 0..w.count {
+        if w.traffic.role[i] == COMBAT { continue; } // the combat AI flies these
         let mode = w.rng.below(4) as u8;
         let vmax = w.types.vmax[w.ships.kind[i] as usize];
         let (a, sp) = (w.rng.range(0.0, TAU), w.rng.range(0.0, vmax * 1.2));
@@ -88,5 +102,13 @@ mod tests {
         assert_eq!(super::run(42, 600), super::run(42, 600));
         assert_ne!(super::run(42, 600), super::run(43, 600));
         assert_ne!(super::run(42, 600), super::run(42, 601));
+    }
+
+    #[test]
+    fn the_fighters_fight() {
+        let mut w = super::build(7);
+        for t in 0..1800 { if t % 30 == 0 { super::decide(&mut w); } w.step(); }
+        let fired = (0..w.count).filter(|&i| w.arms.guns[i] > 0 && w.arms.ammo[i] < 800.0).count();
+        assert!(fired >= 4, "fighters fired: {fired}");
     }
 }

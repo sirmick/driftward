@@ -21,6 +21,7 @@
 //! rows give a ship type and a weight per stream; a new ship draws its row by weight. A route is a polyline: start,
 //! waypoints (round any body in the way, or the loop of a loiter), end.
 
+use crate::combat::{A_LOITER, COMBAT};
 use crate::flight::open_gap;
 use crate::market::MAX_GOODS;
 use crate::math::{atan2, cos, exp, hypot, ln, sin, TAU};
@@ -469,6 +470,7 @@ impl World {
         t.s[k] = 0.0; t.cruise[k] = cruise; t.age[k] = 0.0;
         if let End::Body(_) = from { t.phase[k] = T_LAUNCH; t.timer[k] = LAUNCH_S; self.slot_reset(k, true); }
         else { t.phase[k] = T_ARRIVING; t.timer[k] = 0.0; self.arriving_step(k, 0.0); self.slot_reset(k, true); }
+        self.arm(k, 0); // armed, on no side (combat.rs)
         Some(k)
     }
 
@@ -584,6 +586,9 @@ impl World {
                 }
                 T_TORCH => self.torch_step(k),
                 T_ARRIVING => { self.traffic.timer[k] += DT; let t = self.traffic.timer[k]; self.arriving_step(k, t); }
+                // a lab fighter arrived: the combat AI flies it from here (combat.rs)
+                T_CRUISE if self.traffic.role[k] == COMBAT => { self.traffic.phase[k] = A_LOITER; self.ships.rail[k] = 0; }
+                p if p >= A_LOITER => {}
                 _ => self.cruise_step(k, px, py, near, far),
             }
         }
@@ -622,7 +627,7 @@ impl World {
     }
 
     /// Leaving by zone z: on rails, along its bearing, at the speed it has.
-    fn light_torch(&mut self, k: usize, z: usize) {
+    pub(crate) fn light_torch(&mut self, k: usize, z: usize) {
         let (dx, dy) = self.zone_dir(z);
         let v = hypot(self.ships.vx[k], self.ships.vy[k]).max(self.traffic.cruise[k]);
         let s = &mut self.ships;

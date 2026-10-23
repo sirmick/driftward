@@ -144,12 +144,13 @@ function assemble(brand, size, seed, sizeIdx) {
     for (const k of ['r1', 'r2', 'hw', 'hl', 'he', 'len', 'r']) if (typeof a[k] === 'number') a[k] *= 1 + d * (r() * 2 - 1);
     p.a = a; p.ang += (r() * 2 - 1) * d * 40; return p;
   }
-  // build fn(): parts at +x side. Mirrored per brand symmetry; scrap brands may re-roll or drop the second side.
-  function addPair(fn) {
+  // build fn(): parts at +x side. Mirrored per brand symmetry; scrap brands may re-roll or drop the second side (but
+  // never a weapon site's: keep, so a hull has the sites its loadout counts)
+  function addPair(fn, keep) {
     const A = fn(); parts.push(...A);
     const sym = st.symmetry == null ? 1 : st.symmetry;
     if (r() < sym) { A.forEach(p => parts.push(driftCopy(mirror(p)))); return; }
-    if (r() < 0.3) return;
+    if (r() < 0.3 && !keep) return;
     fn().forEach(p => parts.push(mirror(p)));
   }
   const paintOf = (tmpl, role) => {
@@ -360,13 +361,13 @@ function assemble(brand, size, seed, sizeIdx) {
   if (wt && nW > 0) {
     if (sizeIdx <= 1) {
       const pairs = Math.floor(nW / 2);
-      for (let k = 0; k < pairs; k++) addPair(() => { const y = lerp(0.05, 0.22, r()) * core.len + k * 0.1 * core.len; return weapon(core.hwAt(y) * 0.9, y); });
+      for (let k = 0; k < pairs; k++) addPair(() => { const y = lerp(0.05, 0.22, r()) * core.len + k * 0.1 * core.len; return weapon(core.hwAt(y) * 0.9, y); }, true);
       if (nW % 2) parts.push(...weapon(0, 0.3 * core.len));
     } else {
       const c = nW <= 3 ? nW : Math.ceil(nW / 3);
       for (let k = 0; k < c; k++) parts.push(...weapon(0, lerp(-0.25, 0.36, (k + 0.5) / c) * core.len));
       const pairs = Math.floor((nW - c) / 2);
-      for (let k = 0; k < pairs; k++) addPair(() => { const y = lerp(-0.2, 0.22, (k + 0.5) / Math.max(1, pairs)) * core.len; return weapon(core.hwAt(y) * 0.62, y); });
+      for (let k = 0; k < pairs; k++) addPair(() => { const y = lerp(-0.2, 0.22, (k + 0.5) / Math.max(1, pairs)) * core.len; return weapon(core.hwAt(y) * 0.62, y); }, true);
     }
   }
 
@@ -419,6 +420,45 @@ function assemble(brand, size, seed, sizeIdx) {
   const cx = (bx0 + bx1) / 2, cy = (by0 + by1) / 2;
   for (const p of parts) { p.x -= cx; p.y -= cy; p.ca = Math.cos(p.ang * D2R); p.sa = Math.sin(p.ang * D2R); }
   return { brand: brand.id, size: size.id, seed, L, coreH, coreTemplate: ct.id, parts };
+}
+
+// ---------- footprint (for the sim core: core/src/combat.rs) ----------
+// A ship's silhouette as the sim sees it, in the baked sprite's frame (the bake centres the texture on the silhouette's
+// bounds, pass 0 below): a convex outline of at most `maxV` vertices, local metres (+x right, +y forward), that shells
+// hit; and its turret sites, each [x, y, size] (1 light; the weapon parts' bases, in the order gen placed them).
+function footprint(ship, maxV) {
+  maxV = maxV || 12;
+  const parts = ship.parts, N = 64;
+  let rx0 = 1e9, ry0 = 1e9, rx1 = -1e9, ry1 = -1e9;
+  for (const p of parts) { rx0 = Math.min(rx0, p.x - p.rad); rx1 = Math.max(rx1, p.x + p.rad); ry0 = Math.min(ry0, p.y - p.rad); ry1 = Math.max(ry1, p.y + p.rad); }
+  const sx = (rx1 - rx0) / N, sy = (ry1 - ry0) / N, pts = [];
+  let ex0 = 1e9, ey0 = 1e9, ex1 = -1e9, ey1 = -1e9;
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    const wx = rx0 + i * sx, wy = ry0 + j * sy;
+    for (const p of parts) {
+      if (Math.abs(wx - p.x) > p.rad || Math.abs(wy - p.y) > p.rad) continue;
+      const dx = wx - p.x, dy = wy - p.y; let lx = dx * p.ca + dy * p.sa; const ly = -dx * p.sa + dy * p.ca; if (p.flip) lx = -lx;
+      if (partSDF(p, lx, ly) < Math.max(sx, sy)) { ex0 = Math.min(ex0, wx); ex1 = Math.max(ex1, wx); ey0 = Math.min(ey0, wy); ey1 = Math.max(ey1, wy); pts.push([wx, wy]); break; }
+    }
+  }
+  const cx = (ex0 + ex1) / 2, cy = (ey0 + ey1) / 2;
+  // the convex hull (monotone chain), then the vertex whose removal loses the least area dropped until maxV are left
+  const P = pts.map(([x, y]) => [x - cx, y - cy]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const q of P) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (let i = P.length - 1; i >= 0; i--) { const q = P[i]; while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  const hull = lo.slice(0, -1).concat(up.slice(0, -1));
+  while (hull.length > maxV) {
+    let best = 0, bestA = Infinity;
+    for (let i = 0; i < hull.length; i++) {
+      const a = hull[(i + hull.length - 1) % hull.length], b = hull[i], c = hull[(i + 1) % hull.length];
+      const area = Math.abs(cross(a, b, c)); if (area < bestA) { bestA = area; best = i; }
+    }
+    hull.splice(best, 1);
+  }
+  const mounts = parts.filter(p => p.role === 'weapon' && p.prim === 'circle').map(p => [p.x - cx, p.y - cy, 1]);
+  return { outline: hull, mounts };
 }
 
 // ---------- bake ----------
@@ -1184,6 +1224,6 @@ function describe(ship) {
   };
 }
 
-const api = { generate, generateStation, assemble, assembleStation, bake, describe, hexRGB, resolveCatalog, brandOf };
+const api = { generate, generateStation, assemble, assembleStation, bake, footprint, describe, hexRGB, resolveCatalog, brandOf };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ShipGen = api;
 })(typeof self !== 'undefined' ? self : this);

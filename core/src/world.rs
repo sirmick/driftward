@@ -3,6 +3,7 @@
 use crate::atlas::{AtlasBodies, AtlasGates, AtlasHead, AtlasMarket, AtlasMix, AtlasSys, MAX_SYSTEMS, NO_SYSTEM};
 use crate::jump::{Gates, MAX_GATES};
 use crate::cols::{params, soa, ColumnDesc};
+use crate::combat::{Arms, AtlasSides, Battle, Bursts, Mounts, Outline, Shells, Sides, Turrets, ATLAS_SIDES, MAX_BURSTS, MAX_MOUNTS, MAX_OUTLINE, MAX_SHELLS, MAX_SIDES};
 use crate::fit::{MAX_FIT, N_STATS, SLOT_NAMES, STAT_NAMES};
 use crate::flight;
 use crate::market::MAX_GOODS;
@@ -73,9 +74,12 @@ soa! {
     /// tonnes, its plumes (torch mounts), its structure (hull points before armour), its minimum crew, and the stock
     /// fit's sensors (t) and shield (points). The last row is the player's fitted ship, written by the core from the
     /// fit (fit.rs `player_kind`).
+    /// Its geometry (combat.rs), content too: its light turret sites (`guns`; the sites in `mounts`), its outline's
+    /// vertex count (the vertices in `outline`) and the radius that holds it.
     pub struct Types {
         accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32, hull: f64, fuel: f64, len: f64,
         frame: f64, bay_p: f64, bay_u: f64, plumes: u8, structure: f64, crew: u8, sensors: f64, shield: f64,
+        guns: u8, outline: u8, rad: f64,
     }
 }
 
@@ -367,6 +371,33 @@ params! {
     price_rack = 50.0;    "credits a tonne: container racks"
     price_climate = 250.0; "credits a tonne: climate hold"
     price_bulkhead = 150.0; "credits a tonne the bulkhead moves (labour: nothing back)"
+    // weapons (combat.rs; docs/weapons.md): the light multicannon, damage, shields in combat, the combat AI
+    mc_rate = 10.0;       "light multicannon: shells a second, each gun"
+    mc_speed = 1200.0;    "light multicannon: muzzle speed, m/s (a shell keeps its ship's velocity too)"
+    mc_fuse = 0.75;       "light multicannon: the longest fuse, seconds (its reach: speed x fuse)"
+    mc_spread = 0.026;    "light multicannon: the most a shell strays from the barrel, radians (triangular)"
+    mc_blast = 12.0;      "light multicannon: a burst's reach, metres"
+    mc_core = 4.0;        "light multicannon: full damage inside this many metres of a burst"
+    mc_dmg = 1.0;         "light multicannon: a shell's damage"
+    mc_traverse = 4.0;    "light multicannon: turret traverse, rad/s"
+    mc_mj = 0.02;         "light multicannon: energy a shell, MJ"
+    mc_heat = 0.05;       "light multicannon: heat a shell, MJ"
+    mc_rounds = 400.0;    "rounds of 30 mm a tonne of magazine"
+    mc_t = 2.0;           "a light multicannon's tonnes (unpressurised)"
+    price_mc = 3000.0;    "credits a light multicannon"
+    price_magazine = 150.0; "credits a tonne: magazine (rounds included)"
+    shield_hard = 1.0;    "shield hardness on a 100 m hull (going with length squared): a hit no harder does only hard_frac"
+    hard_frac = 0.1;      "share of a hit at or under the shield's hardness that the shield takes"
+    bleed_kin = 0.1;      "share of a kinetic hit that reaches the hull while the shield holds"
+    shield_pause = 1.0;   "seconds a hit stops a shield regenerating"
+    shield_refill = 20.0; "seconds a ship's shield (but the player's, fit.rs) takes to fill from empty"
+    morale = 0.3;         "a fighter flees under this share of its hull"
+    ai_think = 0.5;       "seconds between a fighter's looks round"
+    ai_range = 0.7;       "a fighter closes to this share of its guns' reach, then circles"
+    ai_cruise = 0.8;      "a fighter flies at this share of its top speed"
+    ai_orbit = 3.0;       "with no enemy in sight, fighters circle the contested body at this many radii"
+    ai_leash = 4000.0;    "fighters take on only enemies within this many metres of the contested body (the player anywhere it shoots them)"
+    side_gap = 4.0;       "seconds between a lab side's arrivals"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -391,6 +422,17 @@ pub struct World {
     /// the player's fit and the outfitter's draft (fit.rs), and each commodity's hold class (content)
     pub fit: Fit,
     pub draft: Fit,
+    /// combat (combat.rs): types' sites and outlines, each ship's arms and turrets, shells, bursts, the fight, the
+    /// lab's sides (and the atlas's copy of them)
+    pub mounts: Mounts,
+    pub outline: Outline,
+    pub arms: Arms,
+    pub turrets: Turrets,
+    pub shells: Shells,
+    pub bursts: Bursts,
+    pub battle: Battle,
+    pub sides: Sides,
+    pub atlas_sides: AtlasSides,
     pub goods: Goods,
     /// the outfitter's view of a fit (fit.rs `view_fit`): its stats, for the page; not state
     pub fitview: Vec<f64>,
@@ -441,6 +483,15 @@ impl World {
             hold: Hold::with_capacity(MAX_GOODS),
             fit: Fit::with_capacity(MAX_FIT),
             draft: Fit::with_capacity(MAX_FIT),
+            mounts: Mounts::with_capacity(cfg.max_types * MAX_MOUNTS),
+            outline: Outline::with_capacity(cfg.max_types * MAX_OUTLINE),
+            arms: Arms::with_capacity(cfg.max_ships),
+            turrets: Turrets::with_capacity(cfg.max_ships * MAX_MOUNTS),
+            shells: Shells::with_capacity(MAX_SHELLS),
+            bursts: Bursts::with_capacity(MAX_BURSTS),
+            battle: Battle::with_capacity(1),
+            sides: Sides::with_capacity(MAX_SIDES),
+            atlas_sides: AtlasSides::with_capacity(ATLAS_SIDES),
             goods: Goods::with_capacity(MAX_GOODS),
             fitview: vec![0.0; N_STATS],
             market: Market::with_capacity(cfg.max_bodies * MAX_GOODS),
@@ -493,6 +544,15 @@ impl World {
         self.hold.describe("hold", &mut c);
         self.fit.describe("fit", &mut c);
         self.draft.describe("draft", &mut c);
+        self.mounts.describe("mount", &mut c);
+        self.outline.describe("outline", &mut c);
+        self.arms.describe("arms", &mut c);
+        self.turrets.describe("turret", &mut c);
+        self.shells.describe("shell", &mut c);
+        self.bursts.describe("burst", &mut c);
+        self.battle.describe("battle", &mut c);
+        self.sides.describe("side", &mut c);
+        self.atlas_sides.describe("atlas_side", &mut c);
         self.goods.describe("goods", &mut c);
         self.market.describe("market", &mut c);
         self.offers.describe("offer", &mut c);
@@ -525,8 +585,8 @@ impl World {
         )).collect();
         let quote = |l: &[&str]| l.iter().map(|n| format!("\"{n}\"")).collect::<Vec<_>>().join(",");
         format!(
-            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"maxMix":{},"launchS":{},"descentS":{},"envN":{},"envW":{},"playerKind":{},"fitSlots":[{}],"fitStats":[{}],"params":[{}],"columns":[{}]}}"#,
-            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, MAX_OFFERS, MAX_MISSIONS, MAX_MIX, LAUNCH_S, DESCENT_S, self.cfg.env_n, self.cfg.env_w,
+            r#"{{"dt":{},"maxShips":{},"maxTypes":{},"maxBodies":{},"maxGoods":{},"maxOffers":{},"maxMissions":{},"maxMix":{},"maxMounts":{},"maxOutline":{},"maxShells":{},"maxBursts":{},"maxSides":{},"launchS":{},"descentS":{},"envN":{},"envW":{},"playerKind":{},"fitSlots":[{}],"fitStats":[{}],"params":[{}],"columns":[{}]}}"#,
+            DT, self.cfg.max_ships, self.cfg.max_types, self.cfg.max_bodies, MAX_GOODS, MAX_OFFERS, MAX_MISSIONS, MAX_MIX, MAX_MOUNTS, MAX_OUTLINE, MAX_SHELLS, MAX_BURSTS, MAX_SIDES, LAUNCH_S, DESCENT_S, self.cfg.env_n, self.cfg.env_w,
             self.player_kind(), quote(&SLOT_NAMES), quote(&STAT_NAMES), quote(PARAM_NAMES), cols.join(",")
         )
     }
@@ -542,6 +602,11 @@ impl World {
         self.hold.clear();
         self.fit.clear();
         self.draft.clear();
+        self.arms.clear();
+        self.turrets.clear();
+        self.battle.clear();
+        self.clear_fire();
+        self.sides.next.fill(0.0);
         self.offers.clear();
         self.missions.clear();
         self.traffic.clear();
@@ -615,6 +680,7 @@ impl World {
         flight::engines(self);
         self.step_ships();
         self.step_sensors();
+        self.step_combat();
         self.tick += 1;
     }
 
@@ -626,6 +692,12 @@ impl World {
             s.rx[i] = (s.prev_x[i] + (s.x[i] - s.prev_x[i]) * a) as f32;
             s.ry[i] = (s.prev_y[i] + (s.y[i] - s.prev_y[i]) * a) as f32;
             s.ra[i] = wrap(s.prev_ang[i] + wrap(s.ang[i] - s.prev_ang[i]) * a) as f32;
+        }
+        let sh = &mut self.shells;
+        for n in 0..MAX_SHELLS {
+            if sh.live[n] == 0 { continue; }
+            sh.rx[n] = (sh.prev_x[n] + (sh.x[n] - sh.prev_x[n]) * a) as f32;
+            sh.ry[n] = (sh.prev_y[n] + (sh.y[n] - sh.prev_y[n]) * a) as f32;
         }
         let b = &mut self.bodies;
         for j in 0..self.n_bodies {
@@ -699,8 +771,15 @@ impl World {
             eat(m.tons[k] as u64 | (m.pay[k] as u64) << 32);
             eat(m.due[k] as u64);
         }
+        // combat (combat.rs): shells in flight, each ship's arms, the fight
+        let sh = &self.shells;
+        for n in 0..MAX_SHELLS { if sh.live[n] != 0 { eat(n as u64 | (sh.side[n] as u64) << 16 | (sh.owner[n] as u64) << 32); for v in [sh.x[n], sh.y[n], sh.t[n]] { eat(v.to_bits()); } } }
+        eat(self.battle.player_side[0] as u64 | (self.battle.angry[0] as u64) << 8 | (self.battle.burst[0] as u64) << 16);
+        for s in 0..MAX_SIDES { eat(self.sides.next[s].to_bits()); }
         let s = &self.ships;
         for i in 0..self.count {
+            let a = &self.arms;
+            if s.alive[i] != 0 { eat(a.side[i] as u64 | (a.guns[i] as u64) << 8 | (a.target[i] as u64) << 32); for v in [a.shield[i], a.shield_t[i], a.ammo[i], a.think[i]] { eat(v.to_bits()); } }
             eat(s.alive[i] as u64 | (s.ctl[i] as u64) << 8 | (s.burn[i] as u64) << 16 | (s.kind[i] as u64) << 24 | (s.generation[i] as u64) << 32);
             let t = &self.traffic;
             eat(s.rail[i] as u64 | (t.role[i] as u64) << 8 | (t.phase[i] as u64) << 16 | (t.leg[i] as u64) << 24 | (t.to[i] as u16 as u64) << 32);

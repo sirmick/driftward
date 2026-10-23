@@ -220,7 +220,11 @@ const FP = {
   plume: compile(FLY_PLUME_VS, derive(PLUME_FS, DERIVE.plume), { iN: 1, iP: 2, iB: 3 }),
   planet: compile(PLANET_VS, PLANET_FS),
   sheath: compile(SHEATH_VS, SHEATH_FS),
-  orbiter: compile(ORBITER_VS, ORBITER_FS, { iA: 1, iB: 2 })
+  orbiter: compile(ORBITER_VS, ORBITER_FS, { iA: 1, iB: 2 }),
+  // combat's looks (core/src/combat.rs), the lab's shaders: shield hits, shells as tracers, sparks and fire
+  shield: compile(FLY_SHIELD_VS, derive(SHIELD_FS, DERIVE.shield), { iA: 1, iH1: 2, iH2: 3 }),
+  bolt: compile(FLY_BOLT_VS, FLY_BOLT_FS, { iA: 1, iC: 2 }),
+  part: compile(FLY_PART_VS, FLY_PART_FS, { iA: 1, iC: 2 })
 };
 // an instanced quad's VAO and its instance buffer, allocated once for `cap` instances; `upload` refills it in place
 function instVAO(sizes, cap) {
@@ -406,21 +410,27 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   const SH = sim.ship, IN = CORE.IN;
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; sim.type.hull[k] = T.hull; sim.type.fuel[k] = T.fuel; sim.type.len[k] = T.L; });
   // The frames (core/src/fit.rs): each type's class frame, structure and stock shield, and its plumes, the nozzles its
-  // generated hull has (assembled here, without the bake: the part list alone, from the seed it is baked from).
+  // generated hull has (assembled here, without the bake: the part list alone, from the seed it is baked from). And
+  // its geometry (core/src/combat.rs; src/gen.js footprint): the outline shells hit and its light turret sites.
   const PK = sim.playerKind, FIT = Object.fromEntries(sim.fitSlots.map((n, k) => [n, k]).filter(([n]) => n));
   types.forEach((T, k) => {
     const F = T.frame, t = sim.type, B = catalog.brands[T.bi], Z = catalog.sizes[T.zi];
-    const parts = ShipGen.assemble(B, Z, yard.seedOf(B.id, Z.id), T.zi).parts;
+    const ship = ShipGen.assemble(B, Z, yard.seedOf(B.id, Z.id), T.zi), parts = ship.parts;
     T.plumes = Math.max(1, Math.min(8, parts.filter(q => q.em && q.em.type === 'exhaust').length));
     t.frame[k] = F.mass; t.bay_p[k] = F.bayP; t.bay_u[k] = F.bayU; t.crew[k] = F.crew; t.sensors[k] = F.sensors;
     t.plumes[k] = T.plumes; t.structure[k] = T.structure; t.shield[k] = T.shield;
+    const fp = ShipGen.footprint(ship, sim.maxOutline), MO = sim.maxOutline, MM = sim.maxMounts;
+    T.mounts = fp.mounts.filter(m => m[2] === 1).slice(0, MM);
+    fp.outline.forEach(([x, y], v) => { sim.outline.x[k * MO + v] = x; sim.outline.y[k * MO + v] = y; });
+    T.mounts.forEach(([x, y, z], m) => { sim.mount.x[k * MM + m] = x; sim.mount.y[k * MM + m] = y; sim.mount.size[k * MM + m] = z; });
+    t.outline[k] = fp.outline.length; t.guns[k] = T.mounts.length; t.rad[k] = Math.max(...fp.outline.map(([x, y]) => Math.hypot(x, y)));
   });
   // the player's ship flies as the core's last type row, built from its fit; it looks like the type it is built on
   const fittedLooks = () => { if (sim.game.fitted[0]) types[PK] = types[sim.game.base[0]]; };
   types[PK] = types[0];
   // each commodity's hold (economy.json: bulk, general, climate)
   GOODS.slice(0, sim.maxGoods).forEach((c, g) => { sim.goods.class[g] = { bulk: 0, general: 1, climate: 2 }[c.hold] || 0; });
-  const CMD = CORE.CMD, MODE = CORE.MODE;
+  const CMD = CORE.CMD, MODE = CORE.MODE, BURST = CORE.BURST;
   // Asteroid belts and fields: their rocks (src/rocks.js), placed once from each one's seed round where the core put
   // it. Scenery: not in the sim (ships fly through them), so the page owns them. Density 1 is a rock per 22,000 m²;
   // a belt's rocks thin toward its edges and gather in clumps along it, a field's toward its rim. Sizes follow a power
@@ -489,6 +499,10 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     (TCFG.local || []).forEach(e => add(TRAFFIC.mix.local, -1, e, e.share));
     (TCFG.through || []).forEach(e => add(TRAFFIC.mix.through, -1, e, e.share));
     (TCFG.loiter || []).forEach(e => { const j = BODIES.findIndex(b => b.id === e.port && b.port); if (j > 0) add(TRAFFIC.mix.loiter, j, e, e.count); });
+    // a lab's standing fight (core/src/combat.rs): each side's ships as mix rows (body: the side), its zone and numbers
+    const C = S.loaded.system.combat || {}, contested = BODIES.findIndex(b => b.id === C.contested);
+    w.side.count.fill(0); w.side.contested.fill(-1);
+    (C.sides || []).slice(0, w.maxSides).forEach((e, s) => { add(TRAFFIC.mix.side, s, e, 1); w.side.zone[s] = e.zone || 0; w.side.count[s] = e.count; w.side.contested[s] = contested; });
     // environmental stations: one group per archetype and owner, its rows from traffic.json's environs (own.<line> is
     // the owner faction's line); each station launches at its archetype's rate, a share of trips via the jump zones
     const groups = new Map();
@@ -1333,6 +1347,10 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // a row: its slot (or the four corners together), its side of the bulkhead (P, U, or outside the bay), its step and
   // what a step gives, and its price a step
   const OUTFIT_GROUPS = [
+    // weapons (core/src/combat.rs): a light multicannon on a light turret site; its rounds
+    ['Weapons', [
+      { id: 'mc', name: 'Light multicannon', side: 'U', step: 1, unit: '', give: () => `30 mm, ${fmt1(prm('mc_rate'))}/s, ${kmNum(prm('mc_speed') * prm('mc_fuse'))} km · ${fmt1(prm('mc_t'))} t · a light site each`, price: () => prm('price_mc') },
+      { id: 'magazine', name: 'Magazine', side: 'U', step: 1, give: () => `${Math.round(prm('mc_rounds'))} rounds of 30 mm`, price: () => prm('price_magazine') }]],
     ['Drive', [
       { id: 'jets', name: 'Jet clusters', side: 'corners', step: 1, give: () => 'turning, a cluster per corner', price: () => prm('price_jet') }]],
     ['Power', [
@@ -1358,9 +1376,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   ];
   // the bay's blocks, by side, and their colours
   const BAY = { P: [['bunks', '#8fd3ff'], ['sensors', '#7fd0c4'], ['furnace', '#e8a05a'], ['jump', '#c9b3f0'], ['battery', '#e2b866'], ['banks', '#6fa8ff'], ['climate', '#7fd08a']],
-    U: [['hopper', '#a08a6a'], ['rack', '#c8a27a'], ['tank', '#d07a5a'], ['deflector', '#6fa8ff'], ['fins', '#9fb4c8'], ['sinks', '#7a8aa0']] };
+    U: [['hopper', '#a08a6a'], ['rack', '#c8a27a'], ['tank', '#d07a5a'], ['deflector', '#6fa8ff'], ['fins', '#9fb4c8'], ['sinks', '#7a8aa0'], ['mc', '#e86a5a'], ['magazine', '#b8584a']] };
   const BAY_NAME = { bunks: 'bunks', sensors: 'sensors', furnace: 'reactor', jump: 'jump drive', battery: 'battery', banks: 'shield banks', climate: 'climate hold',
-    hopper: 'hoppers', rack: 'racks', tank: 'fuel tank', deflector: 'deflector', fins: 'fins', sinks: 'heat sinks' };
+    hopper: 'hoppers', rack: 'racks', tank: 'fuel tank', deflector: 'deflector', fins: 'fins', sinks: 'heat sinks', mc: 'multicannons', magazine: 'magazine' };
   const draftT = n => sim.draft.t[FIT[n]], fitT = n => sim.fit.t[FIT[n]];
   const changed = () => sim.fitSlots.some((n, k) => n && sim.draft.t[k] !== sim.fit.t[k]);
   // set slot n of the draft to v tonnes (all four corners for the jets)
@@ -1413,7 +1431,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     $('outfit-sum').textContent = `${T.name} · fit worth ${fmtCr(Math.round(d.value))} cr`;
     // the bars: pressurised and unpressurised, a block a module
     const bar = (side, used, space) => {
-      const blocks = BAY[side].map(([n, col]) => { const t = n === 'bunks' ? draftT(n) * prm('bunk_t') : draftT(n); return t > 0 ? `<i style="width:${100 * t / Math.max(space, used, 1)}%;background:${col}" title="${BAY_NAME[n]} ${fmt1(t)} t"></i>` : ''; }).join('');
+      const blocks = BAY[side].map(([n, col]) => { const t = n === 'bunks' ? draftT(n) * prm('bunk_t') : n === 'mc' ? draftT(n) * prm('mc_t') : draftT(n); return t > 0 ? `<i style="width:${100 * t / Math.max(space, used, 1)}%;background:${col}" title="${BAY_NAME[n]} ${fmt1(t)} t"></i>` : ''; }).join('');
       return `<div class="bay"><span>${side === 'P' ? 'Pressurised' : 'Unpressurised'}</span><b class="${used > space + 1e-9 ? 'over' : ''}">${fmt1(used)} / ${fmt1(space)} t</b><div class="bay-bar">${blocks}</div></div>`;
     };
     $('outfit-bars').innerHTML = bar('P', d.pUsed, d.pSpace) + bar('U', d.uUsed, d.uSpace);
@@ -1447,6 +1465,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       line('Battery', `${fmt1(d.battery)} MJ${delta(d.battery, cur.battery)}${short > 0 ? ` · ${Math.round(d.battery / short)} s of burner short` : ''}`),
       line('Heat', d.burnSecs < 0 ? 'the burner never locks' : `burner locks after ${Math.round(d.burnSecs)} s${delta(d.burnSecs, cur.burnSecs, x => Math.round(x) + ' s')}`),
       line('Shield', `${fmt1(d.shield)} pts${delta(d.shield, cur.shield)} · ${fmt1(d.regen)}/s${d.regen > 0 ? ` · full in ${Math.round(d.shield / d.regen)} s` : ''}`),
+      line('Guns', `${draftT('mc')} of ${d.sites} light sites · ${Math.round(d.rounds).toLocaleString('en-US')} rounds (${Math.round(d.rounds / Math.max(1, draftT('mc') * prm('mc_rate')))} s of fire) · reach ${kmNum(d.range)} km`),
       line('Hull', `${int(d.hull)} pts${delta(d.hull, cur.hull, int)}`),
       line('Holds', `bulk ${fmt1(d.hopper)} · racks ${fmt1(d.rack)} · climate ${fmt1(d.climate)} t`),
       line('Fuel', `${fmt1(d.fuel)} t${delta(d.fuel, cur.fuel)} · ${fmt1(range)} ly`),
@@ -1487,6 +1506,82 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   const VS = { ship: instVAO([4, 2], MAXS), station: instVAO([4, 2], MAX_STATIONS), plume: instVAO([4, 4, 2], MAXS * 12),
     orbiter: instVAO([4, 4], sim.orbitOut.length / 8), ghost: instVAO([4, 4], 8), speck: instVAO([4, 4], MAX_ROCKS) };
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
+  // ---------- combat's looks (core/src/combat.rs; docs/weapons.md) ----------
+  // Shells are drawn as tracers from the core's columns. Bursts come from the core's ring (each read once, by its time):
+  // a shell in the open is a puff of fire, on a shield a flash where it struck (the shield shader's hits, the newest
+  // two a ship), on a hull sparks and the hull glowing; a ship destroyed, a fireball and debris. Particles are looks
+  // only: Math.random, outside the sim.
+  const MAXSH = sim.maxShells, MAXP = 4096, HIT_LIFE = 2.6;
+  VS.shield = instVAO([4, 4, 4], MAXS); VS.bolt = instVAO([4, 4], MAXSH); VS.part = instVAO([4, 4], MAXP);
+  const shieldInst = new Float32Array(MAXS * 12), boltInst = new Float32Array(MAXSH * 8), partInst = new Float32Array(MAXP * 8);
+  const shieldCount = new Int32Array(types.length), shieldStart = new Int32Array(types.length), shieldFill = new Int32Array(types.length);
+  const FX = { n: 0, x: new Float32Array(MAXP), y: new Float32Array(MAXP), vx: new Float32Array(MAXP), vy: new Float32Array(MAXP), life: new Float32Array(MAXP),
+    max: new Float32Array(MAXP), size: new Float32Array(MAXP), grow: new Float32Array(MAXP), r: new Float32Array(MAXP), g: new Float32Array(MAXP), b: new Float32Array(MAXP) };
+  // per slot: the last two shield hits (local, in half-extents; the game time; strength), the hull's glow, and the
+  // generation they belong to (a respawned slot starts clean)
+  const HITS = { ax: new Float32Array(MAXS), ay: new Float32Array(MAXS), at: new Float64Array(MAXS).fill(-99), as: new Float32Array(MAXS),
+    bx: new Float32Array(MAXS), by: new Float32Array(MAXS), bt: new Float64Array(MAXS).fill(-99), bs: new Float32Array(MAXS), glow: new Float32Array(MAXS), gen: new Uint32Array(MAXS) };
+  const FLASH = []; // [x, y, radius, life, age, r, g, b]: brief lights on the hulls round a burst
+  let burstAt = -1; // the newest burst read
+  function addFx(x, y, vx, vy, life, size, grow, r, g, b) {
+    if (FX.n >= MAXP) return;
+    const k = FX.n++;
+    FX.x[k] = x; FX.y[k] = y; FX.vx[k] = vx; FX.vy[k] = vy; FX.life[k] = life; FX.max[k] = life; FX.size[k] = size; FX.grow[k] = grow; FX.r[k] = r; FX.g[k] = g; FX.b[k] = b;
+  }
+  function sparks(x, y, vx, vy, n, col, speed, size, life) {
+    for (let k = 0; k < n; k++) { const a = Math.random() * 6.283, s = speed * (0.3 + Math.random()); addFx(x, y, vx + Math.cos(a) * s, vy + Math.sin(a) * s, life * (0.5 + Math.random()), size * (0.6 + Math.random() * 0.8), -0.4, col[0] * 3, col[1] * 3, col[2] * 3); }
+  }
+  const FIRE = [1.0, 0.62, 0.3], HOT = [1.0, 0.75, 0.45];
+  // the bursts the core has made since the last frame
+  function readBursts() {
+    const B = sim.burst, now = sim.tick() * sim.DT;
+    if (burstAt > now) burstAt = -1; // a new game, a load or a jump: time went back
+    const fresh = [];
+    for (let n = 0; n < sim.maxBursts; n++) if (B.kind[n] && B.at[n] > burstAt) fresh.push(n);
+    fresh.sort((a, b) => B.at[a] - B.at[b]);
+    for (const n of fresh) {
+      const x = B.x[n], y = B.y[n], kind = B.kind[n], j = B.ship[n] - 1, size = B.size[n];
+      burstAt = Math.max(burstAt, B.at[n]);
+      if (now - B.at[n] > 0.5) continue; // too old to show (the page was elsewhere)
+      const ok = j >= 0 && j < MAXS, T = ok ? types[SH.kind[j]] : null, vx = ok ? SH.vx[j] : 0, vy = ok ? SH.vy[j] : 0;
+      if (ok && HITS.gen[j] !== SH.generation[j]) { HITS.gen[j] = SH.generation[j]; HITS.at[j] = HITS.bt[j] = -99; HITS.glow[j] = 0; }
+      if (kind === BURST.air) {
+        addFx(x, y, 0, 0, 0.2, size * 0.35, 1.6, 1.6, 1.0, 0.5);
+        sparks(x, y, 0, 0, 2, FIRE, 60, 1.0, 0.25);
+      } else if (kind === BURST.shield && T) {
+        const c = Math.cos(SH.ra[j]), s = Math.sin(SH.ra[j]), dx = x - SH.rx[j], dy = y - SH.ry[j], h = (T.extent || T.L * 1.2) / 2;
+        HITS.bx[j] = HITS.ax[j]; HITS.by[j] = HITS.ay[j]; HITS.bt[j] = HITS.at[j]; HITS.bs[j] = HITS.as[j];
+        HITS.ax[j] = (dx * c + dy * s) / h; HITS.ay[j] = (-dx * s + dy * c) / h; HITS.at[j] = B.at[n]; HITS.as[j] = 0.7;
+        sparks(x, y, vx, vy, 3, T.br.shCol, 70, 1.0 + T.L * 0.01, 0.3);
+        FLASH.push([x, y, T.L * 0.8 + 20, 0.25, 0, ...T.br.shCol.map(v => v * 3)]);
+      } else if (kind === BURST.hull) {
+        addFx(x, y, vx, vy, 0.18, size * 0.45, 1.5, 3.2, 1.8, 0.8);
+        sparks(x, y, vx, vy, 7, FIRE, 130, 1.0 + (T ? T.L * 0.008 : 0), 0.5);
+        if (ok) HITS.glow[j] = 1;
+        FLASH.push([x, y, 30 + (T ? T.L : 20), 0.2, 0, 3, 1.8, 0.9]);
+      } else if (kind === BURST.lost) {
+        const L = T ? T.L : size, col = T ? T.br.plCol : FIRE;
+        addFx(x, y, vx * 0.5, vy * 0.5, 0.6, L * 0.9, 1.6, 6, 4.5, 3);
+        addFx(x, y, vx * 0.5, vy * 0.5, 1.4, L * 0.6, 0.9, col[0] * 2, col[1] * 2, col[2] * 2);
+        const m = Math.min(220, 40 + L * 2);
+        for (let k = 0; k < m; k++) {
+          const a = Math.random() * 6.283, sp = (40 + L * 1.5) * Math.pow(Math.random(), 0.6), q = Math.random() < 0.7 ? HOT : col;
+          addFx(x + Math.cos(a) * L * 0.2 * Math.random(), y + Math.sin(a) * L * 0.2 * Math.random(), vx * 0.5 + Math.cos(a) * sp, vy * 0.5 + Math.sin(a) * sp, 0.6 + Math.random() * 1.4, L * (0.04 + Math.random() * 0.1), 0.6, q[0] * 4, q[1] * 4, q[2] * 4);
+        }
+        FLASH.push([x, y, L * 7, 1.1, 0, 9, 6.3, 3.6]);
+      }
+    }
+  }
+  function stepFx(dt) {
+    for (let k = 0; k < FX.n; k++) {
+      FX.life[k] -= dt;
+      if (FX.life[k] <= 0) { const e = --FX.n; for (const c of ['x', 'y', 'vx', 'vy', 'life', 'max', 'size', 'grow', 'r', 'g', 'b']) FX[c][k] = FX[c][e]; k--; continue; }
+      const dr = Math.max(0, 1 - dt * 0.8);
+      FX.vx[k] *= dr; FX.vy[k] *= dr; FX.x[k] += FX.vx[k] * dt; FX.y[k] += FX.vy[k] * dt; FX.size[k] *= 1 + FX.grow[k] * dt;
+    }
+    for (let i = 0; i < MAXS; i++) HITS.glow[i] = Math.max(0, HITS.glow[i] - dt * 4);
+    for (let k = FLASH.length - 1; k >= 0; k--) { FLASH[k][4] += dt; if (FLASH[k][4] >= FLASH[k][3]) FLASH.splice(k, 1); }
+  }
   const typeCount = new Int32Array(types.length), typeStart = new Int32Array(types.length), typeFill = new Int32Array(types.length);
   const LP = new Float32Array(64), LC = new Float32Array(64);
   const plCol = new Float32Array(51), plCore = new Float32Array(51), plP = new Float32Array(68), plSpread = new Float32Array(17), plBurn = new Float32Array(51);
@@ -1688,6 +1783,54 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // GL draws in scene-target pixels: the canvas's at renderScale (sceneScale is scale at that resolution); the HUD,
   // culling and world sizes stay in canvas terms (scale)
   let sceneScale = 1;
+  // shields struck lately, then shells as tracers, then fire and sparks: added light over the hulls
+  function drawCombat(t, cx, cy, TW, TH, halfW, halfH, live) {
+    const now = sim.tick() * sim.DT;
+    gl.blendFunc(gl.ONE, gl.ONE);
+    shieldCount.fill(0);
+    const struck = i => SH.alive[i] && HITS.gen[i] === SH.generation[i] && now - HITS.at[i] < HIT_LIFE && shown(i, cx, cy, halfW, halfH) && types[SH.kind[i]].s;
+    for (let i = 0; i < live; i++) if (struck(i)) shieldCount[SH.kind[i]]++;
+    let accS = 0;
+    for (const k of order) { shieldStart[k] = accS; accS += shieldCount[k]; shieldFill[k] = shieldStart[k]; }
+    for (let i = 0; i < live; i++) {
+      if (!struck(i)) continue;
+      const q = shieldFill[SH.kind[i]]++ * 12, a1 = now - HITS.at[i], a2 = now - HITS.bt[i];
+      shieldInst.set([SH.rx[i], SH.ry[i], SH.ra[i], 0, HITS.ax[i], HITS.ay[i], a1 < HIT_LIFE ? a1 : -1, HITS.as[i], HITS.bx[i], HITS.by[i], a2 < HIT_LIFE ? a2 : -1, HITS.bs[i]], q);
+    }
+    if (accS) {
+      setView(FP.shield, TW, TH, cx, cy);
+      const u = FP.shield.u; gl.uniform1f(u.uTime, t); gl.uniform1i(u.uX, 0);
+      gl.bindVertexArray(VS.shield.vao); upload(VS.shield, shieldInst, accS);
+      for (const k of order) {
+        if (!shieldCount[k]) continue;
+        const T = types[k];
+        gl.uniform1f(u.uHalfM, T.half); gl.uniform1f(u.uExtent, T.extent); gl.uniform1f(u.uS, T.S); gl.uniform1f(u.uDmax, T.Dmax);
+        gl.uniform1f(u.uStrength, T.br.shStr); gl.uniform3fv(u.uCol, T.br.shCol); gl.uniform1i(u.uPat, T.br.shPat);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, T.s.tex[3]);
+        pointAt(VS.shield, shieldStart[k]);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, shieldCount[k]);
+      }
+      gl.bindVertexArray(null);
+    }
+    // tracers: the shell's head where the core puts it, its tail a few metres back along its path
+    const S = sim.shell;
+    let nb = 0;
+    for (let n = 0; n < MAXSH; n++) {
+      if (!S.live[n] || Math.abs(S.rx[n] - cx) > halfW + 60 || Math.abs(S.ry[n] - cy) > halfH + 60) continue;
+      const o = nb++ * 8, vx = S.vx[n], vy = S.vy[n], v = Math.hypot(vx, vy) || 1, len = 10;
+      boltInst[o] = S.rx[n] - vx / v * len * 0.5; boltInst[o + 1] = S.ry[n] - vy / v * len * 0.5; boltInst[o + 2] = vx; boltInst[o + 3] = vy;
+      boltInst[o + 4] = 1.4; boltInst[o + 5] = 0.85; boltInst[o + 6] = 0.35; boltInst[o + 7] = len;
+    }
+    if (nb) { setView(FP.bolt, TW, TH, cx, cy); gl.bindVertexArray(VS.bolt.vao); upload(VS.bolt, boltInst, nb); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nb); gl.bindVertexArray(null); }
+    let np = 0;
+    for (let k = 0; k < FX.n; k++) {
+      if (Math.abs(FX.x[k] - cx) > halfW + FX.size[k] || Math.abs(FX.y[k] - cy) > halfH + FX.size[k]) continue;
+      const o = np++ * 8, f = FX.life[k] / FX.max[k];
+      partInst[o] = FX.x[k]; partInst[o + 1] = FX.y[k]; partInst[o + 2] = FX.size[k]; partInst[o + 3] = f * f;
+      partInst[o + 4] = FX.r[k]; partInst[o + 5] = FX.g[k]; partInst[o + 6] = FX.b[k]; partInst[o + 7] = 0;
+    }
+    if (np) { setView(FP.part, TW, TH, cx, cy); gl.bindVertexArray(VS.part.vao); upload(VS.part, partInst, np); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, np); gl.bindVertexArray(null); }
+  }
   function setView(prog, RW, RH, cx, cy) { gl.useProgram(prog.p); gl.uniform2f(prog.u.uRes, RW, RH); gl.uniform2f(prog.u.uCam, cx, cy); gl.uniform1f(prog.u.uScale, sceneScale); }
   function render(t, cx, cy) {
     const RW = canvas.width, RH = canvas.height, T0 = types[SH.kind[0]], live = Math.min(MAXS, sim.count());
@@ -1841,6 +1984,14 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     }
     typeCount.fill(0);
     let nL = 0, nPl = 0;
+    readBursts(); stepFx(Math.min(0.1, frameDt));
+    // a burst lights the hulls round it, briefly
+    for (const f of FLASH) {
+      if (nL >= 12) break;
+      const o = nL++ * 4, k = Math.pow(1 - f[4] / f[3], 2);
+      LP[o] = f[0]; LP[o + 1] = f[1]; LP[o + 2] = 6; LP[o + 3] = f[2];
+      LC[o] = f[5] * k; LC[o + 1] = f[6] * k; LC[o + 2] = f[7] * k; LC[o + 3] = 0;
+    }
     // the torch: the player's plume grows long as the drive takes it toward jump speed
     const torch = jumpPhase() === JUMP.torch ? 2 + 4 * Math.min(1, Math.hypot(SH.vx[0], SH.vy[0]) / (sim.param('jump_speed') * sim.type.vmax[SH.kind[0]])) : 0;
     for (let i = 0; i < live; i++) {
@@ -1906,7 +2057,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       if (!shown(i, cx, cy, halfW, halfH)) continue;
       const o = typeFill[SH.kind[i]]++ * 6, q = npcSeq(i);
       shipInst[o] = q ? q.x : SH.rx[i]; shipInst[o + 1] = q ? q.y : SH.ry[i]; shipInst[o + 2] = q ? q.ang : SH.ra[i];
-      shipInst[o + 3] = SH.thr[i]; shipInst[o + 4] = 0; shipInst[o + 5] = q ? q.sc : 0;
+      shipInst[o + 3] = SH.thr[i]; shipInst[o + 4] = HITS.gen[i] === SH.generation[i] ? HITS.glow[i] : 0; shipInst[o + 5] = q ? q.sc : 0;
       if (q && q.heat > 0.01) sheaths.push([i, q]);
     }
     if (pseq) {
@@ -1933,6 +2084,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       }
       gl.bindVertexArray(null);
     }
+    drawCombat(t, cx, cy, TW, TH, halfW, halfH, live);
     if (sheaths.length) {
       gl.blendFunc(gl.ONE, gl.ONE);
       setView(FP.sheath, TW, TH, cx, cy);
@@ -2002,7 +2154,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     if (sim.game.auto[0]) ms.unshift([`AUTOPILOT → ${autoName().toUpperCase()}`, '#7fd08a']);
     const cl = courseLine(); if (cl) ms.unshift([cl, '#a8f0c4']);
     const jl = jumpLine(); if (jl) ms.unshift(jl.slice(0, 2));
-    const modeLine = `${ASSIST[assistMode].hud}${sim.game.cold[0] ? '  ·  COLD' : ''}  ·  ${SH.well[0] > 0.01 ? `WELL ${Math.round(SH.well[0] * 100)}%` : `DEEP SPACE ${Math.round(deep * 100)}%`}`
+    const guns = sim.arms.guns[0], gunLine = guns ? `  ·  GUNS ${guns} · ${Math.floor(sim.arms.ammo[0]).toLocaleString('en-US')}` : ''; // the light multicannons and their rounds
+    const modeLine = `${ASSIST[assistMode].hud}${sim.game.cold[0] ? '  ·  COLD' : ''}  ·  ${SH.well[0] > 0.01 ? `WELL ${Math.round(SH.well[0] * 100)}%` : `DEEP SPACE ${Math.round(deep * 100)}%`}${gunLine}`
       + (rad > 0 ? `  ·  RAD −${(rad * 100).toFixed(1)}%/s` : '') + (SETTINGS.debug ? `  ·  ${sim.tick()}  ${fps.toFixed(0)} fps${renderScale < 1 ? ` ${Math.round(renderScale * 100)}%` : ''}` : '');
     const MONO = '500 11.5px "IBM Plex Mono", ui-monospace, monospace', SMALL = '500 10px "IBM Plex Mono", ui-monospace, monospace';
     hx.font = MONO; hx.textBaseline = 'middle'; hx.textAlign = 'left';
@@ -2039,7 +2192,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const shCap = sim.fit.t[FIT.banks] * sim.param('bank_pts'), shK = shCap > 0 ? sim.game.shield[0] / shCap : 0, shT = sim.game.shield_t[0];
     tag('SHIELD', x0, y);
     if (!sim.game.fitted[0] || shCap <= 0) { none(x0 + LW, y, half); val('—', x0 + LW + half + 6, y, '#8a95a4'); }
-    else if (shT > 0) { amount(x0 + LW, y, half, 1 - shT / sim.param('shield_restart'), 'rgba(143,211,255,.3)'); val(sim.game.cold[0] ? 'COLD' : 'DOWN', x0 + LW + half + 6, y, '#f08a72'); }
+    else if (shT > 0 && sim.game.shield[0] <= 0) { amount(x0 + LW, y, half, 1 - shT / sim.param('shield_restart'), 'rgba(143,211,255,.3)'); val(sim.game.cold[0] ? 'COLD' : 'DOWN', x0 + LW + half + 6, y, '#f08a72'); }
     else { amount(x0 + LW, y, half, shK, shK < 0.3 ? '#f08a72' : '#8fd3ff'); val(`${Math.round(shK * 100)}%`, x0 + LW + half + 6, y, rad > 0 ? '#8fd3ff' : undefined); }
     tag('HULL', col2, y); amount(col2 + 30, y, half, hullK, hullK < 0.3 ? '#f08a72' : hullK < 0.7 ? '#e2b866' : '#7fd08a'); val(`${Math.ceil(hullK * 100)}%`, col2 + 30 + half + 6, y, rad > 0 || hullK < 0.3 ? '#f08a72' : undefined);
     // heat and charge (M2)
@@ -2429,6 +2582,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   const jumpSystems = () => readFlyable().map(([S, n]) => { const B = S.loaded.bodies, j = Math.max(1, B.findIndex(b => b.id === S.loaded.system.start && b.port), B.findIndex(b => b.port));
     return { n, j, id: B[j].id, place: B[j].name, port: B[j].port ? B[j].port.name : '', kind: B[j].kind, system: S.loaded.system.name, sysId: S.id }; });
   debug.setJump({ places: jumpPlaces, systems: jumpSystems, current: () => sysRec.id, start: () => START_ID, prepare: () => needSystems(FLYABLE),
+    side: s => { const r = command(CMD.side, s), C = SYS.combat || {}, e = (C.sides || [])[s - 1]; toast(r ? `Can't: ${CORE.RESULT[r] || r}` : s && e ? `On ${e.line}'s side` : 'On no side'); },
     go: (id, j) => Promise.resolve(jumpTo(id, j)).then(r => { if (r === 0) debug.close(); return r; }) });
   escapeFlight = () => {
     if (mapOn) { toggleMap(false); return true; }
@@ -2860,6 +3014,11 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     traffic: () => { const out = []; for (let i = 0; i < sim.count(); i++) if (TR.role[i]) out.push({ i, role: TRAFFIC.streams[TR.role[i] - 1], line: types[SH.kind[i]].brand.id, cls: catalog.sizes[types[SH.kind[i]].zi].id, phase: TR.phase[i], from: TR.from[i], to: TR.to[i], rail: SH.rail[i], x: SH.x[i], y: SH.y[i], v: Math.hypot(SH.vx[i], SH.vy[i]) }); return out; },
     // how many rocks the belts and fields hold (scenery: src/rocks.js)
     rocks: () => ROCKS.length,
+    // combat (core/src/combat.rs): the lab's fighters (side, AI phase, hull, shield, rounds), shells in flight, the side the
+    // player is on, and joining one
+    combat: () => { const A = sim.arms, out = []; for (let i = 0; i < sim.count(); i++) if (SH.alive[i] && sim.traffic.role[i] === TRAFFIC.combat) out.push({ i, side: A.side[i], phase: sim.traffic.phase[i], hull: SH.hull[i], shield: A.shield[i], ammo: A.ammo[i], target: A.target[i] ? A.target[i] - 1 & 0xffff : -1 });
+      let shells = 0; for (let n = 0; n < sim.maxShells; n++) shells += sim.shell.live[n]; return { fighters: out, shells, side: sim.battle.player_side[0], angry: sim.battle.angry[0], guns: sim.arms.guns[0], ammo: sim.arms.ammo[0] }; },
+    side: s => command(CMD.side, s),
     // dev: put the (flying) player at rest over body j; a logged command, so replays still match
     teleport: j => command(CMD.teleport, j),
     // sensors (core/src/sensors.rs): a flare's warning now (dev), and what the sensors make of every ship

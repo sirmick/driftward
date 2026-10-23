@@ -1302,7 +1302,7 @@
                 "maxLength": 60
               },
               "zone": {
-                "description": "The jump zone the side arrives at (0 up).",
+                "description": "The jump zone the side arrives at: its lanes' gates in order (0 up; past the last, it wraps).",
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 11,

@@ -169,6 +169,7 @@ impl World {
                 OK
             }
             CMD_JUMP => self.jump_to(a, b),
+            crate::combat::CMD_SIDE => self.side_command(a),
             CMD_HYPER => self.hyper(a),
             CMD_ZONE => self.to_zone(a),
             _ => UNKNOWN_COMMAND,
