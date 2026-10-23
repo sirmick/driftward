@@ -25,8 +25,8 @@
 //! `ms_range` launches a volley at it. Those nearer wait out the difference in flight time, so the wave arrives
 //! together and floods the target's point defence.
 //!
-//! Point defence (combat.rs `turrets`): light guns shoot first at the nearest enemy missile within their reach, a
-//! missile of another side, or one homing on their ship.
+//! Point defence (combat.rs `turrets`): light guns shoot first at the nearest missile within their reach that is
+//! homing on their ship, or another side's within `ms_pd_near` of it. A ship defends itself, not its neighbours.
 
 use crate::cols::soa;
 use crate::combat::{A_FLEE, B_SHOT, COMBAT, G_BAY, MAX_MOUNTS, MAX_SIDES};
@@ -240,12 +240,13 @@ impl World {
         }
     }
 
-    /// Whether missile n threatens ship k: not its own, and another side's, or homing on k.
+    /// Whether missile n threatens ship k: not its own, and homing on k, or another side's within `ms_pd_near` of it.
+    /// A ship defends itself, not its neighbours: a wave meets its target's guns, not the whole fleet's.
     pub(crate) fn threatens(&self, n: usize, k: usize) -> bool {
         if self.missiles.live[n] == 0 || self.resolve(self.missiles.owner[n]) == Some(k) { return false; }
         if self.missiles.target[n].checked_sub(1).and_then(|h| self.resolve(h)) == Some(k) { return true; }
         let (ms, ks) = (self.missiles.side[n], self.arms.side[k]);
-        ms != 0 && ks != 0 && ms != ks
+        ms != 0 && ks != 0 && ms != ks && hypot(self.missiles.x[n] - self.ships.x[k], self.missiles.y[n] - self.ships.y[k]) <= self.p(P::ms_pd_near)
     }
 
     /// The missiles by where they are, for shells and point defence (grid.rs; `mgrid`).
