@@ -1,6 +1,6 @@
 {
   "description": "M1's economy: fixed prices by port role (the Book: 'fixed prices that vary with the port's role'). A port trades the commodities its role lists, at the commodity's base price times its tier: low where the role makes it, high where the role needs it. Commodities are core rows in this order (at most 16); each names the hold that takes it (core/src/fit.rs): bulk goes in any hold, general cargo in container racks or a climate hold, and food and medicine only in a climate hold, so they pay more. A new game starts in start.system (a system file's id: the Book's M1 system), with credits and a debt to a lender.",
-  "start": { "system": "brannock", "credits": 1500, "debt": 12000 },
+  "start": { "system": "combatlab", "credits": 1500, "debt": 12000 },
   "tiers": { "low": 0.7, "medium": 1.0, "high": 1.4 },
   "commodities": [
     { "id": "food", "name": "Food", "base": 60, "hold": "climate" },
