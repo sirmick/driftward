@@ -5,20 +5,21 @@
   "ring": "middle",
   "region": "margins",
   "lab": true,
-  "description": "Test world: an empty system round a quiet yellow star, one station nobody holds, and the Union's Clads and the Freeflag fighting over it.",
+  "description": "Test world: an empty system round a quiet yellow star, one gas giant nobody holds, and the Union's Clads and the Freeflag fighting over it.",
   "star": { "name": "Gl 179", "class": "yellow", "radius": 2200, "gravity": 55 },
   "start": "prize",
+  "startShip": "prism.military:c1",
   "bodies": [
-    { "id": "prize", "name": "Prize Station", "kind": "station", "orbit": { "radius": 16000, "angle": 214 }, "radius": 450, "gravity": 4,
-      "station": { "archetype": "port", "brand": "union", "seed": "prize" },
-      "port": { "name": "Prize Station", "role": "haven", "population": "outpost", "services": ["refuel", "repair", "outfitter"], "description": "A lab station: whoever holds the space round it holds it." } }
+    { "id": "prize", "name": "Prize", "kind": "planet", "orbit": { "radius": 16000, "angle": 214 }, "radius": 2800, "gravity": 42,
+      "look": { "surface": "giant", "palette": ["#c08a5a", "#7a4e34", "#e8c89a"], "atmosphere": "#e0b890", "air": 1.1, "seed": 3.7, "lightning": 0.4 },
+      "port": { "name": "Prize Skimfield", "role": "gas", "population": "outpost", "services": ["refuel", "repair", "outfitter"], "description": "A lab outpost in the cloud tops: whoever holds the sky round it holds it." } }
   ],
   "traffic": { "ships": 0, "local": [], "through": [], "loiter": [] },
   "combat": {
     "contested": "prize",
     "sides": [
-      { "line": "union.military", "zone": 0, "count": 7, "classes": { "c1": 3, "c2": 3, "c3": 2, "c4": 1 } },
-      { "line": "union.raider", "zone": 1, "count": 7, "classes": { "c1": 3, "c2": 3, "c3": 2, "c4": 1 } }
+      { "line": "union.military", "zone": 0, "count": 60, "classes": { "c1": 3, "c2": 3, "c3": 2, "c4": 1 } },
+      { "line": "union.raider", "zone": 1, "count": 60, "classes": { "c1": 3, "c2": 3, "c3": 2, "c4": 1 } }
     ]
   }
 }

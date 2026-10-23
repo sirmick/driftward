@@ -580,11 +580,11 @@ How hulls are made and what sets them apart. Every hull is generated; none is dr
 
 | Class | Length |
 | :---- | :---- |
-| I | 18 m |
-| II | 34 m |
-| III | 60 m |
-| IV | 100 m |
-| V | 160 m |
+| I | 14 m |
+| II | 30 m |
+| III | 66 m |
+| IV | 145 m |
+| V | 320 m |
 
 * \[M1\] Line stats: a size class sets base acceleration, turn, top speed, hull, shields and hold; a line multiplies them. Civilian lines carry cargo and passengers: large holds, light or no armament, weaker shields, slower handling. Military lines carry little cargo.  
 * \[M1\] Shared hulls: a line may build on another line's hulls, so the same seed gives the same vessel outfitted differently. The miners' war line is their cargo and ore haulers with weapons and armor welded on. Lines that do not share hulls share only the faction style (the AI corpo's black warships and white liners).  

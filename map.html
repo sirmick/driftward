@@ -292,7 +292,7 @@ void main(){
   float scan = .5+.5*sin(m.y/PS*.5 - uTime*2.4 + uSeed);
   float idle = uIdle*(fres*.55 + fres*pat*(.35+.65*scan)*.9);
   if (uPat == 3) idle *= .6+.4*step(.35, vn(vec2(uTime*7., uSeed)));
-  float hit = 0.;
+  float hit = 0., veil = 0.;
   for (int i=0; i<8; i++) {
     float age = uHits[i].z; if (age < 0.) continue;
     float hd = length(m - uHits[i].xy*uExtent*.5);
@@ -302,8 +302,9 @@ void main(){
     float flash = exp(-hd/(uS*.9))*exp(-age*6.);
     float glowA = exp(-hd/(uS*3.))*exp(-age*3.);
     hit += (ring*(.5+pat*1.5) + flash*4. + glowA*pat*.8)*uHits[i].w;
+    veil += exp(-age*10.)*max(uHits[i].w-.3, 0.); // a hard hit lights the whole shield for a moment, over the hull
   }
-  float I = edge*(idle + hit*(.3+.7*fres+.3*pat))*uStrength;
+  float I = edge*(idle + hit*(.3+.7*fres+.3*pat) + veil*(.45+.35*pat+.6*fres))*uStrength;
   o = vec4(uCol*I*1.8, 0.);
 }`;
 
@@ -466,15 +467,22 @@ const FLY_BOLT_FS = `#version 300 es
 precision highp float; in vec2 vQ; flat in vec3 vCol; out vec4 o;
 void main(){ float core = exp(-vQ.x*vQ.x*6.)*(1.-smoothstep(.55,1.,abs(vQ.y)));
   float head = .5+1.5*smoothstep(-1.,1.,vQ.y);
-  o = vec4(mix(vCol, vec3(1.), core*core*.6)*core*head*2.5, 0.); }`;
+  o = vec4(mix(vCol, vec3(1.), core*core*.35)*core*head*2.5, 0.); }`;
 const FLY_PART_VS = `#version 300 es
 in vec2 aPos; in vec4 iA; in vec4 iC;
 ${WORLD_POS}
-out vec2 vQ; flat out vec3 vCol; flat out float vLife;
-void main(){ vQ=aPos; vCol=iC.rgb; vLife=iA.w; vec2 w = iA.xy + aPos*max(iA.z, 1.6/uScale); gl_Position=clipOf(w); }`;
+out vec2 vQ; flat out vec3 vCol; flat out float vLife; flat out float vShard;
+void main(){ vQ=aPos; vCol=iC.rgb; vLife=iA.w; vShard=iC.a;
+  // a shard (iC.a 1) tumbles as it flies: its angle from where it is
+  if (iC.a > .5) { float a = (iA.x + iA.y*1.7)*.09, c = cos(a), s = sin(a); vQ = mat2(c,s,-s,c)*aPos; }
+  vec2 w = iA.xy + aPos*max(iA.z, 1.6/uScale); gl_Position=clipOf(w); }`;
 const FLY_PART_FS = `#version 300 es
-precision highp float; in vec2 vQ; flat in vec3 vCol; flat in float vLife; out vec4 o;
-void main(){ float r=length(vQ); float g=(exp(-r*r*7.)*1.4 + exp(-r*3.)*.25)*(1.-smoothstep(.85,1.,r)); o=vec4(vCol*g*vLife, 0.); }`;
+precision highp float; in vec2 vQ; flat in vec3 vCol; flat in float vLife; flat in float vShard; out vec4 o;
+void main(){ float r=length(vQ);
+  // a soft glowing blob, or a shard: a hard-edged sliver, no halo
+  float g = vShard > .5 ? 1.-smoothstep(.75,.95,max(abs(vQ.x)*1.9, abs(vQ.y)))
+                        : (exp(-r*r*7.)*1.4 + exp(-r*3.)*.25)*(1.-smoothstep(.85,1.,r));
+  o=vec4(vCol*g*vLife, 0.); }`;
 const PLANET_VS = `#version 300 es
 in vec2 aPos;
 ${WORLD_POS}

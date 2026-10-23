@@ -372,8 +372,10 @@ impl World {
     }
 
     /// A free slot for a new traffic ship (never the player's), growing the live range if needed, within the cap.
-    fn free_slot(&mut self) -> Option<usize> {
-        if self.traffic_count() as f64 >= self.p(P::traffic_cap) { return None; }
+    /// A slot for a new ship of `stream`. Ambient traffic stops at `traffic_cap`; a lab's fighters (COMBAT) don't count
+    /// toward it and aren't held by it (their sides keep their own numbers).
+    fn free_slot(&mut self, stream: u8) -> Option<usize> {
+        if stream != COMBAT && (0..self.count).filter(|&i| self.traffic.role[i] != 0 && self.traffic.role[i] != COMBAT).count() as f64 >= self.p(P::traffic_cap) { return None; }
         let player = usize::try_from(self.game.player[0]).ok();
         if let Some(i) = (0..self.count).find(|&i| Some(i) != player && self.ships.alive[i] == 0 && self.traffic.role[i] == 0) { return Some(i); }
         if self.count < self.cfg.max_ships { self.count += 1; return Some(self.count - 1); }
@@ -452,7 +454,7 @@ impl World {
     /// From a port it lifts off (T_LAUNCH); from a jump zone it arrives already cruising.
     pub(crate) fn spawn(&mut self, stream: u8, from: End, to: End, row: Option<usize>) -> Option<usize> {
         let m = match row { Some(m) => m, None => self.pick_mix(if stream == LOCAL { MIX_LOCAL } else { MIX_THROUGH })? };
-        let k = self.free_slot()?;
+        let k = self.free_slot(stream)?;
         let kind = self.mix.kind[m];
         // each ship its own pace, a little under or over the stream's
         let cruise = self.types.vmax[kind as usize] * if stream == LOITER { self.p(P::loiter_cruise) } else { self.p(P::traffic_cruise) } * self.rng.range(0.85, 1.1);
@@ -652,7 +654,7 @@ impl World {
 
     /// Come in by a jump zone, `t` seconds ago: along the route at jump speed easing down to cruise (as the player's
     /// arrival), on rails; then cruising.
-    fn arriving_step(&mut self, k: usize, t: f64) {
+    pub(crate) fn arriving_step(&mut self, k: usize, t: f64) {
         // (cruise is its open-space pace there, which place_on_route moves it at)
         let cruise = self.traffic.cruise[k] * self.open_k(k, self.ships.x[k], self.ships.y[k]);
         let total = self.p(P::arrive_secs);

@@ -91,6 +91,12 @@ pub unsafe extern "C" fn dw_fit_stock(w: *mut World) { unsafe { world(w) }.fit_s
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dw_view_fit(w: *mut World, which: u32) { unsafe { world(w) }.view_fit(which) }
 
+/// Catalog type `k`'s stock fit into the "fit/stock" column and its stats into "fit/view" (fit.rs).
+/// # Safety
+/// See `world`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dw_view_stock(w: *mut World, k: u32) { unsafe { world(w) }.view_stock(k as usize) }
+
 /// The most tons of commodity `g` that still fit aboard, by hold class (fit.rs).
 /// # Safety
 /// See `world`.

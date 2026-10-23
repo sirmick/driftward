@@ -295,7 +295,7 @@ resize();
 
 // ---------- input: keys -> one bitmask per tick, and actions (src/play/keys.js: the bindings) ----------
 const keys = new Set(), KB = makeKeys();
-// flight mode: 0 ASSIST (the Book's full assist: a throttle), 1 DRIFT (drift off), 2 FREE (full off); Tab cycles (F too)
+// flight mode: 0 ASSIST (the Book's full assist: a throttle), 1 DRIFT (drift off), 2 FREE (full off); F cycles
 const ASSIST = [
   { hud: 'ASSIST', toast: () => `Assist: ${KB.name('thrust')}/${KB.name('reverse')} throttle, ${KB.name('retro')} all stop, ${KB.name('burn')} burn; drift and gravity cancelled` },
   { hud: 'DRIFT', toast: () => `Drift: raw thrust, ${KB.name('strafeL')}/${KB.name('strafeR')} strafe, ${KB.name('retro')} turns to face backward; momentum stays` },
@@ -357,7 +357,7 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 // these need the core; bound once it loads
 let saveGame = () => {}, loadGame = () => {}, landOrLaunch = () => {}, skipSequence = () => {}, waitDay = () => {}, inPort = () => false;
-let inFlight = () => false, cycleTarget = () => {}, cycleBody = () => {}, cycleUnknown = () => {}, nearestHostile = () => {}, nextZone = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false, portService = () => {};
+let inFlight = () => false, cycleTarget = () => {}, cycleScreen = () => {},cycleBody = () => {}, cycleUnknown = () => {}, nearestHostile = () => {}, nextZone = () => {}, flyTo = () => {}, toggleMap = () => {}, pickLocation = () => {}, escapeFlight = () => false, portService = () => {};
 let pauseGame = () => {}, shellBack = () => {}, jitterToggle = () => false, barrierUp = () => false, noticeUp = () => false, closeNotice = () => {};
 let lostUp = () => false, closeLost = () => {}, jumpKey = () => {}, jumping = () => false, coldKey = () => {}, pingKey = () => {};
 // Esc steps back: a sequence skips; in port, an open panel closes; in flight, the map closes, then the target
@@ -367,7 +367,7 @@ const keyLive = ctx => ctx === 'any' || (ctx === 'flight' ? inFlight() : ctx ===
 const togglePanel = p => showPanel(panelOpen() === p ? null : p);
 const ACTIONS = {
   mode: () => { assistMode = (assistMode + 1) % 3; toast(ASSIST[assistMode].toast()); },
-  targetNext: () => cycleTarget(1), targetPrev: () => cycleTarget(-1), unknownNext: () => cycleUnknown(1), unknownPrev: () => cycleUnknown(-1), hostile: () => nearestHostile(),
+  targetNext: () => cycleTarget(1), targetPrev: () => cycleTarget(-1), screenNext: () => cycleScreen(1), screenPrev: () => cycleScreen(-1),unknownNext: () => cycleUnknown(1), unknownPrev: () => cycleUnknown(-1), hostile: () => nearestHostile(),
   placeNext: () => cycleBody(1), placePrev: () => cycleBody(-1), zoneNext: () => nextZone(),
   autopilot: () => flyTo(), land: () => landOrLaunch(), jump: () => jumpKey(), skip: () => skipSequence(),
   cold: () => coldKey(), ping: () => pingKey(), galaxy: () => openGalaxy(), systemMap: () => toggleMap(), nav: () => setNav(!navOn),
@@ -401,7 +401,7 @@ const UNIVERSE_READY = DATA.universe().then(u => {
 Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   setSystem(SYSTEMS.get(START_ID), false); // the page's view holds a system from the start; a new game lays it out and draws it
   // body capacity: the schema's caps on bodies and belts, the star, and the most environmental stations a system holds
-  const CFG = { maxShips: 128, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + SYSTEM_SCHEMA.properties.belts.maxItems + 1 + MAX_ENVIRONS, envN: 16, envW: 40000, seed: 1 };
+  const CFG = { maxShips: 512, maxTypes: 64, maxBodies: SYSTEM_SCHEMA.properties.bodies.maxItems + SYSTEM_SCHEMA.properties.belts.maxItems + 1 + MAX_ENVIRONS, envN: 16, envW: 40000, seed: 1 };
   const sim = CORE.world(CFG);
   // a second world, never stepped, that systems are laid out in (layoutSystem); making it grows WASM memory, so the
   // first's views are made again before anything holds on to them
@@ -411,7 +411,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; sim.type.hull[k] = T.hull; sim.type.fuel[k] = T.fuel; sim.type.len[k] = T.L; });
   // The frames (core/src/fit.rs): each type's class frame, structure and stock shield, and its plumes, the nozzles its
   // generated hull has (assembled here, without the bake: the part list alone, from the seed it is baked from). And
-  // its geometry (core/src/combat.rs; src/gen.js footprint): the outline shells hit and its turret sites, by size.
+  // its geometry (core/src/combat.rs; src/gen.js footprint): the outline shells hit, its shield's standoff and its turret
+  // sites, by size.
   const PK = sim.playerKind, FIT = Object.fromEntries(sim.fitSlots.map((n, k) => [n, k]).filter(([n]) => n));
   types.forEach((T, k) => {
     const F = T.frame, t = sim.type, B = catalog.brands[T.bi], Z = catalog.sizes[T.zi];
@@ -424,6 +425,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     fp.outline.forEach(([x, y], v) => { sim.outline.x[k * MO + v] = x; sim.outline.y[k * MO + v] = y; });
     T.mounts.forEach(([x, y, z], m) => { sim.mount.x[k * MM + m] = x; sim.mount.y[k * MM + m] = y; sim.mount.size[k * MM + m] = z; });
     t.outline[k] = fp.outline.length; t.guns[k] = T.mounts.length; t.rad[k] = Math.max(...fp.outline.map(([x, y]) => Math.hypot(x, y)));
+    t.standoff[k] = ShipGen.shieldStandoff(ship, B);
   });
   // the player's ship flies as the core's last type row, built from its fit; it looks like the type it is built on
   const fittedLooks = () => { if (sim.game.fitted[0]) types[PK] = types[sim.game.base[0]]; };
@@ -671,7 +673,8 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     const S0 = SYSTEMS.get(START_ID);
     sim.atlasReset(); layoutSystem(S0, 0); sim.atlasLoad(0); showSystem(S0); galaxy.endTransit(); resetFollow();
     sim.setCount(1);
-    SH.kind[0] = playerTypeIndex(opts && opts.ship); SH.alive[0] = 1; SH.ang[0] = 0; // opts.ship: 'faction.line:class' (dev and tests)
+    // opts.ship: 'faction.line:class' (dev and tests), else ?ship=, else the start system's own (a lab's fast watcher)
+    SH.kind[0] = playerTypeIndex((opts && opts.ship) || new URLSearchParams(location.search).get('ship') || S0.loaded.system.startShip); SH.alive[0] = 1; SH.ang[0] = 0;
     sim.setPlayer(0);
     sim.fitStock(); fittedLooks(); // its stock fit: sound, fuelled and charged (core/src/fit.rs)
     if (opts && opts.space) { SH.x[0] = opts.space[0]; SH.y[0] = opts.space[1]; sim.slotReset(0, true); }
@@ -933,7 +936,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // the hints that name keys, from the bindings: the strip's flight keys, the port's buttons, the pause menu
   function keyHints() {
     const N = KB.name, strip = [[['thrust', 'reverse'], 'throttle'], [['retro'], 'stop'], [['burn'], 'burn'], [['mode'], 'mode'], [['land'], 'land'], [['jump'], 'jump'],
-      [['autopilot'], 'autopilot'], [['targetNext'], 'ships'], [['placeNext'], 'places'], [['cold'], 'cold'], [['ping'], 'ping'], [['galaxy'], 'maps'], [['nav'], 'nav']];
+      [['autopilot'], 'autopilot'], [['screenNext'], 'ships'], [['placeNext'], 'places'], [['cold'], 'cold'], [['ping'], 'ping'], [['galaxy'], 'maps'], [['nav'], 'nav']];
     document.querySelector('.strip .keys').textContent = strip.map(([ids, what]) => `${ids.map(N).join(' ')} ${what}`).join(' · ');
     for (const [id, act] of [['svc-trade', 'trade'], ['svc-board', 'missions'], ['svc-bar', 'bar'], ['svc-wait', 'wait'], ['svc-map', 'portMap'], ['svc-launch', 'land'], ['svc-about', 'about'], ['svc-outfit', 'outfit']]) $(id).querySelector('span').textContent = N(act);
     $('p-resume').querySelector('span').textContent = `${N('pause')} or Esc`; $('p-save').querySelector('span').textContent = N('save'); $('p-load').querySelector('span').textContent = N('load');
@@ -1498,6 +1501,34 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   }
   $('outfit-rows').addEventListener('click', e => { const b = e.target.closest('button[data-n]'); if (b) stepRow(b.dataset.n, +b.dataset.d, +b.dataset.s, !!b.dataset.signed); });
   $('outfit-refit').onclick = () => refit();
+  // the debug screen's Outfitting tab: the ship's fit slot by slot, what it makes, its power, heat and shield now, the
+  // stock fit of every catalog hull against its catalog stats, and the components' ratings and prices (core params)
+  debug.setFit(() => {
+    if (!sim.game.fitted[0]) return null;
+    const base = sim.game.base[0], v = fitStats(0), g = sim.game, T = types[base];
+    const meta = new Map(OUTFIT_GROUPS.flatMap(([grp, list]) => list.map(R => [R.id, { grp, name: R.name, side: R.side, price: R.price() / R.step, unit: R.unit }])));
+    const slots = [];
+    for (let q = 0; q < v.plumes; q++) { const t = fitT('plume' + q); slots.push({ grp: 'Torches', name: `Plume ${q + 1}`, side: 'torch', t, price: prm('price_torch') * t * t * t, each: true }); }
+    ['fl', 'fr', 'rl', 'rr'].forEach((c, q) => slots.push({ grp: 'Drive', name: `Jets, ${{ fl: 'fore left', fr: 'fore right', rl: 'aft left', rr: 'aft right' }[c]}`, side: 'corner', t: fitT('corner' + q), price: prm('price_jet') * fitT('corner' + q), each: true }));
+    for (const [n, M] of meta) if (n !== 'jets') slots.push({ grp: M.grp, name: M.name, side: M.side, t: fitT(n), unit: M.unit, price: n === 'bulkhead' ? 0 : M.price * fitT(n) });
+    // cargo aboard by hold class (trade and mission cargo)
+    const byClass = [0, 0, 0];
+    GOODS.forEach((c, i) => { byClass[sim.goods.class[i]] += sim.hold.tons[i]; });
+    activeMissions().forEach(k => { byClass[sim.goods.class[MS.good[k]]] += MS.tons[k]; });
+    // every catalog hull's stock fit (the core's stock_fit), against the catalog's acceleration and turn
+    const stock = [];
+    types.forEach((S, k) => {
+      if (k === PK || (S.brand.classes && !S.brand.classes.includes(catalog.sizes[S.zi].id))) return;
+      sim.viewStock(k);
+      const sv = {}; for (const n in STAT) sv[n] = sim.fitView[STAT[n]];
+      const f = Object.fromEntries(Object.entries(FIT).map(([n, i]) => [n, sim.stockFit[i]]));
+      stock.push({ k, name: S.name, line: S.brand.id, cls: catalog.sizes[S.zi].name, catAccel: sim.type.accel[k], catTurn: sim.type.turn[k], f, v: sv, mine: k === base });
+    });
+    const names = sim.paramNames, from = names.indexOf('torch_mn'), to = names.indexOf('price_bulkhead');
+    const params = names.slice(from, to + 1).map(n => ({ n, v: sim.param(n) }));
+    return { name: T.name, line: T.brand.id, base, v, slots, byClass, stock, params,
+      live: { mw: g.mw_use[0], drive: g.drive[0], energy: g.energy[0], heat: g.heat[0], hot: !!g.hot[0], shield: g.shield[0], shieldT: g.shield_t[0], cold: !!g.cold[0], fuel: g.fuel[0], hull: SH.hull[0] } };
+  });
   $('outfit-reset').onclick = () => { command(CMD.draftFrom, 0); refreshOutfit(); };
   $('outfit-stock').onclick = () => { command(CMD.draftFrom, 1); refreshOutfit(); };
 
@@ -1510,29 +1541,51 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   const shipInst = new Float32Array(MAXS * 6), plumeInst = new Float32Array(MAXS * 12 * 10);
   // ---------- combat's looks (core/src/combat.rs; docs/weapons.md) ----------
   // Shells are drawn as tracers from the core's columns. Bursts come from the core's ring (each read once, by its time):
-  // a shell in the open is a puff of fire, on a shield a flash where it struck (the shield shader's hits, the newest
-  // two a ship), on a hull sparks and the hull glowing; a ship destroyed, a fireball and debris. Particles are looks
+  // a shell in the open is a puff of fire; on a shield (its surface, standing off the hull) a ripple in the shield's
+  // colour from where it struck (the shield shader's hits, two a ship) and sparks skating off, no fire, only a flicker
+  // for a hit the shield shrugs off, and a fainter ripple where a burst nearby reached it; on a hull fire, debris,
+  // embers left on the plating and the hull glowing; a ship destroyed, a fireball and debris. Particles are looks
   // only: Math.random, outside the sim.
-  const MAXSH = sim.maxShells, MAXP = 4096, HIT_LIFE = 2.6;
-  const TRACER_LEN = [10, 18, 30], TRACER_K = [1, 1.3, 1.7]; // a tracer's length (m) and brightness, by calibre: light, medium, heavy
+  const MAXSH = sim.maxShells, MAXP = 8192, HIT_LIFE = 2.6;
+  const TRACER_LEN = [10, 18, 30]; // a tracer's length (m), by calibre: light, medium, heavy
+  const TRACER_COL = [[0.85, 0.72, 0.16], [1.0, 0.45, 0.08], [1.3, 0.16, 0.05]]; // and its colour, brightness in it: yellow, orange, red
   VS.shield = instVAO([4, 4, 4], MAXS); VS.bolt = instVAO([4, 4], MAXSH); VS.part = instVAO([4, 4], MAXP);
   const shieldInst = new Float32Array(MAXS * 12), boltInst = new Float32Array(MAXSH * 8), partInst = new Float32Array(MAXP * 8);
   const shieldCount = new Int32Array(types.length), shieldStart = new Int32Array(types.length), shieldFill = new Int32Array(types.length);
-  const FX = { n: 0, x: new Float32Array(MAXP), y: new Float32Array(MAXP), vx: new Float32Array(MAXP), vy: new Float32Array(MAXP), life: new Float32Array(MAXP),
-    max: new Float32Array(MAXP), size: new Float32Array(MAXP), grow: new Float32Array(MAXP), r: new Float32Array(MAXP), g: new Float32Array(MAXP), b: new Float32Array(MAXP) };
+  // particles: a fixed pool of MAXP slots, live while life > 0. A new one takes the next slot round (when the pool is
+  // full, the oldest written goes); nothing moves when one dies. `top`: slots used so far, so loops skip the rest
+  const FX = { next: 0, top: 0, x: new Float32Array(MAXP), y: new Float32Array(MAXP), vx: new Float32Array(MAXP), vy: new Float32Array(MAXP), life: new Float32Array(MAXP),
+    max: new Float32Array(MAXP), size: new Float32Array(MAXP), grow: new Float32Array(MAXP), r: new Float32Array(MAXP), g: new Float32Array(MAXP), b: new Float32Array(MAXP), shard: new Uint8Array(MAXP) };
   // per slot: the last two shield hits (local, in half-extents; the game time; strength), the hull's glow, and the
   // generation they belong to (a respawned slot starts clean)
   const HITS = { ax: new Float32Array(MAXS), ay: new Float32Array(MAXS), at: new Float64Array(MAXS).fill(-99), as: new Float32Array(MAXS),
     bx: new Float32Array(MAXS), by: new Float32Array(MAXS), bt: new Float64Array(MAXS).fill(-99), bs: new Float32Array(MAXS), glow: new Float32Array(MAXS), gen: new Uint32Array(MAXS) };
   const FLASH = []; // [x, y, radius, life, age, r, g, b]: brief lights on the hulls round a burst
   let burstAt = -1; // the newest burst read
-  function addFx(x, y, vx, vy, life, size, grow, r, g, b) {
-    if (FX.n >= MAXP) return;
-    const k = FX.n++;
-    FX.x[k] = x; FX.y[k] = y; FX.vx[k] = vx; FX.vy[k] = vy; FX.life[k] = life; FX.max[k] = life; FX.size[k] = size; FX.grow[k] = grow; FX.r[k] = r; FX.g[k] = g; FX.b[k] = b;
+  function addFx(x, y, vx, vy, life, size, grow, r, g, b, shard) {
+    const k = FX.next;
+    FX.next = (k + 1) % MAXP; FX.top = Math.max(FX.top, k + 1);
+    FX.x[k] = x; FX.y[k] = y; FX.vx[k] = vx; FX.vy[k] = vy; FX.life[k] = life; FX.max[k] = life; FX.size[k] = size; FX.grow[k] = grow; FX.r[k] = r; FX.g[k] = g; FX.b[k] = b; FX.shard[k] = shard ? 1 : 0;
   }
   function sparks(x, y, vx, vy, n, col, speed, size, life) {
     for (let k = 0; k < n; k++) { const a = Math.random() * 6.283, s = speed * (0.3 + Math.random()); addFx(x, y, vx + Math.cos(a) * s, vy + Math.sin(a) * s, life * (0.5 + Math.random()), size * (0.6 + Math.random() * 0.8), -0.4, col[0] * 3, col[1] * 3, col[2] * 3); }
+  }
+  // sparks glancing off a shield at (x, y): along the surface, either way, a little outward (nx, ny: out from the ship)
+  function skate(x, y, vx, vy, nx, ny, n, col, speed, size, life) {
+    const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+    for (let k = 0; k < n; k++) {
+      const side = Math.random() < 0.5 ? -1 : 1, s = speed * (0.4 + Math.random()), out = 0.15 + Math.random() * 0.35;
+      addFx(x, y, vx + (-ny * side + nx * out) * s, vy + (nx * side + ny * out) * s, life * (0.5 + Math.random()), size * (0.6 + Math.random() * 0.8), -0.5, col[0] * 3, col[1] * 3, col[2] * 3);
+    }
+  }
+  // a ripple on ship j's shield from (x, y), into the newest of its two hits (the shield shader's); a weaker one than
+  // a hit still fresh goes in the older slot instead, so a stream of light shells can't wipe out a heavy hit's ring
+  function shieldHit(j, T, x, y, at, strength) {
+    const c = Math.cos(SH.ra[j]), s = Math.sin(SH.ra[j]), dx = x - SH.rx[j], dy = y - SH.ry[j], h = (T.extent || T.L * 1.2) / 2;
+    const lx = (dx * c + dy * s) / h, ly = (-dx * s + dy * c) / h;
+    if (strength < HITS.as[j] && at - HITS.at[j] < 0.4) { HITS.bx[j] = lx; HITS.by[j] = ly; HITS.bt[j] = at; HITS.bs[j] = strength; return; }
+    HITS.bx[j] = HITS.ax[j]; HITS.by[j] = HITS.ay[j]; HITS.bt[j] = HITS.at[j]; HITS.bs[j] = HITS.as[j];
+    HITS.ax[j] = lx; HITS.ay[j] = ly; HITS.at[j] = at; HITS.as[j] = strength;
   }
   const FIRE = [1.0, 0.62, 0.3], HOT = [1.0, 0.75, 0.45];
   // the bursts the core has made since the last frame
@@ -1551,17 +1604,25 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       if (kind === BURST.air) {
         addFx(x, y, 0, 0, 0.2, size * 0.3, 1.6, 1.0, 0.62, 0.3);
         sparks(x, y, 0, 0, 2, FIRE, 60, 1.0, 0.25);
-      } else if (kind === BURST.shield && T) {
-        const c = Math.cos(SH.ra[j]), s = Math.sin(SH.ra[j]), dx = x - SH.rx[j], dy = y - SH.ry[j], h = (T.extent || T.L * 1.2) / 2;
-        HITS.bx[j] = HITS.ax[j]; HITS.by[j] = HITS.ay[j]; HITS.bt[j] = HITS.at[j]; HITS.bs[j] = HITS.as[j];
-        HITS.ax[j] = (dx * c + dy * s) / h; HITS.ay[j] = (-dx * s + dy * c) / h; HITS.at[j] = B.at[n]; HITS.as[j] = 0.7;
-        sparks(x, y, vx, vy, 3, T.br.shCol, 70, 1.0 + T.L * 0.01, 0.3);
-        FLASH.push([x, y, T.L * 0.8 + 20, 0.25, 0, ...T.br.shCol.map(v => v * 3)]);
+      } else if ((kind === BURST.shield || kind === BURST.shrug || kind === BURST.splash) && T) {
+        // a shield takes it: no fire, its own colour. A ripple from where it met the shield (a splash: from the burst,
+        // off the shield), and a full hit's sparks skate off along the surface; a shrugged-off hit only flickers
+        const full = kind === BURST.shield, sc = T.br.shCol, cal = Math.min(1, size / 40);
+        shieldHit(j, T, x, y, B.at[n], full ? 0.8 + 0.6 * cal : kind === BURST.splash ? 0.35 : 0.18);
+        if (full) {
+          addFx(x, y, vx, vy, 0.12, size * 0.35, 1.2, 1.2 + sc[0] * 3, 1.2 + sc[1] * 3, 1.2 + sc[2] * 3); // a cold white flash
+          skate(x, y, vx, vy, x - SH.rx[j], y - SH.ry[j], 4 + Math.round(8 * cal), sc, 110 + 120 * cal, 0.9 + T.L * 0.008, 0.35);
+          FLASH.push([x, y, T.L * 0.8 + 20 + size, 0.22, 0, ...sc.map(v => v * 3)]);
+        } else if (kind === BURST.shrug) skate(x, y, vx, vy, x - SH.rx[j], y - SH.ry[j], 1, sc, 80, 0.7, 0.2);
       } else if (kind === BURST.hull) {
-        addFx(x, y, vx, vy, 0.18, size * 0.45, 1.5, 3.2, 1.8, 0.8);
-        sparks(x, y, vx, vy, 7, FIRE, 130, 1.0 + (T ? T.L * 0.008 : 0), 0.5);
+        // through to the hull: fire, debris thrown out, and embers left burning on the plating
+        const cal = Math.min(1, size / 40), L = T ? T.L : 20;
+        addFx(x, y, vx, vy, 0.22, size * 0.55, 1.6, 3.4, 1.7, 0.6);
+        sparks(x, y, vx, vy, 8 + Math.round(10 * cal), FIRE, 140, 1.0 + L * 0.008, 0.55);
+        sparks(x, y, vx, vy, 2 + Math.round(4 * cal), [0.35, 0.3, 0.27], 45, 1.4 + L * 0.01, 1.4); // debris, dim and slow
+        for (let e = 0; e < 2 + Math.round(3 * cal); e++) addFx(x + (Math.random() - 0.5) * 2, y + (Math.random() - 0.5) * 2, vx, vy, 1.4 + Math.random() * 1.2, 0.7 + L * 0.006, 0, 1.6, 0.45, 0.1);
         if (ok) HITS.glow[j] = 1;
-        FLASH.push([x, y, 30 + (T ? T.L : 20), 0.2, 0, 3, 1.8, 0.9]);
+        FLASH.push([x, y, 30 + L + size, 0.25, 0, 3, 1.6, 0.7]);
       } else if (kind === BURST.lost) {
         const L = T ? T.L : size, col = T ? T.br.plCol : FIRE;
         addFx(x, y, vx * 0.5, vy * 0.5, 0.6, L * 0.9, 1.6, 6, 4.5, 3);
@@ -1571,15 +1632,22 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
           const a = Math.random() * 6.283, sp = (40 + L * 1.5) * Math.pow(Math.random(), 0.6), q = Math.random() < 0.7 ? HOT : col;
           addFx(x + Math.cos(a) * L * 0.2 * Math.random(), y + Math.sin(a) * L * 0.2 * Math.random(), vx * 0.5 + Math.cos(a) * sp, vy * 0.5 + Math.sin(a) * sp, 0.6 + Math.random() * 1.4, L * (0.04 + Math.random() * 0.1), 0.6, q[0] * 4, q[1] * 4, q[2] * 4);
         }
+        // shards of the hull in its paint, flung every way, tumbling, fading to nothing
+        const paint = T ? T.br.debris : [FIRE], ns = Math.min(480, 80 + Math.round(L * 1.8));
+        for (let k = 0; k < ns; k++) {
+          const a = Math.random() * 6.283, sp = (30 + L * 1.2) * (0.25 + Math.random() * 1.1), q = paint[(Math.random() * paint.length) | 0];
+          addFx(x + Math.cos(a) * L * 0.25 * Math.random(), y + Math.sin(a) * L * 0.25 * Math.random(), vx * 0.5 + Math.cos(a) * sp, vy * 0.5 + Math.sin(a) * sp,
+            1.6 + Math.random() * 2.4, L * (0.012 + Math.random() * 0.03), 0, q[0], q[1], q[2], true);
+        }
         FLASH.push([x, y, L * 7, 1.1, 0, 9, 6.3, 3.6]);
       }
     }
   }
   function stepFx(dt) {
-    for (let k = 0; k < FX.n; k++) {
+    for (let k = 0; k < FX.top; k++) {
+      if (FX.life[k] <= 0) continue;
       FX.life[k] -= dt;
-      if (FX.life[k] <= 0) { const e = --FX.n; for (const c of ['x', 'y', 'vx', 'vy', 'life', 'max', 'size', 'grow', 'r', 'g', 'b']) FX[c][k] = FX[c][e]; k--; continue; }
-      const dr = Math.max(0, 1 - dt * 0.8);
+      const dr = FX.shard[k] ? 1 : Math.max(0, 1 - dt * 0.8); // fire and smoke slow; shards keep going, in vacuum
       FX.vx[k] *= dr; FX.vy[k] *= dr; FX.x[k] += FX.vx[k] * dt; FX.y[k] += FX.vy[k] * dt; FX.size[k] *= 1 + FX.grow[k] * dt;
     }
     for (let i = 0; i < MAXS; i++) HITS.glow[i] = Math.max(0, HITS.glow[i] - dt * 4);
@@ -1820,17 +1888,18 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     let nb = 0;
     for (let n = 0; n < MAXSH; n++) {
       if (!S.live[n] || Math.abs(S.rx[n] - cx) > halfW + 60 || Math.abs(S.ry[n] - cy) > halfH + 60) continue;
-      const z = Math.max(0, Math.min(2, S.gun[n] - 1)), o = nb++ * 8, vx = S.vx[n], vy = S.vy[n], v = Math.hypot(vx, vy) || 1, len = TRACER_LEN[z], k = TRACER_K[z];
+      const z = Math.max(0, Math.min(2, S.gun[n] - 1)), o = nb++ * 8, vx = S.vx[n], vy = S.vy[n], v = Math.hypot(vx, vy) || 1, len = TRACER_LEN[z], c = TRACER_COL[z];
       boltInst[o] = S.rx[n] - vx / v * len * 0.5; boltInst[o + 1] = S.ry[n] - vy / v * len * 0.5; boltInst[o + 2] = vx; boltInst[o + 3] = vy;
-      boltInst[o + 4] = 0.75 * k; boltInst[o + 5] = 0.45 * k; boltInst[o + 6] = 0.18 * k; boltInst[o + 7] = len;
+      boltInst[o + 4] = c[0]; boltInst[o + 5] = c[1]; boltInst[o + 6] = c[2]; boltInst[o + 7] = len;
     }
     if (nb) { setView(FP.bolt, TW, TH, cx, cy); gl.bindVertexArray(VS.bolt.vao); upload(VS.bolt, boltInst, nb); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nb); gl.bindVertexArray(null); }
     let np = 0;
-    for (let k = 0; k < FX.n; k++) {
+    for (let k = 0; k < FX.top; k++) {
+      if (FX.life[k] <= 0) continue;
       if (Math.abs(FX.x[k] - cx) > halfW + FX.size[k] || Math.abs(FX.y[k] - cy) > halfH + FX.size[k]) continue;
       const o = np++ * 8, f = FX.life[k] / FX.max[k];
       partInst[o] = FX.x[k]; partInst[o + 1] = FX.y[k]; partInst[o + 2] = FX.size[k]; partInst[o + 3] = f * f;
-      partInst[o + 4] = FX.r[k]; partInst[o + 5] = FX.g[k]; partInst[o + 6] = FX.b[k]; partInst[o + 7] = 0;
+      partInst[o + 4] = FX.r[k]; partInst[o + 5] = FX.g[k]; partInst[o + 6] = FX.b[k]; partInst[o + 7] = FX.shard[k];
     }
     if (np) { setView(FP.part, TW, TH, cx, cy); gl.bindVertexArray(VS.part.vao); upload(VS.part, partInst, np); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, np); gl.bindVertexArray(null); }
   }
@@ -2533,6 +2602,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // T: identified ships; Y: contacts not yet identified
   cycleTarget = (dir = 1) => shipCycle('known', i => sensed(i) >= 2, () => `No identified ships: ${KB.name('unknownNext')} for unknown contacts, ${KB.name('ping')} pings`)(dir);
   cycleUnknown = (dir = 1) => shipCycle('unknown', i => sensed(i) === 1, () => `No unknown contacts: ${KB.name('ping')} pings`)(dir);
+  // Tab: any ship the sensors hold that is in view
+  const inView = i => { const [x, y] = toScreen(SH.rx[i], SH.ry[i]); return x >= 0 && x <= W && y >= 0 && y <= H; };
+  cycleScreen = (dir = 1) => shipCycle('screen', i => sensed(i) >= 1 && inView(i), () => `No ships on screen: ${KB.name('targetNext')} for any identified ship`)(dir);
   // H: the nearest hostile; until M2 brings hostiles, the nearest ship tracking you
   nearestHostile = () => {
     const list = shipsBy(i => sensed(i) >= 1 && SH.seen[i] >= sim.param('contact_snr'));

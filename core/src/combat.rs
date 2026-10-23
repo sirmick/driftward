@@ -1,5 +1,6 @@
 //! Weapons and combat (the Book's Weapons, Shields and Damage chapters, M2; docs/weapons.md): turret sites, the
-//! light multicannon, its shells, hits on the hull's outline, damage through shields to the hull, and the combat AI.
+//! multicannons, their shells, hits on shields and the hull's outline, damage through shields to the hull, and the
+//! combat AI.
 //!
 //! Geometry is content, per ship type (the page writes it from the generated hull, src/gen.js `footprint`): the
 //! convex `outline` shells hit (local metres, +x right, +y forward, counter-clockwise) and the turret sites, `mount`
@@ -10,22 +11,24 @@
 //!
 //! Turrets traverse 360 degrees at their gun's rate and lead their target (a shell keeps its ship's velocity). The
 //! player's fire while Fire is held, at the target or straight ahead; the AI's at their target, inside the gun's reach
-//! and on it. A shell flies at its gun's speed with a little spread and bursts on contact with an outline, or when
+//! and on it. A shell flies at its gun's speed with a little spread and bursts on contact with a shield's surface
+//! (`types.standoff` out from the outline) while the shield holds, or with the outline, or when
 //! its fuse runs out: set to the target's range when it has one (flak), else the gun's longest. A burst hurts every
 //! ship within its gun's blast, fully inside its core, the one it struck fully, but never its own side's or its
 //! gunner.
 //!
 //! Damage goes to the shield first. A hit at or under the shield's hardness (`shield_hard` at 100 m of hull, going with
-//! length squared) does only `hard_frac` of itself to the shield; a harder one does the rest to the shield and
+//! length to the 1.5) does only `hard_frac` of itself to the shield; a harder one does the rest to the shield and
 //! `bleed_kin` of it through to the hull. A hit pauses regen for `shield_pause`; a shield run out collapses and
 //! restarts after `shield_restart` (fit.rs, the player's; here, everyone else's, regenerating in `shield_refill`). A hull
 //! at zero is lost: the player's ends the game (service.rs), anyone else's is destroyed.
 //!
 //! The lab's standing fight (the system file's `combat`; the page writes `side` and MIX_SIDE rows): each side keeps
-//! `count` ships in flight, arriving one every `side_gap` seconds at its own jump zone, bound for the contested body.
+//! `count` ships in the fight (those fleeing don't count), arriving one every `side_gap` seconds out of a jump along
+//! the route from its own jump zone, `side_drop` short of the contested body.
 //! Every side is hostile to every other; to the player only once it has joined another (CMD_SIDE) or fired on them.
 //! The AI (a COMBAT ship's phase): LOITER round the contested body; ENGAGE the nearest hostile its sensors hold
-//! (the signature model, sensors.rs) within `ai_leash` of the contested body (the player anywhere, once it has fired
+//! (the signature model, sensors.rs) within `ai_leash` of the contested body's surface (the player anywhere, once it has fired
 //! on them), closing to `ai_range` of the guns' reach and circling; FLEE for its jump zone
 //! once its hull is under `morale`, and leave.
 
@@ -42,8 +45,8 @@ use crate::world::{World, DT, P};
 pub const MAX_MOUNTS: usize = 12;
 pub const MAX_OUTLINE: usize = 12;
 /// Shells in flight at once (a new one past this is not fired), and bursts remembered for the page to draw.
-pub const MAX_SHELLS: usize = 1024;
-pub const MAX_BURSTS: usize = 128;
+pub const MAX_SHELLS: usize = 8192;
+pub const MAX_BURSTS: usize = 1024;
 /// Sides in a lab's fight.
 pub const MAX_SIDES: usize = 4;
 
@@ -55,11 +58,14 @@ pub const A_LOITER: u8 = 10;
 pub const A_ENGAGE: u8 = 11;
 pub const A_FLEE: u8 = 12;
 
-/// Bursts (`burst.kind`): a shell bursting in the open, on a shield, on a hull; a ship destroyed.
+/// Bursts (`burst.kind`): a shell bursting in the open, on a shield, on a hull; a ship destroyed; a shell on a shield
+/// it is no harder than (shrugged off); a burst in the open whose blast reached a ship's shield (one per ship, with it).
 pub const B_AIR: u8 = 1;
 pub const B_SHIELD: u8 = 2;
 pub const B_HULL: u8 = 3;
 pub const B_LOST: u8 = 4;
+pub const B_SHRUG: u8 = 5;
+pub const B_SPLASH: u8 = 6;
 
 /// Debug: the player joins side a (0 neutral, 1..MAX_SIDES), and every side forgives it.
 pub const CMD_SIDE: u32 = 104;
@@ -152,6 +158,38 @@ fn enter(poly: &[(f64, f64)], a: (f64, f64), b: (f64, f64)) -> Option<f64> {
     Some(t0)
 }
 
+/// Where segment a->b first comes within `s` of a convex counter-clockwise polygon (its outline grown by s: the shield's
+/// surface), as a share of the way along; 0 if a is already that close; None if it never is.
+fn enter_round(poly: &[(f64, f64)], s: f64, a: (f64, f64), b: (f64, f64)) -> Option<f64> {
+    if s <= 0.0 { return enter(poly, a, b); }
+    let n = poly.len();
+    if n < 3 { return None; }
+    if distance(poly, a) <= s { return Some(0.0); }
+    let d = (b.0 - a.0, b.1 - a.1);
+    let mut best: Option<f64> = None;
+    let mut take = |t: f64| if (0.0..=1.0).contains(&t) && best.is_none_or(|x| t < x) { best = Some(t); };
+    for i in 0..n {
+        let (p, q) = (poly[i], poly[(i + 1) % n]);
+        let (ex, ey) = (q.0 - p.0, q.1 - p.1);
+        let len = hypot(ex, ey).max(1e-12);
+        let nrm = (ey / len, -ex / len); // outward
+        // the edge pushed out by s: crossed going in
+        let den = nrm.0 * d.0 + nrm.1 * d.1;
+        if den < -1e-12 {
+            let t = (s - (nrm.0 * (a.0 - p.0) + nrm.1 * (a.1 - p.1))) / den;
+            let (hx, hy) = (a.0 + d.0 * t - p.0, a.1 + d.1 * t - p.1);
+            let u = (hx * ex + hy * ey) / (len * len);
+            if (0.0..=1.0).contains(&u) { take(t); }
+        }
+        // the corner's arc: the nearer root of |a + t d - p| = s
+        let (wx, wy) = (a.0 - p.0, a.1 - p.1);
+        let (qa, qb, qc) = (d.0 * d.0 + d.1 * d.1, 2.0 * (wx * d.0 + wy * d.1), wx * wx + wy * wy - s * s);
+        let disc = qb * qb - 4.0 * qa * qc;
+        if qa > 1e-12 && disc >= 0.0 { take((-qb - disc.sqrt()) / (2.0 * qa)); }
+    }
+    best
+}
+
 /// Distance from p to a convex counter-clockwise polygon (0 inside).
 fn distance(poly: &[(f64, f64)], p: (f64, f64)) -> f64 {
     let n = poly.len();
@@ -180,7 +218,16 @@ impl World {
             self.npc_shield(k);
             self.turrets(k);
         }
+        self.build_grid();
         self.fly_shells();
+    }
+
+    /// The ships shells can hit, by where they are (grid.rs): alive, off their rails, each as far out as its shield.
+    fn build_grid(&mut self) {
+        let mut g = std::mem::take(&mut self.grid);
+        g.build(self.count, |i| (self.ships.alive[i] != 0 && self.ships.rail[i] == 0)
+            .then(|| (self.ships.x[i], self.ships.y[i], self.types.rad[self.look_kind(i)] + self.standoff(i))));
+        self.grid = g;
     }
 
     /// Ship i's outline in local metres (its type's; the player's fitted ship's is its hull's).
@@ -197,6 +244,11 @@ impl World {
         if self.fitted() && k == self.player_kind() { self.game.base[0] as usize } else { k }
     }
     fn is_player(&self, i: usize) -> bool { usize::try_from(self.game.player[0]).ok() == Some(i) }
+    /// How far out ship i's shield stands from its hull while it holds, metres (0 when it is down).
+    fn standoff(&self, i: usize) -> f64 {
+        let up = if self.is_player(i) { self.game.shield[0] } else { self.arms.shield[i] } > 0.0;
+        if up { self.types.standoff[self.look_kind(i)] } else { 0.0 }
+    }
     /// A point in ship i's frame, in the world.
     fn to_world(&self, i: usize, lx: f64, ly: f64) -> (f64, f64) {
         let (s, c) = sin_cos(self.ships.ang[i]);
@@ -208,8 +260,8 @@ impl World {
         let (dx, dy) = (x - self.ships.x[i], y - self.ships.y[i]);
         (dx * c + dy * s, -dx * s + dy * c)
     }
-    /// The shield's hardness on ship i: `shield_hard` at 100 m of hull, with length squared.
-    fn hardness(&self, i: usize) -> f64 { let l = self.types.len[self.look_kind(i)] / 100.0; self.p(P::shield_hard) * l * l }
+    /// The shield's hardness on ship i: `shield_hard` at 100 m of hull, with length to the 1.5.
+    fn hardness(&self, i: usize) -> f64 { let l = self.types.len[self.look_kind(i)] / 100.0; self.p(P::shield_hard) * l * l.sqrt() }
     /// A gun's numbers, by size (G_*).
     pub fn gun(&self, size: u8) -> Gun {
         let p = |q: P| self.p(q);
@@ -287,7 +339,8 @@ impl World {
             let want = self.sides.count[s] as usize;
             let c = self.sides.contested[s];
             if want == 0 || c < 0 || c as usize >= self.n_bodies || now < self.sides.next[s] { continue; }
-            let have = (0..self.count).filter(|&k| self.traffic.role[k] == COMBAT && self.ships.alive[k] != 0 && self.arms.side[k] == s as u8 + 1).count();
+            // ships fleeing are out of the fight: others come in their place
+            let have = (0..self.count).filter(|&k| self.traffic.role[k] == COMBAT && self.ships.alive[k] != 0 && self.arms.side[k] == s as u8 + 1 && self.traffic.phase[k] != A_FLEE).count();
             if have >= want { continue; }
             self.sides.next[s] = now + self.p(P::side_gap);
             // the side's type by weight
@@ -297,7 +350,16 @@ impl World {
             let mut pick = self.rng.range(0.0, total);
             let m = *rows.iter().find(|&&m| { pick -= self.mix.weight[m]; pick <= 0.0 }).unwrap_or(&rows[rows.len() - 1]);
             let z = (self.sides.zone[s] as usize) % self.n_zones().max(1);
-            if let Some(k) = self.spawn(COMBAT, End::Jump(z), End::Body(c as usize), Some(m)) { self.arm(k, s as u8 + 1); }
+            if let Some(k) = self.spawn(COMBAT, End::Jump(z), End::Body(c as usize), Some(m)) {
+                // dropped in close to the fight, not at the system's edge: its arrival starts side_drop short of the body
+                let drop = self.p(P::side_drop);
+                if drop > 0.0 && self.traffic.len[k] > drop {
+                    self.traffic.s[k] = self.traffic.len[k] - drop;
+                    self.arriving_step(k, 0.0);
+                    self.slot_reset(k, true);
+                }
+                self.arm(k, s as u8 + 1);
+            }
         }
     }
 
@@ -328,7 +390,7 @@ impl World {
         let (x, y) = (self.ships.x[k], self.ships.y[k]);
         // the fight is over the contested body: enemies within the leash of it
         let c = self.sides.contested[((side.max(1) - 1) as usize).min(MAX_SIDES - 1)];
-        let (cx, cy, leash) = if c >= 0 && (c as usize) < self.n_bodies { (self.bodies.x[c as usize], self.bodies.y[c as usize], self.p(P::ai_leash)) } else { (x, y, f64::MAX) };
+        let (cx, cy, leash) = if c >= 0 && (c as usize) < self.n_bodies { let j = c as usize; (self.bodies.x[j], self.bodies.y[j], self.bodies.r[j] + self.p(P::ai_leash)) } else { (x, y, f64::MAX) };
         let mut best: Option<(usize, f64)> = None;
         for j in 0..self.count {
             if j == k || !self.hostile(side, j) || !self.holds(k, j) { continue; }
@@ -380,7 +442,9 @@ impl World {
                 let c = self.sides.contested[((self.arms.side[k].max(1) - 1) as usize).min(MAX_SIDES - 1)];
                 if c < 0 || c as usize >= self.n_bodies { (0.0, 0.0) } else {
                     let j = c as usize;
-                    circle(self.bodies.x[j], self.bodies.y[j], self.bodies.vx[j], self.bodies.vy[j], self.bodies.r[j] * self.p(P::ai_orbit), cruise * 0.5)
+                    // ai_orbit radii out, but no more than half a leash above it (a planet's would be far outside the fight)
+                    let r = self.bodies.r[j];
+                    circle(self.bodies.x[j], self.bodies.y[j], self.bodies.vx[j], self.bodies.vy[j], (r * self.p(P::ai_orbit)).min(r + 0.5 * self.p(P::ai_leash)), cruise * 0.5)
                 }
             }
         };
@@ -479,7 +543,8 @@ impl World {
         true
     }
 
-    /// Every shell a tick on: does its path enter a ship's outline? Then it bursts there; else when its fuse runs out.
+    /// Every shell a tick on: does its path reach a ship's shield, or its outline with the shield down? Then it bursts
+    /// there; else when its fuse runs out.
     fn fly_shells(&mut self) {
         for n in 0..MAX_SHELLS {
             if self.shells.live[n] == 0 { continue; }
@@ -490,13 +555,15 @@ impl World {
             let (owner, side) = (self.resolve(self.shells.owner[n]), self.shells.side[n]);
             let seg = hypot(x1 - x0, y1 - y0);
             let mut hit: Option<(usize, f64)> = None;
-            for j in 0..self.count {
-                if self.ships.alive[j] == 0 || self.ships.rail[j] != 0 || Some(j) == owner || (side != 0 && self.arms.side[j] == side) { continue; }
-                let r = self.types.rad[self.look_kind(j)];
-                if r <= 0.0 || hypot(self.ships.x[j] - x1, self.ships.y[j] - y1) > r + seg { continue; }
+            // only the ships near its path this tick (grid.rs); the first it meets, the lower slot on a tie
+            self.grid.near(x0, y0, x1, y1, 0.0, |j| {
+                if self.ships.alive[j] == 0 || Some(j) == owner || (side != 0 && self.arms.side[j] == side) { return; }
+                let (r, s) = (self.types.rad[self.look_kind(j)], self.standoff(j));
+                if r <= 0.0 || hypot(self.ships.x[j] - x1, self.ships.y[j] - y1) > r + s + seg { return; }
                 let (poly, nv) = self.outline_of(j);
-                if let Some(t) = enter(&poly[..nv], self.to_local(j, x0, y0), self.to_local(j, x1, y1)) && hit.is_none_or(|h| t < h.1) { hit = Some((j, t)); }
-            }
+                if let Some(t) = enter_round(&poly[..nv], s, self.to_local(j, x0, y0), self.to_local(j, x1, y1))
+                    && hit.is_none_or(|h| t < h.1 || (t == h.1 && j < h.0)) { hit = Some((j, t)); }
+            });
             if let Some((j, t)) = hit {
                 self.shells.live[n] = 0;
                 self.burst(n, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, Some(j));
@@ -507,25 +574,32 @@ impl World {
         }
     }
 
-    /// Shell n bursts at (x, y), on ship `struck` if it hit one: every ship within the blast takes its share.
+    /// Shell n bursts at (x, y), on ship `struck` if it hit one: every ship within the blast takes its share, measured
+    /// to its shield's surface while that holds. A burst in the open that reaches a shield notes a splash on it.
     fn burst(&mut self, n: usize, x: f64, y: f64, struck: Option<usize>) {
         let g = self.gun(self.shells.gun[n]);
         let (blast, core, dmg) = (g.blast, g.core, g.dmg);
         let (owner, side) = (self.resolve(self.shells.owner[n]), self.shells.side[n]);
         let mut kind = B_AIR;
-        for j in 0..self.count {
-            if self.ships.alive[j] == 0 || self.ships.rail[j] != 0 || Some(j) == owner || (side != 0 && self.arms.side[j] == side) { continue; }
+        // the ships near enough (grid.rs), in slot order; gathered first, as damage changes the world
+        let mut near = std::mem::take(&mut self.grid.buf);
+        near.clear();
+        self.grid.near(x, y, x, y, blast, |j| near.push(j));
+        near.sort_unstable();
+        for &j in &near {
+            if self.ships.alive[j] == 0 || Some(j) == owner || (side != 0 && self.arms.side[j] == side) { continue; }
             let d = if Some(j) == struck { 0.0 } else {
-                let r = self.types.rad[self.look_kind(j)];
-                if r <= 0.0 || hypot(self.ships.x[j] - x, self.ships.y[j] - y) > r + blast { continue; }
+                let (r, s) = (self.types.rad[self.look_kind(j)], self.standoff(j));
+                if r <= 0.0 || hypot(self.ships.x[j] - x, self.ships.y[j] - y) > r + s + blast { continue; }
                 let (poly, nv) = self.outline_of(j);
-                distance(&poly[..nv], self.to_local(j, x, y))
+                (distance(&poly[..nv], self.to_local(j, x, y)) - s).max(0.0)
             };
             if d >= blast { continue; }
             let share = if d <= core { 1.0 } else { 1.0 - (d - core) / (blast - core).max(1e-6) };
             let k = self.damage(j, dmg * share, owner);
-            if Some(j) == struck { kind = k; }
+            if Some(j) == struck { kind = k; } else if k == B_SHIELD || k == B_SHRUG { self.note_burst(B_SPLASH, x, y, blast, Some(j)); }
         }
+        self.grid.buf = near;
         self.note_burst(kind, x, y, blast, struck);
     }
 
@@ -538,7 +612,7 @@ impl World {
     }
 
     /// `dmg` points of kinetic damage on ship j from `from`'s guns: shield, then hull (see the module comment).
-    /// Returns what it struck (B_SHIELD or B_HULL).
+    /// Returns what it struck (B_SHIELD, B_SHRUG for a hit no harder than the shield, or B_HULL).
     pub(crate) fn damage(&mut self, j: usize, dmg: f64, from: Option<usize>) -> u8 {
         let player = self.is_player(j);
         let (shield, st) = if player { (self.game.shield[0], self.game.shield_t[0]) } else { (self.arms.shield[j], self.arms.shield_t[j]) };
@@ -546,7 +620,7 @@ impl World {
         let mut struck = B_HULL;
         if shield > 0.0 {
             struck = B_SHIELD;
-            if dmg <= self.hardness(j) { shield -= dmg * self.p(P::hard_frac); }
+            if dmg <= self.hardness(j) { shield -= dmg * self.p(P::hard_frac); struck = B_SHRUG; }
             else { let b = self.p(P::bleed_kin); shield -= dmg * (1.0 - b); hull = dmg * b; }
             if shield <= 0.0 { (shield, st) = (0.0, self.p(P::shield_restart)); } else { st = st.max(self.p(P::shield_pause)); }
         } else { hull = dmg; st = st.max(self.p(P::shield_pause)); }
@@ -657,11 +731,25 @@ mod tests {
     }
 
     #[test]
+    fn shells_meet_the_shield_standoff_out() {
+        let sq = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)];
+        // head on: the grown edge, 0.5 out
+        let t = enter_round(&sq, 0.5, (-5.0, 0.0), (5.0, 0.0)).unwrap();
+        assert!((t - 0.35).abs() < 1e-9, "{t}");
+        // past a corner: its arc, not the square's diagonal
+        let t = enter_round(&sq, 0.5, (-5.0, 1.3), (5.0, 1.3)).unwrap();
+        assert!((-5.0 + 10.0 * t - (-1.0 - (0.25f64 - 0.09).sqrt())).abs() < 1e-9, "{t}");
+        assert_eq!(enter_round(&sq, 0.5, (-5.0, 1.6), (5.0, 1.6)), None, "misses wide");
+        assert_eq!(enter_round(&sq, 0.5, (1.2, 0.0), (5.0, 0.0)), Some(0.0), "starts inside the shield");
+        assert_eq!(enter_round(&sq, 0.0, (-5.0, 0.0), (5.0, 0.0)), enter(&sq, (-5.0, 0.0), (5.0, 0.0)), "no shield: the outline");
+    }
+
+    #[test]
     fn hardness_shrugs_off_light_hits_on_big_hulls() {
         let mut w = world();
         let a = ship(&mut w, 0.0, 0.0, 1);
-        w.types.len[0] = 160.0; // a capital hull: hardness 2.56
-        w.damage(a, 1.0, None);
+        w.types.len[0] = 320.0; // a capital hull: hardness 17.2
+        assert_eq!(w.damage(a, 1.0, None), B_SHRUG);
         assert!((w.arms.shield[a] - (40.0 - 0.1)).abs() < 1e-9 && w.ships.hull[a] == 60.0, "a tenth, nothing through: {}", w.arms.shield[a]);
     }
 

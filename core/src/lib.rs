@@ -16,6 +16,7 @@ pub mod combat;
 pub mod ffi;
 pub mod fit;
 pub mod flight;
+pub mod grid;
 pub mod jump;
 pub mod market;
 pub mod math;

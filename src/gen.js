@@ -471,6 +471,13 @@ function footprint(ship, maxV) {
   return { outline: hull, mounts };
 }
 
+// How far a ship's shield stands out from its hull, metres: the shield shader's edge, and where shells meet it (the
+// core's types.standoff)
+function shieldStandoff(ship, brand) {
+  const sh = brand.style.shield;
+  return (ship.noShield ? 0.002 : ((sh && sh.standoff) ?? 0.035)) * ship.L;
+}
+
 // ---------- bake ----------
 function prof(p, t) {
   if (t <= 0) return 0;
@@ -509,7 +516,7 @@ function bake(ship, brand, size) {
     }
   }
   const ccx = (ex0 + ex1) / 2, ccy = (ey0 + ey1) / 2;
-  const shieldS = (ship.noShield ? 0.002 : ((st.shield && st.shield.standoff) ?? 0.035)) * L, Dmax = shieldS * 2.2;
+  const shieldS = shieldStandoff(ship, brand), Dmax = shieldS * 2.2;
   const extent = Math.max(ex1 - ex0, ey1 - ey0) * 1.08 + k * 2 + shieldS * 2.8;
   const px = extent / res;
   // recenter parts so the ship sits at texture center
@@ -1234,6 +1241,6 @@ function describe(ship) {
   };
 }
 
-const api = { generate, generateStation, assemble, assembleStation, bake, footprint, describe, hexRGB, resolveCatalog, brandOf };
+const api = { generate, generateStation, assemble, assembleStation, bake, footprint, shieldStandoff, describe, hexRGB, resolveCatalog, brandOf };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ShipGen = api;
 })(typeof self !== 'undefined' ? self : this);

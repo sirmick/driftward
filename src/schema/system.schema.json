@@ -533,6 +533,11 @@
       "type": "string",
       "default": ""
     },
+    "startShip": {
+      "description": "The ship a new game here starts in, as faction.line:class (a lab's: a fast one to watch from); empty for the usual used hauler. A ?ship= in the page's address still wins.",
+      "type": "string",
+      "default": ""
+    },
     "bodies": {
       "type": "array",
       "description": "Planets, moons and stations; the stars are not among them. At most 7.",
@@ -1309,10 +1314,10 @@
                 "default": 0
               },
               "count": {
-                "description": "Ships the side keeps in flight.",
+                "description": "Ships the side keeps in the fight.",
                 "type": "integer",
                 "minimum": 0,
-                "maximum": 24
+                "maximum": 200
               },
               "classes": {
                 "description": "Weights by size class, as traffic's.",

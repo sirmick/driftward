@@ -19,7 +19,9 @@ const KEY_ACTIONS = [
   { id: 'retro', group: 'Flight controls', ctx: 'held', label: 'All stop (assist) / face backward', keys: ['KeyX'] },
   { id: 'fire', group: 'Flight controls', ctx: 'held', label: 'Fire', keys: ['Space'] },
   // flight
-  { id: 'mode', group: 'Flight', ctx: 'space', label: 'Next flight mode', keys: ['Tab', 'KeyF'] },
+  { id: 'mode', group: 'Flight', ctx: 'space', label: 'Next flight mode', keys: ['KeyF'] },
+  { id: 'screenNext', group: 'Targets', ctx: 'flight', label: 'Next ship on screen', keys: ['Tab'] },
+  { id: 'screenPrev', group: 'Targets', ctx: 'flight', label: 'Previous ship on screen', keys: ['Shift+Tab'] },
   { id: 'targetNext', group: 'Targets', ctx: 'flight', label: 'Next identified ship', keys: ['KeyT'] },
   { id: 'targetPrev', group: 'Targets', ctx: 'flight', label: 'Previous identified ship', keys: ['Shift+KeyT'] },
   { id: 'unknownNext', group: 'Targets', ctx: 'flight', label: 'Next unknown contact', keys: ['KeyY'] },
@@ -88,8 +90,14 @@ function makeKeys() {
     }
     return out;
   }
-  let binds = (() => { try { return clean((JSON.parse(localStorage.getItem(KEY_STORE) || 'null') || {}).bindings, []); } catch (e) { return defaults(); } })();
-  const save = () => localStorage.setItem(KEY_STORE, JSON.stringify({ format: KEY_FORMAT, version: 1, bindings: binds }));
+  // version 2 moved Tab from the flight mode to the ships on screen: an older map loses Tab from the mode
+  function migrate(raw) {
+    const b = raw && raw.bindings;
+    if (b && (raw.version || 1) < 2 && Array.isArray(b.mode)) b.mode = b.mode.filter(k => k !== 'Tab');
+    return b;
+  }
+  let binds = (() => { try { return clean(migrate(JSON.parse(localStorage.getItem(KEY_STORE) || 'null')), []); } catch (e) { return defaults(); } })();
+  const save = () => localStorage.setItem(KEY_STORE, JSON.stringify({ format: KEY_FORMAT, version: 2, bindings: binds }));
 
   // contexts that can both be live at once (a binding shared between them is a conflict)
   const LIVE = { held: ['held', 'flight', 'space', 'any'], flight: ['held', 'flight', 'space', 'any'], space: ['held', 'flight', 'space', 'any'], port: ['port', 'any'], any: ['held', 'flight', 'space', 'port', 'any'] };
@@ -116,13 +124,13 @@ function makeKeys() {
   // export: the whole map, as a file the browser downloads; import: a file the player picks
   function exportFile() {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ format: KEY_FORMAT, version: 1, bindings: binds }, null, 2)], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ format: KEY_FORMAT, version: 2, bindings: binds }, null, 2)], { type: 'application/json' }));
     a.download = 'driftward-keys.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
   function importText(text) {
     let raw; try { raw = JSON.parse(text); } catch (e) { return { ok: false, notes: ['not JSON'] }; }
     if (!raw || raw.format !== KEY_FORMAT || typeof raw.bindings !== 'object') return { ok: false, notes: [`not a ${KEY_FORMAT} file`] };
-    const notes = []; binds = clean(raw.bindings, notes); save();
+    const notes = []; binds = clean(migrate(raw), notes); save();
     return { ok: true, notes };
   }
 

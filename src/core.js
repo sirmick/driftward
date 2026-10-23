@@ -33,6 +33,8 @@ const CORE_READY = (async () => {
       // into fitView (names in fitStats); roomFor(g) is the most tons of commodity g that still fit aboard
       fit: groups.fit, draft: groups.draft, goods: groups.goods, fitView: groups.fit.view, playerKind: M.playerKind, fitSlots: M.fitSlots, fitStats: M.fitStats,
       fitStock: () => X.dw_fit_stock(w), viewFit: which => X.dw_view_fit(w, which), roomFor: g => X.dw_room_for(w, g),
+      // catalog type k's stock fit into stockFit (slots as fitSlots) and its stats into fitView (the debug screen)
+      viewStock: k => X.dw_view_stock(w, k), stockFit: groups.fit.stock,
       // mission boards (body * maxOffers + slot) and the player's missions (core/src/mission.rs)
       offer: groups.offer, mission: groups.mission, maxOffers: M.maxOffers, maxMissions: M.maxMissions,
       postBoards: () => X.dw_post_boards(w), // fresh boards at every port, for a new game
@@ -120,7 +122,7 @@ const CORE_READY = (async () => {
     const views = () => Object.assign(o, {
       ship: groups.ship, type: groups.type, body: groups.body, env: groups.env, game: groups.game, hold: groups.hold, market: groups.market,
       offer: groups.offer, mission: groups.mission, traffic: groups.traffic, route: groups.route, mix: groups.mix, lane: groups.lane, jlane: groups.jlane,
-      gate: groups.gate, orbitOut: groups.orbit.out, fit: groups.fit, draft: groups.draft, goods: groups.goods, fitView: groups.fit.view,
+      gate: groups.gate, orbitOut: groups.orbit.out, fit: groups.fit, draft: groups.draft, goods: groups.goods, fitView: groups.fit.view, stockFit: groups.fit.stock,
       mount: groups.mount, outline: groups.outline, arms: groups.arms, turret: groups.turret, shell: groups.shell, burst: groups.burst, battle: groups.battle, side: groups.side });
     views();
     o.rebind = () => { if (mem.buffer !== buffer) { bind(); views(); } };
@@ -138,7 +140,7 @@ const CORE_READY = (async () => {
   // combat.rs: a lab fighter's role (6) and AI phases; its side's mix rows (5); bursts' kinds
   const TRAFFIC = { launch: 1, cruise: 2, land: 3, torch: 4, arriving: 5, streams: ['local', 'arrive', 'depart', 'loiter', 'environ', 'combat'], mix: { local: 1, through: 2, loiter: 3, env: 4, side: 5 }, zones: ['north', 'east', 'south', 'west'],
     combat: 6, ai: { loiter: 10, engage: 11, flee: 12 } };
-  const BURST = { air: 1, shield: 2, hull: 3, lost: 4 };
+  const BURST = { air: 1, shield: 2, hull: 3, lost: 4, shrug: 5, splash: 6 };
   const MODE = { flying: 0, descending: 1, landed: 2, launching: 3, dead: 4 };
   const RESULT = { 0: 'ok', 1: 'not over a port', 2: 'too fast', 3: 'not now', 4: 'unknown command', 5: 'not enough credits', 6: 'no room in the hold', 7: 'not traded here', 8: 'not that much aboard', 9: 'bad amount', 10: 'no such offer or mission', 11: 'carrying too many missions', 12: 'no such body', 13: 'not offered here', 14: 'nothing to do',
     15: 'not in a jump zone', 16: 'not lined up with the zone', 17: 'too slow to jump', 18: 'not enough fuel', 19: 'no chart of that system', 20: 'missed',

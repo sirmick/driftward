@@ -1,6 +1,6 @@
 # Ship roster
 
-How each faction's lines name their hulls. Every line names its five size classes (the Book's Ships chapter: class I 18 m, II 34 m, III 60 m, IV 100 m, V 160 m) from one **series**, smallest to largest, so a name tells you the size. Class names come first; individual ship names come later. Places these names depend on are tracked in [names.md](names.md).
+How each faction's lines name their hulls. Every line names its five size classes (the Book's Ships chapter: class I 14 m, II 30 m, III 66 m, IV 145 m, V 320 m) from one **series**, smallest to largest, so a name tells you the size. Class names come first; individual ship names come later. Places these names depend on are tracked in [names.md](names.md).
 
 Status: **agreed**, or **open** with the options on the table.
 

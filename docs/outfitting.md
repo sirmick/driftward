@@ -18,11 +18,11 @@ Frame mass goes with length squared (a hull is a shell), so hull points per tonn
 
 | Class | Union hulls | Frame | Bay (pressurised / unpressurised) | Plumes (default hull) | Torch cap, all plumes | Armour cap |
 | :-- | :-- | --: | :-- | --: | --: | --: |
-| I, 18 m | Tinhaul, Tinclad | 45 t | 43 t (23 / 20) | 2 | 12 t (Haul) | 76 t |
-| II, 34 m | Copperhaul, Copperclad | 170 t | 91 t (39 / 52) | 4 | 20 t (Haul) | 214 t |
-| III, 60 m | Brasshaul, Brassclad | 520 t | 237 t (88 / 149) | 3 | 31 t (Haul) | 529 t |
-| IV, 100 m | Ironhaul, Ironclad | 1,450 t | 566 t (184 / 382) | 6 | 42 t (Haul) | 1,386 t |
-| V, 160 m | Steelhaul, Steelclad | 3,700 t | 1,346 t (402 / 944) | 8 | 48 t (Haul) | 3,528 t |
+| I, 14 m | Tinhaul, Tinclad | 45 t | 43 t (23 / 20) | 2 | 12 t (Haul) | 76 t |
+| II, 30 m | Copperhaul, Copperclad | 170 t | 91 t (39 / 52) | 4 | 20 t (Haul) | 214 t |
+| III, 66 m | Brasshaul, Brassclad | 520 t | 237 t (88 / 149) | 3 | 31 t (Haul) | 529 t |
+| IV, 145 m | Ironhaul, Ironclad | 1,450 t | 566 t (184 / 382) | 6 | 42 t (Haul) | 1,386 t |
+| V, 320 m | Steelhaul, Steelclad | 3,700 t | 1,346 t (402 / 944) | 8 | 48 t (Haul) | 3,528 t |
 
 - **Plumes** are the nozzles on the generated hull: its core engines and one on each nacelle (the default seeds' here; the page counts each hull's own from its part list, so a hull picked in the debug screen's Ships tab has its own count).
 - **Torch cap:** a limit per hull type, on all its plumes together, however they are split: `torch_room` (1.4) times its stock fit's torches. The Copperhaul's is 20 t (10 + 10 on two plumes, or 5 + 5 + 5 + 5 on four). A line that carries more than its class's frame holds has bigger bays (`frame` multipliers on the line: the container lines, the Bloom's warships).
@@ -131,4 +131,5 @@ Edits are a draft, priced (purchases less resale, about 60%) and timed (days by 
 - **Power, heat and shields** each tick as above, with the brownout by priority; the HUD's SHIELD and CHG bars are live (DOWN or COLD while a shield restarts, LOW in a brownout). Running cold drops the shield.
 - **Cargo by hold class**: food and medicine only in a climate hold (the market and the board say so); climate deliveries pay `climate_pay` (2.5) times over, and food and medicine are dearer (60 and 300 cr base).
 - **The outfitter**: a port service (Kettle Yard, Calder Station, Quire Foundry and Thresh Dock have one), key O. Rows with steppers by group, the bay's two sides as bars, the hull's silhouette with its plumes and corners marked where they are, the budget with changes, warnings, and Refit, Reset and Stock. Every change is a logged command, so replays follow refits.
+- **The debug screen's Outfitting tab** (backquote): the ship's fit slot by slot, what it makes, its power, heat and shield now, every catalog hull's stock fit against its catalog stats, and the ratings and prices (the core params).
 - **Not yet**: weapons and their sites; the zones drawn on the hull (the bay is bars for now); per-corner jets (the four move together); the soft mass limit; traffic's own fits (traffic flies its catalog stats); crew wages; buying a hull.

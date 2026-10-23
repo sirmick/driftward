@@ -5,6 +5,8 @@
 //            out, the art bible and the parts every image prompt shares); one card per port with its body, its
 //            lore and its art, each image showing only its own part of the prompt; then the raw files.
 //   Player   the live state: ship and its stats, flight, money, the hold priced at every port, missions.
+//   Outfitting  the ship's fit slot by slot, what it makes, power, heat and shield now; every hull's stock fit
+//            against its catalog stats; the components' ratings and prices.
 //   Traffic  the traffic mix (local, through, loiter) against what is flying now, by stream and by row.
 //   Ships    every faction line's hulls in every class, drawn behind the tab by the shipyard (src/play/shipyard.js)
 //            with plumes and shields: click a hull for a new seed, shift-click for the one before.
@@ -171,6 +173,57 @@ function makeDebug(ctx) {
       }).join('') + '</tbody></table>');
     add('missions', 'Missions', d.missions.length ? `<table class="dbg-grid"><thead><tr><th>Slot</th><th>Deliver to</th><th>Cargo</th><th class="n">Pay</th><th class="n">Due</th></tr></thead><tbody>${d.missions.map(m => `<tr><td>${m.k}</td><td>${e(m.dest)}</td><td>${m.tons} t ${e(m.good)}</td><td class="n">${fmt(m.pay)}</td><td class="n${m.left <= 1 ? ' high' : ''}">day ${m.due} (${m.left <= 0 ? 'today' : `${m.left} left`})</td></tr>`).join('')}</tbody></table>` : '<p class="dbg-note">No active missions.</p>');
     add('session', 'Session', kv([['day', d.day], ['tick', `${d.tick} <small>(${(d.tick / 60 / 60).toFixed(1)} min of game time)</small>`], ['state hash', `<code>${d.hash}</code>`], ['seed', d.seed]]));
+    return sections(S);
+  }
+
+  // ---------- Outfitting: live, rebuilt each time the tab shows (core/src/fit.rs; docs/outfitting.md) ----------
+  let fitSrc = null;
+  function fitTab() {
+    const d = fitSrc && fitSrc();
+    if (!d) return '<p class="dbg-note">No fitted ship yet: start a game.</p>';
+    const S = [], add = (id, title, body) => S.push({ id, title, body });
+    const n0 = x => Math.round(x).toLocaleString('en-US'), n1 = x => (Math.round(x * 10) / 10).toLocaleString('en-US');
+    const v = d.v, L = d.live, pct = (a, b) => b > 0 ? `${Math.round(100 * a / b)}%` : '–';
+    const RES = { 23: "jump drive too small", 24: 'too few bunks', 25: 'over the bay', 26: "past the hull's limits", 27: "cargo wouldn't fit" };
+    add('fit-ship', 'Your ship', kv([['hull', `<b>${e(d.name)}</b> <small><code>${e(d.line)}</code> · type ${d.base}, flying as the core's last row</small>`],
+      ['fit worth', `${n0(v.value)} cr`],
+      ['mass', `${n1(v.mass)} t now <small>· ${n1(v.massEmpty)} t empty, ${n1(v.massFull)} t full hold (full tank)</small>`],
+      ['thrust', `${n1(v.thrust)} MN on ${v.plumes} plumes <small>(they take ${v.torchCap} t of torch in all)</small>`],
+      ['acceleration', `${n1(v.accel)} m/s² empty <small>· ${n1(v.accelFull)} full</small>`], ['turn', `${v.turn.toFixed(2)} rad/s <small>(${n0(v.turn * 180 / Math.PI)}°/s)</small>`], ['top speed', `${n0(v.vmax)} m/s <small>(the hull's)</small>`],
+      ['bay', `pressurised ${n1(v.pUsed)} of ${n1(v.pSpace)} t · unpressurised ${n1(v.uUsed)} of ${n1(v.uSpace)} t <small>(the bulkhead moves ±${v.bulkMax} t)</small>`],
+      ['hull', `${n0(L.hull)} of ${n0(v.hull)} points <small>(armour up to ${v.armourCap} t)</small>`], ['crew', `${v.crew} bunks, ${v.crewMin} needed`],
+      ['jump drive', `jumps ${n0(v.jump)} t <small>(${n0(v.massFull)} t laden)</small>`]]));
+    const brown = L.drive < 0.999;
+    add('fit-live', 'Power, heat and shield now', kv([
+      ['reactor', `${n1(v.mw)} MW <small>· drawing ${n1(L.mw)} MW now</small>`],
+      ['draws', `life ${n1(v.mwLife)} · drive ${n1(v.mwDrive)} at full · shields +${n1(v.mwRegen)} regenerating · burner +${n1(v.mwBurn)} <small>(MW)</small>`],
+      ['helm and drive', brown ? `<span class="warn">browning out: ${pct(L.drive, 1)} of their power met</span>` : 'fully powered'],
+      ['battery', `${n1(L.energy)} of ${n1(v.battery)} MJ <small>(${pct(L.energy, v.battery)})</small>`],
+      ['heat', `${pct(L.heat, 1)} of ${n0(v.heatCap)} MJ${L.hot ? ' <span class="warn">burner locked</span>' : ''} <small>· sheds ${n1(v.shed)} MW at full heat · the burner locks after ${v.burnSecs < 0 ? 'never' : n0(v.burnSecs) + ' s'} from cold</small>`],
+      ['shield', L.shieldT > 0 ? `<span class="warn">${L.cold ? 'dropped to run cold' : 'collapsed'}: restarting in ${n1(L.shieldT)} s</span>` : `${n1(L.shield)} of ${n1(v.shield)} points <small>· ${n1(v.regen)} a second${v.regen > 0 ? `, full in ${n0(v.shield / v.regen)} s` : ''}</small>`],
+      ['fuel', `${n1(L.fuel)} of ${n1(v.fuel)} t`]]));
+    let grp = '';
+    add('fit-slots', 'The fit', `<table class="dbg-grid"><thead><tr><th>Component</th><th>Where</th><th class="n">Fitted</th><th class="n">Worth</th></tr></thead><tbody>${d.slots.map(r => {
+      const head = r.grp !== grp ? `<tr><th colspan="4">${e(grp = r.grp)}</th></tr>` : '';
+      return head + `<tr><td>${e(r.name)}</td><td>${e(r.side === 'P' ? 'pressurised' : r.side === 'U' ? 'unpressurised' : r.side)}</td><td class="n${r.t ? '' : ' none'}">${r.side === '±' && r.t > 0 ? '+' : ''}${n1(r.t)}${r.unit === '' ? '' : ' t'}</td><td class="n">${r.price ? n0(r.price) + ' cr' : ''}</td></tr>`;
+    }).join('')}</tbody></table>`);
+    add('fit-holds', 'Holds', `<table class="dbg-grid"><thead><tr><th>Class</th><th class="n">Aboard</th><th>Goes in</th></tr></thead><tbody>`
+      + `<tr><td>bulk</td><td class="n">${d.byClass[0]} t</td><td>any hold</td></tr><tr><td>general</td><td class="n">${d.byClass[1]} t</td><td>racks or the climate hold</td></tr><tr><td>climate</td><td class="n">${d.byClass[2]} t</td><td>the climate hold only</td></tr></tbody></table>`
+      + `<p class="dbg-note">Hoppers ${n1(v.hopper)} t, container racks ${n1(v.rack)} t, climate hold ${n1(v.climate)} t: ${n1(v.cargo)} t aboard.</p>`);
+    const ratio = (a, b) => { const r = b > 0 ? a / b : 0; return `<td class="n${Math.abs(r - 1) > 0.15 ? ' high' : ''}">${r.toFixed(2)}</td>`; };
+    const plumes = f => Array.from({ length: 8 }, (_, q) => f['plume' + q]).filter(x => x > 0).join('+');
+    add('fit-stock', 'Stock fits, every hull', `<p class="dbg-note">Each catalog hull's stock fit, generated by the core from its catalog stats (<code>stock_fit</code>): what a new game in it starts with. Acceleration and turn against the catalog's (amber more than 15% off); P and U are the bay's pressurised and unpressurised tonnes used of those there. Empty hold, full tank.</p>`
+      + `<div class="dbg-scroll"><table class="dbg-grid"><thead><tr><th>Hull</th><th>Line</th><th>Plumes (t)</th><th class="n">Cap</th><th class="n">Jets</th><th class="n">Reactor</th><th class="n">Batt</th><th class="n">Defl</th><th class="n">Banks</th><th class="n">Fins</th><th class="n">Armour</th><th class="n">Bunks</th><th class="n">Jump</th><th class="n">Tank</th><th class="n">Hold</th><th class="n">Bulk</th><th class="n">P</th><th class="n">U</th><th class="n">Mass</th><th class="n">Accel</th><th class="n">×cat</th><th class="n">×turn</th><th class="n">Worth</th></tr></thead><tbody>`
+      + d.stock.map(r => { const f = r.f, w = r.v;
+        return `<tr${r.mine ? ' class="here"' : ''}><td><b>${e(r.name)}</b> <small>${e(r.cls)}</small></td><td><code>${e(r.line)}</code></td><td>${plumes(f)}</td><td class="n">${w.torchCap}</td><td class="n">4×${f.corner0}</td>`
+          + `<td class="n">${f.furnace}</td><td class="n">${f.battery}</td><td class="n">${f.deflector}</td><td class="n">${f.banks}</td><td class="n">${f.fins}</td><td class="n">${f.armour || ''}</td><td class="n">${f.bunks}</td><td class="n">${f.jump}</td><td class="n">${f.tank}</td>`
+          + `<td class="n">${f.hopper + f.rack}</td><td class="n">${f.bulkhead ? '+' + f.bulkhead : ''}</td><td class="n${w.pUsed > w.pSpace ? ' high' : ''}">${n0(w.pUsed)}/${n0(w.pSpace)}</td><td class="n${w.uUsed > w.uSpace ? ' high' : ''}">${n0(w.uUsed)}/${n0(w.uSpace)}</td>`
+          + `<td class="n">${n0(w.massEmpty)}</td><td class="n">${n1(w.accel)}</td>${ratio(w.accel, r.catAccel)}${ratio(w.turn, r.catTurn)}<td class="n">${n0(w.value)}${w.problem ? ` <span class="warn">${e(RES[w.problem] || w.problem)}</span>` : ''}</td></tr>`; }).join('')
+      + '</tbody></table></div>');
+    const rate = d.params.filter(p => !p.n.startsWith('price_')), price = d.params.filter(p => p.n.startsWith('price_'));
+    const ptable = list => `<table class="dbg-grid"><tbody>${list.map(p => `<tr><td><code>${e(p.n)}</code></td><td class="n">${p.v}</td></tr>`).join('')}</tbody></table>`;
+    add('fit-params', 'Ratings and prices', `<p class="dbg-note">Core params (<code>core/src/world.rs</code>, where each is described): tune live with <code>__play.sim.param(name, value)</code>.</p>`
+      + `<div class="dbg-cols"><div><p class="dbg-sub">Ratings</p>${ptable(rate)}</div><div><p class="dbg-sub">Prices</p>${ptable(price)}</div></div>`);
     return sections(S);
   }
 
@@ -468,7 +521,7 @@ function makeDebug(ctx) {
     return starMap;
   }
 
-  const TABS = [{ id: 'content', name: 'Content', render: content, mount: mountLinks, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }, { id: 'regions', name: 'Regions', render: regionsTab, mount: mountRegions, fixed: true }, { id: 'planets', name: 'Planets', render: planetsTab, mount: mountPlanets, fixed: true }, { id: 'map', name: 'Map', render: mapTab, mount: mountMap, clear: true }];
+  const TABS = [{ id: 'content', name: 'Content', render: content, mount: mountLinks, fixed: true }, { id: 'player', name: 'Player', render: player }, { id: 'outfit', name: 'Outfitting', render: fitTab }, { id: 'traffic', name: 'Traffic', render: trafficTab }, { id: 'ships', name: 'Ships', render: ships, mount: mountShips, clear: true }, { id: 'suns', name: 'Suns', render: sunsTab, mount: mountSuns, clear: true }, { id: 'regions', name: 'Regions', render: regionsTab, mount: mountRegions, fixed: true }, { id: 'planets', name: 'Planets', render: planetsTab, mount: mountPlanets, fixed: true }, { id: 'map', name: 'Map', render: mapTab, mount: mountMap, clear: true }];
   let tab = TABS[0].id;
   const cache = new Map();
   function show(id) {
@@ -551,6 +604,7 @@ function makeDebug(ctx) {
     close,
     setJump(j) { jump = j; }, // { places(), systems(), current(), start(), go(system id, j), prepare(), side(s) }, bound once the core has loaded
     setLive(fn) { live = fn; }, // the Player tab's source, bound once the core has loaded
+    setFit(fn) { fitSrc = fn; }, // the Outfitting tab's source, likewise
     setYard(y) { yard = y; },
     yardView,
     setSuns(g) { gallery = g; }, // the Suns tab's gallery (src/play/suns.js), bound once the game's GL is up

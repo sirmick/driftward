@@ -50,7 +50,11 @@ function brandRender(b) {
       plCol: lin(hexRGB(pl.color || b.style.palette.engine)), plCore: lin(hexRGB(pl.core || '#ffffff')),
       plBurn: lin(hexRGB(pl.burn || '#c27bff')), // the burner's tint: a deliberate break from the cruise colour
       plLen: pl.len ?? 4, plWid: pl.width ?? 1, plTurb: pl.turb ?? 0, plDia: pl.diamonds ?? 0, plSput: pl.sputter ?? 0, plPulse: pl.pulse ?? 0, plSpread: pl.spread ?? 0.3,
-      shCol: lin(hexRGB(sh.color || b.style.palette.emissive)), shPat: PATTERNS[sh.pattern] != null ? PATTERNS[sh.pattern] : 0, shStr: sh.strength == null ? 1 : sh.strength
+      shCol: lin(hexRGB(sh.color || b.style.palette.emissive)), shPat: PATTERNS[sh.pattern] != null ? PATTERNS[sh.pattern] : 0, shStr: sh.strength == null ? 1 : sh.strength,
+      // a wreck's debris: the paint's colours (the accent twice), lifted so dark hulls still show as added light
+      debris: [b.style.palette.accent, b.style.palette.accent, ...(b.style.palette.hull || []), b.style.palette.trim].filter(Boolean).map(h => {
+        const c = lin(hexRGB(h)), m = Math.max(...c, 1e-3); return c.map(v => v * Math.max(1, 0.55 / m));
+      })
     };
     brandCache.set(b, c);
   }

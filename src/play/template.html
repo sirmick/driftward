@@ -280,6 +280,8 @@ body.vista-framed.has-vista #port { inset: auto; left: var(--vista-x); top: var(
 .dbg-summary { margin: 0 0 12px; padding-left: 18px; max-width: 1100px; color: #c4ccd6; font-size: 13px; }
 .dbg-summary li { margin: 0 0 4px; }
 .dbg-grid th.here, .dbg-grid td.here { background: rgba(226,184,102,.08); }
+.dbg-grid tr.here td { background: rgba(226,184,102,.08); }
+.dbg-scroll { overflow-x: auto; } /* a table wider than the pane scrolls on its own */ /* the Outfitting tab's stock fits: the hull you fly */
 .dbg-grid td.best { outline: 1px solid var(--amber); outline-offset: -2px; }
 /* the Ships tab: see-through, so the hulls the game's canvas draws behind it show; the rest of the page hides */
 body.dbg-clear > :not(#debug):not(#view) { visibility: hidden; }
@@ -549,7 +551,7 @@ body.dbg-clear .dbg-head { background: rgba(7,9,12,.94); }
 </section>
 <div class="strip">
   <h1>Driftward</h1>
-  <span class="keys" hidden>W S throttle · X stop · Shift burn · Tab mode · L land · J jump · G autopilot · T ships · R places · C cold · V ping · M maps · I nav</span>
+  <span class="keys" hidden>W S throttle · X stop · Shift burn · F mode · L land · J jump · G autopilot · Tab ships · R places · C cold · V ping · M maps · I nav</span>
   <span class="spacer"></span>
   <button type="button" id="b-menu" title="P">Menu</button>
   <button type="button" id="b-nav" title="I" aria-pressed="false">Nav</button>

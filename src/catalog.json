@@ -4,8 +4,8 @@
   {
    "id": "c1",
    "name": "Class I",
-   "length": 18,
-   "res": 192,
+   "length": 14,
+   "res": 160,
    "frame": {
     "mass": 45,
     "bayP": 23,
@@ -29,8 +29,8 @@
   {
    "id": "c2",
    "name": "Class II",
-   "length": 34,
-   "res": 256,
+   "length": 30,
+   "res": 240,
    "frame": {
     "mass": 170,
     "bayP": 39,
@@ -54,8 +54,8 @@
   {
    "id": "c3",
    "name": "Class III",
-   "length": 60,
-   "res": 352,
+   "length": 66,
+   "res": 384,
    "frame": {
     "mass": 520,
     "bayP": 88,
@@ -79,8 +79,8 @@
   {
    "id": "c4",
    "name": "Class IV",
-   "length": 100,
-   "res": 480,
+   "length": 145,
+   "res": 640,
    "frame": {
     "mass": 1450,
     "bayP": 184,
@@ -104,8 +104,8 @@
   {
    "id": "c5",
    "name": "Class V",
-   "length": 160,
-   "res": 640,
+   "length": 320,
+   "res": 1024,
    "frame": {
     "mass": 3700,
     "bayP": 402,
@@ -197,7 +197,7 @@
      "spread": 0.1
     },
     "shield": {
-     "color": "#86b0ff",
+     "color": "#3f86ff",
      "pattern": "grid",
      "standoff": 0.035,
      "strength": 1.1
@@ -776,7 +776,7 @@
      "spread": 0.06
     },
     "shield": {
-     "color": "#55e6ff",
+     "color": "#ff3fb4",
      "pattern": "hex",
      "standoff": 0.03,
      "strength": 1.0
@@ -1224,7 +1224,7 @@
        "core": "#ffffff"
       },
       "shield": {
-       "color": "#e6f6ff"
+       "color": "#ff5cc8"
       },
       "detail": {
        "panelDark": 0.08,
@@ -1340,7 +1340,7 @@
        "core": "#ffffff"
       },
       "shield": {
-       "color": "#e6f6ff"
+       "color": "#ff5cc8"
       },
       "detail": {
        "panelDark": 0.08,
@@ -1457,7 +1457,7 @@
      "spread": 0.12
     },
     "shield": {
-     "color": "#ffaa4d",
+     "color": "#38d4ff",
      "pattern": "ragged",
      "standoff": 0.03,
      "strength": 0.8
@@ -2106,6 +2106,9 @@
        "panelDark": 0.85,
        "stripes": 0.9,
        "patches": 0.7
+      },
+      "shield": {
+       "color": "#9a5cff"
       }
      }
     },
@@ -2244,7 +2247,7 @@
      "spread": 0.12
     },
     "shield": {
-     "color": "#4ff0bb",
+     "color": "#ff5a3c",
      "pattern": "flow",
      "standoff": 0.04,
      "strength": 1.0
@@ -2690,7 +2693,7 @@
        "color": "#a8f56a"
       },
       "shield": {
-       "color": "#9ff07a"
+       "color": "#ff7a4a"
       }
      },
      "loadout": {

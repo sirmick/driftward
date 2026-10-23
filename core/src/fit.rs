@@ -515,12 +515,32 @@ impl World {
     pub fn view_fit(&mut self, which: u32) {
         if !self.fitted() { self.fitview.fill(0.0); return; }
         let f = if which == 1 { self.draft.t.clone() } else { self.fit.t.clone() };
-        let (k, t) = (self.base(), &self.types);
         let c = self.cargo_by_class();
         let aboard = c[0] + c[1] + c[2];
-        let s0 = self.stats(k, &f, 0.0, f[F_TANK] * self.p(P::tank_fuel));
-        let now = self.stats(k, &f, aboard, self.game.fuel[0].min(s0.fuel));
-        let full = self.stats(k, &f, s0.hopper + s0.rack + s0.climate, s0.fuel);
+        let (cost, problem) = (self.refit_cost(&self.fit.t, &f), self.fit_problem(&f) as f64);
+        let v = self.view_of(self.base(), &f, aboard, self.game.fuel[0], cost, problem);
+        self.fitview.copy_from_slice(&v);
+    }
+
+    /// Catalog type `k`'s stock fit into `fitstock` and its stats into `fitview` (the debug screen's table of every
+    /// hull): problem NO_BAY_ROOM if it overflows the bay, OVER_LIMIT if its bulkhead moves too far; empty hold, full tank.
+    pub fn view_stock(&mut self, k: usize) {
+        if k >= self.cfg.max_types { return; }
+        let f = self.stock_fit(k);
+        let s = self.stats(k, &f, 0.0, 0.0);
+        let problem = if f[F_BULKHEAD].abs() > self.p(P::bulkhead_max) * (self.types.bay_p[k] + self.types.bay_u[k]) + 1e-9 { OVER_LIMIT }
+            else if s.p_used > s.p_space + 1e-9 || s.u_used > s.u_space + 1e-9 { NO_BAY_ROOM } else { OK };
+        let v = self.view_of(k, &f, 0.0, s.fuel, 0.0, problem as f64);
+        self.fitview.copy_from_slice(&v);
+        self.fitstock.copy_from_slice(&f);
+    }
+
+    /// The view's numbers for fit `f` on type `k`'s frame, with `aboard` tonnes of cargo and `fuel` in the tank now.
+    fn view_of(&self, k: usize, f: &[f64], aboard: f64, fuel: f64, cost: f64, problem: f64) -> [f64; N_STATS] {
+        let t = &self.types;
+        let s0 = self.stats(k, f, 0.0, f[F_TANK] * self.p(P::tank_fuel));
+        let now = self.stats(k, f, aboard, fuel.min(s0.fuel));
+        let full = self.stats(k, f, s0.hopper + s0.rack + s0.climate, s0.fuel);
         let p = |q: P| self.p(q);
         let q = p(P::furnace_waste) * s0.mw + (p(P::torch_heat) + p(P::burn_heat)) * s0.thrust;
         let burn_secs = if s0.shed <= 0.0 { if q > 0.0 { s0.heat_cap / q } else { -1.0 } } else if q <= s0.shed { -1.0 } else { s0.heat_cap / s0.shed * (q / (q - s0.shed)).ln() };
@@ -537,8 +557,8 @@ impl World {
         v[S_HOPPER] = s0.hopper; v[S_RACK] = s0.rack; v[S_CLIMATE] = s0.climate;
         v[S_HEAT_CAP] = s0.heat_cap; v[S_SHED] = s0.shed; v[S_BURN_SECS] = burn_secs; v[S_JUMP] = s0.jump;
         v[S_CREW] = f[F_BUNKS]; v[S_CREW_MIN] = t.crew[k] as f64; v[S_PLUMES] = t.plumes[k] as f64; v[S_TORCH_CAP] = self.torch_cap(k);
-        v[S_VALUE] = self.fit_value(&f); v[S_COST] = self.refit_cost(&self.fit.t, &f);
-        v[S_PROBLEM] = self.fit_problem(&f) as f64; v[S_ROOM] = aboard;
+        v[S_VALUE] = self.fit_value(f); v[S_COST] = cost;
+        v[S_PROBLEM] = problem; v[S_ROOM] = aboard;
         let sites = self.site_counts(k);
         (v[S_SITES], v[S_SITES_M], v[S_SITES_L]) = (sites[0] as f64, sites[1] as f64, sites[2] as f64);
         let guns = [(f[F_MC], crate::combat::G_LIGHT), (f[F_MM], crate::combat::G_MEDIUM), (f[F_ML], crate::combat::G_HEAVY)];
@@ -546,7 +566,7 @@ impl World {
         v[S_FIRE_SECS] = if use_t > 0.0 { f[F_MAG] / use_t } else { 0.0 };
         v[S_RANGE] = guns.iter().filter(|g| g.0 > 0.0).map(|&(_, z)| self.gun(z).reach()).fold(0.0, f64::max);
         v[S_GUNS_OK] = self.place_guns(k, f[F_MC] as usize, f[F_MM] as usize, f[F_ML] as usize).is_some() as u8 as f64;
-        self.fitview.copy_from_slice(&v);
+        v
     }
 }
 
@@ -779,6 +799,8 @@ mod tests {
         draft(&mut w, F_BANKS, 5.0);
         w.view_fit(1);
         assert_eq!((w.fitview[S_SHIELD], w.fitview[S_COST]), (150.0, 700.0));
+        w.view_stock(0);
+        assert_eq!((w.fitstock[F_PLUME], w.fitstock[F_PLUME + 1], w.fitview[S_SHIELD], w.fitview[S_PROBLEM]), (7.0, 7.0, 90.0, 0.0), "type 0's stock fit, unfitted");
     }
 
     #[test]

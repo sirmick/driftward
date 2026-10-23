@@ -8,7 +8,7 @@ A turreted autocannon firing a torrent of exploding shells. A shell bursts on co
 
 | Size | Shell | Rate | Punch (per shell) | Fuse range | Mass | Status |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| **S** | **30 mm** | **10 /s** | **1×** | **~900 m** | **2 t** | **built** |
+| **S** | **30 mm** | **10 /s** | **1×** | **720 m** | **2 t** | **built** |
 | **M** | **57 mm** | **3 /s** | **6×** | **1,425 m** | **8 t** | **built** |
 | **L** | **120 mm** | **0.8 /s** | **35×** | **2,250 m** | **30 t** | **built** |
 | XL | ~200 mm | ~0.25 /s | ~150× | ~3,000 m | ~90 t | later |
@@ -22,7 +22,7 @@ Punch goes about with the calibre cubed and the rate falls steeply, so the big g
 | Site | S turret (any turret site takes it) |
 | Traverse | 360°, 4 rad/s; leads its target |
 | Rate | 10 shells a second, a spread of 2.6°; each shell's speed and fuse 6% off either way |
-| Shell | 1,200 m/s plus the ship's velocity; fuse 0.75 s (900 m); a burst of 12 m radius |
+| Shell | 1,200 m/s plus the ship's velocity; fuse 0.6 s (720 m); a burst of 12 m radius |
 | Damage | 1 point a shell, full inside 4 m, falling to nothing at the burst's edge |
 | Energy and heat | 0.02 MJ and 0.05 MJ a shell (0.2 MW and 0.5 MW firing) |
 | Ammunition | 400 rounds a tonne of magazine (40 s of fire); the munitions commodity |
@@ -51,11 +51,11 @@ Every ship is armed; the lightest carry a single light multicannon. The counts b
 
 | Class | Civilian | Military |
 | :-- | :-- | :-- |
-| I (18 m) | 1 S | 2 S |
-| II (34 m) | 2 S | 4 S |
-| III (60 m) | 2 S | 4 S + 2 M |
-| IV (100 m) | 4 S | 4 S + 2 L |
-| V (160 m) | 4 S + 2 M | 6 S + 2 L + 2 M |
+| I (14 m) | 1 S | 2 S |
+| II (30 m) | 2 S | 4 S |
+| III (66 m) | 2 S | 4 S + 2 M |
+| IV (145 m) | 4 S | 4 S + 2 L |
+| V (320 m) | 4 S + 2 M | 6 S + 2 L + 2 M |
 
 - **Turrets** (S, M, L, XL) traverse. A site takes a gun of its size or smaller. S turrets go in flank pairs and at the ends, for the widest point-defence cover; M and L on the centreline, where the hull is deep.
 - **Ventral mounts** are fixed (no gimbal): missile racks, mass drivers, spinal rails. They fire along the hull's axis. Not built yet; the site type exists so hulls can carry them.
@@ -98,7 +98,7 @@ Two systems that are not in the Calder March: dead stars from the galaxy, each a
 
 ## As built (2026-10-23)
 
-- **Test worlds.** `src/systems/flarelab.json` (GJ 3822, a white giant, `flares` 4: one about every 25 s; a planet and moon to hide behind) and `src/systems/combatlab.json` (Gl 179: Prize Station, set between its two lanes' jump zones; the Union's Clads arrive by one, the Freeflag's raiders by the other). The debug screen's header has a Labs row: Start, Flares, Combat, and the side the player is on (none, 1, 2).
+- **Test worlds.** `src/systems/flarelab.json` (GJ 3822, a white giant, `flares` 4: one about every 25 s; a planet and moon to hide behind) and `src/systems/combatlab.json` (Gl 179: Prize, set between its two lanes' jump zones; the Union's Clads arrive by one, the Freeflag's raiders by the other). The debug screen's header has a Labs row: Start, Flares, Combat, and the side the player is on (none, 1, 2).
 - **Sites.** `gen.js` lays out the light sites the table gives (scrap hulls keep both of a pair now), and `footprint()` hands the core each hull's convex outline (up to 12 vertices, in the baked sprite's frame) and its sites. Only light sites exist yet.
 - **The fit.** Two slots, `mc` (guns, one a light site) and `magazine` (tonnes); stock fits fill every site and carry a tonne of rounds a gun. The outfitter's Weapons group sells both; its budget shows guns, rounds, seconds of fire and reach. Landing restocks the magazine free for now (munitions come with the economy).
 - **The core** (`core/src/combat.rs`): per-ship arms (side, shield, target, rounds, guns) and turrets; a 1,024-shell pool; hits by segment against the outline; blast damage with hardness and bleed-through; the AI; the lab's sides (kept in the atlas per system). Everyone's shield but the player's is here (regenerating in `shield_refill`); the player's stays the fit's. Every ship is armed, but only lab fighters and the player fire.
@@ -107,6 +107,13 @@ Two systems that are not in the Calder March: dead stars from the galaxy, each a
 - **Looks.** Tracers for shells, the lab's shield-hit shader on shields struck (the newest two hits a ship), a hull glowing and sparks on hull hits, a fireball and debris for a ship lost, and brief lights on the hulls round a burst. Turret barrels are still the bake's (they don't turn yet).
 - **Determinism.** The scenario `npm run check` runs natively and in WASM now has fighters on two sides firing at each other; the hashes agree. The snapshot is version 24.
 - **Medium and heavy guns (2026-10-23).** Sites by size (`gen.js` draws the turret bigger the bigger the site; the catalog's loadouts take `weaponM` and `weaponL`); the guns are one table in the core (`Gun`, by size), placed biggest first on the biggest sites (`place_guns`), with the magazine in tonnes. The fit has `mm` and `ml` slots; the outfitter sells all three, and its budget shows the sites, seconds of fire and reach. Fighters circle at `ai_range` of their longest gun's reach. Tracers grow longer and brighter with the calibre. The combat lab's sides now fly class III and IV ships (Brassclads with two medium guns, Ironclads with two heavy) beside the light ones.
+- **Tuning (2026-10-23).** `shield_hard` 3 (was 1): a 60 m class III shield's hardness is 1.08, so light shells only scratch shields from class III up (a tenth, nothing through), while class I and II shields still take them in full; medium shells (6) are shrugged off only by class V (160 m: 7.7). The light gun's fuse is 0.6 s (720 m), the shortest reach of the line. Tracers are coloured by calibre: yellow light, orange medium, red heavy. Tab cycles the ships on screen (Shift+Tab back); the flight mode is F alone.
+- **Shields as surfaces (2026-10-23).** While a shield holds, shells meet it at its surface, `types.standoff` out from the outline (the shield shader's edge: the brand's `shield.standoff` times the hull's length, `shieldStandoff` in gen.js), and a blast is measured to that surface; with the shield down they reach the outline. Bursts say what happened: on a shield (a ripple in its colour, a cold flash, sparks skating off along the surface, no fire), shrugged off (`B_SHRUG`, a hit no harder than the shield: a faint flicker), a splash (`B_SPLASH`, a burst nearby that reached a shield: a fainter ripple), or on the hull (fire, debris, embers left on the plating, the hull glowing). Snapshot version 25.
+- **A fight that never stops (2026-10-23).** The combat lab keeps 10 ships a side in the fight; those fleeing don't count, so others come in their place. A new one comes every `side_gap` (2 s) out of a jump `side_drop` (3.5 km) short of Prize along its route, not at the system's edge 30 to 60 km out. A new game there starts in a Prism military class I, the fastest hull, to watch from (the system file's `startShip`; `?ship=` still wins).
+- **Classes scaled up (2026-10-23).** The class lengths are 14 / 30 / 66 / 145 / 320 m (were 18 / 34 / 60 / 100 / 160), about 2.2 times a step, and the bakes' resolution rose with them. Shield hardness now goes with length to the 1.5 (was squared), which keeps the tuning above at the new lengths: class II 0.49, III 1.6, IV 5.2, V 17.2; light shells shrugged off from class III up, medium ones by class V.
+- **A grid for hits (2026-10-23; core/src/grid.rs).** Each tick the ships that can be hit go into a spatial hash of 250 m cells (a counting sort into flat arrays, no allocation); a shell tests only the ships whose cells its path, grown by the farthest any shield reaches, touches, and a burst only those within its blast. Same hits in the same order as testing every ship (the check's hashes didn't move), at a handful of ships a shell instead of all of them. Scratch only: outside the snapshot.
+- **Big fights (2026-10-23).** The page's world holds 512 ships (was 128), the core 8,192 shells in flight and 1,024 bursts remembered (were 1,024 and 128; snapshot version 26). A lab's fighters don't count toward ambient traffic's `traffic_cap` (90), and a side keeps up to 200 (was 24). The combat lab keeps 60 a side, one arriving every `side_gap` (0.5 s) a side.
+- **A battle over a planet (2026-10-23).** The combat lab's prize is a gas giant now, Prize (2.8 km, a port in its cloud tops), not a station. `ai_leash` counts from the contested body's surface, and loitering fighters circle at `ai_orbit` radii but no more than half a leash above it, so over a planet they swing round just off its limb instead of 8 km out.
 - **Not yet:** the XL guns; ventral mounts; point defence (no missiles); turrets that turn on screen; hull blocking turret arcs; munitions bought; ion, arc and heat damage, resistances, system damage, field repair, disable; distress calls and patrols; traffic fighting back; bounty missions.
 
 ## Build order

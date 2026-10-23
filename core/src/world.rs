@@ -75,11 +75,12 @@ soa! {
     /// fit's sensors (t) and shield (points). The last row is the player's fitted ship, written by the core from the
     /// fit (fit.rs `player_kind`).
     /// Its geometry (combat.rs), content too: its light turret sites (`guns`; the sites in `mounts`), its outline's
-    /// vertex count (the vertices in `outline`) and the radius that holds it.
+    /// vertex count (the vertices in `outline`), the radius that holds it, and how far out its shield stands from the
+    /// hull, metres (the shield shader's edge, src/gen.js shieldStandoff).
     pub struct Types {
         accel: f64, turn: f64, vmax: f64, well: f64, cargo: u32, hull: f64, fuel: f64, len: f64,
         frame: f64, bay_p: f64, bay_u: f64, plumes: u8, structure: f64, crew: u8, sensors: f64, shield: f64,
-        guns: u8, outline: u8, rad: f64,
+        guns: u8, outline: u8, rad: f64, standoff: f64,
     }
 }
 
@@ -374,7 +375,7 @@ params! {
     // weapons (combat.rs; docs/weapons.md): the light multicannon, damage, shields in combat, the combat AI
     mc_rate = 10.0;       "light multicannon: shells a second, each gun"
     mc_speed = 1200.0;    "light multicannon: muzzle speed, m/s (a shell keeps its ship's velocity too)"
-    mc_fuse = 0.75;       "light multicannon: the longest fuse, seconds (its reach: speed x fuse)"
+    mc_fuse = 0.6;        "light multicannon: the longest fuse, seconds (its reach: speed x fuse)"
     mc_spread = 0.045;    "light multicannon: the most a shell strays from the barrel, radians (triangular)"
     mc_jitter = 0.06;     "every multicannon: a shell's muzzle speed and fuse each vary by up to this share, either way"
     mm_rate = 3.0;        "medium multicannon (57 mm): shells a second"
@@ -413,7 +414,7 @@ params! {
     mc_t = 2.0;           "a light multicannon's tonnes (unpressurised)"
     price_mc = 3000.0;    "credits a light multicannon"
     price_magazine = 150.0; "credits a tonne: magazine (rounds included)"
-    shield_hard = 1.0;    "shield hardness on a 100 m hull (going with length squared): a hit no harder does only hard_frac"
+    shield_hard = 3.0;    "shield hardness on a 100 m hull (going with length to the 1.5): a hit no harder does only hard_frac"
     hard_frac = 0.1;      "share of a hit at or under the shield's hardness that the shield takes"
     bleed_kin = 0.1;      "share of a kinetic hit that reaches the hull while the shield holds"
     shield_pause = 1.0;   "seconds a hit stops a shield regenerating"
@@ -422,9 +423,10 @@ params! {
     ai_think = 0.5;       "seconds between a fighter's looks round"
     ai_range = 0.7;       "a fighter closes to this share of its guns' reach, then circles"
     ai_cruise = 0.8;      "a fighter flies at this share of its top speed"
-    ai_orbit = 3.0;       "with no enemy in sight, fighters circle the contested body at this many radii"
-    ai_leash = 4000.0;    "fighters take on only enemies within this many metres of the contested body (the player anywhere it shoots them)"
-    side_gap = 4.0;       "seconds between a lab side's arrivals"
+    ai_orbit = 3.0;       "with no enemy in sight, fighters circle the contested body at this many radii (at most half of ai_leash above it)"
+    ai_leash = 4000.0;    "fighters take on only enemies within this many metres of the contested body's surface (the player anywhere it shoots them)"
+    side_gap = 0.5;       "seconds between a lab side's arrivals"
+    side_drop = 3500.0;   "a lab side's ships come out of their jump this many metres short of the contested body, along their route (0: at their zone)"
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -461,8 +463,9 @@ pub struct World {
     pub sides: Sides,
     pub atlas_sides: AtlasSides,
     pub goods: Goods,
-    /// the outfitter's view of a fit (fit.rs `view_fit`): its stats, for the page; not state
+    /// the outfitter's view of a fit (fit.rs `view_fit`, `view_stock`): its stats, and a stock fit, for the page; not state
     pub fitview: Vec<f64>,
+    pub fitstock: Vec<f64>,
     pub market: Market,
     pub offers: Offers,
     pub missions: Missions,
@@ -495,6 +498,8 @@ pub struct World {
     pub atlas_row: Vec<u8>,
     /// orbiting debris and traffic: looks only, outside the snapshot and the hash (orbit.rs)
     pub orbit: Orbit,
+    /// the ships by where they are, for shells' hits: scratch, rebuilt each tick, outside the snapshot (grid.rs)
+    pub(crate) grid: crate::grid::Grid,
     manifest: String,
 }
 
@@ -521,6 +526,7 @@ impl World {
             atlas_sides: AtlasSides::with_capacity(ATLAS_SIDES),
             goods: Goods::with_capacity(MAX_GOODS),
             fitview: vec![0.0; N_STATS],
+            fitstock: vec![0.0; MAX_FIT],
             market: Market::with_capacity(cfg.max_bodies * MAX_GOODS),
             offers: Offers::with_capacity(cfg.max_bodies * MAX_OFFERS),
             missions: Missions::with_capacity(MAX_MISSIONS),
@@ -546,6 +552,7 @@ impl World {
             snap: Vec::new(),
             atlas_row: Vec::new(),
             orbit: Orbit::new(),
+            grid: crate::grid::Grid::new(cfg.max_ships),
             manifest: String::new(),
         });
         w.cols = w.columns();
@@ -605,7 +612,7 @@ impl World {
 
     fn build_manifest(&self) -> String {
         // the snapshot buffer and the orbiters' output are exposed too, but are not state
-        let mut extra = vec![ColumnDesc::of("world", "snapshot", &self.snap), ColumnDesc::of("fit", "view", &self.fitview)];
+        let mut extra = vec![ColumnDesc::of("world", "snapshot", &self.snap), ColumnDesc::of("fit", "view", &self.fitview), ColumnDesc::of("fit", "stock", &self.fitstock)];
         self.orbit.describe(&mut extra);
         let cols: Vec<String> = self.cols.iter().chain(extra.iter()).map(|c| format!(
             r#"{{"group":"{}","name":"{}","kind":"{}","ptr":{},"len":{}}}"#, c.group, c.name, c.kind, c.ptr, c.len
