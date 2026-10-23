@@ -16,9 +16,11 @@
 //! target's signature, seen from the missile, makes a contact (the sensors' model times `ms_seek`); lost, the missile
 //! flies on straight.
 //!
-//! It bursts when its path comes within `ms_prox` of a hostile ship's shield (or hull, the shield down), its warhead
-//! doing `ms_dmg` through `ms_blast` metres (full inside `ms_core`) by the shells' rules (combat.rs `blast`). Shells hit
-//! it as a circle of `ms_rad` metres, and a burst's blast reaches it too; `ms_hp` points of damage destroy it.
+//! It bursts when its path comes within `ms_prox` of its target's shield (or hull, the shield down), passing through
+//! every other ship; one that has lost its target flies on until its life runs out. Its warhead does `ms_dmg` through
+//! `ms_blast` metres (full inside `ms_core`) by the shells' rules (combat.rs `blast`), so ships close by the target take
+//! some too. Shells hit it as a circle of `ms_rad` metres, and a burst's blast reaches it too; `ms_hp` points of damage
+//! destroy it.
 //!
 //! Waves: every `ms_wave` seconds (give or take `ms_wave_jit`) a lab side picks the most valuable enemy its ships are
 //! fighting (the longest hull), and every ship of the side with missiles, its bays loaded and that target within
@@ -202,18 +204,18 @@ impl World {
             ms.vy[n] += ay * DT;
             let (x1, y1) = (x0 + ms.vx[n] * DT, y0 + ms.vy[n] * DT);
             (ms.prev_x[n], ms.prev_y[n], ms.x[n], ms.y[n]) = (x0, y0, x1, y1);
-            // the proximity fuse: the first hostile ship whose shield (grown by ms_prox) its path meets
-            let (owner, side) = (self.resolve(self.missiles.owner[n]), self.missiles.side[n]);
-            let seg = hypot(x1 - x0, y1 - y0);
+            // the proximity fuse: its target alone (it passes through every other ship), when its path, seen from the
+            // target as it moved this tick, comes within ms_prox of the target's shield (its hull, the shield down)
             let mut hit: Option<(usize, f64)> = None;
-            self.grid.near(x0, y0, x1, y1, prox, |j| {
-                if self.ships.alive[j] == 0 || Some(j) == owner || (side != 0 && self.arms.side[j] == side) { return; }
+            if let Some(j) = tgt && self.ships.alive[j] != 0 {
                 let (r, s) = (self.types.rad[self.look_kind(j)], self.standoff(j) + prox);
-                if r <= 0.0 || hypot(self.ships.x[j] - x1, self.ships.y[j] - y1) > r + s + seg { return; }
-                let (poly, nv) = self.outline_of(j);
-                if let Some(t) = crate::combat::enter_round(&poly[..nv], s, self.to_local(j, x0, y0), self.to_local(j, x1, y1))
-                    && hit.is_none_or(|h| t < h.1 || (t == h.1 && j < h.0)) { hit = Some((j, t)); }
-            });
+                let (dx, dy) = (self.ships.x[j] - self.ships.prev_x[j], self.ships.y[j] - self.ships.prev_y[j]);
+                let seg = hypot(x1 - x0 - dx, y1 - y0 - dy);
+                if r > 0.0 && hypot(self.ships.x[j] - x1, self.ships.y[j] - y1) <= r + s + seg {
+                    let (poly, nv) = self.outline_of(j);
+                    hit = crate::combat::enter_round(&poly[..nv], s, self.to_local(j, x0 + dx, y0 + dy), self.to_local(j, x1, y1)).map(|t| (j, t));
+                }
+            }
             if let Some((j, t)) = hit { self.detonate(n, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, Some(j)); }
             else if self.missiles.t[n] <= 0.0 { self.detonate(n, x1, y1, None); }
         }
@@ -343,6 +345,21 @@ mod tests {
         // each through the shield (25 over a hardness of 5.2): a tenth to the hull (the shield has regenerated since)
         assert!(w.ships.hull[b] < 400.0 - 4.0, "and struck: {}", w.ships.hull[b]);
         assert!((0..crate::combat::MAX_BURSTS).filter(|&q| w.bursts.kind[q] == crate::combat::B_SHIELD && w.bursts.ship[q] as usize == b + 1).count() == 2, "both on its shield");
+    }
+
+    #[test]
+    fn missiles_pass_through_ships_that_are_not_their_target() {
+        let mut w = world();
+        let a = ship(&mut w, 0, 0.0, -4000.0, 1);
+        let c = ship(&mut w, 1, 0.0, -2000.0, 2); // squarely in the way, its guns silent
+        let b = ship(&mut w, 1, 0.0, 0.0, 2);
+        for k in [a, b, c] { w.traffic.role[k] = 0; w.ships.ctl[k] = 0; }
+        for k in [b, c] { for m in 0..MAX_MOUNTS { w.turrets.gun[k * MAX_MOUNTS + m] = 0; } w.arms.guns[k] = 0; }
+        w.volley(a, b);
+        run(&mut w, 15.0);
+        assert!((0..crate::combat::MAX_BURSTS).all(|q| w.bursts.kind[q] == 0 || w.bursts.ship[q] as usize != c + 1), "nothing burst on the ship in the way");
+        assert_eq!(w.ships.hull[c], 400.0);
+        assert!(w.ships.hull[b] < 400.0, "the target was struck: {}", w.ships.hull[b]);
     }
 
     #[test]
