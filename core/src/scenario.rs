@@ -108,7 +108,7 @@ mod tests {
     fn the_fighters_fight() {
         let mut w = super::build(7);
         for t in 0..1800 { if t % 30 == 0 { super::decide(&mut w); } w.step(); }
-        let fired = (0..w.count).filter(|&i| w.arms.guns[i] > 0 && w.arms.ammo[i] < 800.0).count();
+        let fired = (0..w.count).filter(|&i| w.arms.guns[i] > 0 && w.arms.ammo[i] < 2.0).count();
         assert!(fired >= 4, "fighters fired: {fired}");
     }
 }

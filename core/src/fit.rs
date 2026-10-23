@@ -65,14 +65,17 @@ pub const F_PLUME: usize = 16;
 pub const MAX_PLUMES: usize = 8;
 pub const F_CORNER: usize = 24;
 pub const CORNERS: usize = 4;
-/// Weapons (combat.rs): light multicannons, a count (one a light turret site), and the magazine, tonnes.
+/// Weapons (combat.rs): light, medium and heavy multicannons, counts (a gun a turret site of its size or bigger), and
+/// the magazine, tonnes (every calibre's rounds).
 pub const F_MC: usize = 28;
 pub const F_MAG: usize = 29;
+pub const F_MM: usize = 30;
+pub const F_ML: usize = 31;
 pub const MAX_FIT: usize = 32;
 /// The slots' names, for the manifest (the page's outfitter keys its rows by them); "" unused.
 pub const SLOT_NAMES: [&str; MAX_FIT] = ["furnace", "battery", "deflector", "banks", "fins", "sinks", "armour", "jump", "sensors", "bunks", "tank",
     "hopper", "rack", "climate", "bulkhead", "", "plume0", "plume1", "plume2", "plume3", "plume4", "plume5", "plume6", "plume7",
-    "corner0", "corner1", "corner2", "corner3", "mc", "magazine", "", ""];
+    "corner0", "corner1", "corner2", "corner3", "mc", "magazine", "mm", "ml"];
 
 /// Hold classes (`goods.class`).
 pub const CLASS_BULK: u8 = 0;
@@ -140,12 +143,15 @@ pub const S_COST: usize = 36; // the refit to the draft, credits (negative: mone
 pub const S_PROBLEM: usize = 37; // why the draft can't be fitted (a result code; 0 it can)
 pub const S_ROOM: usize = 38; // tonnes of cargo aboard now, all holds
 pub const S_SITES: usize = 39; // light turret sites
-pub const S_ROUNDS: usize = 40; // rounds the magazine holds
-pub const S_RANGE: usize = 41; // the light guns' reach, metres
-pub const N_STATS: usize = 42;
+pub const S_FIRE_SECS: usize = 40; // seconds of fire the magazine holds, every gun firing
+pub const S_RANGE: usize = 41; // the biggest gun's reach, metres
+pub const S_SITES_M: usize = 42; // medium turret sites
+pub const S_SITES_L: usize = 43; // heavy turret sites
+pub const S_GUNS_OK: usize = 44; // 1 if the guns all go on the sites
+pub const N_STATS: usize = 45;
 pub const STAT_NAMES: [&str; N_STATS] = ["mass", "massEmpty", "massFull", "thrust", "accel", "accelFull", "turn", "vmax", "pUsed", "pSpace", "uUsed", "uSpace",
     "bulkMax", "mw", "mwLife", "mwDrive", "mwRegen", "mwBurn", "battery", "shield", "regen", "hull", "armourCap", "fuel", "hopper", "rack", "climate",
-    "heatCap", "shed", "burnSecs", "jump", "crew", "crewMin", "plumes", "torchCap", "value", "cost", "problem", "cargo", "sites", "rounds", "range"];
+    "heatCap", "shed", "burnSecs", "jump", "crew", "crewMin", "plumes", "torchCap", "value", "cost", "problem", "cargo", "sites", "fireSecs", "range", "sitesM", "sitesL", "gunsOk"];
 
 /// A fit's numbers, for a load of cargo and fuel (see `stats`).
 #[derive(Clone, Copy, Debug, Default)]
@@ -174,7 +180,7 @@ impl World {
             F_FINS => P::price_fin, F_SINKS => P::price_sink, F_ARMOUR => P::price_armour, F_JUMP => P::price_jump, F_SENSORS => P::price_sensor,
             F_BUNKS => P::price_bunk, F_TANK => P::price_tank, F_HOPPER => P::price_hopper, F_RACK => P::price_rack, F_CLIMATE => P::price_climate,
             F_BULKHEAD => P::price_bulkhead,
-            F_MC => P::price_mc, F_MAG => P::price_magazine,
+            F_MC => P::price_mc, F_MM => P::price_mm, F_ML => P::price_ml, F_MAG => P::price_magazine,
             k if (F_CORNER..F_CORNER + CORNERS).contains(&k) => P::price_jet,
             _ => return 0.0,
         })
@@ -208,7 +214,7 @@ impl World {
         let jets: f64 = (F_CORNER..F_CORNER + CORNERS).map(|s| f[s]).sum();
         let bulk = f[F_BULKHEAD];
         let p_used = f[F_BUNKS] * p(P::bunk_t) + f[F_SENSORS] + f[F_FURNACE] + f[F_JUMP] + f[F_BATTERY] + f[F_BANKS] + f[F_CLIMATE];
-        let guns = f[F_MC] * p(P::mc_t) + f[F_MAG];
+        let guns = f[F_MC] * p(P::mc_t) + f[F_MM] * p(P::mm_t) + f[F_ML] * p(P::ml_t) + f[F_MAG];
         let u_used = f[F_HOPPER] + f[F_RACK] + f[F_TANK] + f[F_DEFLECTOR] + f[F_FINS] + f[F_SINKS] + guns;
         let dry = t.frame[k] + torches + jets + f[F_FURNACE] + f[F_BATTERY] + f[F_DEFLECTOR] + f[F_BANKS] + f[F_FINS] + f[F_SINKS] + f[F_ARMOUR]
             + f[F_JUMP] + f[F_SENSORS] + f[F_BUNKS] * p(P::bunk_t) + f[F_TANK] * (1.0 - p(P::tank_fuel))
@@ -252,9 +258,10 @@ impl World {
         f[F_TANK] = up(t.fuel[k] / p(P::tank_fuel), 1.0);
         f[F_BUNKS] = t.crew[k] as f64 + 1.0;
         f[F_SENSORS] = t.sensors[k];
-        // a light multicannon on every light site, and a tonne of rounds for each (combat.rs)
-        f[F_MC] = t.guns[k] as f64;
-        f[F_MAG] = t.guns[k] as f64;
+        // a multicannon of its size on every site, and the stock magazine for them (combat.rs)
+        let sites = self.site_counts(k);
+        (f[F_MC], f[F_MM], f[F_ML]) = (sites[0] as f64, sites[1] as f64, sites[2] as f64);
+        f[F_MAG] = (0..3).map(|z| sites[z] as f64 * crate::combat::STOCK_MAG[z]).sum();
         let n = (t.plumes[k] as usize).clamp(1, MAX_PLUMES);
         for _ in 0..16 {
             let s = self.stats(k, &f, 0.0, f[F_TANK] * p(P::tank_fuel));
@@ -437,7 +444,7 @@ impl World {
         if (n..MAX_PLUMES).any(|q| f[F_PLUME + q] > 0.0) { return OVER_LIMIT; }
         if (F_PLUME..F_PLUME + n).map(|s| f[s]).sum::<f64>() > self.torch_cap(k) + 1e-9 { return OVER_LIMIT; }
         if f[F_ARMOUR] * self.p(P::armour_pts) > t.structure[k] + 1e-9 { return OVER_LIMIT; }
-        if f[F_MC] > t.guns[k] as f64 { return OVER_LIMIT; }
+        if self.place_guns(k, f[F_MC] as usize, f[F_MM] as usize, f[F_ML] as usize).is_none() { return OVER_LIMIT; }
         if f[F_BULKHEAD].abs() > self.p(P::bulkhead_max) * (t.bay_p[k] + t.bay_u[k]) + 1e-9 { return OVER_LIMIT; }
         let s = self.stats(k, f, 0.0, 0.0);
         if s.p_used > s.p_space + 1e-9 || s.u_used > s.u_space + 1e-9 { return NO_BAY_ROOM; }
@@ -532,7 +539,13 @@ impl World {
         v[S_CREW] = f[F_BUNKS]; v[S_CREW_MIN] = t.crew[k] as f64; v[S_PLUMES] = t.plumes[k] as f64; v[S_TORCH_CAP] = self.torch_cap(k);
         v[S_VALUE] = self.fit_value(&f); v[S_COST] = self.refit_cost(&self.fit.t, &f);
         v[S_PROBLEM] = self.fit_problem(&f) as f64; v[S_ROOM] = aboard;
-        v[S_SITES] = t.guns[k] as f64; v[S_ROUNDS] = f[F_MAG] * p(P::mc_rounds); v[S_RANGE] = self.gun_range();
+        let sites = self.site_counts(k);
+        (v[S_SITES], v[S_SITES_M], v[S_SITES_L]) = (sites[0] as f64, sites[1] as f64, sites[2] as f64);
+        let guns = [(f[F_MC], crate::combat::G_LIGHT), (f[F_MM], crate::combat::G_MEDIUM), (f[F_ML], crate::combat::G_HEAVY)];
+        let use_t: f64 = guns.iter().map(|&(n, z)| { let g = self.gun(z); n * g.rate / g.rounds.max(1e-6) }).sum(); // tonnes a second, all firing
+        v[S_FIRE_SECS] = if use_t > 0.0 { f[F_MAG] / use_t } else { 0.0 };
+        v[S_RANGE] = guns.iter().filter(|g| g.0 > 0.0).map(|&(_, z)| self.gun(z).reach()).fold(0.0, f64::max);
+        v[S_GUNS_OK] = self.place_guns(k, f[F_MC] as usize, f[F_MM] as usize, f[F_ML] as usize).is_some() as u8 as f64;
         self.fitview.copy_from_slice(&v);
     }
 }

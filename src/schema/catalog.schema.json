@@ -791,6 +791,46 @@
               }
             }
           ]
+        },
+        "weaponM": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ],
+          "description": "Medium turret sites (docs/weapons.md), on the centreline."
+        },
+        "weaponL": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            }
+          ],
+          "description": "Heavy turret sites, on the centreline."
         }
       },
       "description": "How many of each role a hull of this class gets (a mirrored pair counts once; cargo: columns a side)."

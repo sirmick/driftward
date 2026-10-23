@@ -411,7 +411,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   types.forEach((T, k) => { sim.type.accel[k] = T.accel; sim.type.turn[k] = T.turn; sim.type.vmax[k] = T.vmax; sim.type.well[k] = T.well; sim.type.cargo[k] = T.cargo; sim.type.hull[k] = T.hull; sim.type.fuel[k] = T.fuel; sim.type.len[k] = T.L; });
   // The frames (core/src/fit.rs): each type's class frame, structure and stock shield, and its plumes, the nozzles its
   // generated hull has (assembled here, without the bake: the part list alone, from the seed it is baked from). And
-  // its geometry (core/src/combat.rs; src/gen.js footprint): the outline shells hit and its light turret sites.
+  // its geometry (core/src/combat.rs; src/gen.js footprint): the outline shells hit and its turret sites, by size.
   const PK = sim.playerKind, FIT = Object.fromEntries(sim.fitSlots.map((n, k) => [n, k]).filter(([n]) => n));
   types.forEach((T, k) => {
     const F = T.frame, t = sim.type, B = catalog.brands[T.bi], Z = catalog.sizes[T.zi];
@@ -420,7 +420,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     t.frame[k] = F.mass; t.bay_p[k] = F.bayP; t.bay_u[k] = F.bayU; t.crew[k] = F.crew; t.sensors[k] = F.sensors;
     t.plumes[k] = T.plumes; t.structure[k] = T.structure; t.shield[k] = T.shield;
     const fp = ShipGen.footprint(ship, sim.maxOutline), MO = sim.maxOutline, MM = sim.maxMounts;
-    T.mounts = fp.mounts.filter(m => m[2] === 1).slice(0, MM);
+    T.mounts = fp.mounts.slice(0, MM);
     fp.outline.forEach(([x, y], v) => { sim.outline.x[k * MO + v] = x; sim.outline.y[k * MO + v] = y; });
     T.mounts.forEach(([x, y, z], m) => { sim.mount.x[k * MM + m] = x; sim.mount.y[k * MM + m] = y; sim.mount.size[k * MM + m] = z; });
     t.outline[k] = fp.outline.length; t.guns[k] = T.mounts.length; t.rad[k] = Math.max(...fp.outline.map(([x, y]) => Math.hypot(x, y)));
@@ -1347,10 +1347,12 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // a row: its slot (or the four corners together), its side of the bulkhead (P, U, or outside the bay), its step and
   // what a step gives, and its price a step
   const OUTFIT_GROUPS = [
-    // weapons (core/src/combat.rs): a light multicannon on a light turret site; its rounds
+    // weapons (core/src/combat.rs): the multicannons, a gun a turret site its size or bigger; the magazine they share
     ['Weapons', [
-      { id: 'mc', name: 'Light multicannon', side: 'U', step: 1, unit: '', give: () => `30 mm, ${fmt1(prm('mc_rate'))}/s, ${kmNum(prm('mc_speed') * prm('mc_fuse'))} km · ${fmt1(prm('mc_t'))} t · a light site each`, price: () => prm('price_mc') },
-      { id: 'magazine', name: 'Magazine', side: 'U', step: 1, give: () => `${Math.round(prm('mc_rounds'))} rounds of 30 mm`, price: () => prm('price_magazine') }]],
+      { id: 'mc', name: 'Light multicannon', side: 'U', step: 1, unit: '', give: () => `30 mm, ${fmt1(prm('mc_rate'))}/s, ${kmNum(prm('mc_speed') * prm('mc_fuse'))} km · ${fmt1(prm('mc_t'))} t · any site`, price: () => prm('price_mc') },
+      { id: 'mm', name: 'Medium multicannon', side: 'U', step: 1, unit: '', give: () => `57 mm, ${fmt1(prm('mm_rate'))}/s, ${kmNum(prm('mm_speed') * prm('mm_fuse'))} km · ${fmt1(prm('mm_t'))} t · a medium or heavy site`, price: () => prm('price_mm') },
+      { id: 'ml', name: 'Heavy multicannon', side: 'U', step: 1, unit: '', give: () => `120 mm, ${fmt1(prm('ml_rate'))}/s, ${kmNum(prm('ml_speed') * prm('ml_fuse'))} km · ${fmt1(prm('ml_t'))} t · a heavy site`, price: () => prm('price_ml') },
+      { id: 'magazine', name: 'Magazine', side: 'U', step: 1, give: () => `${Math.round(prm('mc_rounds'))} × 30 mm, ${Math.round(prm('mm_rounds'))} × 57 mm or ${Math.round(prm('ml_rounds'))} × 120 mm`, price: () => prm('price_magazine') }]],
     ['Drive', [
       { id: 'jets', name: 'Jet clusters', side: 'corners', step: 1, give: () => 'turning, a cluster per corner', price: () => prm('price_jet') }]],
     ['Power', [
@@ -1376,9 +1378,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   ];
   // the bay's blocks, by side, and their colours
   const BAY = { P: [['bunks', '#8fd3ff'], ['sensors', '#7fd0c4'], ['furnace', '#e8a05a'], ['jump', '#c9b3f0'], ['battery', '#e2b866'], ['banks', '#6fa8ff'], ['climate', '#7fd08a']],
-    U: [['hopper', '#a08a6a'], ['rack', '#c8a27a'], ['tank', '#d07a5a'], ['deflector', '#6fa8ff'], ['fins', '#9fb4c8'], ['sinks', '#7a8aa0'], ['mc', '#e86a5a'], ['magazine', '#b8584a']] };
+    U: [['hopper', '#a08a6a'], ['rack', '#c8a27a'], ['tank', '#d07a5a'], ['deflector', '#6fa8ff'], ['fins', '#9fb4c8'], ['sinks', '#7a8aa0'], ['mc', '#e86a5a'], ['mm', '#d4553f'], ['ml', '#b8402c'], ['magazine', '#9a4a3e']] };
   const BAY_NAME = { bunks: 'bunks', sensors: 'sensors', furnace: 'reactor', jump: 'jump drive', battery: 'battery', banks: 'shield banks', climate: 'climate hold',
-    hopper: 'hoppers', rack: 'racks', tank: 'fuel tank', deflector: 'deflector', fins: 'fins', sinks: 'heat sinks', mc: 'multicannons', magazine: 'magazine' };
+    hopper: 'hoppers', rack: 'racks', tank: 'fuel tank', deflector: 'deflector', fins: 'fins', sinks: 'heat sinks', mc: 'light guns', mm: 'medium guns', ml: 'heavy guns', magazine: 'magazine' };
   const draftT = n => sim.draft.t[FIT[n]], fitT = n => sim.fit.t[FIT[n]];
   const changed = () => sim.fitSlots.some((n, k) => n && sim.draft.t[k] !== sim.fit.t[k]);
   // set slot n of the draft to v tonnes (all four corners for the jets)
@@ -1431,7 +1433,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     $('outfit-sum').textContent = `${T.name} · fit worth ${fmtCr(Math.round(d.value))} cr`;
     // the bars: pressurised and unpressurised, a block a module
     const bar = (side, used, space) => {
-      const blocks = BAY[side].map(([n, col]) => { const t = n === 'bunks' ? draftT(n) * prm('bunk_t') : n === 'mc' ? draftT(n) * prm('mc_t') : draftT(n); return t > 0 ? `<i style="width:${100 * t / Math.max(space, used, 1)}%;background:${col}" title="${BAY_NAME[n]} ${fmt1(t)} t"></i>` : ''; }).join('');
+      const blocks = BAY[side].map(([n, col]) => { const t = n === 'bunks' ? draftT(n) * prm('bunk_t') : n === 'mc' || n === 'mm' || n === 'ml' ? draftT(n) * prm(n + '_t') : draftT(n); return t > 0 ? `<i style="width:${100 * t / Math.max(space, used, 1)}%;background:${col}" title="${BAY_NAME[n]} ${fmt1(t)} t"></i>` : ''; }).join('');
       return `<div class="bay"><span>${side === 'P' ? 'Pressurised' : 'Unpressurised'}</span><b class="${used > space + 1e-9 ? 'over' : ''}">${fmt1(used)} / ${fmt1(space)} t</b><div class="bay-bar">${blocks}</div></div>`;
     };
     $('outfit-bars').innerHTML = bar('P', d.pUsed, d.pSpace) + bar('U', d.uUsed, d.uSpace);
@@ -1465,7 +1467,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
       line('Battery', `${fmt1(d.battery)} MJ${delta(d.battery, cur.battery)}${short > 0 ? ` · ${Math.round(d.battery / short)} s of burner short` : ''}`),
       line('Heat', d.burnSecs < 0 ? 'the burner never locks' : `burner locks after ${Math.round(d.burnSecs)} s${delta(d.burnSecs, cur.burnSecs, x => Math.round(x) + ' s')}`),
       line('Shield', `${fmt1(d.shield)} pts${delta(d.shield, cur.shield)} · ${fmt1(d.regen)}/s${d.regen > 0 ? ` · full in ${Math.round(d.shield / d.regen)} s` : ''}`),
-      line('Guns', `${draftT('mc')} of ${d.sites} light sites · ${Math.round(d.rounds).toLocaleString('en-US')} rounds (${Math.round(d.rounds / Math.max(1, draftT('mc') * prm('mc_rate')))} s of fire) · reach ${kmNum(d.range)} km`),
+      line('Guns', `${[['mc', 'light'], ['mm', 'medium'], ['ml', 'heavy']].filter(([n]) => draftT(n)).map(([n, w]) => `${draftT(n)} ${w}`).join(', ') || 'none'} · sites ${d.sites} light, ${d.sitesM} medium, ${d.sitesL} heavy${d.gunsOk ? '' : ' · TOO MANY GUNS FOR THE SITES'} · ${Math.round(d.fireSecs)} s of fire · reach ${kmNum(d.range)} km`),
       line('Hull', `${int(d.hull)} pts${delta(d.hull, cur.hull, int)}`),
       line('Holds', `bulk ${fmt1(d.hopper)} · racks ${fmt1(d.rack)} · climate ${fmt1(d.climate)} t`),
       line('Fuel', `${fmt1(d.fuel)} t${delta(d.fuel, cur.fuel)} · ${fmt1(range)} ly`),
@@ -1512,6 +1514,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
   // two a ship), on a hull sparks and the hull glowing; a ship destroyed, a fireball and debris. Particles are looks
   // only: Math.random, outside the sim.
   const MAXSH = sim.maxShells, MAXP = 4096, HIT_LIFE = 2.6;
+  const TRACER_LEN = [10, 18, 30], TRACER_K = [1, 1.3, 1.7]; // a tracer's length (m) and brightness, by calibre: light, medium, heavy
   VS.shield = instVAO([4, 4, 4], MAXS); VS.bolt = instVAO([4, 4], MAXSH); VS.part = instVAO([4, 4], MAXP);
   const shieldInst = new Float32Array(MAXS * 12), boltInst = new Float32Array(MAXSH * 8), partInst = new Float32Array(MAXP * 8);
   const shieldCount = new Int32Array(types.length), shieldStart = new Int32Array(types.length), shieldFill = new Int32Array(types.length);
@@ -1817,9 +1820,9 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     let nb = 0;
     for (let n = 0; n < MAXSH; n++) {
       if (!S.live[n] || Math.abs(S.rx[n] - cx) > halfW + 60 || Math.abs(S.ry[n] - cy) > halfH + 60) continue;
-      const o = nb++ * 8, vx = S.vx[n], vy = S.vy[n], v = Math.hypot(vx, vy) || 1, len = 10;
+      const z = Math.max(0, Math.min(2, S.gun[n] - 1)), o = nb++ * 8, vx = S.vx[n], vy = S.vy[n], v = Math.hypot(vx, vy) || 1, len = TRACER_LEN[z], k = TRACER_K[z];
       boltInst[o] = S.rx[n] - vx / v * len * 0.5; boltInst[o + 1] = S.ry[n] - vy / v * len * 0.5; boltInst[o + 2] = vx; boltInst[o + 3] = vy;
-      boltInst[o + 4] = 0.75; boltInst[o + 5] = 0.45; boltInst[o + 6] = 0.18; boltInst[o + 7] = len;
+      boltInst[o + 4] = 0.75 * k; boltInst[o + 5] = 0.45 * k; boltInst[o + 6] = 0.18 * k; boltInst[o + 7] = len;
     }
     if (nb) { setView(FP.bolt, TW, TH, cx, cy); gl.bindVertexArray(VS.bolt.vao); upload(VS.bolt, boltInst, nb); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nb); gl.bindVertexArray(null); }
     let np = 0;
@@ -2154,7 +2157,7 @@ Promise.all([CORE_READY, UNIVERSE_READY]).then(([CORE]) => {
     if (sim.game.auto[0]) ms.unshift([`AUTOPILOT → ${autoName().toUpperCase()}`, '#7fd08a']);
     const cl = courseLine(); if (cl) ms.unshift([cl, '#a8f0c4']);
     const jl = jumpLine(); if (jl) ms.unshift(jl.slice(0, 2));
-    const guns = sim.arms.guns[0], gunLine = guns ? `  ·  GUNS ${guns} · ${Math.floor(sim.arms.ammo[0]).toLocaleString('en-US')}` : ''; // the light multicannons and their rounds
+    const guns = sim.arms.guns[0], gunLine = guns ? `  ·  GUNS ${guns} · MAG ${fmt1(sim.arms.ammo[0])} t` : ''; // the multicannons and the magazine's tonnes left
     const modeLine = `${ASSIST[assistMode].hud}${sim.game.cold[0] ? '  ·  COLD' : ''}  ·  ${SH.well[0] > 0.01 ? `WELL ${Math.round(SH.well[0] * 100)}%` : `DEEP SPACE ${Math.round(deep * 100)}%`}${gunLine}`
       + (rad > 0 ? `  ·  RAD −${(rad * 100).toFixed(1)}%/s` : '') + (SETTINGS.debug ? `  ·  ${sim.tick()}  ${fps.toFixed(0)} fps${renderScale < 1 ? ` ${Math.round(renderScale * 100)}%` : ''}` : '');
     const MONO = '500 11.5px "IBM Plex Mono", ui-monospace, monospace', SMALL = '500 10px "IBM Plex Mono", ui-monospace, monospace';

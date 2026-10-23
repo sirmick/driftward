@@ -9,8 +9,8 @@ A turreted autocannon firing a torrent of exploding shells. A shell bursts on co
 | Size | Shell | Rate | Punch (per shell) | Fuse range | Mass | Status |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
 | **S** | **30 mm** | **10 /s** | **1×** | **~900 m** | **2 t** | **built** |
-| M | ~57 mm | ~3 /s | ~6× | ~1,400 m | ~8 t | later |
-| L | ~120 mm | ~0.8 /s | ~35× | ~2,200 m | ~30 t | later |
+| **M** | **57 mm** | **3 /s** | **6×** | **1,425 m** | **8 t** | **built** |
+| **L** | **120 mm** | **0.8 /s** | **35×** | **2,250 m** | **30 t** | **built** |
 | XL | ~200 mm | ~0.25 /s | ~150× | ~3,000 m | ~90 t | later |
 
 Punch goes about with the calibre cubed and the rate falls steeply, so the big guns hit far harder per second and far harder per shell. Shield hardness (below) is what keeps a battery of light guns from stripping a capital shield.
@@ -28,7 +28,22 @@ Punch goes about with the calibre cubed and the rate falls steeply, so the big g
 | Ammunition | 400 rounds a tonne of magazine (40 s of fire); the munitions commodity |
 | Mass and price | 2 t, unpressurised; 3,000 cr |
 
-Its params are `mc_s_*`. The other sizes will be the same columns with their own values.
+Its params are `mc_*`.
+
+### The medium and heavy multicannons (M, L)
+
+| | Medium (57 mm) | Heavy (120 mm) |
+| :-- | :-- | :-- |
+| Site | M or L turret | L turret |
+| Traverse | 2 rad/s | 0.9 rad/s |
+| Rate, spread | 3 /s, 3.4° | 0.8 /s, 2.1° |
+| Shell | 1,500 m/s, fuse 0.95 s (1,425 m), burst 22 m (full inside 7 m) | 1,800 m/s, fuse 1.25 s (2,250 m), burst 40 m (full inside 12 m) |
+| Damage | 6 a shell (18 /s) | 35 a shell (28 /s) |
+| Energy and heat | 0.15 and 0.4 MJ a shell | 1 and 2.5 MJ a shell |
+| Magazine | 60 rounds a tonne | 8 rounds a tonne |
+| Mass and price | 8 t, 14,000 cr | 30 t, 60,000 cr |
+
+Params `mm_*` and `ml_*`. Every calibre shares the one magazine, in tonnes. A stock fit carries about 40 s of fire for each gun: 1 t a light gun, 2 t a medium, 4 t a heavy. The heavy gun's slow shells and slow traverse miss small, quick ships, but a hit through a fighter's shield is most of its hull. Its 35-point punch is far over any shield's hardness.
 
 ## Weapon sites
 
@@ -91,7 +106,8 @@ Two systems that are not in the Calder March: dead stars from the galaxy, each a
 - **The AI.** Fighters see by the sensors' model (the player through `seen`, others by their signature), fight only enemies within `ai_leash` of the contested station (the player anywhere, once it has fired on them), circle their target at `ai_range` of the guns' reach, and flee under `morale`. From far off they come in at open-space speed.
 - **Looks.** Tracers for shells, the lab's shield-hit shader on shields struck (the newest two hits a ship), a hull glowing and sparks on hull hits, a fireball and debris for a ship lost, and brief lights on the hulls round a burst. Turret barrels are still the bake's (they don't turn yet).
 - **Determinism.** The scenario `npm run check` runs natively and in WASM now has fighters on two sides firing at each other; the hashes agree. The snapshot is version 24.
-- **Not yet:** the M, L and XL guns and their sites; ventral mounts; point defence (no missiles); turrets that turn on screen; hull blocking turret arcs; munitions bought; ion, arc and heat damage, resistances, system damage, field repair, disable; distress calls and patrols; traffic fighting back; bounty missions.
+- **Medium and heavy guns (2026-10-23).** Sites by size (`gen.js` draws the turret bigger the bigger the site; the catalog's loadouts take `weaponM` and `weaponL`); the guns are one table in the core (`Gun`, by size), placed biggest first on the biggest sites (`place_guns`), with the magazine in tonnes. The fit has `mm` and `ml` slots; the outfitter sells all three, and its budget shows the sites, seconds of fire and reach. Fighters circle at `ai_range` of their longest gun's reach. Tracers grow longer and brighter with the calibre. The combat lab's sides now fly class III and IV ships (Brassclads with two medium guns, Ironclads with two heavy) beside the light ones.
+- **Not yet:** the XL guns; ventral mounts; point defence (no missiles); turrets that turn on screen; hull blocking turret arcs; munitions bought; ion, arc and heat damage, resistances, system damage, field repair, disable; distress calls and patrols; traffic fighting back; bounty missions.
 
 ## Build order
 

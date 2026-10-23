@@ -3,14 +3,17 @@
 //!
 //! Geometry is content, per ship type (the page writes it from the generated hull, src/gen.js `footprint`): the
 //! convex `outline` shells hit (local metres, +x right, +y forward, counter-clockwise) and the turret sites, `mount`
-//! (light ones only for now: `types.guns` of them). A ship flies with a gun on each of its first `arms.guns` sites:
-//! every one for traffic and the lab's fighters (their line's stock fit), the fit's for the player (fit.rs F_MC).
+//! (`types.guns` of them, each light, medium or heavy). The guns are the multicannon line (`Gun`, by size: light `mc_*`,
+//! medium `mm_*`, heavy `ml_*` params); a site takes a gun of its size or smaller. Traffic and the lab's fighters fly
+//! with a gun of its size on every site (their line's stock fit); the player with the fit's (fit.rs F_MC, F_MM, F_ML),
+//! the biggest on the biggest sites (`place_guns`). Every calibre shares one magazine, in tonnes.
 //!
-//! Turrets traverse 360 degrees at `mc_traverse` and lead their target (a shell keeps its ship's velocity). The
-//! player's fire while Fire is held, at the target or straight ahead; the AI's at their target, inside range and on
-//! it. A shell flies `mc_speed` from the muzzle with a little spread and bursts on contact with an outline, or when
-//! its fuse runs out: set to the target's range when it has one (flak), else `mc_fuse`. A burst hurts every ship in
-//! `mc_blast` metres of it, fully inside `mc_core`, the one it struck fully, but never its own side's or its gunner.
+//! Turrets traverse 360 degrees at their gun's rate and lead their target (a shell keeps its ship's velocity). The
+//! player's fire while Fire is held, at the target or straight ahead; the AI's at their target, inside the gun's reach
+//! and on it. A shell flies at its gun's speed with a little spread and bursts on contact with an outline, or when
+//! its fuse runs out: set to the target's range when it has one (flak), else the gun's longest. A burst hurts every
+//! ship within its gun's blast, fully inside its core, the one it struck fully, but never its own side's or its
+//! gunner.
 //!
 //! Damage goes to the shield first. A hit at or under the shield's hardness (`shield_hard` at 100 m of hull, going with
 //! length squared) does only `hard_frac` of itself to the shield; a harder one does the rest to the shield and
@@ -28,7 +31,7 @@
 
 use crate::atlas::MAX_SYSTEMS;
 use crate::cols::soa;
-use crate::fit::{F_MAG, F_MC};
+use crate::fit::{F_MAG, F_MC, F_ML, F_MM};
 use crate::math::{atan2, hypot, sin_cos, wrap};
 use crate::player::IN_FIRE;
 use crate::port::{MODE_FLYING, OK, WRONG_MODE};
@@ -36,7 +39,7 @@ use crate::traffic::End;
 use crate::world::{World, DT, P};
 
 /// Turret sites per type, and outline vertices per type.
-pub const MAX_MOUNTS: usize = 8;
+pub const MAX_MOUNTS: usize = 12;
 pub const MAX_OUTLINE: usize = 12;
 /// Shells in flight at once (a new one past this is not fired), and bursts remembered for the page to draw.
 pub const MAX_SHELLS: usize = 1024;
@@ -61,8 +64,23 @@ pub const B_LOST: u8 = 4;
 /// Debug: the player joins side a (0 neutral, 1..MAX_SIDES), and every side forgives it.
 pub const CMD_SIDE: u32 = 104;
 
+/// Gun and site sizes: light, medium, heavy.
+pub const G_LIGHT: u8 = 1;
+pub const G_MEDIUM: u8 = 2;
+pub const G_HEAVY: u8 = 3;
+/// Tonnes of magazine a stock fit carries for each gun, by size (about 40 s of fire each).
+pub const STOCK_MAG: [f64; 3] = [1.0, 2.0, 4.0];
+
+/// A multicannon's numbers (the size's params).
+#[derive(Clone, Copy, Debug)]
+pub struct Gun { pub rate: f64, pub speed: f64, pub fuse: f64, pub spread: f64, pub blast: f64, pub core: f64, pub dmg: f64, pub traverse: f64, pub mj: f64, pub heat: f64, pub rounds: f64, pub t: f64 }
+impl Gun {
+    /// How far it reaches: muzzle speed times the longest fuse.
+    pub fn reach(&self) -> f64 { self.speed * self.fuse }
+}
+
 soa! {
-    /// Each type's turret sites (type * MAX_MOUNTS + site), local metres, and their size (1 light).
+    /// Each type's turret sites (type * MAX_MOUNTS + site), local metres, and their size (G_*).
     pub struct Mounts { x: f64, y: f64, size: u8 }
 }
 
@@ -73,20 +91,21 @@ soa! {
 
 soa! {
     /// Per ship slot: its side (0 none, else side + 1); its shield's points and the seconds before it regenerates
-    /// again; the ship it fights (a handle plus one, 0 none) and when it next looks again; rounds aboard; guns fitted;
-    /// seconds since it was last hit (the page's shield flash).
+    /// again; the ship it fights (a handle plus one, 0 none) and when it next looks again; the magazine, tonnes; guns
+    /// fitted; seconds since it was last hit (the page's shield flash).
     pub struct Arms { side: u8, shield: f64, shield_t: f64, target: u32, think: f64, ammo: f64, guns: u8, hit: f32, orbit: u8 }
 }
 
 soa! {
-    /// Per ship slot and site (slot * MAX_MOUNTS + site): the turret's world angle and its cooldown, seconds.
-    pub struct Turrets { ang: f64, cd: f64 }
+    /// Per ship slot and site (slot * MAX_MOUNTS + site): the gun on it (G_*, 0 none), the turret's world angle and its
+    /// cooldown, seconds.
+    pub struct Turrets { gun: u8, ang: f64, cd: f64 }
 }
 
 soa! {
-    /// Shells in flight: position and velocity, fuse left, the gunner (a handle) and its side; the previous-tick and
-    /// render positions.
-    pub struct Shells { live: u8, x: f64, y: f64, vx: f64, vy: f64, t: f64, owner: u32, side: u8, prev_x: f64, prev_y: f64, rx: f32, ry: f32 }
+    /// Shells in flight: the gun's size, position and velocity, fuse left, the gunner (a handle) and its side; the
+    /// previous-tick and render positions.
+    pub struct Shells { live: u8, gun: u8, x: f64, y: f64, vx: f64, vy: f64, t: f64, owner: u32, side: u8, prev_x: f64, prev_y: f64, rx: f32, ry: f32 }
 }
 
 soa! {
@@ -191,28 +210,73 @@ impl World {
     }
     /// The shield's hardness on ship i: `shield_hard` at 100 m of hull, with length squared.
     fn hardness(&self, i: usize) -> f64 { let l = self.types.len[self.look_kind(i)] / 100.0; self.p(P::shield_hard) * l * l }
-    /// How far a light gun reaches: its shells' speed times the fuse.
-    pub fn gun_range(&self) -> f64 { self.p(P::mc_speed) * self.p(P::mc_fuse) }
-
-    /// Arm a slot that has just become a ship: its type's guns on every site, a tonne of rounds each, its shield full,
-    /// turrets facing forward; side `side` (0 none).
-    pub(crate) fn arm(&mut self, k: usize, side: u8) {
-        let t = self.ships.kind[k] as usize;
-        let guns = self.types.guns[t].min(MAX_MOUNTS as u8);
-        let a = &mut self.arms;
-        (a.side[k], a.shield[k], a.shield_t[k], a.target[k], a.ammo[k], a.guns[k], a.hit[k]) = (side, self.types.shield[t], 0.0, 0, guns as f64 * self.params[P::mc_rounds as usize], guns, 99.0);
-        a.think[k] = self.rng.range(0.0, self.params[P::ai_think as usize]);
-        a.orbit[k] = (self.rng.next_f64() < 0.5) as u8;
-        for m in 0..MAX_MOUNTS { (self.turrets.ang[k * MAX_MOUNTS + m], self.turrets.cd[k * MAX_MOUNTS + m]) = (self.ships.ang[k], 0.0); }
+    /// A gun's numbers, by size (G_*).
+    pub fn gun(&self, size: u8) -> Gun {
+        let p = |q: P| self.p(q);
+        match size {
+            G_HEAVY => Gun { rate: p(P::ml_rate), speed: p(P::ml_speed), fuse: p(P::ml_fuse), spread: p(P::ml_spread), blast: p(P::ml_blast), core: p(P::ml_core), dmg: p(P::ml_dmg), traverse: p(P::ml_traverse), mj: p(P::ml_mj), heat: p(P::ml_heat), rounds: p(P::ml_rounds), t: p(P::ml_t) },
+            G_MEDIUM => Gun { rate: p(P::mm_rate), speed: p(P::mm_speed), fuse: p(P::mm_fuse), spread: p(P::mm_spread), blast: p(P::mm_blast), core: p(P::mm_core), dmg: p(P::mm_dmg), traverse: p(P::mm_traverse), mj: p(P::mm_mj), heat: p(P::mm_heat), rounds: p(P::mm_rounds), t: p(P::mm_t) },
+            _ => Gun { rate: p(P::mc_rate), speed: p(P::mc_speed), fuse: p(P::mc_fuse), spread: p(P::mc_spread), blast: p(P::mc_blast), core: p(P::mc_core), dmg: p(P::mc_dmg), traverse: p(P::mc_traverse), mj: p(P::mc_mj), heat: p(P::mc_heat), rounds: p(P::mc_rounds), t: p(P::mc_t) },
+        }
+    }
+    /// How far a light gun reaches.
+    pub fn gun_range(&self) -> f64 { self.gun(G_LIGHT).reach() }
+    /// The farthest reach of ship k's guns (a light gun's if it has none).
+    fn reach(&self, k: usize) -> f64 {
+        let big = (0..MAX_MOUNTS).map(|m| self.turrets.gun[k * MAX_MOUNTS + m]).max().unwrap_or(0);
+        self.gun(big.max(G_LIGHT)).reach()
+    }
+    /// Type k's turret sites by size: light, medium, heavy.
+    pub fn site_counts(&self, k: usize) -> [usize; 3] {
+        let mut c = [0; 3];
+        for m in 0..(self.types.guns[k] as usize).min(MAX_MOUNTS) { let z = self.mounts.size[k * MAX_MOUNTS + m]; if (G_LIGHT..=G_HEAVY).contains(&z) { c[(z - 1) as usize] += 1; } }
+        c
+    }
+    /// `light`, `medium` and `heavy` guns on type k's sites, the biggest first on the biggest sites (a site takes a
+    /// gun of its size or smaller): the gun on each site, or None if they don't all go on.
+    pub fn place_guns(&self, k: usize, light: usize, medium: usize, heavy: usize) -> Option<[u8; MAX_MOUNTS]> {
+        let n = (self.types.guns[k] as usize).min(MAX_MOUNTS);
+        let mut on = [0u8; MAX_MOUNTS];
+        for (size, mut want) in [(G_HEAVY, heavy), (G_MEDIUM, medium), (G_LIGHT, light)] {
+            // the smallest free site that takes it first, so the big ones stay free for big guns
+            for site in size..=G_HEAVY {
+                for m in 0..n { if want > 0 && on[m] == 0 && self.mounts.size[k * MAX_MOUNTS + m] == site { on[m] = size; want -= 1; } }
+            }
+            if want > 0 { return None; }
+        }
+        Some(on)
     }
 
-    /// The player's guns and rounds from the fit (a new game, a refit, a landing's restock).
+    /// Arm a slot that has just become a ship: a gun of its size on every site of its type and the stock magazine
+    /// for them, its shield full, turrets facing forward; side `side` (0 none).
+    pub(crate) fn arm(&mut self, k: usize, side: u8) {
+        let t = self.ships.kind[k] as usize;
+        let n = (self.types.guns[t] as usize).min(MAX_MOUNTS);
+        let mut mag = 0.0;
+        for m in 0..MAX_MOUNTS {
+            let g = if m < n { self.mounts.size[t * MAX_MOUNTS + m].min(G_HEAVY) } else { 0 };
+            if g > 0 { mag += STOCK_MAG[(g - 1) as usize]; }
+            let o = k * MAX_MOUNTS + m;
+            (self.turrets.gun[o], self.turrets.ang[o], self.turrets.cd[o]) = (g, self.ships.ang[k], 0.0);
+        }
+        let a = &mut self.arms;
+        (a.side[k], a.shield[k], a.shield_t[k], a.target[k], a.ammo[k], a.guns[k], a.hit[k]) = (side, self.types.shield[t], 0.0, 0, mag, n as u8, 99.0);
+        a.think[k] = self.rng.range(0.0, self.params[P::ai_think as usize]);
+        a.orbit[k] = (self.rng.next_f64() < 0.5) as u8;
+    }
+
+    /// The player's guns and magazine from the fit (a new game, a refit, a landing's restock).
     pub(crate) fn arm_player(&mut self) {
         let Some(i) = usize::try_from(self.game.player[0]).ok().filter(|&i| i < self.count) else { return };
-        let (guns, mag) = if self.fitted() { (self.fit.t[F_MC], self.fit.t[F_MAG]) } else { (0.0, 0.0) };
+        let on = if self.fitted() {
+            let f = &self.fit.t;
+            self.place_guns(self.game.base[0] as usize, f[F_MC] as usize, f[F_MM] as usize, f[F_ML] as usize).unwrap_or([0; MAX_MOUNTS])
+        } else { [0; MAX_MOUNTS] };
+        for (m, &g) in on.iter().enumerate() { self.turrets.gun[i * MAX_MOUNTS + m] = g; }
+        let mag = if self.fitted() { self.fit.t[F_MAG] } else { 0.0 };
         let side = self.battle.player_side[0];
         let a = &mut self.arms;
-        (a.side[i], a.guns[i], a.ammo[i], a.target[i], a.hit[i]) = (side, (guns as usize).min(MAX_MOUNTS) as u8, mag * self.params[P::mc_rounds as usize], 0, 99.0);
+        (a.side[i], a.guns[i], a.ammo[i], a.target[i], a.hit[i]) = (side, on.iter().filter(|&&g| g > 0).count() as u8, mag, 0, 99.0);
     }
 
     // ---------- the lab's sides ----------
@@ -300,7 +364,7 @@ impl World {
         };
         let (vx, vy) = match self.traffic.phase[k] {
             A_ENGAGE => match self.arms.target[k].checked_sub(1).and_then(|h| self.resolve(h)) {
-                Some(j) => circle(self.ships.x[j], self.ships.y[j], self.ships.vx[j], self.ships.vy[j], self.p(P::ai_range) * self.gun_range(), cruise * 0.7),
+                Some(j) => circle(self.ships.x[j], self.ships.y[j], self.ships.vx[j], self.ships.vy[j], self.p(P::ai_range) * self.reach(k), cruise * 0.7),
                 None => { self.traffic.phase[k] = A_LOITER; (0.0, 0.0) }
             },
             A_FLEE => {
@@ -343,17 +407,19 @@ impl World {
 
     /// Ship k's turrets: turn toward the lead on its target and fire when on it (the player's: while Fire is held).
     fn turrets(&mut self, k: usize) {
-        let guns = self.arms.guns[k] as usize;
-        if guns == 0 || self.ships.rail[k] != 0 { return; }
+        if self.arms.guns[k] == 0 || self.ships.rail[k] != 0 { return; }
         let player = self.is_player(k);
         if player && self.mode() != MODE_FLYING { return; }
         let target = if player { self.target_ship() } else { self.arms.target[k].checked_sub(1).and_then(|h| self.resolve(h)) };
         let firing = if player { self.game.input[0] & IN_FIRE != 0 } else { target.is_some() && self.traffic.phase[k] == A_ENGAGE };
-        let (speed, range, trav) = (self.p(P::mc_speed), self.gun_range(), self.p(P::mc_traverse) * DT);
         let look = self.look_kind(k);
-        let (hot, mj) = (self.game.hot[0] != 0, self.p(P::mc_mj));
-        for m in 0..guns {
+        let hot = self.game.hot[0] != 0;
+        for m in 0..MAX_MOUNTS {
             let o = k * MAX_MOUNTS + m;
+            let size = self.turrets.gun[o];
+            if size == 0 { continue; }
+            let g = self.gun(size);
+            let (speed, range, trav, mj) = (g.speed, g.reach(), g.traverse * DT, g.mj);
             let mi = look * MAX_MOUNTS + m;
             let (mx, my) = self.to_world(k, self.mounts.x[mi], self.mounts.y[mi]);
             // the lead: where the target will be when a shell (with the ship's velocity) reaches it
@@ -375,20 +441,21 @@ impl World {
             let err = wrap(want - self.turrets.ang[o]);
             self.turrets.ang[o] = wrap(self.turrets.ang[o] + err.clamp(-trav, trav));
             self.turrets.cd[o] = (self.turrets.cd[o] - DT).max(-DT);
-            if !firing || self.turrets.cd[o] > 0.0 || self.arms.ammo[k] < 1.0 { continue; }
+            let round = 1.0 / g.rounds.max(1e-6);
+            if !firing || self.turrets.cd[o] > 0.0 || self.arms.ammo[k] < round - 1e-9 { continue; }
             if !player {
                 let Some((_, _, d)) = aim else { continue };
                 if d > range * 1.05 || err.abs() > 0.06 { continue; }
             } else if hot || (self.fitted() && self.game.energy[0] < mj) { continue; }
             // the fuse: burst at the target's range (flak), else at full reach
-            let fuse = aim.map_or(self.p(P::mc_fuse), |a| (a.1 + 0.03).clamp(0.05, self.p(P::mc_fuse)));
-            if self.fire(k, mx, my, self.turrets.ang[o], fuse) {
-                self.turrets.cd[o] += 1.0 / self.p(P::mc_rate).max(0.1);
-                self.arms.ammo[k] -= 1.0;
+            let fuse = aim.map_or(g.fuse, |a| (a.1 + 0.03).clamp(0.05, g.fuse));
+            if self.fire(k, mx, my, self.turrets.ang[o], fuse, size) {
+                self.turrets.cd[o] += 1.0 / g.rate.max(0.01);
+                self.arms.ammo[k] = (self.arms.ammo[k] - round).max(0.0);
                 if player && self.fitted() {
                     self.game.energy[0] = (self.game.energy[0] - mj).max(0.0);
                     let cap = self.stats(self.game.base[0] as usize, &self.fit.t, 0.0, 0.0).heat_cap.max(1.0);
-                    self.game.heat[0] = (self.game.heat[0] + self.p(P::mc_heat) / cap).min(1.0);
+                    self.game.heat[0] = (self.game.heat[0] + g.heat / cap).min(1.0);
                 }
             }
         }
@@ -396,18 +463,19 @@ impl World {
 
     /// A shell from (x, y) along angle `ang`, give or take the spread, with ship k's velocity; its speed and fuse a
     /// little off (`mc_jitter`), so a stream scatters; false if every shell slot is in use.
-    fn fire(&mut self, k: usize, x: f64, y: f64, ang: f64, fuse: f64) -> bool {
+    fn fire(&mut self, k: usize, x: f64, y: f64, ang: f64, fuse: f64, size: u8) -> bool {
         let Some(n) = (0..MAX_SHELLS).find(|&n| self.shells.live[n] == 0) else { return false };
-        let spread = self.p(P::mc_spread) * (self.rng.next_f64() + self.rng.next_f64() - 1.0);
+        let g = self.gun(size);
+        let spread = g.spread * (self.rng.next_f64() + self.rng.next_f64() - 1.0);
         let (s, c) = sin_cos(ang + spread);
         let j = self.p(P::mc_jitter);
-        let v = self.p(P::mc_speed) * (1.0 + j * (self.rng.next_f64() * 2.0 - 1.0));
+        let v = g.speed * (1.0 + j * (self.rng.next_f64() * 2.0 - 1.0));
         let fuse = fuse * (1.0 + j * (self.rng.next_f64() * 2.0 - 1.0));
         let (owner, side) = (self.handle(k), self.arms.side[k]);
         let (vx, vy) = (self.ships.vx[k], self.ships.vy[k]);
         let sh = &mut self.shells;
         (sh.live[n], sh.x[n], sh.y[n], sh.vx[n], sh.vy[n], sh.t[n], sh.owner[n], sh.side[n]) = (1, x, y, vx - s * v, vy + c * v, fuse, owner, side);
-        (sh.prev_x[n], sh.prev_y[n], sh.rx[n], sh.ry[n]) = (x, y, x as f32, y as f32);
+        (sh.prev_x[n], sh.prev_y[n], sh.rx[n], sh.ry[n], sh.gun[n]) = (x, y, x as f32, y as f32, size);
         true
     }
 
@@ -441,7 +509,8 @@ impl World {
 
     /// Shell n bursts at (x, y), on ship `struck` if it hit one: every ship within the blast takes its share.
     fn burst(&mut self, n: usize, x: f64, y: f64, struck: Option<usize>) {
-        let (blast, core, dmg) = (self.p(P::mc_blast), self.p(P::mc_core), self.p(P::mc_dmg));
+        let g = self.gun(self.shells.gun[n]);
+        let (blast, core, dmg) = (g.blast, g.core, g.dmg);
         let (owner, side) = (self.resolve(self.shells.owner[n]), self.shells.side[n]);
         let mut kind = B_AIR;
         for j in 0..self.count {
@@ -605,7 +674,7 @@ mod tests {
         w.sides.contested.fill(0);
         run(&mut w, 1.0);
         assert_eq!((w.traffic.phase[a], w.traffic.phase[b]), (A_ENGAGE, A_ENGAGE), "each sees the other");
-        let fired = |w: &World| w.arms.ammo[a] < 800.0 && w.arms.ammo[b] < 800.0;
+        let fired = |w: &World| w.arms.ammo[a] < 2.0 && w.arms.ammo[b] < 2.0; // two tonnes each to start
         run(&mut w, 3.0);
         assert!(fired(&w), "both fire: {} {}", w.arms.ammo[a], w.arms.ammo[b]);
         assert!(w.arms.shield[a] < 40.0 || w.ships.hull[a] < 60.0 || w.ships.alive[a] == 0, "a is hit");
@@ -622,6 +691,44 @@ mod tests {
         let n = (0..w.count).filter(|&k| w.traffic.role[k] == COMBAT && w.ships.alive[k] != 0).count();
         assert_eq!(n, 3);
         assert!((0..w.count).all(|k| w.traffic.role[k] != COMBAT || w.arms.side[k] == 1));
+    }
+
+    #[test]
+    fn guns_go_on_sites_their_size_or_bigger() {
+        let mut w = world();
+        // sites: light, light, medium, heavy
+        w.types.guns[0] = 4;
+        for (m, z) in [G_LIGHT, G_LIGHT, G_MEDIUM, G_HEAVY].into_iter().enumerate() { w.mounts.size[m] = z; }
+        assert_eq!(w.site_counts(0), [2, 1, 1]);
+        assert_eq!(&w.place_guns(0, 2, 1, 1).unwrap()[..4], &[1, 1, 2, 3]);
+        assert_eq!(&w.place_guns(0, 1, 2, 0).unwrap()[..4], &[1, 0, 2, 2], "a medium gun on the heavy site");
+        assert_eq!(&w.place_guns(0, 4, 0, 0).unwrap()[..4], &[1, 1, 1, 1], "light guns anywhere");
+        assert!(w.place_guns(0, 0, 0, 2).is_none(), "one heavy site");
+        assert!(w.place_guns(0, 3, 2, 0).is_none(), "five guns, four sites");
+    }
+
+    #[test]
+    fn a_heavy_gun_hits_hard_and_reaches_far() {
+        let mut w = world();
+        w.mounts.size[0] = G_HEAVY;
+        w.types.guns[0] = 1;
+        let a = ship(&mut w, -1800.0, 0.0, 1);
+        let b = ship(&mut w, 0.0, 0.0, 2);
+        // b: a sitting duck (type 1: the same hull, all but no drive, no guns)
+        let t = &mut w.types;
+        (t.accel[1], t.turn[1], t.vmax[1], t.well[1], t.len[1], t.hull[1], t.shield[1], t.outline[1], t.rad[1]) = (1.0, 0.1, 1.0, 0.35, 18.0, 60.0, 40.0, 4, 7.0);
+        for v in 0..4 { (w.outline.x[MAX_OUTLINE + v], w.outline.y[MAX_OUTLINE + v]) = (w.outline.x[v], w.outline.y[v]); }
+        w.ships.kind[b] = 1;
+        w.arms.guns[b] = 0;
+        for k in [a, b] { (w.traffic.role[k], w.traffic.phase[k]) = (COMBAT, A_LOITER); }
+        w.sides.contested.fill(0);
+        w.params[P::ai_leash as usize] = 1e9;
+        w.params[P::ml_spread as usize] = 0.0;
+        w.params[P::mc_jitter as usize] = 0.0;
+        assert!(w.gun(G_HEAVY).reach() > 1800.0 && w.gun_range() < 1800.0);
+        run(&mut w, 8.0);
+        assert!(w.arms.ammo[a] < STOCK_MAG[2], "it fired: {}", w.arms.ammo[a]);
+        assert!(w.ships.alive[b] == 0 || w.ships.hull[b] < 60.0 || w.arms.shield[b] < 40.0 - 20.0, "and hit hard: {} {}", w.ships.hull[b], w.arms.shield[b]);
     }
 
     #[test]

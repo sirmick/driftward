@@ -17,8 +17,8 @@
   "combat": {
     "contested": "prize",
     "sides": [
-      { "line": "union.military", "zone": 0, "count": 5, "classes": { "c1": 3, "c2": 3, "c3": 1 } },
-      { "line": "union.raider", "zone": 1, "count": 6, "classes": { "c1": 4, "c2": 3 } }
+      { "line": "union.military", "zone": 0, "count": 7, "classes": { "c1": 3, "c2": 3, "c3": 2, "c4": 1 } },
+      { "line": "union.raider", "zone": 1, "count": 7, "classes": { "c1": 3, "c2": 3, "c3": 2, "c4": 1 } }
     ]
   }
 }

@@ -113,7 +113,7 @@ function finOutline(span, root, tip, sweep, curve, rootIn) {
 // by the line's hull key, the outfit (pods, weapons) from one seeded by the line itself. Lines that share hulls
 // (catalog: hullFrom) share the hull key and the hull loadout, so the same seed gives the same vessel in each,
 // outfitted differently. Outfit parts are numbered apart from hull parts, so hull detail noise matches too.
-const OUTFIT_ROLES = new Set(['pod', 'weapon', 'barrel', 'cargo']);
+const OUTFIT_ROLES = new Set(['pod', 'weapon', 'weaponM', 'weaponL', 'barrel', 'cargo']); // (and the loadout's keys for the turret sites by size)
 function assemble(brand, size, seed, sizeIdx) {
   const hullKey = brand.hullKey || brand.id;
   const rh = rng32(hashStr(hullKey + '|' + size.id + '|' + seed)), ro = rng32(hashStr(brand.id + '|outfit|' + size.id + '|' + seed));
@@ -340,16 +340,20 @@ function assemble(brand, size, seed, sizeIdx) {
 
   // --- weapons (outfit) ---
   stream(true);
-  const nW = count(load.weapon, r);
+  // turret sites by size (docs/weapons.md): light (`weapon`) in flank pairs and on the centreline, medium and heavy
+  // (`weaponM`, `weaponL`) on the centreline, fore and aft, the turret drawn bigger the bigger the gun
+  const nW = count(load.weapon, r), nM = count(load.weaponM, r), nL = count(load.weaponL, r);
   const wt = pick('weapon');
-  function weapon(x, y) {
-    const out = [];
-    const rr = sample(wt.r, r) * L, z = sample(wt.z, r) * coreH, H = sample(wt.H, r) * coreH;
-    const base = mk(wt, 'circle', { r: rr }, x, y, 0, z, H, { paint: -1, prof: 'round' });
+  const SITE_K = [1, 1.7, 2.6], BARREL_K = [1, 1.5, 2.1];
+  function weapon(x, y, size) {
+    size = size || 1;
+    const out = [], kr = SITE_K[size - 1], kb = BARREL_K[size - 1];
+    const rr = sample(wt.r, r) * L * kr, z = sample(wt.z, r) * coreH, H = sample(wt.H, r) * coreH * (1 + 0.2 * (size - 1));
+    const base = mk(wt, 'circle', { r: rr }, x, y, 0, z, H, { paint: -1, prof: 'round', site: size });
     if (wt.style === 'blister') base.em = { type: 'core' };
     out.push(base);
     const nb = wt.barrels || 0;
-    const blen = sample(wt.blen, r) * L, bw = (wt.bw || 0.004) * L;
+    const blen = sample(wt.blen, r) * L * kb, bw = (wt.bw || 0.004) * L * kb;
     for (let b = 0; b < nb; b++) {
       const bx = x + (b - (nb - 1) / 2) * bw * 2.8;
       const bar = mk({ id: wt.id + '.barrel', role: 'barrel', prof: 'round' }, 'rbox', { hw: bw, hl: blen / 2, rad: bw * 0.9 }, bx, y + blen / 2 + rr * 0.2, 0, z + H * 0.3, H * 0.55, { paint: -1 });
@@ -364,11 +368,16 @@ function assemble(brand, size, seed, sizeIdx) {
       for (let k = 0; k < pairs; k++) addPair(() => { const y = lerp(0.05, 0.22, r()) * core.len + k * 0.1 * core.len; return weapon(core.hwAt(y) * 0.9, y); }, true);
       if (nW % 2) parts.push(...weapon(0, 0.3 * core.len));
     } else {
-      const c = nW <= 3 ? nW : Math.ceil(nW / 3);
-      for (let k = 0; k < c; k++) parts.push(...weapon(0, lerp(-0.25, 0.36, (k + 0.5) / c) * core.len));
+      // with big guns on the centreline, the light ones go in pairs (an odd one aft of the middle)
+      const c = nM + nL ? nW % 2 : nW <= 3 ? nW : Math.ceil(nW / 3);
+      for (let k = 0; k < c; k++) parts.push(...weapon(0, (nM + nL ? -0.05 : lerp(-0.25, 0.36, (k + 0.5) / c)) * core.len));
       const pairs = Math.floor((nW - c) / 2);
       for (let k = 0; k < pairs; k++) addPair(() => { const y = lerp(-0.2, 0.22, (k + 0.5) / Math.max(1, pairs)) * core.len; return weapon(core.hwAt(y) * 0.62, y); }, true);
     }
+  }
+  if (wt && nM + nL > 0) {
+    const at = [0.4, -0.34, 0.2, -0.18];
+    [...Array(nL).fill(3), ...Array(nM).fill(2)].slice(0, at.length).forEach((size, k) => parts.push(...weapon(0, at[k] * core.len, size)));
   }
 
   // --- bridge / cockpit ---
@@ -425,7 +434,8 @@ function assemble(brand, size, seed, sizeIdx) {
 // ---------- footprint (for the sim core: core/src/combat.rs) ----------
 // A ship's silhouette as the sim sees it, in the baked sprite's frame (the bake centres the texture on the silhouette's
 // bounds, pass 0 below): a convex outline of at most `maxV` vertices, local metres (+x right, +y forward), that shells
-// hit; and its turret sites, each [x, y, size] (1 light; the weapon parts' bases, in the order gen placed them).
+// hit; and its turret sites, each [x, y, size] (1 light, 2 medium, 3 heavy; the weapon parts' bases, in the order gen
+// placed them).
 function footprint(ship, maxV) {
   maxV = maxV || 12;
   const parts = ship.parts, N = 64;
@@ -457,7 +467,7 @@ function footprint(ship, maxV) {
     }
     hull.splice(best, 1);
   }
-  const mounts = parts.filter(p => p.role === 'weapon' && p.prim === 'circle').map(p => [p.x - cx, p.y - cy, 1]);
+  const mounts = parts.filter(p => p.role === 'weapon' && p.prim === 'circle').map(p => [p.x - cx, p.y - cy, p.site || 1]);
   return { outline: hull, mounts };
 }
 

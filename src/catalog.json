@@ -515,7 +515,8 @@
      "weapon": 4,
      "pod": 0,
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponM": 2
     },
     "c4": {
      "hull": 4,
@@ -526,7 +527,8 @@
      "weapon": 4,
      "pod": 1,
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponL": 2
     },
     "c5": {
      "hull": 6,
@@ -537,7 +539,9 @@
      "weapon": 6,
      "pod": 2,
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponL": 2,
+     "weaponM": 2
     }
    },
    "lines": [
@@ -603,23 +607,33 @@
      "loadout": {
       "c1": {
        "weapon": 1,
-       "pod": 0
+       "pod": 0,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c2": {
        "weapon": 2,
-       "pod": 1
+       "pod": 1,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c3": {
        "weapon": 2,
-       "pod": 2
+       "pod": 2,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c4": {
        "weapon": 4,
-       "pod": 3
+       "pod": 3,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c5": {
        "weapon": 4,
-       "pod": 4
+       "pod": 4,
+       "weaponM": 2,
+       "weaponL": 0
       }
      }
     },
@@ -685,7 +699,9 @@
        "pod": 0,
        "weapon": 4,
        "hull": 1,
-       "nacelle": 0
+       "nacelle": 0,
+       "weaponM": 0,
+       "weaponL": 0
       }
      }
     }
@@ -1096,7 +1112,8 @@
      "weapon": 4,
      "pod": 0,
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponM": 2
     },
     "c4": {
      "hull": [
@@ -1113,7 +1130,8 @@
       2
      ],
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponL": 2
     },
     "c5": {
      "hull": [
@@ -1139,7 +1157,9 @@
       3
      ],
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponL": 2,
+     "weaponM": 2
     }
    },
    "lines": [
@@ -1219,35 +1239,45 @@
        "pod": 0,
        "nacelle": 0,
        "fin": 0,
-       "hull": 0
+       "hull": 0,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c2": {
        "weapon": 2,
        "pod": 0,
        "nacelle": 0,
        "fin": 0,
-       "hull": 1
+       "hull": 1,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c3": {
        "weapon": 2,
        "pod": 0,
        "nacelle": 0,
        "fin": 0,
-       "hull": 1
+       "hull": 1,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c4": {
        "weapon": 4,
        "pod": 0,
        "nacelle": 0,
        "fin": 1,
-       "hull": 2
+       "hull": 2,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c5": {
        "weapon": 4,
        "pod": 0,
        "nacelle": 0,
        "fin": 1,
-       "hull": 2
+       "hull": 2,
+       "weaponM": 2,
+       "weaponL": 0
       }
      }
     },
@@ -1348,7 +1378,9 @@
        "hull": 0,
        "nacelle": 0,
        "fin": 1,
-       "wing": 0
+       "wing": 0,
+       "weaponM": 0,
+       "weaponL": 0
       }
      }
     }
@@ -1752,7 +1784,8 @@
      "weapon": 4,
      "pod": 2,
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponM": 2
     },
     "c4": {
      "hull": [
@@ -1775,7 +1808,8 @@
       4
      ],
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponL": 2
     },
     "c5": {
      "hull": [
@@ -1795,7 +1829,9 @@
       6
      ],
      "ring": 0,
-     "bridge": 1
+     "bridge": 1,
+     "weaponL": 2,
+     "weaponM": 2
     }
    },
    "lines": [
@@ -1862,35 +1898,45 @@
      "loadout": {
       "c1": {
        "weapon": 1,
-       "pod": 1
+       "pod": 1,
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c2": {
        "weapon": 2,
        "pod": [
         1,
         2
-       ]
+       ],
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c3": {
        "weapon": 2,
        "pod": [
         2,
         3
-       ]
+       ],
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c4": {
        "weapon": 4,
        "pod": [
         4,
         5
-       ]
+       ],
+       "weaponM": 0,
+       "weaponL": 0
       },
       "c5": {
        "weapon": 4,
        "pod": [
         6,
         7
-       ]
+       ],
+       "weaponM": 2,
+       "weaponL": 0
       }
      },
      "drop": [
@@ -1943,15 +1989,21 @@
       },
       "c3": {
        "weapon": 4,
-       "pod": 1
+       "pod": 1,
+       "weaponM": 2,
+       "weaponL": 0
       },
       "c4": {
        "weapon": 4,
-       "pod": 2
+       "pod": 2,
+       "weaponL": 2,
+       "weaponM": 0
       },
       "c5": {
        "weapon": 6,
-       "pod": 3
+       "pod": 3,
+       "weaponL": 2,
+       "weaponM": 2
       }
      },
      "style": {
@@ -2020,15 +2072,21 @@
       },
       "c3": {
        "weapon": 4,
-       "pod": 1
+       "pod": 1,
+       "weaponM": 2,
+       "weaponL": 0
       },
       "c4": {
        "weapon": 4,
-       "pod": 1
+       "pod": 1,
+       "weaponL": 2,
+       "weaponM": 0
       },
       "c5": {
        "weapon": 6,
-       "pod": 2
+       "pod": 2,
+       "weaponL": 2,
+       "weaponM": 2
       }
      },
      "style": {
@@ -2109,7 +2167,9 @@
        "hull": [
         3,
         4
-       ]
+       ],
+       "weaponM": 2,
+       "weaponL": 0
       }
      }
     }
